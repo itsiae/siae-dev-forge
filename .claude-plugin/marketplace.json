@@ -15,7 +15,7 @@
         "name": "SIAE AI Competence Center",
         "email": "ai-cc@siae.it"
       },
-      "source": ".",
+      "source": "./plugin",
       "category": "development",
       "homepage": "https://github.com/itsiae/siae-dev-forge"
     }
