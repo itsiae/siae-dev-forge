@@ -7,6 +7,22 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Print brand banner to stderr (visible in terminal at startup)
+cat >&2 <<'BANNER'
+
+╔══════════════════════════════════════════════════════════════════╗
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
+║              🔨 DevForge · AI Competence Center                ║
+║         "Il codice si forgia. Il developer cresce."            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+BANNER
+
 # Read using-devforge content
 using_devforge_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/SKILL.md" 2>&1 || echo "Error reading using-devforge skill")
 
