@@ -57,79 +57,28 @@ Il risultato: ogni interazione con Claude Code segue automaticamente gli standar
 
 ## Installazione
 
-Il plugin e' privato e non e' disponibile nel marketplace pubblico. L'installazione avviene tramite un marketplace locale.
-
-### Opzione A: Script automatico (raccomandato)
+Il plugin e' distribuito tramite un marketplace privato GitHub. Due comandi e sei operativo.
 
 ```bash
-git clone git@github.com:itsiae/siae-dev-forge.git ~/git/siae-dev-forge
-cd ~/git/siae-dev-forge
-./install.sh
+# 1. Registra il marketplace (una volta sola)
+claude plugin marketplace add itsiae/siae-dev-forge
+
+# 2. Installa il plugin
+claude plugin install siae-devforge --scope user
 ```
 
-Lo script crea la struttura del marketplace locale, registra il plugin e lo installa in un unico passaggio. E' idempotente: puo' essere rieseguito senza problemi.
+Riavvia Claude Code per attivare il plugin.
 
-### Opzione B: Installazione manuale
-
-**1. Clona il repository**
-
-```bash
-git clone git@github.com:itsiae/siae-devforge.git ~/git/siae-dev-forge
-```
-
-**2. Crea il marketplace locale**
-
-```bash
-mkdir -p ~/.claude/local-plugins/.claude-plugin
-mkdir -p ~/.claude/local-plugins/plugins
-ln -sf ~/git/siae-dev-forge ~/.claude/local-plugins/plugins/siae-devforge
-```
-
-**3. Crea il manifest del marketplace**
-
-Crea il file `~/.claude/local-plugins/.claude-plugin/marketplace.json`:
-
-```json
-{
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "siae-local",
-  "description": "SIAE private plugins marketplace",
-  "owner": {
-    "name": "SIAE AI Competence Center",
-    "email": "ai-cc@siae.it"
-  },
-  "plugins": [
-    {
-      "name": "siae-devforge",
-      "description": "SIAE Development Forge - AI SDLC Chain per sviluppo software conforme a standard SIAE. 13 skill, 5 comandi, 3 agent, 2 hook.",
-      "version": "1.0.0-mvp",
-      "author": {
-        "name": "SIAE AI Competence Center",
-        "email": "ai-cc@siae.it"
-      },
-      "source": "./plugins/siae-devforge",
-      "category": "development",
-      "homepage": "https://github.com/itsiae/siae-devforge"
-    }
-  ]
-}
-```
-
-**4. Registra il marketplace e installa il plugin**
-
-```bash
-claude plugin marketplace add ~/.claude/local-plugins --scope user
-claude plugin install siae-devforge@siae-local
-```
-
-Dopo l'installazione, il plugin si attiva automaticamente in ogni sessione Claude Code. Riavvia Claude Code per applicare le modifiche.
-
-> **Aggiornamento:** per aggiornare il plugin e' sufficiente fare `git pull` nella cartella clonata. Il symlink garantisce che le modifiche siano immediatamente riflesse senza reinstallare.
+> **Aggiornamento:** per aggiornare il plugin all'ultima versione:
+> ```bash
+> claude plugin update siae-devforge
+> ```
 
 ### Requisiti
 
 - [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) installato e configurato
-- Accesso al repository GitHub `itsiae/siae-devforge`
+- Accesso in lettura al repository GitHub `itsiae/siae-dev-forge` (chiedi al tuo team lead di aggiungerti al team GitHub `siae-developers`)
+- SSH key configurata su GitHub (oppure HTTPS con token)
 - (Opzionale) MCP Atlassian configurato per l'integrazione JIRA/Confluence
 
 ---
