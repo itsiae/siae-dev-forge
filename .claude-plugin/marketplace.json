@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "siae-devforge",
+  "description": "SIAE private plugins marketplace",
+  "owner": {
+    "name": "SIAE AI Competence Center",
+    "email": "ai-cc@siae.it"
+  },
+  "plugins": [
+    {
+      "name": "siae-devforge",
+      "description": "SIAE Development Forge - AI SDLC Chain per sviluppo software conforme a standard SIAE. 13 skill, 5 comandi, 3 agent, 2 hook.",
+      "version": "1.0.0-mvp",
+      "author": {
+        "name": "SIAE AI Competence Center",
+        "email": "ai-cc@siae.it"
+      },
+      "source": ".",
+      "category": "development",
+      "homepage": "https://github.com/itsiae/siae-dev-forge"
+    }
+  ]
+}
