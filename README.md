@@ -57,9 +57,19 @@ Il risultato: ogni interazione con Claude Code segue automaticamente gli standar
 
 ## Installazione
 
-### Installazione (raccomandato)
-
 Il plugin e' privato e non e' disponibile nel marketplace pubblico. L'installazione avviene tramite un marketplace locale.
+
+### Opzione A: Script automatico (raccomandato)
+
+```bash
+git clone git@github.com:itsiae/siae-dev-forge.git ~/git/siae-dev-forge
+cd ~/git/siae-dev-forge
+./install.sh
+```
+
+Lo script crea la struttura del marketplace locale, registra il plugin e lo installa in un unico passaggio. E' idempotente: puo' essere rieseguito senza problemi.
+
+### Opzione B: Installazione manuale
 
 **1. Clona il repository**
 
