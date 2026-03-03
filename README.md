@@ -49,7 +49,7 @@ siae-devforge e' un **plugin Claude Code** che agisce come "sistema operativo" p
 1. **All'avvio** — L'hook `SessionStart` inietta automaticamente la meta-skill `using-devforge`, che insegna a Claude come e quando usare tutte le altre skill
 2. **Su ogni task** — Claude controlla se esiste una skill applicabile (con la regola dell'1%: se c'e' anche solo l'1% di possibilita' che una skill sia rilevante, la invoca)
 3. **Catena SDLC** — Le skill sono organizzate in 7 fasi ordinate. Claude segue l'ordine corretto: non puo' scrivere codice senza aver fatto brainstorming, non puo' committare senza test
-4. **Al commit** — L'hook `PreCommit` esegue un quality gate a 5 punti (secret scan, naming, test, file size, lint) prima di ogni commit
+4. **Al commit** — L'hook `PreToolUse` intercetta i comandi `git commit` ed esegue un quality gate a 5 punti (secret scan, naming, test, file size, lint) prima di ogni commit
 
 Il risultato: ogni interazione con Claude Code segue automaticamente gli standard SIAE senza che il developer debba ricordarli.
 
@@ -411,9 +411,9 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 - **Effetto:** Claude "impara" il sistema di skill al boot, senza che l'utente debba fare nulla
 - **Pattern:** Lazy loading — solo la meta-skill viene caricata. Le skill specifiche vengono invocate on-demand
 
-### `PreCommit` — Quality Gate
+### `PreToolUse` (Bash) — Quality Gate
 
-- **Evento:** Prima di ogni commit
+- **Evento:** Prima di ogni `git commit` (intercettato via PreToolUse sul tool Bash)
 - **5 verifiche:**
 
 | # | Check | Livello | Blocca? |
@@ -452,7 +452,7 @@ siae-devforge/
 ├── .gitignore
 │
 ├── hooks/
-│   ├── hooks.json               # Registro hook (SessionStart, PreCommit)
+│   ├── hooks.json               # Registro hook (SessionStart, PreToolUse)
 │   ├── run-hook.cmd             # Script dispatcher cross-platform (polyglot bash/cmd)
 │   ├── session-start            # Hook bootstrap: inietta using-devforge al boot
 │   └── pre-commit               # Hook quality gate: 5 check prima di ogni commit
@@ -575,7 +575,7 @@ Claude Code Session
   Skill invocata → Esecuzione con HARD-GATE e pre-flight cards
         │
         ▼
-  Commit → PreCommit Hook → Quality Gate 5 punti
+  Commit → PreToolUse Hook (Bash) → Quality Gate 5 punti
         │
         ▼
   Output: codice conforme, testato, documentato, sicuro
