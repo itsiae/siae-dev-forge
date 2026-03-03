@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-# install.sh — Installa siae-devforge come plugin locale di Claude Code
+# install.sh — Installa siae-devforge come plugin di Claude Code dal repo GitHub
 set -euo pipefail
 
-PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MARKETPLACE_DIR="${HOME}/.claude/local-plugins"
-MANIFEST_FILE="${MARKETPLACE_DIR}/.claude-plugin/marketplace.json"
-SYMLINK="${MARKETPLACE_DIR}/plugins/siae-devforge"
+GITHUB_REPO="itsiae/siae-dev-forge"
 
 # Colori
 GREEN='\033[0;32m'
@@ -25,64 +22,27 @@ echo ""
 
 # Verifica prerequisiti
 command -v claude &>/dev/null || error "Claude Code non trovato. Installalo prima: https://docs.anthropic.com/en/docs/build-with-claude/claude-code"
+command -v gh &>/dev/null    || error "GitHub CLI (gh) non trovato. Installalo: https://cli.github.com"
 
-# Crea struttura marketplace
-mkdir -p "${MARKETPLACE_DIR}/.claude-plugin"
-mkdir -p "${MARKETPLACE_DIR}/plugins"
-info "Directory marketplace creata: ${MARKETPLACE_DIR}"
-
-# Crea/aggiorna symlink
-if [ -L "${SYMLINK}" ]; then
-  warning "Symlink già esistente, aggiorno: ${SYMLINK}"
-  rm "${SYMLINK}"
+# Verifica autenticazione GitHub
+if ! gh auth status &>/dev/null; then
+  error "Non autenticato su GitHub. Esegui: gh auth login"
 fi
-ln -sf "${PLUGIN_DIR}" "${SYMLINK}"
-info "Symlink creato: ${SYMLINK} → ${PLUGIN_DIR}"
+info "GitHub autenticato"
 
-# Crea manifest marketplace
-cat > "${MANIFEST_FILE}" <<EOF
-{
-  "\$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "siae-local",
-  "description": "SIAE private plugins marketplace",
-  "owner": {
-    "name": "SIAE AI Competence Center",
-    "email": "ai-cc@siae.it"
-  },
-  "plugins": [
-    {
-      "name": "siae-devforge",
-      "description": "SIAE Development Forge - AI SDLC Chain per sviluppo software conforme a standard SIAE. 13 skill, 5 comandi, 3 agent, 2 hook.",
-      "version": "1.0.0-mvp",
-      "author": {
-        "name": "SIAE AI Competence Center",
-        "email": "ai-cc@siae.it"
-      },
-      "source": "./plugins/siae-devforge",
-      "category": "development",
-      "homepage": "https://github.com/itsiae/siae-devforge"
-    }
-  ]
-}
-EOF
-info "Manifest marketplace scritto: ${MANIFEST_FILE}"
-
-# Registra marketplace (idempotente)
-if claude plugin marketplace list 2>/dev/null | grep -q "siae-local"; then
-  warning "Marketplace 'siae-local' già registrato, aggiorno"
-  claude plugin marketplace update siae-local 2>/dev/null || true
-else
-  claude plugin marketplace add "${MARKETPLACE_DIR}" --scope user
-  info "Marketplace 'siae-local' registrato"
+# Verifica accesso al repo
+if ! gh repo view "${GITHUB_REPO}" &>/dev/null; then
+  error "Impossibile accedere a ${GITHUB_REPO}. Verifica i permessi GitHub."
 fi
+info "Accesso al repo ${GITHUB_REPO} verificato"
 
-# Installa/aggiorna plugin
+# Installa/aggiorna plugin da GitHub
 if claude plugin list 2>/dev/null | grep -q "siae-devforge"; then
   warning "Plugin già installato, aggiorno"
-  claude plugin update siae-devforge 2>/dev/null || true
+  claude plugin update siae-devforge 2>&1 && info "Plugin aggiornato" || warning "Aggiornamento non necessario"
 else
-  claude plugin install siae-devforge@siae-local
-  info "Plugin 'siae-devforge' installato"
+  claude plugin install "siae-devforge@github:${GITHUB_REPO}"
+  info "Plugin 'siae-devforge' installato da GitHub"
 fi
 
 echo ""
@@ -91,5 +51,5 @@ echo "║  Installazione completata. Riavvia Claude Code.      ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
 echo "  Per aggiornare in futuro:"
-echo "    git pull && claude plugin update siae-devforge"
+echo "    claude plugin update siae-devforge"
 echo ""
