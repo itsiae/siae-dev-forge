@@ -124,6 +124,8 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 | siae-data-engineering | Glue, PySpark, Medallion, ETL | Flexible | 4. Implementation |
 | siae-frontend | Vue.js, vitest, Firebase, GA | Flexible | 4. Implementation |
 | siae-tdd | Implementazione feature, bug fix | Rigid | 5. Testing |
+| siae-qa | Fine brainstorming (AC ready), fine TDD (test pronti), /forge-qa | Rigid | 5. Testing / QA |
+| siae-automation | Dopo siae-qa (TC con Automazione=Y pronti), /forge-automate | Rigid | 5. Testing / Automation |
 | siae-debugging | Debug issue, errore, incident | Rigid | 6. QA Gate |
 | siae-documentation | Richiesta doc HLD/LLD/API | Flexible | 7. Release |
 
@@ -145,12 +147,12 @@ Le 7 fasi del ciclo di sviluppo SIAE. Ogni fase ha skill, comandi e agenti dedic
   siae-onboarding     siae-brainstorming    siae-git-workflow
                       siae-architecture
 
-4. Implementation  →  5. Testing        →  6. QA Gate        →  7. Release
-       ↓                     ↓                    ↓                    ↓
-  siae-code-standards   siae-tdd          siae-debugging       siae-documentation
-  siae-security
-  siae-iac
-  siae-data-engineering
+4. Implementation  →  5. Testing           →  6. QA Gate        →  7. Release
+       ↓                     ↓                      ↓                    ↓
+  siae-code-standards   siae-tdd             siae-debugging       siae-documentation
+  siae-security         siae-qa (Xray TC)
+  siae-iac              siae-automation
+  siae-data-engineering (Appium/Cypress)
   siae-frontend
 ```
 
