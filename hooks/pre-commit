@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
-# PreCommit hook for siae-devforge plugin
+# PreToolUse hook for siae-devforge plugin (intercepts git commit via Bash tool)
 # Quality gate checks injected as additionalContext before every commit.
 
 set -euo pipefail
+
+# Read tool input from stdin (JSON with tool_name and tool_input)
+HOOK_INPUT=$(cat)
+
+# Extract the command from the tool input
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+# Only activate on git commit commands — exit silently for everything else
+if [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+    echo '{}'
+    exit 0
+fi
 
 # Determine plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Escape string for JSON embedding using bash parameter substitution.
-# Each ${s//old/new} is a single C-level pass - orders of magnitude
-# faster than the character-by-character loop this replaces.
 escape_for_json() {
     local s="$1"
     s="${s//\\/\\\\}"
@@ -177,7 +187,7 @@ cat <<EOF
 {
   "additional_context": "${precommit_context}",
   "hookSpecificOutput": {
-    "hookEventName": "PreCommit",
+    "hookEventName": "PreToolUse",
     "additionalContext": "${precommit_context}"
   }
 }
