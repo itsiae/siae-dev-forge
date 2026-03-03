@@ -189,15 +189,15 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge · Onboarding completato                            ║
+║  🔨 DevForge · Onboarding completato                             ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
 ║  📂 Progetto:     <nome directory>                               ║
 ║  🏭 Factory:      <factory rilevata>                             ║
-║  🛠️  Stack:        <stack rilevato/i>                             ║
-║  🌍 Ambienti:     sviluppo · collaudo · certificazione · prod   ║
-║  🔄 CI/CD:        GitHub Actions (itsiae/siae-gh-actions v2.x)  ║
-║  📊 Quality:      Qodana                                        ║
+║  🛠️  Stack:        <stack rilevato/i>                            ║
+║  🌍 Ambienti:     sviluppo · collaudo · certificazione · prod    ║
+║  🔄 CI/CD:        GitHub Actions (itsiae/siae-gh-actions v2.x)   ║
+║  📊 Quality:      Qodana                                         ║
 ║                                                                  ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Skill disponibili per questo stack:                             ║
@@ -206,7 +206,7 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
 ║  • siae-tdd              Test-driven development                 ║
 ║  • siae-git-workflow      Branch, merge, release                 ║
 ║  • siae-security          Security review                        ║
-║  • <skill specifiche per stack rilevato>                          ║
+║  • <skill specifiche per stack rilevato>                         ║
 ║                                                                  ║
 ║  Digita /help per la lista completa dei comandi DevForge.        ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -244,7 +244,7 @@ Se lo stack non e' stato rilevato, mostra un avviso:
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
-|-----------|---------|------|
+|------------|---------|------|
 | Lettura file di progetto (pom.xml, package.json, ...) | 🟢 Sicuro | No |
 | Lettura `.siae-config.json` | 🟢 Sicuro | No |
 | Mostra welcome message | 🟢 Sicuro | No |

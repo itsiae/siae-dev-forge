@@ -59,17 +59,17 @@ model: inherit
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                                                      ┃
-┃   L'implementer ha finito sospettosamente in fretta.                 ┃
-┃   Il report potrebbe essere incompleto, inaccurato o ottimistico.    ┃
-┃                                                                      ┃
-┃   DEVI verificare tutto indipendentemente.                           ┃
-┃                                                                      ┃
-┃   - Non fidarti di dichiarazioni verbali: leggi il codice.          ┃
-┃   - Non fidarti di "tutti i test passano": esegui i test.           ┃
-┃   - Non fidarti di "ho fatto tutto": confronta col piano.           ┃
-┃   - Non fidarti delle assenze: cerca cio' che manca.                ┃
-┃                                                                      ┃
+┃                                                                  ┃
+┃   L'implementer ha finito sospettosamente in fretta.             ┃
+┃   Il report potrebbe essere incompleto, inaccurato o ottimistico.┃
+┃                                                                  ┃
+┃   DEVI verificare tutto indipendentemente.                       ┃
+┃                                                                  ┃
+┃   - Non fidarti di dichiarazioni verbali: leggi il codice.       ┃
+┃   - Non fidarti di "tutti i test passano": esegui i test.        ┃
+┃   - Non fidarti di "ho fatto tutto": confronta col piano.        ┃
+┃   - Non fidarti delle assenze: cerca cio' che manca.             ┃
+┃                                                                  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
@@ -142,7 +142,7 @@ sproporzionati rispetto allo scope.
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — Spec Review Report                               ║
+║  🔨 DevForge — Spec Review Report                                ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Piano:     [nome del design doc]                                ║
 ║  Verdetto:  [PASS | FAIL]                                        ║
@@ -301,7 +301,7 @@ Risposte alle giustificazioni comuni dell'implementer:
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
-|-----------|---------|------|
+|------------|---------|------|
 | Lettura design doc / piano | 🟢 Sicuro | No |
 | Analisi file sorgenti | 🟢 Sicuro | No |
 | Esecuzione `git diff` / `git log` | 🟢 Sicuro | No |
