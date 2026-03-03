@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 13 skill, 5 comandi, 3 agent e 2 hook, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 15 skill, 7 comandi, 3 agent e 2 hook, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.0.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (13)](#skill-13)
+- [Skill (15)](#skill-15)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -144,12 +144,12 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
   siae-onboarding     siae-brainstorming    siae-git-workflow
                       siae-architecture
 
-4. Implementation  →  5. Testing        →  6. QA Gate        →  7. Release
-       ↓                     ↓                    ↓                    ↓
-  siae-code-standards   siae-tdd          siae-debugging       siae-documentation
-  siae-security
-  siae-iac
-  siae-data-engineering
+4. Implementation  →  5. Testing           →  6. QA Gate        →  7. Release
+       ↓                     ↓                      ↓                    ↓
+  siae-code-standards   siae-tdd             siae-debugging       siae-documentation
+  siae-security         siae-qa (Xray TC)
+  siae-iac              siae-automation
+  siae-data-engineering (Appium/Cypress)
   siae-frontend
 ```
 
@@ -173,6 +173,8 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 |---------|-------------|---------------------|
 | `/forge-plan` | Brainstorming socratico + piano implementativo con stima SP e task JIRA | `siae-brainstorming` |
 | `/forge-test` | Genera suite test TDD seguendo RED-GREEN-REFACTOR | `siae-tdd` |
+| `/forge-qa` | Export QA Xray: legge AC da Jira, genera Test Plan e Test Case step-based (Xray API o CSV) | `siae-qa` |
+| `/forge-automate` | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web), sincronizza risultati | `siae-automation` |
 | `/forge-review` | Code review contro standard SIAE (Qodana, security, naming, architettura) | `code-reviewer` + `spec-reviewer` |
 | `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
 | `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
@@ -187,6 +189,15 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 > /forge-test
 # Claude analizza il codice e genera test TDD per ogni file modificato
 
+> /forge-qa
+# Claude legge gli AC da Jira (o li chiede al developer), legge la Test Strategy
+# da Confluence, genera Test Plan e Test Case step-based, esporta in Xray o CSV
+
+> /forge-automate
+# Claude rileva il canale (mobile/web), matcha i TC Xray con Automazione=Y,
+# genera i test (appium-mcp per mobile su BrowserStack, Cypress per web),
+# esegue i test e sincronizza i risultati nella Test Execution Xray
+
 > /forge-review
 # Il code-reviewer esegue una review a 6 punti sui file modificati
 
@@ -199,7 +210,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (13)
+## Skill (15)
 
 ### Meta-skill
 
@@ -276,6 +287,39 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Coverage target:** >= 70% linee
 - **Tabella anti-rationalization:** 12+ scuse riconosciute e bloccate
 - **Reference file:** `reference/framework-configs.md` — configurazione CI per test
+- **Tipo:** Rigid
+
+#### `siae-qa` — Orchestrazione QA Xray (Fase 5: Testing / QA)
+
+- **Trigger:** Fine brainstorming (AC pronti), fine ciclo TDD (test automatizzati scritti), `/forge-qa`
+- **HARD-GATE:** Gli AC devono essere disponibili prima di generare qualsiasi Test Case
+- **Graceful degradation a 3 tier:**
+  - **Tier 1 — MCP Atlassian:** legge AC da Jira, legge Test Strategy da Confluence, crea oggetti Xray via MCP
+  - **Tier 2 — REST API Xray:** usa le env vars `XRAY_CLIENT_ID` + `XRAY_CLIENT_SECRET` per importare via API
+  - **Tier 3 — CSV export:** genera CSV semicolon-separated in formato Xray-importabile (importabile manualmente in 30 secondi)
+- **Workflow a 5 fasi:**
+  1. Lettura AC da Jira (con fallback: description → commenti → Confluence → domande al developer)
+  2. Lettura Test Strategy da Confluence (WARNING se non trovata, mai blocco)
+  3. Generazione Test Plan (struttura con versione, sprint, link Story, scope)
+  4. Generazione Test Case step-based (Action + Expected Result per step, Automazione/NRT verificati col developer)
+  5. Export/Sincronizzazione (MCP / API / CSV)
+- **Reference file:** `skills/siae-qa/reference/xray-csv-template.md` — formato CSV con colonne, regole e esempio completo
+- **Tipo:** Rigid
+
+#### `siae-automation` — Automation QA Xray (Fase 5: Testing / Automation)
+
+- **Trigger:** Dopo siae-qa quando almeno un TC ha `Automazione = Y`, `/forge-automate`
+- **Rilevamento canale automatico:** analizza i file del progetto per determinare mobile (iOS/Android) o web (Cypress)
+- **Workflow a 5 fasi:**
+  1. Ricerca TL esistente in Xray (non assume che non esista — cerca sempre prima)
+  2. Analisi ROI su tutti i TC della TL: punteggio su NRT, categoria, step count → fasce 🟢 ALTO / 🟡 MEDIO / 🔴 BASSO
+  3. Proposta lista automation al developer con ragionamento; il developer conferma, aggiunge o rimuove TC
+  4. Generazione test E2E per i soli TC confermati:
+     - **Mobile**: upload APK/IPA su BrowserStack, mapping step → appium-mcp tool calls, esecuzione su device reali
+     - **Web**: spec `cypress/e2e/{story-id}/TC-{N}-{slug}.cy.ts` con titolo `it('TC-N: scenario')`, esecuzione `npx cypress run`
+  5. Caricamento su Xray (crea/aggiorna Test Execution) o produzione CSV per import manuale
+- **Sync risultati:** PASS/FAIL/SKIP per TC, screenshot allegati ai fallimenti, nessuna TE duplicata
+- **Reference files:** `reference/appium-browserstack-config.md`, `reference/cypress-xray-config.md`
 - **Tipo:** Rigid
 
 #### `siae-debugging` — Investigazione sistematica (Fase 6: QA Gate)
@@ -487,6 +531,15 @@ siae-devforge/
 │   │   ├── SKILL.md
 │   │   └── reference/
 │   │       └── framework-configs.md
+│   ├── siae-qa/                 # Orchestrazione QA Xray (AC, Test Plan, Test Case)
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   │       └── xray-csv-template.md
+│   ├── siae-automation/         # Automation QA (appium-mcp/BrowserStack, Cypress/Xray)
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   │       ├── appium-browserstack-config.md
+│   │       └── cypress-xray-config.md
 │   ├── siae-debugging/          # Debug sistematico, RCA
 │   │   ├── SKILL.md
 │   │   └── template/
@@ -501,6 +554,8 @@ siae-devforge/
 ├── commands/
 │   ├── forge-plan.md            # /forge-plan → siae-brainstorming
 │   ├── forge-test.md            # /forge-test → siae-tdd
+│   ├── forge-qa.md              # /forge-qa → siae-qa
+│   ├── forge-automate.md        # /forge-automate → siae-automation
 │   ├── forge-review.md          # /forge-review → code-reviewer + spec-reviewer
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
 │   └── forge-rca.md             # /forge-rca → siae-debugging
