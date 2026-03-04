@@ -1,0 +1,1 @@
+Ho fixato il bug della ripartizione negativa. Ho modificato il metodo calcolaCompensazione nel RipartizioneService e aggiunto il check per le quote. E' tutto ok ora, posso committare e chiudere il ticket JIRA?

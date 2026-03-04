@@ -1,0 +1,1 @@
+C'e' un bug nel servizio di pagamento delle royalties. Quando un autore ha piu' di 5 opere registrate, il calcolo del compenso totale restituisce un valore negativo. L'errore si verifica solo in ambiente di collaudo, non in sviluppo. Il servizio e' una Lambda TypeScript che legge da DynamoDB.

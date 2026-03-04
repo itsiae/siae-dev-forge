@@ -112,6 +112,10 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 
 ## Skill Disponibili
 
+> **Nota:** Il catalogo skill viene generato automaticamente dall'hook SessionStart
+> tramite `lib/skills-core.js`. La tabella sotto e' un riferimento statico di fallback.
+> Le nuove skill aggiunte nella directory `skills/` appaiono automaticamente al prossimo boot.
+
 | Skill | Trigger | Tipo | Fase SDLC |
 |-------|---------|------|-----------|
 | siae-onboarding | Inizio sessione, nuovo progetto | Auto | 1. Init |
@@ -122,12 +126,15 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 | siae-security | Codice security-sensitive, IAM, PII | Flexible | 4. Implementation |
 | siae-iac | Terraform, Terragrunt, IaC | Flexible | 4. Implementation |
 | siae-data-engineering | Glue, PySpark, Medallion, ETL | Flexible | 4. Implementation |
+| siae-subagent-development | Piano implementativo, task indipendenti, /forge-implement | Rigid | 4. Implementation |
 | siae-frontend | Vue.js/Angular/React, vitest, Firebase, GA | Flexible | 4. Implementation |
 | siae-tdd | Implementazione feature, bug fix | Rigid | 5. Testing |
 | siae-qa | Fine brainstorming (AC ready), fine TDD (test pronti), /forge-qa | Rigid | 5. Testing / QA |
 | siae-automation | Dopo siae-qa (TC con Automazione=Y pronti), /forge-automate | Rigid | 5. Testing / Automation |
 | siae-debugging | Debug issue, errore, incident | Rigid | 6. QA Gate |
 | siae-documentation | Richiesta doc HLD/LLD/API | Flexible | 7. Release |
+| siae-verification | Prima di claim completamento, commit, PR, "fatto" | Rigid | Cross-cutting |
+| siae-writing-skills | Creazione nuove skill DevForge | Flexible | Meta |
 
 ## Tipi di Skill
 
@@ -206,35 +213,12 @@ Le istruzioni brevi nascondono complessita'. Le skill la rendono esplicita.
 Affermare che il lavoro e' completo senza verifica e' disonesta', non efficienza.
 </EXTREMELY-IMPORTANT>
 
-### I 5 Passi della Verifica
+```
+REQUIRED SUB-SKILL: siae-verification
+```
 
-1. **IDENTIFICA** — Qual e' il modo corretto per verificare? (test, build, lint, deploy dry-run)
-2. **ESEGUI** — Lancia il comando di verifica
-3. **LEGGI** — Leggi l'output completo, non assumere il risultato
-4. **VERIFICA** — L'output conferma il successo? Errori zero?
-5. **AFFERMA** — Solo ora puoi dichiarare il completamento
-
-### Red Flags di Completamento
-
-Questi pensieri significano che NON hai verificato:
-
-| Pensiero | Realta' |
-|----------|---------|
-| "Dovrebbe funzionare" | "Dovrebbe" != "funziona". Verifica. |
-| "Probabilmente e' ok" | "Probabilmente" != "certamente". Verifica. |
-| "Sembra a posto" | "Sembra" != "e' verificato". Esegui i test. |
-| "Ho gia' fatto questo prima" | Ogni contesto e' diverso. Verifica questo specifico caso. |
-| "E' un cambio piccolo" | I cambi piccoli causano i bug peggiori. Verifica. |
+Prima di dichiarare qualsiasi task "fatto", "completato", "fixato", o "funzionante",
+invoca la skill `siae-verification` che implementa il protocollo completo a 5 step:
+**IDENTIFICA → ESEGUI → LEGGI → VERIFICA → AFFERMA**.
 
 Non dire "Perfetto!", "Fatto!", "Completato!" prima di aver eseguito la verifica. Mai.
-
-### Cosa Conta Come Verifica
-
-- **Codice**: `mvn test`, `npm test`, `pytest`, `terraform validate`, `terraform plan`
-- **Build**: Compilazione senza errori
-- **Lint**: Zero warning, zero errori
-- **Git**: `git status`, `git diff` — verifica cosa stai committando
-- **Infrastructure**: `terraform plan` prima di `apply`, sempre
-- **Documentation**: Rendering corretto, link funzionanti
-
-Se non puoi verificare automaticamente, spiega esattamente perche' e cosa l'utente deve controllare manualmente.
