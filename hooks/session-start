@@ -7,6 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Source activity logger and start session
+source "${PLUGIN_ROOT}/lib/logger.sh"
+START_NS=$(date +%s%N 2>/dev/null || echo "0")
+DEVFORGE_SID=$(devforge_new_sid)
+PLUGIN_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "unknown")
+
 # Print brand banner to stderr (visible in terminal at startup)
 cat >&2 <<'BANNER'
 
@@ -70,5 +76,8 @@ cat <<EOF
   }
 }
 EOF
+
+# Log session start event
+devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
 
 exit 0

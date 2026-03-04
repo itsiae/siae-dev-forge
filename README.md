@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 18 skill, 8 comandi, 3 agent, 2 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 18 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.0.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -33,7 +33,7 @@
   - [Skill Tech-Specific](#skill-tech-specific)
   - [Skill Cross-cutting e Meta](#skill-cross-cutting-e-meta)
 - [Agent (3)](#agent-3)
-- [Hook (2)](#hook-2)
+- [Hook (3)](#hook-3)
 - [Design System Visivo](#design-system-visivo)
 - [Test Suite](#test-suite)
 - [Struttura del Repository](#struttura-del-repository)
@@ -454,7 +454,7 @@ Se MCP Atlassian e' disponibile, pubblica direttamente su Confluence.
 
 ---
 
-## Hook (2)
+## Hook (3)
 
 Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 
@@ -479,6 +479,36 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 | 5 | **Lint Check** — ESLint/Checkstyle/Flake8/tflint se configurato | MEDIO | No (warning) |
 
 - **Output:** Pre-flight card con riepilogo PASS/FAIL per ogni check
+
+### `PostToolUse` (Skill) — Activity Logging
+
+- **Evento:** Dopo ogni invocazione del tool Skill
+- **Funzione:** Logga l'evento `skill_invoked` nel file di activity log `~/.claude/devforge-activity.jsonl`
+- **Dati registrati:** Timestamp, session ID, nome della skill invocata
+- **Pattern:** Append-only JSONL — ogni riga e' un evento JSON auto-contenuto
+
+### Activity Log
+
+Tutti e 3 gli hook scrivono eventi strutturati in `~/.claude/devforge-activity.jsonl` tramite il logger centralizzato `lib/logger.sh`. Il file e' in formato JSONL (una riga JSON per evento) e traccia:
+
+| Evento | Sorgente | Dati |
+|--------|----------|------|
+| `session_start` | SessionStart hook | Directory progetto, versione plugin, durata boot |
+| `quality_gate` | PreToolUse hook | Comando git intercettato |
+| `skill_invoked` | PostToolUse hook | Nome della skill invocata |
+
+Il log e' consultabile con `cat`, `grep` o `jq`:
+
+```bash
+# Ultimi 10 eventi
+tail -10 ~/.claude/devforge-activity.jsonl
+
+# Skill piu' invocate
+jq -r 'select(.event=="skill_invoked") | .meta.skill_name' ~/.claude/devforge-activity.jsonl | sort | uniq -c | sort -rn
+
+# Sessioni di oggi
+jq -r 'select(.event=="session_start")' ~/.claude/devforge-activity.jsonl | grep "$(date +%Y-%m-%d)"
+```
 
 ---
 
@@ -506,13 +536,15 @@ siae-devforge/
 ├── .gitignore
 │
 ├── hooks/
-│   ├── hooks.json               # Registro hook (SessionStart, PreToolUse)
+│   ├── hooks.json               # Registro hook (SessionStart, PreToolUse, PostToolUse)
 │   ├── run-hook.cmd             # Script dispatcher cross-platform (polyglot bash/cmd)
 │   ├── session-start            # Hook bootstrap: inietta using-devforge al boot
-│   └── pre-commit               # Hook quality gate: 5 check prima di ogni commit
+│   ├── pre-commit               # Hook quality gate: 5 check prima di ogni commit
+│   └── post-skill               # Hook activity log: traccia skill invocate
 │
 ├── lib/
-│   └── skills-core.js           # Discovery dinamica skill e catalogo auto-generato
+│   ├── skills-core.js           # Discovery dinamica skill e catalogo auto-generato
+│   └── logger.sh                # Activity logger centralizzato (JSONL append)
 │
 ├── skills/
 │   ├── using-devforge/          # Meta-skill: sistema operativo del plugin
@@ -657,19 +689,25 @@ Per configurare MCP Atlassian, segui la [documentazione ufficiale](https://devel
 Claude Code Session
         │
         ▼
-  SessionStart Hook → Inietta using-devforge
+  SessionStart Hook → Inietta using-devforge + log session_start
         │
         ▼
   Messaggio utente → using-devforge controlla skill applicabili
         │
         ▼
-  Skill invocata → Esecuzione con HARD-GATE e pre-flight cards
+  Skill invocata → PostToolUse Hook → log skill_invoked
         │
         ▼
-  Commit → PreToolUse Hook (Bash) → Quality Gate 5 punti
+  Esecuzione con HARD-GATE e pre-flight cards
+        │
+        ▼
+  Commit → PreToolUse Hook (Bash) → Quality Gate 5 punti + log quality_gate
         │
         ▼
   Output: codice conforme, testato, documentato, sicuro
+        │
+        ▼
+  Activity log: ~/.claude/devforge-activity.jsonl (JSONL append-only)
 ```
 
 ---

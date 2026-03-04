@@ -10,15 +10,21 @@ HOOK_INPUT=$(cat)
 # Extract the command from the tool input
 TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
+# Determine plugin root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source activity logger
+source "${PLUGIN_ROOT}/lib/logger.sh"
+
 # Only activate on git commit commands — exit silently for everything else
 if [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     echo '{}'
     exit 0
 fi
 
-# Determine plugin root directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Log quality gate activation
+devforge_log "quality_gate" "success" "{\"check_name\":\"pre_commit_activated\",\"command\":\"${TOOL_COMMAND}\"}"
 
 # Escape string for JSON embedding using bash parameter substitution.
 escape_for_json() {
