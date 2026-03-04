@@ -1,0 +1,76 @@
+Copyright (c) 2026 SIAE — Società Italiana degli Autori ed Editori
+Via della Letteratura, 30 — 00144 Roma, Italia
+Tutti i diritti riservati.
+
+LICENZA PROPRIETARIA SIAE
+
+1. PROPRIETÀ INTELLETTUALE
+   Il presente software, inclusi il codice sorgente, la documentazione, le skill,
+   gli hook, gli agent, i template e qualsiasi altro materiale contenuto in questo
+   repository ("il Software"), è di proprietà esclusiva di SIAE — Società Italiana
+   degli Autori ed Editori e dei suoi licenzianti.
+
+   Sono altresì di proprietà esclusiva di SIAE le seguenti opere dell'ingegno e
+   creazioni intellettuali incorporate nel Software o da esso derivanti
+   ("la Proprietà Intellettuale"):
+   a) il concept e l'idea originale del sistema di workflow AI per lo sviluppo
+      software basato su catena SDLC a 7 fasi con skill disciplinate;
+   b) la metodologia "Catena SDLC a 7 Fasi" e il relativo sistema di enforcement
+      tramite skill Rigid/Flexible con HARD-GATE e anti-rationalization;
+   c) il meccanismo di bootstrap via meta-skill con lazy loading e dynamic catalog;
+   d) il sistema di quality gate pre-commit a 5 punti integrato con Claude Code;
+   e) il framework di activity logging cross-session con correlazione JIRA/branch;
+   f) l'architettura controller-subagent con distrust pattern e double review;
+   g) il DevForge Visual Design System (banner ASCII, pre-flight cards, risk levels);
+   h) tutti i pattern, le metodologie, le logiche di workflow e i principi di
+      progettazione documentati nel Software, indipendentemente dalla loro
+      espressione in codice.
+
+   La tutela si estende non solo al codice ma anche alle idee, ai metodi, ai
+   processi, ai sistemi e ai concetti originali che il Software incorpora, nella
+   misura massima consentita dalla legge italiana sul diritto d'autore
+   (L. 633/1941 e successive modificazioni) e dalla normativa europea applicabile.
+
+2. LICENZA D'USO LIMITATA
+   SIAE concede una licenza personale, non esclusiva, non trasferibile e revocabile
+   esclusivamente ai soggetti espressamente autorizzati per iscritto da SIAE
+   ("Utenti Autorizzati"). L'uso è consentito unicamente per attività svolte
+   nell'ambito di progetti e commesse SIAE.
+
+3. DIVIETI
+   È espressamente vietato, senza previo consenso scritto di SIAE:
+   a) copiare, riprodurre o distribuire il Software, in tutto o in parte;
+   b) modificare, adattare, tradurre o creare opere derivate basate sul Software;
+   c) concedere in sublicenza, vendere, affittare, cedere o trasferire il Software
+      a terzi;
+   d) rimuovere o alterare qualsiasi avviso di copyright, licenza o proprietà;
+   e) utilizzare il Software, la Proprietà Intellettuale, i suoi pattern,
+      metodologie, concetti o architetture per sviluppare prodotti, servizi o
+      sistemi analoghi o ispirati al presente Software, destinati a clienti,
+      organizzazioni o mercati diversi da SIAE, anche qualora l'implementazione
+      tecnica differisca dalla presente;
+   f) divulgare a terzi il funzionamento interno, le logiche o i contenuti del
+      Software al di fuori di quanto strettamente necessario per l'esecuzione
+      delle attività commissionat da SIAE.
+
+4. RISERVATEZZA
+   Il Software è informazione riservata di SIAE. Gli Utenti Autorizzati si
+   impegnano a mantenerlo riservato con lo stesso grado di cura applicato alle
+   proprie informazioni riservate, e comunque non inferiore a un livello di
+   ragionevole diligenza.
+
+5. NESSUNA GARANZIA
+   IL SOFTWARE È FORNITO "COSÌ COM'È", SENZA GARANZIE DI ALCUN TIPO,
+   ESPRESSE O IMPLICITE.
+
+6. LIMITAZIONE DI RESPONSABILITÀ
+   In nessun caso SIAE sarà responsabile per danni diretti, indiretti, incidentali,
+   speciali o consequenziali derivanti dall'uso o dall'impossibilità di uso del
+   Software.
+
+7. LEGGE APPLICABILE
+   La presente licenza è regolata dalla legge italiana. Per qualsiasi controversia
+   è competente in via esclusiva il Foro di Roma.
+
+8. CONTATTI
+   Per richieste di licenza o autorizzazioni: lorenzo.detomasi@siae.it
