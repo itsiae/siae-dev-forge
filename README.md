@@ -484,7 +484,7 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 
 - **Evento:** Dopo ogni invocazione del tool Skill
 - **Funzione:** Logga l'evento `skill_invoked` nel file di activity log `~/.claude/devforge-activity.jsonl`
-- **Dati registrati:** Timestamp, session ID, nome della skill invocata
+- **Dati registrati:** Timestamp, session ID, nome della skill invocata, fase SDLC
 - **Pattern:** Append-only JSONL — ogni riga e' un evento JSON auto-contenuto
 
 ### Activity Log
@@ -495,9 +495,47 @@ Tutti e 3 gli hook scrivono eventi strutturati in `~/.claude/devforge-activity.j
 |--------|----------|------|
 | `session_start` | SessionStart hook | Directory progetto, versione plugin, durata boot |
 | `quality_gate` | PreToolUse hook | Comando git intercettato |
-| `skill_invoked` | PostToolUse hook | Nome della skill invocata |
+| `skill_invoked` | PostToolUse hook | Nome della skill invocata, fase SDLC |
 
-Il log e' consultabile con `cat`, `grep` o `jq`:
+#### Schema JSONL
+
+Ogni riga del log contiene i campi seguenti:
+
+```json
+{
+  "ts": "2026-03-04T10:30:00.000Z",
+  "sid": "a1b2c3d4",
+  "branch": "feature/SDLC-142-add-login",
+  "jira_id": "SDLC-142",
+  "project": "diritti-gestione-service",
+  "event": "skill_invoked",
+  "status": "success",
+  "duration_ms": 1234,
+  "meta": {"skill_name": "siae-tdd", "sdlc_phase": "5. Testing"}
+}
+```
+
+| Campo | Descrizione |
+|-------|-------------|
+| `ts` | Timestamp UTC ISO 8601 |
+| `sid` | Session ID (8 char hash, rinnovato ad ogni SessionStart) |
+| `branch` | Branch git corrente (o `no-branch` fuori da un repo) |
+| `jira_id` | JIRA ID estratto automaticamente dal nome del branch (o `null`) |
+| `project` | Nome della directory root del progetto git |
+| `event` | Tipo evento: `session_start`, `quality_gate`, `skill_invoked` |
+| `status` | `success` o `error` |
+| `duration_ms` | Durata in millisecondi (solo per eventi timed) |
+| `meta` | Oggetto JSON con dati specifici dell'evento |
+
+#### Correlazione Cross-Session
+
+I campi `branch`, `jira_id` e `project` permettono di tracciare il flusso SDLC **attraverso sessioni diverse**. Questo e' fondamentale per:
+
+- **Drift detection:** Identificare sessioni che fanno Implementation senza un Design precedente
+- **Multi-repo tracking:** Seguire un ticket JIRA (es. `SPORT-456`) attraverso microservizi diversi
+- **Analisi cicli iterativi:** Rilevare fix non risolutive che iterano sullo stesso branch
+
+#### Query di Esempio
 
 ```bash
 # Ultimi 10 eventi
@@ -508,6 +546,19 @@ jq -r 'select(.event=="skill_invoked") | .meta.skill_name' ~/.claude/devforge-ac
 
 # Sessioni di oggi
 jq -r 'select(.event=="session_start")' ~/.claude/devforge-activity.jsonl | grep "$(date +%Y-%m-%d)"
+
+# Fasi SDLC per un ticket JIRA specifico (cross-session)
+jq -r 'select(.jira_id=="SDLC-142" and .event=="skill_invoked") | "\(.ts) \(.sid) \(.meta.sdlc_phase) \(.meta.skill_name)"' ~/.claude/devforge-activity.jsonl
+
+# Drift detection: sessioni con Implementation ma senza Design
+jq -sr '
+  group_by(.sid)[] |
+  {sid: .[0].sid, phases: [.[] | select(.event=="skill_invoked") | .meta.sdlc_phase] | unique} |
+  select((.phases | any(startswith("4."))) and (.phases | any(startswith("2.")) | not))
+' ~/.claude/devforge-activity.jsonl
+
+# Storia di un branch attraverso sessioni diverse
+jq -r 'select(.branch=="feature/SPORT-456-fix-sync") | "\(.ts) [\(.sid)] \(.event) \(.meta)"' ~/.claude/devforge-activity.jsonl
 ```
 
 ---
