@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# PostToolUse hook for siae-devforge plugin (intercepts Skill tool invocations)
+# Logs skill_invoked events to the activity JSONL log.
+
+set -euo pipefail
+
+# Determine plugin root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source activity logger
+source "${PLUGIN_ROOT}/lib/logger.sh"
+
+# Read tool output from stdin (JSON with tool_name and tool_input)
+HOOK_INPUT=$(cat)
+
+# Extract skill name from the input
+# The Skill tool input contains a "skill" field with the skill name
+SKILL_NAME=$(echo "$HOOK_INPUT" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+if [ -z "$SKILL_NAME" ]; then
+    # Try alternative field name patterns
+    SKILL_NAME=$(echo "$HOOK_INPUT" | grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
+
+if [ -n "$SKILL_NAME" ]; then
+    devforge_log "skill_invoked" "success" "{\"skill_name\":\"${SKILL_NAME}\"}"
+fi
+
+# Pass through — PostToolUse hooks should not block
+echo '{}'
+exit 0
