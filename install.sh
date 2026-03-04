@@ -3,6 +3,8 @@
 set -euo pipefail
 
 GITHUB_REPO="itsiae/siae-dev-forge"
+MARKETPLACE_NAME="siae-devforge"
+PLUGIN_KEY="siae-devforge@siae-devforge"
 
 # Colori
 GREEN='\033[0;32m'
@@ -36,13 +38,39 @@ if ! gh repo view "${GITHUB_REPO}" &>/dev/null; then
 fi
 info "Accesso al repo ${GITHUB_REPO} verificato"
 
-# Installa/aggiorna plugin da GitHub
+# Abilita autoUpdate per il marketplace (richiede python3)
+enable_autoupdate() {
+  local mkt_file="${HOME}/.claude/plugins/known_marketplaces.json"
+  if [ -f "$mkt_file" ] && command -v python3 &>/dev/null; then
+    python3 - "$mkt_file" "$MARKETPLACE_NAME" <<'PY'
+import json, sys
+path, name = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    data = json.load(f)
+if name in data and not data[name].get("autoUpdate"):
+    data[name]["autoUpdate"] = True
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+PY
+    info "autoUpdate abilitato per il marketplace"
+  fi
+}
+
+# Installa o aggiorna plugin
 if claude plugin list 2>/dev/null | grep -q "siae-devforge"; then
-  warning "Plugin già installato, aggiorno"
-  claude plugin update siae-devforge 2>&1 && info "Plugin aggiornato" || warning "Aggiornamento non necessario"
+  warning "Plugin già installato — aggiorno all'ultima versione"
+  # Aggiorna il marketplace cache (git pull del repo)
+  claude plugin marketplace update "${MARKETPLACE_NAME}"
+  info "Marketplace cache aggiornato"
+  # Reinstalla per applicare la nuova versione
+  claude plugin uninstall "${MARKETPLACE_NAME}" 2>/dev/null || true
+  claude plugin install "${PLUGIN_KEY}" --scope user
+  info "Plugin aggiornato all'ultima versione"
 else
+  # Prima installazione
   claude plugin marketplace add "${GITHUB_REPO}"
-  claude plugin install siae-devforge --scope user
+  enable_autoupdate
+  claude plugin install "${PLUGIN_KEY}" --scope user
   info "Plugin 'siae-devforge' installato da GitHub"
 fi
 
@@ -51,6 +79,7 @@ echo "╔═══════════════════════�
 echo "║  Installazione completata. Riavvia Claude Code.      ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
-echo "  Per aggiornare in futuro:"
-echo "    claude plugin update siae-devforge"
+echo "  Per aggiornare in futuro, riesegui:"
+echo "    bash <(gh api repos/${GITHUB_REPO}/contents/install.sh -q .content | base64 -d)"
+echo "  oppure clona il repo ed esegui: ./install.sh"
 echo ""
