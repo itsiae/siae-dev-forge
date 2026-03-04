@@ -1,8 +1,9 @@
 ---
 name: siae-frontend
 description: >
-  Pattern frontend SIAE: Vue.js 3, vitest, Firebase, Google Analytics.
-  Trigger: sviluppo componenti Vue, test frontend, deploy S3+CloudFront,
+  Pattern frontend SIAE: Vue.js 3 (stack standard), Angular, React.
+  Vitest per tutti i framework. Deploy S3+CloudFront, Firebase, brand SIAE.
+  Trigger: sviluppo componenti frontend, test frontend, deploy S3+CloudFront,
   configurazione Firebase, error tracking GA.
 ---
 
@@ -16,19 +17,23 @@ description: >
 ║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
 ║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
 ║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨  DevForge  ·  SIAE Frontend Patterns              ║
+║              🔨  DevForge  ·  SIAE Frontend Patterns             ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
 ## Panoramica
 
-Pattern frontend SIAE: Vue.js 3, testing, deploy, Firebase, error tracking e brand identity.
+Pattern frontend SIAE per sviluppo, testing, deploy e brand. **Vue.js 3 è lo stack standard SIAE** per i nuovi progetti. Angular e React sono supportati dove già adottati.
 
-**Trigger**: componenti Vue, test frontend, deploy S3+CloudFront, Firebase config, GA error tracking.
+Le sezioni di **deploy**, **Firebase** e **brand** si applicano a tutti i framework. Le sezioni di **stack** e **testing** variano per framework.
+
+**Trigger**: componenti frontend (Vue/Angular/React), test frontend, deploy S3+CloudFront, Firebase config, GA error tracking.
 
 ---
 
 ## 1. Stack Tecnologico
+
+### Vue.js 3 — Stack standard SIAE
 
 | Tecnologia    | Ruolo                    | Versione    |
 |---------------|--------------------------|-------------|
@@ -39,9 +44,32 @@ Pattern frontend SIAE: Vue.js 3, testing, deploy, Firebase, error tracking e bra
 | Vite          | Build tool               | 5.x         |
 | vitest        | Testing framework        | 1.x         |
 
-### Struttura progetto
+Struttura `src/`: `assets/styles/` (CSS variables), `components/` (common, layout), `composables/` (use*), `router/`, `stores/` (Pinia), `views/`, `services/` (api.ts, firebase.ts, analytics.ts), `types/`
 
-`src/`: `assets/styles/` (CSS variables), `components/` (common, layout), `composables/` (use*), `router/`, `stores/` (Pinia), `views/`, `services/` (api.ts, firebase.ts, analytics.ts), `types/`
+### Angular — Stack supportato
+
+| Tecnologia               | Ruolo                    | Versione    |
+|--------------------------|--------------------------|-------------|
+| Angular                  | Framework UI             | 17+         |
+| TypeScript               | Type safety              | 5.x         |
+| RxJS                     | State/async management   | 7.x         |
+| Angular Material / CDK   | UI component library     | 17+         |
+| Vite (via @analogjs/vite-plugin-angular) | Build tool | —  |
+| vitest                   | Testing framework        | 1.x         |
+
+Struttura `src/app/`: `components/`, `services/`, `models/`, `guards/`, `pipes/`
+
+### React — Stack supportato
+
+| Tecnologia               | Ruolo                    | Versione    |
+|--------------------------|--------------------------|-------------|
+| React                    | Framework UI             | 18+         |
+| TypeScript               | Type safety              | 5.x         |
+| Zustand / Redux Toolkit  | State management         | —           |
+| Vite                     | Build tool               | 5.x         |
+| vitest                   | Testing framework        | 1.x         |
+
+Struttura `src/`: `components/`, `hooks/`, `services/`, `store/`, `types/`
 
 ---
 
@@ -55,11 +83,14 @@ Pipeline: `git push tag rc-*` --> GitHub Actions --> vite build --> S3 sync --> 
 
 ## 3. Testing
 
-Stack: vitest (runner) + @testing-library/vue (DOM) + @vue/test-utils (mounting).
+**Runner comune: vitest.** La library DOM cambia per framework. Coverage minima **70%** per tutti gli stack (CI enforcement). Testa comportamento utente, non implementazione interna.
 
-File test: `{Component}.spec.ts`. **Coverage minima: 70%** (CI enforcement). Testa comportamento utente, non implementazione.
+`vitest.config.ts` (comune): environment `jsdom`, coverage provider `v8`, thresholds 70% (statements, branches, functions, lines).
 
-### Esempio test
+### Vue.js
+
+Stack: `vitest` + `@testing-library/vue` + `@vue/test-utils`
+File test: `{Component}.spec.ts`, affiancato al componente.
 
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/vue'
@@ -79,9 +110,47 @@ describe('MyComponent', () => {
 })
 ```
 
-### Configurazione vitest
+### Angular
 
-`vitest.config.ts`: environment `jsdom`, coverage provider `v8`, thresholds 70% (statements, branches, functions, lines).
+Stack: `vitest` + `@testing-library/angular`
+File test: `{component}.spec.ts`, affiancato al componente.
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/angular'
+import { describe, it, expect } from 'vitest'
+import { MyComponent } from './my.component'
+
+describe('MyComponent', () => {
+  it('mostra il titolo', async () => {
+    await render(MyComponent, { componentProperties: { title: 'Test' } })
+    expect(screen.getByText('Test')).toBeTruthy()
+  })
+})
+```
+
+### React
+
+Stack: `vitest` + `@testing-library/react`
+File test: `{Component}.spec.tsx` o `{Component}.test.tsx`, affiancato al componente.
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import MyComponent from './MyComponent'
+
+describe('MyComponent', () => {
+  it('mostra il titolo', () => {
+    render(<MyComponent title="Test" />)
+    expect(screen.getByText('Test')).toBeTruthy()
+  })
+  it('chiama onClick al click', async () => {
+    const onClick = vi.fn()
+    render(<MyComponent onClick={onClick} />)
+    await fireEvent.click(screen.getByRole('button'))
+    expect(onClick).toHaveBeenCalled()
+  })
+})
+```
 
 ---
 
@@ -176,10 +245,10 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 
 ## Classificazione Rischio Operazioni
 
-| Operazione                          | Rischio    |
-|-------------------------------------|------------|
-| Lettura/analisi componenti Vue      | 🟢 Sicuro  |
-| Creazione/modifica componenti       | 🟡 Medio   |
+| Operazione                                | Rischio    |
+|-------------------------------------------|------------|
+| Lettura/analisi componenti frontend       | 🟢 Sicuro  |
+| Creazione/modifica componenti             | 🟡 Medio   |
 | Modifica CSS variables / brand      | 🟡 Medio   |
 | Esecuzione test (`vitest`)          | 🟡 Medio   |
 | Modifica Firebase config            | 🔴 Alto    |

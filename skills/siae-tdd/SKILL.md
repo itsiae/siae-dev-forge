@@ -2,22 +2,23 @@
 name: siae-tdd
 description: >
   Enforces SIAE TDD workflow: RED-GREEN-REFACTOR con JUnit5/Mockito (Java),
-  Jest (TS backend), vitest (TS frontend), pytest (Python). Trigger:
-  implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice.
+  Jest (TS backend), vitest + @testing-library (TS frontend Vue/Angular/React — integra siae-frontend),
+  pytest (Python). Rileva automaticamente il tipo di codice (FE/BE/Java/Python/IaC).
+  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice.
 ---
 
 # SIAE TDD — Test-Driven Development
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
-║              🔨 DevForge · AI Competence Center                ║
-║         "Il codice si forgia. Il developer cresce."            ║
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · AI Competence Center                  ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -57,6 +58,41 @@ Reimplementa partendo dai test. Punto.
 - File di configurazione puri
 
 Stai pensando "salto il TDD solo questa volta"? Fermati. Quella e' razionalizzazione.
+
+---
+
+## Rilevamento Tipo Codice
+
+**Prima del ciclo RED-GREEN-REFACTOR**, identifica il tipo di codice. Il tipo determina il framework di test e i pattern da applicare.
+
+### Detection — Segnali e Mapping
+
+| Segnale nel codice / progetto                                                         | Tipo                   | Framework test                        | Skill di riferimento |
+|---------------------------------------------------------------------------------------|------------------------|---------------------------------------|----------------------|
+| File `.vue`, `vitest.config.ts` con `environment: 'jsdom'`, import da `@testing-library/vue` | **Frontend (Vue.js)**  | vitest + @testing-library/vue         | **siae-frontend**    |
+| `package.json` con `"vue"`, `"vite"`, `"pinia"` nella stessa root                    | **Frontend (Vue.js)**  | vitest + @testing-library/vue         | **siae-frontend**    |
+| `package.json` con `"@angular/core"`, `angular.json`, file `.component.ts`           | **Frontend (Angular)** | vitest + @testing-library/angular     | **siae-frontend**    |
+| `package.json` con `"react"` / `"react-dom"`, file `.tsx` / `.jsx`                   | **Frontend (React)**   | vitest + @testing-library/react       | **siae-frontend**    |
+| `package.json` con `"express"` / `"serverless-http"`, `jest.config.ts`               | **TypeScript Backend** | Jest + ts-jest                        | —                    |
+| `pom.xml`, file `.java`, package `it.siae.*`                                          | **Java / Spring Boot** | JUnit 5 + Mockito + AssertJ           | —                    |
+| File `.py`, `pyproject.toml`, `requirements.txt`, Glue job                            | **Python**             | pytest + pytest-mock                  | —                    |
+| File `.tf`, `.hcl`, `terragrunt.hcl`                                                  | **IaC**                | Terratest (Go)                        | siae-iac             |
+
+### Codice Frontend — integrazione con siae-frontend
+
+Se il tipo rilevato e' **Frontend** (Vue.js, Angular, React o qualsiasi altro framework UI), questa skill integra i pattern definiti in `siae-frontend`. Il runner e' sempre **vitest**, indipendentemente dal framework.
+
+**Cosa cambia rispetto agli altri stack:**
+- **Runner test**: vitest (uguale per tutti i framework frontend)
+- **Library DOM**: `@testing-library/{vue|angular|react}` in base al framework rilevato
+- **File test**: `{Component}.spec.ts`, affiancato al componente nella stessa directory
+- **Focus**: comportamento utente (render DOM, interazioni, eventi) — MAI implementazione interna
+- **Coverage**: `npx vitest run --coverage`, soglia minima >= 70%
+- **Setup file**: `src/test-setup.ts` con `import '@testing-library/jest-dom/vitest'`
+
+**Cosa NON cambia:** il ciclo RED-GREEN-REFACTOR e' identico per tutti i tipi di codice.
+
+> **Codice di produzione frontend:** se nel ciclo TDD devi creare o modificare componenti, hooks/composables o service, invoca `siae-frontend` per i pattern di struttura e le convenzioni di stile.
 
 ---
 

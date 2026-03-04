@@ -16,7 +16,7 @@ description: >
 ║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
 ║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
 ║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨  DevForge  ·  SIAE Debugging Sistematico          ║
+║              🔨  DevForge  ·  SIAE Debugging Sistematico         ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -291,7 +291,7 @@ Per incident significativi (P1/P2), compila: `skills/siae-debugging/template/rca
 ## Quick Reference
 
 | Fase | Attivita' Chiave | Criterio di Successo |
-|------|-------------------|----------------------|
+|------|------------------|----------------------|
 | **1. Root Cause** (HARD-GATE) | Leggi errori, riproduci, traccia, raccogli evidenze | Capisci COSA e PERCHE' |
 | **2. Pattern** | Cerca pattern, confronta, analizza dipendenze | Identifichi differenze |
 | **3. Hypothesis** | Formula ipotesi, testa minimamente, documenta | Confermata o nuova ipotesi |
