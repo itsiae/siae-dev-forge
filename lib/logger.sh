@@ -8,6 +8,42 @@ DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
+# Extract git context for cross-session correlation
+# Returns: branch|jira_id|project
+devforge_get_git_context() {
+    local branch jira_id project
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "no-branch")
+    project=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+    jira_id=$(echo "$branch" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+    [ -z "$jira_id" ] && jira_id="null"
+    echo "${branch}|${jira_id}|${project}"
+}
+
+# Map skill name to SDLC phase for drift detection
+devforge_get_sdlc_phase() {
+    local skill="$1"
+    case "$skill" in
+        *onboarding*)          echo "1. Init" ;;
+        *brainstorming*)       echo "2. Design" ;;
+        *architecture*)        echo "2. Design" ;;
+        *git-workflow*)        echo "3. Branching" ;;
+        *code-standards*)      echo "4. Implementation" ;;
+        *security*)            echo "4. Implementation" ;;
+        *iac*)                 echo "4. Implementation" ;;
+        *data-engineering*)    echo "4. Implementation" ;;
+        *frontend*)            echo "4. Implementation" ;;
+        *subagent*)            echo "4. Implementation" ;;
+        *tdd*)                 echo "5. Testing" ;;
+        *qa*)                  echo "5. Testing / QA" ;;
+        *automation*)          echo "5. Testing / Automation" ;;
+        *debugging*)           echo "6. QA Gate" ;;
+        *documentation*)       echo "7. Release" ;;
+        *verification*)        echo "Cross-cutting" ;;
+        *writing-skills*)      echo "Meta" ;;
+        *)                     echo "unknown" ;;
+    esac
+}
+
 # Get or generate session ID
 devforge_get_sid() {
     if [ -f "$DEVFORGE_SID_FILE" ]; then
@@ -33,14 +69,19 @@ devforge_log() {
     local status="${2:-success}"
     local meta="${3-}"
     [ -z "$meta" ] && meta='{}'
-    local ts sid
+    local ts sid git_ctx branch jira_id project jira_json
 
     ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
     sid=$(devforge_get_sid)
+    git_ctx=$(devforge_get_git_context)
+    branch=$(echo "$git_ctx" | cut -d'|' -f1)
+    jira_id=$(echo "$git_ctx" | cut -d'|' -f2)
+    project=$(echo "$git_ctx" | cut -d'|' -f3)
+    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
     # Atomic append — printf avoids echo quoting issues
-    printf '{"ts":"%s","sid":"%s","event":"%s","status":"%s","meta":%s}\n' \
-        "$ts" "$sid" "$event" "$status" "$meta" >> "$DEVFORGE_LOG_FILE"
+    printf '{"ts":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+        "$ts" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
 
 # Log with duration measurement
@@ -51,7 +92,7 @@ devforge_log_timed() {
     local start_ns="$3"
     local meta="${4-}"
     [ -z "$meta" ] && meta='{}'
-    local end_ns duration_ms ts sid
+    local end_ns duration_ms ts sid git_ctx branch jira_id project jira_json
 
     end_ns=$(date +%s%N 2>/dev/null || echo "0")
     if [ "$start_ns" != "0" ] && [ "$end_ns" != "0" ]; then
@@ -62,7 +103,12 @@ devforge_log_timed() {
 
     ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
     sid=$(devforge_get_sid)
+    git_ctx=$(devforge_get_git_context)
+    branch=$(echo "$git_ctx" | cut -d'|' -f1)
+    jira_id=$(echo "$git_ctx" | cut -d'|' -f2)
+    project=$(echo "$git_ctx" | cut -d'|' -f3)
+    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
-    printf '{"ts":"%s","sid":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
-        "$ts" "$sid" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+    printf '{"ts":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+        "$ts" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
