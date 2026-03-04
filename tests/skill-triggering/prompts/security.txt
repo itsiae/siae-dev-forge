@@ -1,0 +1,1 @@
+Sto implementando un endpoint che gestisce i dati personali degli autori SIAE: nome, cognome, codice fiscale, IBAN per i pagamenti della ripartizione. Devo assicurarmi che il trattamento PII sia conforme e che le policy IAM seguano il principio di least privilege. Controlla anche che non ci siano secret nel codice.

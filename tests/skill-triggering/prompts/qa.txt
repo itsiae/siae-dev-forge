@@ -1,0 +1,1 @@
+Ho finito di implementare la feature SPORT-234 e i test unitari passano tutti. Ora devo generare i Test Case per Xray partendo dagli Acceptance Criteria del ticket Jira. Il QA manager vuole il Test Plan pronto per la sprint review di venerdi'.

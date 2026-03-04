@@ -26,14 +26,23 @@ SKIP=0
 # Compatible with bash 3.x (no associative arrays)
 get_expected_skill() {
   case "$1" in
-    brainstorming)  echo "siae-brainstorming" ;;
-    tdd)            echo "siae-tdd" ;;
-    debugging)      echo "siae-debugging" ;;
-    code-review)    echo "siae-code-standards" ;;
-    verification)   echo "siae-verification" ;;
-    git-workflow)   echo "siae-git-workflow" ;;
-    documentation)  echo "siae-documentation" ;;
-    *)              echo "" ;;
+    brainstorming)          echo "siae-brainstorming" ;;
+    tdd)                    echo "siae-tdd" ;;
+    debugging)              echo "siae-debugging" ;;
+    code-review)            echo "siae-code-standards" ;;
+    verification)           echo "siae-verification" ;;
+    git-workflow)           echo "siae-git-workflow" ;;
+    documentation)          echo "siae-documentation" ;;
+    qa)                     echo "siae-qa" ;;
+    automation)             echo "siae-automation" ;;
+    onboarding)             echo "siae-onboarding" ;;
+    architecture)           echo "siae-architecture" ;;
+    security)               echo "siae-security" ;;
+    iac)                    echo "siae-iac" ;;
+    data-engineering)       echo "siae-data-engineering" ;;
+    frontend)               echo "siae-frontend" ;;
+    subagent-development)   echo "siae-subagent-development" ;;
+    *)                      echo "" ;;
   esac
 }
 

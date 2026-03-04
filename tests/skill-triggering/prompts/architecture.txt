@@ -1,0 +1,1 @@
+Devo progettare l'architettura di un nuovo microservizio per la sincronizzazione dei dati tra il sistema legacy e il data lake su AWS. Mi serve un diagramma C4 a livello container che mostri le interazioni con S3, Glue, DynamoDB e il servizio REST esistente. Quali pattern architetturali SIAE dovrei seguire?

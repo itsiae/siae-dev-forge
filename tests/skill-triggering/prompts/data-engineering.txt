@@ -1,0 +1,1 @@
+Devo creare un job AWS Glue in PySpark per la pipeline bronze-to-silver del dominio "opere musicali". I dati raw arrivano in S3 come CSV giornalieri, vanno puliti, deduplicati e scritti in formato Parquet partizionato per data nel layer silver. Il progetto segue la Medallion Architecture SIAE.

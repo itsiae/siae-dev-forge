@@ -1,0 +1,1 @@
+Devo creare il modulo Terraform per una nuova Lambda che processa eventi da SQS. Il progetto usa Terragrunt con la struttura live/modules, e il deploy e' tag-based con i Makefile SIAE. Scrivi i file .tf con le convenzioni SIAE: _input.tf, _local.tf, _output.tf e il modulo principale.

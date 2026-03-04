@@ -1,0 +1,1 @@
+Devo creare un componente Vue.js 3 per la pagina di ricerca opere nel portale SIAE. Il componente deve avere un campo di ricerca con debounce, una tabella risultati con PrimeVue DataTable, e la paginazione server-side. Il progetto usa TypeScript, Pinia per lo state e vitest per i test.
