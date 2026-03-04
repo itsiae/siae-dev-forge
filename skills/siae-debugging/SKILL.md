@@ -1,9 +1,8 @@
 ---
 name: siae-debugging
 description: >
-  Debug sistematico a 4 fasi con template RCA. Trigger: bug, errore, incident,
-  test che fallisce, comportamento inatteso. HARD-GATE: completa la Fase 1
-  (Root Cause Investigation) prima di qualsiasi tentativo di fix.
+  Debug sistematico con template RCA.
+  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso.
 ---
 
 # SIAE Debugging Sistematico
@@ -285,6 +284,14 @@ aws logs filter-log-events \
 ## Template RCA
 
 Per incident significativi (P1/P2), compila: `skills/siae-debugging/template/rca-template.md`
+
+---
+
+## Tecniche di Supporto
+
+- **[defense-in-depth.md](defense-in-depth.md)** — Pattern a 4 layer per validare il fix (Entry Point, Business Logic, Environment Guards, Debug Instrumentation). Da applicare quando un bug riappare dopo il fix o quando opera su sistemi critici.
+
+- **[find-polluter.sh](find-polluter.sh)** — Script per test bisection. Identifica quale test causa "pollution" (stato condiviso, file temporanei, modifiche globali). Uso: `./skills/siae-debugging/find-polluter.sh '<pattern>' '<glob>'`.
 
 ---
 

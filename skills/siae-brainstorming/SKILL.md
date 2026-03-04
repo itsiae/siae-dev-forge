@@ -1,10 +1,9 @@
 ---
 name: siae-brainstorming
 description: >
-  Brainstorming socratico per trasformare idee in design validati. DEVI usare
-  questa skill prima di qualsiasi lavoro creativo: feature, componenti,
-  funzionalita', modifiche comportamentali. HARD-GATE: nessuna implementazione
-  prima del design approvato.
+  Brainstorming socratico per trasformare idee in design validati.
+  Trigger: feature nuova, design, componente, funzionalita', modifiche comportamentali,
+  qualsiasi lavoro creativo prima dell'implementazione.
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato

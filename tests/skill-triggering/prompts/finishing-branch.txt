@@ -1,0 +1,3 @@
+Ho finito di implementare la feature DIRITTI-892 per la gestione dei contratti editoriali.
+Tutti i test passano, ho fatto 4 commit. Voglio aprire la PR verso sviluppo.
+Come procedo?

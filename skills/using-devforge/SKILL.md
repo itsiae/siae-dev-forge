@@ -78,6 +78,22 @@ digraph skill_flow {
 }
 ```
 
+## EnterPlanMode Intercept
+
+<EXTREMELY-IMPORTANT>
+Stai per usare EnterPlanMode (il piano nativo di Claude Code)?
+
+STOP. Prima verifica:
+- Il brainstorming e' gia' stato fatto in questa sessione?
+  - NO → Invoca PRIMA siae-brainstorming. NON entrare in EnterPlanMode.
+  - SI → Procedi con EnterPlanMode / siae-subagent-development.
+
+EnterPlanMode senza brainstorming = design non validato = lavoro da rifare.
+</EXTREMELY-IMPORTANT>
+
+Il flowchart sopra modella questo comportamento nel nodo "About to EnterPlanMode?".
+Non bypassarlo mai, nemmeno per task "semplici".
+
 ## Red Flags
 
 Questi pensieri significano STOP — stai razionalizzando:
