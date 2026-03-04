@@ -1,0 +1,5 @@
+Il reviewer ha lasciato 7 commenti sulla mia PR GEST-234.
+Uno dice che il metodo calcolaRoyalties() non gestisce il caso in cui l'autore
+sia deceduto, un altro dice che il nome della variabile 'x' non è chiaro,
+e un terzo chiede perché uso Optional invece di un semplice null check.
+Come gestisco questi commenti?

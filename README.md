@@ -13,9 +13,9 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 18 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 20 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.0.1-mvp
+> **Versione:** 1.1.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (18)](#skill-18)
+- [Skill (20)](#skill-20)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -162,7 +162,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (18)
+## Skill (20)
 
 ### Meta-skill
 
@@ -226,6 +226,17 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Reusable Actions:** Riferimento a `itsiae/siae-gh-actions` (v2.x)
 - **Tipo:** Rigid
 
+#### `siae-finishing-branch` — Chiusura sicura di un branch (Fase 3: Branching)
+
+- **Trigger:** "pronto per PR", "finisco il branch", "ready to merge", "apro la PR"
+- **Processo a 5 step:** Verifica stato → Test e build → Revisione diff → Commit history → Apri PR
+- **Controlli automatici:** `git status` clean, test verdi, rimozione debug code, commit history ordinata
+- **Pre-flight card** obbligatoria prima di `git push` e apertura PR
+- **Decide merge strategy:** squash (default feature → sviluppo), merge commit, rebase
+- **Template PR:** titolo, body strutturato, checklist per reviewer
+- **Integrazione:** se test falliscono → `REQUIRED SUB-SKILL: siae-debugging`. Se sviluppo è avanzato → `REQUIRED SUB-SKILL: siae-git-workflow`
+- **Tipo:** Rigid
+
 #### `siae-tdd` — Test-Driven Development obbligatorio (Fase 5: Testing)
 
 - **Trigger:** Implementazione feature, bug fix
@@ -239,6 +250,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Coverage target:** >= 70% linee
 - **Tabella anti-rationalization:** 12+ scuse riconosciute e bloccate
 - **Reference file:** `reference/framework-configs.md` — configurazione CI per test
+- **Tecnica di supporto:** `condition-based-waiting.md` — pattern `waitFor()` per eliminare test flaky da `setTimeout` fissi (TypeScript, Python, Java/Awaitility)
 - **Tipo:** Rigid
 
 #### `siae-qa` — Orchestrazione QA Xray (Fase 5: Testing / QA)
@@ -285,6 +297,9 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **HARD-GATE:** Fase 1 DEVE completarsi prima di qualsiasi fix
 - **Safety net:** Se 3+ fix falliscono → STOP, metti in discussione l'architettura
 - **Template RCA:** `template/rca-template.md` per incident report strutturato
+- **Tecniche di supporto:**
+  - `defense-in-depth.md` — Pattern a 4 layer per validare il fix (Entry Point, Business Logic, Environment Guards, Debug Instrumentation)
+  - `find-polluter.sh` — Script per test bisection: `./find-polluter.sh '<pattern>' '<glob>'` identifica quale test causa pollution
 - **Tipo:** Rigid
 
 #### `siae-documentation` — Documentazione tecnica (Fase 7: Release)
@@ -368,8 +383,19 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Trigger:** Piano implementativo presente con task indipendenti, `/forge-implement`
 - **Processo:** Per ogni task del piano → implementer subagent → spec-reviewer → code-quality-reviewer
 - **Distrust pattern:** reviewer indipendenti con "L'implementer ha finito sospettosamente in fretta"
+- **Self-review checklist a 4 aree:** completezza, qualità, disciplina (YAGNI), testing — obbligatoria prima del report
 - **Max 2 iterazioni** fix-review per stadio, poi escalation all'utente
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per implementer, `REQUIRED SUB-SKILL: siae-verification` per tutti
+- **Tipo:** Rigid
+
+#### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Fase 4)
+
+- **Trigger:** Ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED
+- **Processo a 4 step:** Leggi tutto prima di agire → Categorizza → Pianifica e implementa → Rispondi a ogni commento
+- **Categorie feedback:** REQUIRED (blocca merge), SUGGESTION, QUESTION, NITPICK, DISCUSSION
+- **Mindset:** il feedback è un regalo; ogni commento richiede risposta esplicita, mai silenzio
+- **Fix con TDD:** per ogni REQUIRED non banale → `REQUIRED SUB-SKILL: siae-tdd`
+- **Gestione disaccordo:** risposta con evidenza tecnica, escalate al team lead se irrisolto
 - **Tipo:** Rigid
 
 #### `siae-writing-skills` — Guida per Creare Skill DevForge (Meta)
@@ -403,6 +429,7 @@ cd siae-dev-forge && bash tests/run-all.sh
 | **Dynamic Catalog** | `lib/skills-core.js` rileva tutte le skill | Automatico |
 | **Commands Validation** | Ogni comando ha frontmatter valido | Automatico |
 | **Skill Triggering** | Prompt naturali attivano le skill corrette (richiede Claude CLI) | `tests/skill-triggering/run-all.sh` |
+| **Token Usage Analysis** | Analisi costi per agente/subagent da file sessione .jsonl | `python3 tests/analyze-token-usage.py <session.jsonl>` |
 
 ### Aggiungere un prompt di test
 

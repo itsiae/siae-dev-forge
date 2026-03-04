@@ -1,10 +1,7 @@
 ---
 name: siae-automation
 description: >
-  Orchestrazione automation QA: rileva la Test List Xray esistente (o la legge
-  dall'output siae-qa), propone quali TC automatizzare per ROI, lascia al developer
-  la selezione finale, genera i test E2E (appium-mcp+BrowserStack per mobile,
-  Cypress per web), carica la Test Execution in Xray o produce CSV.
+  Orchestrazione automation test E2E mobile e web.
   Trigger: dopo siae-qa, /forge-automate.
 ---
 

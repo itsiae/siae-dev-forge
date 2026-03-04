@@ -328,3 +328,9 @@ Altrimenti → non e' TDD
 ```
 
 Nessuna eccezione senza il permesso esplicito del tuo partner umano.
+
+---
+
+## Tecniche di Supporto
+
+- **[condition-based-waiting.md](condition-based-waiting.md)** — Elimina test flaky da `setTimeout` fissi. Pattern `waitFor()` per TypeScript, Python e Java (Awaitility). Da applicare quando un test fallisce sporadicamente in CI o usa sleep arbitrari.

@@ -42,6 +42,8 @@ get_expected_skill() {
     data-engineering)       echo "siae-data-engineering" ;;
     frontend)               echo "siae-frontend" ;;
     subagent-development)   echo "siae-subagent-development" ;;
+    finishing-branch)       echo "siae-finishing-branch" ;;
+    receiving-review)       echo "siae-receiving-review" ;;
     *)                      echo "" ;;
   esac
 }

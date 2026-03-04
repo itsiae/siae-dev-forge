@@ -1,10 +1,8 @@
 ---
 name: siae-qa
 description: >
-  Orchestrazione QA completa: legge AC da Jira, legge Test Strategy da Confluence,
-  genera Test Plan e Test Case step-based Xray-compatibili. Trigger: completamento
-  brainstorming (Fase 2) e completamento ciclo TDD (Fase 5). HARD-GATE: gli AC
-  devono essere letti prima di generare qualsiasi Test Case.
+  QA Xray: Test Plan e Test Case step-based compatibili Xray.
+  Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5), /forge-qa.
 ---
 
 # SIAE QA — Orchestrazione Xray

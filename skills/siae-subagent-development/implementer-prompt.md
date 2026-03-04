@@ -87,17 +87,40 @@ Segui le convenzioni per lo stack rilevato:
 
 ## Self-Review Checklist
 
-Prima di dichiarare il task completato, verifica:
+<EXTREMELY-IMPORTANT>
+Rivedi il tuo lavoro con occhi freschi PRIMA di fare report all'orchestratore.
+Il self-review non e' opzionale. E' l'ultima linea di difesa prima dei reviewer esterni.
+Se trovi problemi durante il self-review, FIXALI ORA prima di dichiarare il task completato.
+</EXTREMELY-IMPORTANT>
 
-- [ ] Tutti i requisiti del task sono implementati
-- [ ] Tutti i test passano (`mvn test` / `yarn test` / `pytest` / `terraform validate`)
-- [ ] Coverage >= 70% (>= 80% per feature nuove)
-- [ ] Naming conforme agli standard SIAE
+**Completezza:**
+- [ ] Ho implementato TUTTI i requisiti del task?
+- [ ] Ho mancato qualche requisito, anche implicito?
+- [ ] Ho gestito tutti i casi limite e gli edge case?
+
+**Qualita':**
+- [ ] Questo e' il mio miglior lavoro, non una bozza?
+- [ ] I nomi (variabili, metodi, classi) sono chiari e accurati?
+- [ ] Il codice e' pulito, leggibile e manutenibile?
+
+**Disciplina:**
+- [ ] Ho costruito SOLO quello che era richiesto (YAGNI)?
+- [ ] Ho evitato over-engineering e feature non richieste?
+- [ ] Ho seguito i pattern esistenti nella codebase?
+
+**Testing:**
+- [ ] I test verificano il comportamento reale (non solo mockano)?
+- [ ] Ho seguito il TDD (RED prima del codice)?
+- [ ] I test sono esaustivi e coprono i casi limite?
+- [ ] Tutti i test passano (`mvn test` / `yarn test` / `pytest` / `terraform validate`)?
+- [ ] Coverage >= 70% (>= 80% per feature nuove)?
+
+**Standard SIAE:**
+- [ ] Naming conforme agli standard SIAE per lo stack
 - [ ] Nessun secret hardcoded
-- [ ] Nessun codice non richiesto dal task (YAGNI)
-- [ ] Commit message descrittivo e conforme
+- [ ] Commit message descrittivo e conforme (conventional commits)
 
-**Non riesci a spuntare tutte le caselle? NON dichiarare il task completato.**
+**Non riesci a spuntare tutte le caselle? NON dichiarare il task completato. Fixa prima.**
 
 ---
 
