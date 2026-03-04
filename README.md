@@ -73,7 +73,7 @@ Riavvia Claude Code per attivare il plugin.
 
 > **Aggiornamento:** per aggiornare il plugin all'ultima versione:
 > ```bash
-> claude plugin update siae-devforge
+> claude plugin update "siae-devforge@siae-devforge"
 > ```
 
 ### Requisiti
