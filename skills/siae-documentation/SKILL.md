@@ -14,7 +14,7 @@ description: >
 ║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
 ║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
 ║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨  DevForge  ·  Documentation                     ║
+║              🔨  DevForge  ·  Documentation                      ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -113,7 +113,7 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                 ┃
+┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                  ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃  1.  Azione:    Pubblicazione pagina su Confluence               ┃
 ┃      File/Path: Space/{space} Parent/{parent-page}               ┃

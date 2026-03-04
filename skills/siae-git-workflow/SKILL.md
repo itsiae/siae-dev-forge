@@ -150,7 +150,86 @@ git tag PRODUZIONE && git push origin PRODUZIONE
 
 ---
 
-## 9. Anti-Rationalization Table
+## 9. Hotfix e Rollback
+
+### Hotfix in produzione
+
+Un hotfix si applica quando un bug critico in produzione non può attendere il ciclo normale (sviluppo → collaudo → certificazione → produzione).
+
+```bash
+# 1. Branch da produzione (MAI da sviluppo)
+git checkout produzione
+git pull origin produzione
+git checkout -b hotfix/{JIRA-ID}-descrizione
+
+# 2. Fix minimale + commit
+git commit -m "fix({scope}): descrizione hotfix [{JIRA-ID}]"
+git push origin hotfix/{JIRA-ID}-descrizione
+# → Apri PR verso produzione (merge commit, review obbligatoria)
+
+# 3. Merge e deploy
+git checkout produzione && git merge --no-ff hotfix/{JIRA-ID}-descrizione
+git tag PRODUZIONE && git push origin PRODUZIONE
+
+# 4. Back-merge su sviluppo (OBBLIGATORIO — non perdere il fix)
+git checkout sviluppo
+git merge --no-ff hotfix/{JIRA-ID}-descrizione
+git push origin sviluppo
+```
+
+| Regola hotfix | Dettaglio |
+|---------------|-----------|
+| Branch da **produzione** | Mai da sviluppo: include modifiche non in produzione |
+| PR obbligatoria | Anche per hotfix — nessuna eccezione |
+| Back-merge su sviluppo | Obbligatorio dopo deploy: il fix non deve perdersi |
+| Commit type `fix:` | Con JIRA ID nel messaggio |
+
+### Rollback
+
+Usa il rollback quando un deploy introduce una regressione critica e il fix immediato non è disponibile.
+
+#### Opzione 1 — Revert commit (preferita)
+
+Crea un commit che annulla le modifiche. Non riscrive la history, è tracciabile e reversibile.
+
+```bash
+# Identifica il commit da annullare
+git log produzione --oneline
+
+# Revert: crea un nuovo commit di annullamento
+git revert {SHA_COMMIT} --no-edit
+git push origin produzione
+
+# Re-tag per triggerare il re-deploy
+git tag PRODUZIONE -f
+git push origin PRODUZIONE -f
+```
+
+#### Opzione 2 — Re-tag versione precedente
+
+Se il revert non è praticabile, ri-punta il tag al commit stabile precedente.
+
+```bash
+# Identifica il commit stabile
+git log produzione --oneline
+
+# Rimuovi il tag corrente e ricrealo sul commit stabile
+git tag -d PRODUZIONE
+git push origin :refs/tags/PRODUZIONE
+git tag PRODUZIONE {SHA_COMMIT_STABILE}
+git push origin PRODUZIONE
+```
+
+| Regola rollback | Dettaglio |
+|-----------------|-----------|
+| Preferisci il **revert** | Tracciabile, reversibile, non riscrive history |
+| Opzione 2 solo se revert non praticabile | Es. commit merge con molti file conflittuali |
+| Apri ticket JIRA subito | Il rollback è temporaneo: il fix definitivo va pianificato |
+| Non lasciare produzione in rollback | Risolvi il fix nel ciclo normale (hotfix se urgente) |
+
+---
+
+## 10. Anti-Rationalization Table
 
 | Pensiero | Realta' |
 |----------|---------|

@@ -280,7 +280,7 @@ per severity in ordine decrescente di gravita'.
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — CODE REVIEW REPORT                               ║
+║  🔨 DevForge — CODE REVIEW REPORT                                ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Progetto:    <nome progetto>                                    ║
 ║  Branch:      <nome branch>                                      ║
@@ -462,7 +462,7 @@ probabilmente manca qualcosa. Scava piu' a fondo.
 ## CLASSIFICAZIONE RISCHIO OPERAZIONI
 
 | Operazione | Livello | Card richiesta |
-|-----------|---------|---------------|
+|------------|---------|----------------|
 | Lettura codice e file | 🟢 Sicuro | No |
 | Analisi diff e log git | 🟢 Sicuro | No |
 | Esecuzione test (`mvn test`, `yarn test`, `pytest`) | 🟡 Medio | Si' — Card 🟡 |

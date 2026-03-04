@@ -11,14 +11,14 @@ description: >
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
-║              🔨 DevForge · AI Competence Center                ║
-║         "Il codice si forgia. Il developer cresce."            ║
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · AI Competence Center                  ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -73,15 +73,15 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — SIAE QA · Pre-flight Check                       ║
+║  🔨 DevForge — SIAE QA · Pre-flight Check                        ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Tier attivo:   [Tier 1 MCP / Tier 3 CSV]                      ║
-║  Story Jira:    [PROJ-XXX o "da richiedere"]                    ║
-║  AC disponibili: [Si / No — leggo da description/commenti]      ║
-║  Confluence:    [Spazio QA trovato / Non configurato]           ║
+║  Tier attivo:   [Tier 1 MCP / Tier 3 CSV]                        ║
+║  Story Jira:    [PROJ-XXX o "da richiedere"]                     ║
+║  AC disponibili: [Si / No — leggo da description/commenti]       ║
+║  Confluence:    [Spazio QA trovato / Non configurato]            ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Perche': Il tier determina come vengono sincronizzati i TC     ║
-║  Se Tier 3: esporto CSV importabile manualmente in Xray         ║
+║  Perche': Il tier determina come vengono sincronizzati i TC      ║
+║  Se Tier 3: esporto CSV importabile manualmente in Xray          ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -206,7 +206,7 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 | Scenario (descrizione) | Titolo del Test Case — includi la categoria: es. `[EDGE] ...`, `[NEG] ...`, `[PROFILO] ...` |
 | Step scenario | Numero step (1, 2, 3...) |
 | Action | Cosa fa l'utente/sistema in questo step |
-| Expceted Result | Risultato atteso per questo step *(typo mantenuto per compatibilita' template SIAE)* |
+| Expected Result | Risultato atteso per questo step — **nel CSV il nome colonna e' `Expceted Result`** (typo storico del template importatore Xray SIAE) |
 | Data | Dati di test specifici (vuoto se non necessario) |
 | Automazione | `Y` se esiste test automatizzato per questo TC, `N` altrimenti |
 | NRT | `Y` (default — il TC e' un Non-Regression Test) |
@@ -217,7 +217,7 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 - `[NEG]` = scenario negativo / alternativo (errore, input non valido, dipendenza assente)
 - `[PROFILO]` = scenario specifico di ruolo / profilazione
 
-**Regola multi-step:** stesso ID = stesso Test Case con step multipli. I metadati (tipo, team, Jira, descrizione scenario) si ripetono **solo nella prima riga**. Le righe successive dello stesso TC hanno solo: ID, step numero, Action, Expceted Result.
+**Regola multi-step:** stesso ID = stesso Test Case con step multipli. I metadati (tipo, team, Jira, descrizione scenario) si ripetono **solo nella prima riga**. Le righe successive dello stesso TC hanno solo: ID, step numero, Action, Expected Result.
 
 **Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.
 
@@ -303,7 +303,7 @@ Prima di dichiarare la skill completata:
 - [ ] Ogni AC ha almeno 1 Test Case step-based
 - [ ] Presenti TC per scenari positivi, edge case, negativi e profilazioni (se applicabili)
 - [ ] I titoli Scenario usano i prefissi `[EDGE]`, `[NEG]`, `[PROFILO]` dove appropriato
-- [ ] Ogni step ha sia `Action` che `Expceted Result` (non lasciare Expected Result vuoto)
+- [ ] Ogni step ha sia `Action` che `Expected Result` (nel CSV usa la colonna `Expceted Result` — typo template)
 - [ ] Il campo `ID JIRA Story` e' presente in tutti i Test Case
 - [ ] Riepilogo copertura per categoria mostrato al developer prima dell'export
 - [ ] Campi `Automazione` e `NRT` verificati con il developer
@@ -321,10 +321,10 @@ Prima di dichiarare la skill completata:
 2. **La matrice 4a va compilata prima di scrivere qualsiasi TC** — non si genera senza aver valutato tutte e 4 le categorie
 3. **Le domande su edge case, negativi e profilazioni sono obbligatorie** — se non emergono dagli AC, si chiedono; non si assumono
 4. **Il campo `ID JIRA Story` e' obbligatorio** — senza di esso il TC non ha senso in Xray
-5. **Ogni step ha `Action` E `Expceted Result`** — step senza Expected Result = step non valido
+5. **Ogni step ha `Action` e `Expected Result`** — step senza Expected Result = step non valido
 6. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
 7. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
-8. **Il typo `Expceted Result` va mantenuto** — e' il nome colonna del template Xray SIAE, compatibilita' garantita
+8. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import. Ovunque altrove (documentazione, checklist, commenti) usare `Expected Result` (corretto).
 
 ---
 

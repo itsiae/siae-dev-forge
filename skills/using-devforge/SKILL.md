@@ -12,14 +12,14 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
-║              🔨 DevForge · AI Competence Center                ║
-║         "Il codice si forgia. Il developer cresce."            ║
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · AI Competence Center                  ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -122,7 +122,7 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 | siae-security | Codice security-sensitive, IAM, PII | Flexible | 4. Implementation |
 | siae-iac | Terraform, Terragrunt, IaC | Flexible | 4. Implementation |
 | siae-data-engineering | Glue, PySpark, Medallion, ETL | Flexible | 4. Implementation |
-| siae-frontend | Vue.js, vitest, Firebase, GA | Flexible | 4. Implementation |
+| siae-frontend | Vue.js/Angular/React, vitest, Firebase, GA | Flexible | 4. Implementation |
 | siae-tdd | Implementazione feature, bug fix | Rigid | 5. Testing |
 | siae-qa | Fine brainstorming (AC ready), fine TDD (test pronti), /forge-qa | Rigid | 5. Testing / QA |
 | siae-automation | Dopo siae-qa (TC con Automazione=Y pronti), /forge-automate | Rigid | 5. Testing / Automation |

@@ -47,8 +47,8 @@ Regole valide per **tutti** gli stack SIAE.
 
 Usa sempre i nomi italiani canonici, mai traduzioni o abbreviazioni inventate:
 
-| Ambiente | Suffisso tag | Profile Spring |
-|----------|-------------|----------------|
+| Ambiente | Suffisso tag  | Profile Spring |
+|----------|---------------|----------------|
 | **sviluppo** | `-dev.*` | `application-sviluppo.yml` |
 | **collaudo** | `-rc.*` | `application-collaudo.yml` |
 | **certificazione** | `-cert.*` | `application-certificazione.yml` |
@@ -236,7 +236,7 @@ Tutti gli stack SIAE usano logging strutturato in formato JSON.
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
-|-----------|---------|------|
+|------------|---------|------|
 | Analisi codice esistente | 🟢 Sicuro | No |
 | Suggerimento convenzione | 🟢 Sicuro | No |
 | Creazione nuovo file sorgente | 🟡 Medio | Si |

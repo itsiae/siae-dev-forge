@@ -184,15 +184,15 @@ Procedi allo Step 6.
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                   ┃
+┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                  ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    Pubblicazione pagina su Confluence                 ┃
-┃      File/Path: Space/{space-key} Parent/{parent-page-title}       ┃
+┃  1.  Azione:    Pubblicazione pagina su Confluence               ┃
+┃      File/Path: Space/{space-key} Parent/{parent-page-title}     ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche':       Crea/aggiorna pagina visibile a tutto il team      ┃
-┃  Se NO:         Il documento resta solo in locale (Markdown)       ┃
+┃  Perche':       Crea/aggiorna pagina visibile a tutto il team    ┃
+┃  Se NO:         Il documento resta solo in locale (Markdown)     ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra                ┃
+┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
@@ -200,15 +200,15 @@ Se l'utente aggiorna una pagina esistente, la card diventa:
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                   ┃
+┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                  ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    Aggiornamento pagina esistente su Confluence       ┃
-┃      File/Path: Space/{space-key} Page/{page-title} (ID: {id})     ┃
+┃  1.  Azione:    Aggiornamento pagina esistente su Confluence     ┃
+┃      File/Path: Space/{space-key} Page/{page-title} (ID: {id})   ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche':       Sovrascrive il contenuto della pagina esistente    ┃
-┃  Se NO:         La pagina Confluence resta invariata               ┃
+┃  Perche':       Sovrascrive il contenuto della pagina esistente  ┃
+┃  Se NO:         La pagina Confluence resta invariata             ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra                ┃
+┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
@@ -313,12 +313,12 @@ Al termine della generazione, mostra un riepilogo:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — Doc Generator · Riepilogo                       ║
+║  🔨 DevForge — Doc Generator · Riepilogo                         ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Documento:    {tipo} — {nome sistema/componente}               ║
-║  Sezioni:      {N} sezioni compilate                            ║
-║  Diagrammi:    {N} diagrammi Mermaid generati                   ║
-║  Output:       {percorso file Markdown}                         ║
-║  Confluence:   {pubblicato / non richiesto}                     ║
+║  Documento:    {tipo} — {nome sistema/componente}                ║
+║  Sezioni:      {N} sezioni compilate                             ║
+║  Diagrammi:    {N} diagrammi Mermaid generati                    ║
+║  Output:       {percorso file Markdown}                          ║
+║  Confluence:   {pubblicato / non richiesto}                      ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```

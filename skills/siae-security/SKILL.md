@@ -170,13 +170,13 @@ Quando un file contiene pattern sospetti, mostra la card:
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🚨 CRITICO  ·  Secret rilevato                      ┃
+┃  🔨 DevForge — 🚨 CRITICO  ·  Secret rilevato                    ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    Rilevato pattern segreto nel file                  ┃
-┃      File/Path: [percorso del file]                                ┃
+┃  1.  Azione:    Rilevato pattern segreto nel file                ┃
+┃      File/Path: [percorso del file]                              ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche':      Il file contiene potenziali credenziali             ┃
-┃  Se NO:        Le credenziali potrebbero finire nel repository     ┃
+┃  Perche':      Il file contiene potenziali credenziali           ┃
+┃  Se NO:        Le credenziali potrebbero finire nel repository   ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
@@ -240,7 +240,7 @@ Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
-|-----------|---------|------|
+|------------|---------|------|
 | Analisi codice per vulnerabilita' | 🟢 Sicuro | No |
 | Suggerimento fix di sicurezza | 🟢 Sicuro | No |
 | Modifica codice per fix sicurezza | 🟡 Medio | Si |

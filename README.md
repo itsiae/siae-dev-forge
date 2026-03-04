@@ -2,14 +2,14 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
-║              🔨 DevForge · AI Competence Center                ║
-║         "Il codice si forgia. Il developer cresce."            ║
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · AI Competence Center                  ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -181,7 +181,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Trigger:** Inizio sessione, apertura nuovo progetto
 - **Funzione:** Rileva automaticamente factory, tech stack e regole di progetto analizzando i file nella root:
   - `pom.xml` → Java/Spring Boot (parent POM `it.siae:spring-boot-2-parent-pom`, JUnit5, MapStruct, Lombok)
-  - `package.json` → TypeScript (controlla Vue.js per frontend, Express per backend Lambda)
+  - `package.json` → TypeScript (controlla Vue.js/Angular/React per frontend, Express per backend Lambda)
   - `requirements.txt` / Glue → Python/Data Engineering (PySpark, Medallion)
   - `*.tf` / `terragrunt.hcl` → IaC/Terraform (Terragrunt multi-module)
 - **Output:** Messaggio di benvenuto con stack rilevato e skill disponibili
@@ -206,7 +206,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Trigger:** Design sistema, pattern C4, decisioni AWS
 - **Contenuto:**
   - Modello C4 (Context → Container → Component → Code)
-  - Pattern osservati nei repo SIAE: microservizi Java/OpenShift, serverless TS/Lambda, data pipeline Medallion, IaC Terragrunt, frontend SPA Vue.js
+  - Pattern osservati nei repo SIAE: microservizi Java/OpenShift, serverless TS/Lambda, data pipeline Medallion, IaC Terragrunt, frontend SPA Vue.js (standard) / Angular / React
   - Mappa servizi AWS usati: Lambda, Glue, S3, DynamoDB, RDS, SNS, SQS, Cognito, KMS, CloudFront, EventBridge
   - Template HLD con sezioni predefinite
 - **Reference files:** `reference/aws-patterns.md`, `reference/c4-template.md`
@@ -339,10 +339,10 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 
 #### `siae-frontend` — Frontend SPA (Fase 4)
 
-- **Trigger:** Vue.js, vitest, Firebase, Google Analytics
-- **Stack:** Vue.js 3 + TypeScript + Pinia + PrimeVue
-- **Deploy:** S3 bucket + CloudFront distribution
-- **Test:** vitest + @testing-library/vue, coverage >= 70%
+- **Trigger:** Vue.js / Angular / React, vitest, Firebase, Google Analytics
+- **Stack standard SIAE:** Vue.js 3 + TypeScript + Pinia + PrimeVue. Angular e React supportati dove già adottati.
+- **Deploy:** S3 bucket + CloudFront distribution (tutti i framework)
+- **Test:** vitest + @testing-library/{vue|angular|react}, coverage >= 70%
 - **Config esterne:** Firebase Remote Config + log
 - **Error tracking:** Google Analytics con differenziazione errori server/client/network
 - **Brand SIAE:** `#000000`, `#2F3546`, `#00B4F9`, `#F6F6F6`, font Roboto
@@ -474,7 +474,7 @@ siae-devforge/
 │   │   └── SKILL.md
 │   ├── siae-data-engineering/   # Glue, PySpark, Medallion
 │   │   └── SKILL.md
-│   ├── siae-frontend/           # Vue.js 3, vitest, Firebase
+│   ├── siae-frontend/           # Vue.js 3 (standard), Angular, React, vitest, Firebase
 │   │   └── SKILL.md
 │   ├── siae-tdd/                # TDD obbligatorio
 │   │   ├── SKILL.md

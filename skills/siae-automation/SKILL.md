@@ -12,14 +12,14 @@ description: >
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗    ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║    ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║    ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝    ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝     ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝      ║
-║              🔨 DevForge · AI Competence Center                ║
-║         "Il codice si forgia. Il developer cresce."            ║
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · AI Competence Center                  ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -64,17 +64,17 @@ Se nessun segnale, chiedi: "Stai automatizzando una app mobile (iOS/Android) o u
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — SIAE Automation · Pre-flight Check               ║
+║  🔨 DevForge — SIAE Automation · Pre-flight Check                ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Canale:       [Mobile iOS / Mobile Android / Web]              ║
-║  Tier:         [Tier 1 / 2 / 3]                                 ║
-║  TL Xray:      [Trovata XP-XXX / Non trovata / Da CSV]          ║
-║  TC totali TL: [N TC nella Test List]                           ║
-║  appium-mcp:   [Disponibile / Non disponibile]                  ║
-║  BrowserStack: [Configurato / Mancante BROWSERSTACK_*]          ║
-║  Xray sync:    [MCP / CSV]                                      ║
+║  Canale:       [Mobile iOS / Mobile Android / Web]               ║
+║  Tier:         [Tier 1 / 2 / 3]                                  ║
+║  TL Xray:      [Trovata XP-XXX / Non trovata / Da CSV]           ║
+║  TC totali TL: [N TC nella Test List]                            ║
+║  appium-mcp:   [Disponibile / Non disponibile]                   ║
+║  BrowserStack: [Configurato / Mancante BROWSERSTACK_*]           ║
+║  Xray sync:    [MCP / CSV]                                       ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Perche': Leggo prima la TL, poi propongo il piano automation.  ║
+║  Perche': Leggo prima la TL, poi propongo il piano automation.   ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -494,18 +494,18 @@ Se il sync non è avvenuto: usa il fallback JUnit XML (vedi `reference/cypress-x
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — SIAE Automation · Report                         ║
+║  🔨 DevForge — SIAE Automation · Report                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Story:       PROJ-XXX                                          ║
-║  Test Exec:   XE-456 [nuova / aggiornata]                       ║
-║  Canale:      Mobile Android / Web                              ║
+║  Story:       PROJ-XXX                                           ║
+║  Test Exec:   XE-456 [nuova / aggiornata]                        ║
+║  Canale:      Mobile Android / Web                               ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  PASS:   N TC                                                   ║
-║  FAIL:   N TC  → [TC con step fallito e screenshot]             ║
-║  SKIP:   N TC  → [TC non eseguiti e motivo]                     ║
-║  ESCLUSI: N TC → [TC con ROI basso esclusi in Fase 3]           ║
+║  PASS:   N TC                                                    ║
+║  FAIL:   N TC  → [TC con step fallito e screenshot]              ║
+║  SKIP:   N TC  → [TC non eseguiti e motivo]                      ║
+║  ESCLUSI: N TC → [TC con ROI basso esclusi in Fase 3]            ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Xray sync:  Completato automaticamente / CSV generato          ║
+║  Xray sync:  Completato automaticamente / CSV generato           ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
