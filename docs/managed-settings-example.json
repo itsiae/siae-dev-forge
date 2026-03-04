@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./.aws/credentials)",
+      "Read(./secrets/**)"
+    ],
+    "defaultMode": "default"
+  },
+
+  "companyAnnouncements": [
+    "SIAE DevForge attivo. Usa /forge-plan, /forge-test, /forge-review, /forge-doc, /forge-rca.",
+    "Ricorda: branch policy sviluppo > collaudo > certificazione > produzione. Mai push diretto."
+  ],
+
+  "attribution": {
+    "commit": "\nCo-Authored-By: SIAE DevForge <ai-cc@siae.it>"
+  },
+
+  "strictKnownMarketplaces": [
+    {
+      "source": "github",
+      "repo": "itsiae/siae-dev-forge"
+    },
+    {
+      "source": "github",
+      "repo": "thedotmack/claude-mem"
+    }
+  ],
+
+  "allowManagedMcpServersOnly": false,
+
+  "allowedMcpServers": [
+    { "serverName": "atlassian" },
+    { "serverName": "github" },
+    { "serverName": "playwright" }
+  ],
+
+  "deniedMcpServers": [],
+
+  "language": "italian"
+}
