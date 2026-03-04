@@ -1,0 +1,1 @@
+Scrivi i test per il servizio RipartizioneService in Java. Il servizio calcola la ripartizione dei compensi tra gli aventi diritto in base alle quote percentuali. Deve gestire arrotondamenti, quote che non sommano a 100%, e il caso di un singolo avente diritto. Il progetto usa JUnit 5, Mockito e AssertJ.

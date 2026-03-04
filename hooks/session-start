@@ -26,6 +26,13 @@ BANNER
 # Read using-devforge content
 using_devforge_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/SKILL.md" 2>&1 || echo "Error reading using-devforge skill")
 
+# Generate dynamic skill catalog using skills-core.js
+# Falls back to empty string if node is not available or the script fails
+skill_catalog=""
+if command -v node >/dev/null 2>&1; then
+    skill_catalog=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" 2>/dev/null || echo "")
+fi
+
 # Escape string for JSON embedding using bash parameter substitution.
 # Each ${s//old/new} is a single C-level pass - orders of magnitude
 # faster than the character-by-character loop this replaces.
@@ -40,7 +47,15 @@ escape_for_json() {
 }
 
 using_devforge_escaped=$(escape_for_json "$using_devforge_content")
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}\n</EXTREMELY_IMPORTANT>"
+
+# Append dynamic catalog if available
+catalog_section=""
+if [ -n "$skill_catalog" ]; then
+    skill_catalog_escaped=$(escape_for_json "$skill_catalog")
+    catalog_section="\\n\\n**Dynamic Skill Catalog (auto-generated):**\\n\\n${skill_catalog_escaped}"
+fi
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # Keep both shapes for compatibility:

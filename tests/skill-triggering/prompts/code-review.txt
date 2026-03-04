@@ -1,0 +1,1 @@
+Ho finito l'implementazione del nuovo endpoint per la registrazione delle opere. Ho creato il controller, il service, il DTO e i test. Puoi fare una review del codice? Il progetto e' un microservizio Spring Boot nel package it.siae.opere.

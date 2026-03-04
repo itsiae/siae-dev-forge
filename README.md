@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 15 skill, 7 comandi, 3 agent e 2 hook, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 18 skill, 8 comandi, 3 agent, 2 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.0.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -27,13 +27,15 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (15)](#skill-15)
+- [Skill (18)](#skill-18)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
+  - [Skill Cross-cutting e Meta](#skill-cross-cutting-e-meta)
 - [Agent (3)](#agent-3)
 - [Hook (2)](#hook-2)
 - [Design System Visivo](#design-system-visivo)
+- [Test Suite](#test-suite)
 - [Struttura del Repository](#struttura-del-repository)
 - [Stack Supportati](#stack-supportati)
 - [Integrazione Atlassian (MCP)](#integrazione-atlassian-mcp)
@@ -125,6 +127,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-qa` | Export QA Xray: legge AC da Jira, genera Test Plan e Test Case step-based (Xray API o CSV) | `siae-qa` |
 | `/forge-automate` | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web), sincronizza risultati | `siae-automation` |
 | `/forge-review` | Code review contro standard SIAE (Qodana, security, naming, architettura) | `code-reviewer` + `spec-reviewer` |
+| `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality) | `siae-subagent-development` |
 | `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
 | `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
 
@@ -159,7 +162,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (15)
+## Skill (18)
 
 ### Meta-skill
 
@@ -349,6 +352,64 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Vincoli:** No CSS inline, CSS variables, responsive mobile-first
 - **Tipo:** Flexible
 
+### Skill Cross-cutting e Meta
+
+#### `siae-verification` — Protocollo di Verifica Pre-Completamento (Cross-cutting)
+
+- **Trigger:** Prima di qualsiasi claim di completamento: commit, PR, task complete, "fatto", "fixato"
+- **Protocollo a 5 step:** IDENTIFICA → ESEGUI → LEGGI → VERIFICA → AFFERMA
+- **Iron Law:** NESSUN CLAIM DI COMPLETAMENTO SENZA EVIDENZA FRESCA
+- **Tabella anti-razionalizzazione:** 12 pensieri di bypass riconosciuti e bloccati
+- **Reference file:** `reference/common-failures.md` — claim comuni per stack con comandi e errori tipici
+- **Tipo:** Rigid
+
+#### `siae-subagent-development` — Orchestratore Implementazione con Subagent (Fase 4)
+
+- **Trigger:** Piano implementativo presente con task indipendenti, `/forge-implement`
+- **Processo:** Per ogni task del piano → implementer subagent → spec-reviewer → code-quality-reviewer
+- **Distrust pattern:** reviewer indipendenti con "L'implementer ha finito sospettosamente in fretta"
+- **Max 2 iterazioni** fix-review per stadio, poi escalation all'utente
+- **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per implementer, `REQUIRED SUB-SKILL: siae-verification` per tutti
+- **Tipo:** Rigid
+
+#### `siae-writing-skills` — Guida per Creare Skill DevForge (Meta)
+
+- **Trigger:** Creazione nuove skill, miglioramento skill esistenti
+- **CSO (Claude Search Optimization):** come scrivere description efficaci
+- **Principi di persuasione:** 7 principi Cialdini adattati a DevForge (compliance 33% → 72%)
+- **TDD per documentazione:** RED-GREEN-REFACTOR applicato a skill
+- **Reference files:**
+  - `reference/persuasion-principles.md` — 7 principi con esempi
+  - `reference/testing-skills.md` — metodologia TDD per skill
+  - `reference/skill-template.md` — template SKILL.md pronto all'uso
+- **Tipo:** Flexible
+
+---
+
+## Test Suite
+
+Il plugin include una test suite per validare la struttura e il funzionamento delle skill.
+
+```bash
+# Esegui tutti i test
+cd siae-dev-forge && bash tests/run-all.sh
+```
+
+### Suite disponibili
+
+| Suite | Cosa testa | Comando |
+|-------|-----------|---------|
+| **Structure Validation** | SKILL.md presente con frontmatter valido per ogni skill | Automatico |
+| **Dynamic Catalog** | `lib/skills-core.js` rileva tutte le skill | Automatico |
+| **Commands Validation** | Ogni comando ha frontmatter valido | Automatico |
+| **Skill Triggering** | Prompt naturali attivano le skill corrette (richiede Claude CLI) | `tests/skill-triggering/run-all.sh` |
+
+### Aggiungere un prompt di test
+
+1. Crea un file `.txt` in `tests/skill-triggering/prompts/`
+2. Scrivi un prompt realistico in italiano che dovrebbe attivare una skill specifica
+3. Aggiungi il mapping in `tests/skill-triggering/run-all.sh` nella funzione `get_expected_skill`
+
 ---
 
 ## Agent (3)
@@ -450,6 +511,9 @@ siae-devforge/
 │   ├── session-start            # Hook bootstrap: inietta using-devforge al boot
 │   └── pre-commit               # Hook quality gate: 5 check prima di ogni commit
 │
+├── lib/
+│   └── skills-core.js           # Discovery dinamica skill e catalogo auto-generato
+│
 ├── skills/
 │   ├── using-devforge/          # Meta-skill: sistema operativo del plugin
 │   │   └── SKILL.md
@@ -493,12 +557,27 @@ siae-devforge/
 │   │   ├── SKILL.md
 │   │   └── template/
 │   │       └── rca-template.md
-│   └── siae-documentation/      # HLD, LLD, API doc
+│   ├── siae-documentation/      # HLD, LLD, API doc
+│   │   ├── SKILL.md
+│   │   └── template/
+│   │       ├── hld-template.md
+│   │       ├── lld-template.md
+│   │       └── api-doc-template.md
+│   ├── siae-verification/       # Protocollo verifica pre-completamento
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   │       └── common-failures.md
+│   ├── siae-subagent-development/ # Orchestratore implementazione con subagent
+│   │   ├── SKILL.md
+│   │   ├── implementer-prompt.md
+│   │   ├── spec-reviewer-prompt.md
+│   │   └── code-quality-reviewer-prompt.md
+│   └── siae-writing-skills/     # Guida per creare nuove skill
 │       ├── SKILL.md
-│       └── template/
-│           ├── hld-template.md
-│           ├── lld-template.md
-│           └── api-doc-template.md
+│       └── reference/
+│           ├── persuasion-principles.md
+│           ├── testing-skills.md
+│           └── skill-template.md
 │
 ├── commands/
 │   ├── forge-plan.md            # /forge-plan → siae-brainstorming
@@ -506,6 +585,7 @@ siae-devforge/
 │   ├── forge-qa.md              # /forge-qa → siae-qa
 │   ├── forge-automate.md        # /forge-automate → siae-automation
 │   ├── forge-review.md          # /forge-review → code-reviewer + spec-reviewer
+│   ├── forge-implement.md       # /forge-implement → siae-subagent-development
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
 │   └── forge-rca.md             # /forge-rca → siae-debugging
 │
@@ -516,6 +596,13 @@ siae-devforge/
 │
 ├── design-system/
 │   └── devforge-visual.md       # Banner, pre-flight cards, codifica rischio
+│
+├── tests/
+│   ├── run-all.sh               # Runner principale per tutti i test
+│   └── skill-triggering/
+│       ├── run-all.sh           # Esegue tutti i prompt di test
+│       ├── run-test.sh          # Test singolo: prompt → skill invocata
+│       └── prompts/             # Prompt di test in italiano (scenari SIAE)
 │
 └── docs/
     └── plans/                   # Design doc generati dal brainstorming
@@ -556,7 +643,7 @@ Per configurare MCP Atlassian, segui la [documentazione ufficiale](https://devel
 
 ### Principi di Design
 
-1. **Lazy Loading** — Solo la meta-skill `using-devforge` viene caricata al boot. Tutte le altre skill vengono invocate on-demand via Skill tool, minimizzando il consumo di contesto
+1. **Lazy Loading + Dynamic Discovery** — Solo la meta-skill `using-devforge` viene caricata al boot, con un catalogo skill generato dinamicamente da `lib/skills-core.js`. Tutte le skill vengono invocate on-demand via Skill tool, minimizzando il consumo di contesto. Nuove skill aggiunte nella directory `skills/` appaiono automaticamente al prossimo boot
 2. **Catena Ordinata** — Le skill rispettano l'ordine SDLC. Le skill di processo (fasi 1-3, 5-6) precedono sempre quelle di implementazione (fase 4)
 3. **Rigid vs Flexible** — Le skill di processo (TDD, debugging, brainstorming, git-workflow) sono rigide (segui esattamente). Le skill di dominio (architecture, code-standards, security, iac, data-engineering, frontend, documentation) sono flessibili (adatta al contesto)
 4. **Anti-Rationalization** — Ogni skill rigida include una tabella di scuse comuni che Claude riconosce e blocca, prevenendo scorciatoie

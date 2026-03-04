@@ -1,0 +1,1 @@
+Devo creare un branch per la feature DIRITTI-456 che aggiunge il supporto per le licenze musicali internazionali. Il branch deve partire da sviluppo. Dopo l'implementazione dovro' fare merge su sviluppo e poi promuovere a collaudo.

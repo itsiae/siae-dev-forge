@@ -1,0 +1,1 @@
+Devo implementare una nuova feature per il servizio di gestione diritti d'autore. L'idea e' di aggiungere un endpoint REST che permetta di cercare le opere musicali per ISWC e restituire i titolari dei diritti con le rispettive quote. Il servizio gira su Spring Boot e usa DynamoDB come database. Come procediamo?

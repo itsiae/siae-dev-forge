@@ -1,0 +1,1 @@
+Genera l'HLD per il microservizio di gestione delle licenze musicali. Il servizio espone API REST, usa DynamoDB per la persistenza, SNS per le notifiche, e Cognito per l'autenticazione. E' deployato su ECS Fargate dietro un ALB.
