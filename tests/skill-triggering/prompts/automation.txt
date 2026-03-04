@@ -1,0 +1,1 @@
+I Test Case Xray per la storia DIRITTI-567 sono pronti, alcuni hanno il flag Automazione=Y. Devo automatizzare i test end-to-end: l'app mobile gira su iOS e Android e dobbiamo eseguire su BrowserStack. Genera i test appium e sincronizza i risultati nella Test Execution Xray.

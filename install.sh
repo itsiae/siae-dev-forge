@@ -41,7 +41,8 @@ if claude plugin list 2>/dev/null | grep -q "siae-devforge"; then
   warning "Plugin già installato, aggiorno"
   claude plugin update siae-devforge 2>&1 && info "Plugin aggiornato" || warning "Aggiornamento non necessario"
 else
-  claude plugin install "siae-devforge@github:${GITHUB_REPO}"
+  claude plugin marketplace add "${GITHUB_REPO}"
+  claude plugin install siae-devforge --scope user
   info "Plugin 'siae-devforge' installato da GitHub"
 fi
 

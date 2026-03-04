@@ -1,0 +1,1 @@
+Ho appena aperto un nuovo progetto, e' un servizio Spring Boot per la gestione delle opere musicali. Usa Maven con il parent POM SIAE, ha DynamoDB e deploy su OpenShift. Che stack ha rilevato? Quali skill sono disponibili per questo progetto?
