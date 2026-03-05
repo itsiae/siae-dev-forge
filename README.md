@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 22 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 23 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.1.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (22)](#skill-22)
+- [Skill (23)](#skill-23)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -94,7 +94,7 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 1. Init & Setup    →  2. Req & Design   →  3. Branching
        ↓                     ↓                    ↓
   siae-onboarding     siae-brainstorming    siae-git-workflow
-                      siae-architecture     siae-git-worktrees
+  siae-codebase-map   siae-architecture     siae-git-worktrees
                                             siae-finishing-branch
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
@@ -126,6 +126,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 | Comando | Descrizione | Skill/Agent invocato |
 |---------|-------------|---------------------|
+| `/forge-map` | Mappa e documenta il codebase con subagent Sonnet in parallelo. Genera `docs/CODEBASE_MAP.md` | `siae-codebase-map` |
 | `/forge-plan` | Brainstorming socratico + piano implementativo con stima SP e task JIRA | `siae-brainstorming` |
 | `/forge-test` | Genera suite test TDD seguendo RED-GREEN-REFACTOR | `siae-tdd` |
 | `/forge-qa` | Export QA Xray: legge AC da Jira, genera Test Plan e Test Case step-based (Xray API o CSV) | `siae-qa` |
@@ -138,6 +139,10 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 ### Uso
 
 ```
+> /forge-map
+# Claude scansiona il codebase con tiktoken, raggruppa i file per modulo/layer,
+# dispatcha subagent Sonnet in parallelo, sintetizza in docs/CODEBASE_MAP.md
+
 > /forge-plan
 # Claude avvia il brainstorming socratico: esplora contesto, fa domande,
 # propone 2-3 approcci con trade-off, produce design doc e piano implementativo
@@ -166,7 +171,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (22)
+## Skill (23)
 
 ### Meta-skill
 
@@ -193,6 +198,24 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   - `*.tf` / `terragrunt.hcl` → IaC/Terraform (Terragrunt multi-module)
 - **Output:** Messaggio di benvenuto con stack rilevato e skill disponibili
 - **Reference file:** `skills/siae-onboarding/reference/factory-configs.md` — configurazioni per factory
+
+#### `siae-codebase-map` — Mappa architetturale del codebase (Fase 1: Init)
+
+- **Trigger:** `/forge-map`, onboarding su progetto sconosciuto, codebase > 50 file senza `docs/CODEBASE_MAP.md`
+- **Principio:** Claude Opus orchestra, Sonnet legge. Nessun file del codebase viene letto da Opus direttamente
+- **Processo a 7 step:**
+  1. Verifica se `docs/CODEBASE_MAP.md` esiste e se ci sono modifiche da `last_mapped`
+  2. Scansione con `scripts/scan-codebase.py` (tiktoken) — albero file con conteggio token
+  3. Pianifica i subagent raggruppando per modulo/layer (budget: 150k token ciascuno)
+  4. Dispatcha TUTTI i subagent Sonnet in parallelo (singolo messaggio con chiamate Task)
+  5. Sintetizza i report: merge, deduplicazione, cross-cutting concerns, diagramma Mermaid
+  6. Scrive `docs/CODEBASE_MAP.md` con frontmatter `last_mapped`, `total_files`, `total_tokens`
+  7. Aggiorna `CLAUDE.md` con sezione architettura
+- **Strategia per stack SIAE:** Java per modulo Maven, TS per layer (handlers/services/repositories), Python/Glue per job, IaC per ambiente, Vue per feature/dominio
+- **Update mode:** se mappa esiste, dispatcha subagent solo per moduli modificati da git
+- **Integrazione `siae-onboarding`:** suggerisce `/forge-map` se repo > 50 file senza mappa
+- **Script:** `skills/siae-codebase-map/scripts/scan-codebase.py` — scanner Python con tiktoken, ignora `.gitignore`
+- **Tipo:** Flexible
 
 #### `siae-brainstorming` — Design validato prima del codice (Fase 2: Design)
 
@@ -657,6 +680,10 @@ siae-devforge/
 │   │   ├── SKILL.md
 │   │   └── reference/
 │   │       └── factory-configs.md
+│   ├── siae-codebase-map/       # Mappa architetturale con subagent Sonnet
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       └── scan-codebase.py # Scanner tiktoken (basato su Cartographer MIT)
 │   ├── siae-brainstorming/      # Brainstorming socratico
 │   │   └── SKILL.md
 │   ├── siae-architecture/       # Pattern C4, AWS, HLD
@@ -718,6 +745,7 @@ siae-devforge/
 │           └── skill-template.md
 │
 ├── commands/
+│   ├── forge-map.md             # /forge-map → siae-codebase-map
 │   ├── forge-plan.md            # /forge-plan → siae-brainstorming
 │   ├── forge-test.md            # /forge-test → siae-tdd
 │   ├── forge-qa.md              # /forge-qa → siae-qa
@@ -789,7 +817,7 @@ Ogni parola nel context window **costa token ad ogni singolo messaggio** della s
 
 | Tecnica | Implementazione | Impatto |
 |---------|----------------|---------|
-| **Lazy Loading** | `SessionStart` inietta solo `using-devforge`. Le 19 skill operative sono caricate on-demand via Skill tool, solo quando servono | Le skill non usate non pesano nulla in sessione |
+| **Lazy Loading** | `SessionStart` inietta solo `using-devforge`. Le 20 skill operative sono caricate on-demand via Skill tool, solo quando servono | Le skill non usate non pesano nulla in sessione |
 | **Sub-skill Extraction** | `siae-verification` e' una skill separata, caricata solo su commit/PR/claim di completamento — non sempre in context | Meno token in boot, caricata solo quando serve |
 | **Description Trap Fix** | Le description YAML devono essere trigger-only: Claude carica il corpo completo solo quando serve, non segue la description come sostituto | Compliance: Claude legge sempre il corpo della skill |
 
