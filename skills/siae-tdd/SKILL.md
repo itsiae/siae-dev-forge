@@ -1,9 +1,6 @@
 ---
 name: siae-tdd
 description: >
-  Enforces SIAE TDD workflow: RED-GREEN-REFACTOR con JUnit5/Mockito (Java),
-  Jest (TS backend), vitest + @testing-library (TS frontend Vue/Angular/React — integra siae-frontend),
-  pytest (Python). Rileva automaticamente il tipo di codice (FE/BE/Java/Python/IaC).
   Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice.
 ---
 
@@ -30,7 +27,7 @@ description: >
 NESSUN CODICE DI PRODUZIONE SENZA UN TEST FALLENTE PRIMA
 ```
 
-**"Violare la lettera delle regole E' violare lo spirito delle regole."**
+**Violare la lettera di questa regola significa violare lo spirito della regola.**
 
 Hai scritto codice prima del test? **Cancellalo. Ricomincia.**
 
