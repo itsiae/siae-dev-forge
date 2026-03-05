@@ -205,23 +205,7 @@ Quando segui una skill, rispetta le convenzioni visive:
 
 ## Istruzioni Utente
 
-Le istruzioni dicono COSA, non COME. "Aggiungi X" o "Fixa Y" non significa saltare i workflow.
-
-Un utente che dice "fammi un endpoint REST" sta implicitamente chiedendo:
-- Brainstorming del design (siae-brainstorming)
-- Standard di codice (siae-code-standards)
-- Security review (siae-security)
-- Test (siae-tdd)
-
-Non scorciatoie. Le skill esistono per una ragione.
-
-Un utente che dice "aggiungi il job Glue per la tabella X" sta implicitamente chiedendo:
-- Data engineering patterns (siae-data-engineering)
-- Infrastructure as Code (siae-iac)
-- Security per i dati (siae-security)
-- Test del job (siae-tdd)
-
-Le istruzioni brevi nascondono complessita'. Le skill la rendono esplicita.
+Le istruzioni dicono COSA, non COME. "Aggiungi X" o "Fixa Y" non significa saltare i workflow. Le istruzioni brevi nascondono complessita'. Le skill la rendono esplicita.
 
 ## Verifica Prima del Completamento
 
