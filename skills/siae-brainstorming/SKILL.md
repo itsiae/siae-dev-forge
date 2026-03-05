@@ -83,9 +83,42 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
 ### 6. REQUIRED: Transizione al piano implementativo
 
-- Includi nel design doc (step 5) una sezione **Piano Implementativo** con step atomici
-- Il prossimo passo nella catena SDLC e' `siae-git-workflow` per creare il feature branch
-- NON invocare skill di implementazione direttamente. Segui la catena: brainstorming → git-workflow → implementazione
+Includi nel design doc (step 5) una sezione **Piano Implementativo** con step atomici.
+
+**Ogni piano DEVE iniziare con questo header:**
+
+```markdown
+# [Nome Feature] — Piano Implementativo
+
+> **Per Claude:** REQUIRED SUB-SKILL: Usa `siae-subagent-development` per implementare questo piano task per task.
+
+**Goal:** [Una frase su cosa costruisce]
+**Architettura:** [2-3 frasi sull'approccio]
+**Stack:** [Tecnologie principali]
+
+---
+```
+
+Questo header garantisce che il Claude che aprirà il piano in una nuova sessione sappia quale skill usare senza doverlo ricordare.
+
+**Dopo aver salvato e committato il piano, offri la scelta di esecuzione:**
+
+```
+Piano salvato in docs/plans/<filename>.md. Come vuoi procedere?
+
+1. Subagent (questa sessione) — dispatcho subagent freschi per ogni task,
+   review tra i task, iterazione rapida
+
+2. Sessione separata — apri una nuova sessione con il file piano,
+   esecuzione a batch con checkpoint
+
+Quale preferisci?
+```
+
+- Se **Subagent**: `REQUIRED SUB-SKILL: siae-subagent-development`
+- Se **Sessione separata**: guida l'utente ad aprire una nuova sessione nella directory del progetto e caricare il piano
+
+NON invocare skill di implementazione senza questa scelta esplicita.
 
 ---
 
@@ -198,9 +231,13 @@ Se l'utente conferma, crea il ticket con `createJiraIssue`.
 ## Stato Terminale
 
 ```
-Dopo il brainstorming, il prossimo passo nella catena SDLC e' SEMPRE siae-git-workflow.
-NON invocare siae-tdd, siae-code-standards, o altre skill di implementazione direttamente.
+Output del brainstorming:
+  1. Design doc approvato con piano implementativo (docs/plans/)
+  2. Piano con header REQUIRED SUB-SKILL embedded
+  3. Scelta esecuzione offerta: subagent (questa sessione) o sessione separata
+
+NON invocare siae-tdd, siae-code-standards, o altre skill di implementazione
+senza aver prima offerto la scelta di esecuzione.
 ```
 
-Il brainstorming produce un design doc approvato con piano implementativo incluso.
 L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-workflow`.

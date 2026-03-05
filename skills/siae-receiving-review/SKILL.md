@@ -26,13 +26,30 @@ description: >
 
 ## Il Principio Fondamentale
 
-Il feedback di code review è un **regalo**, non un attacco.
-Il reviewer ha investito tempo e attenzione. Merita una risposta strutturata.
+La code review richiede **valutazione tecnica**, non performance emotiva.
 
 **Mindset corretto:**
 - Il reviewer ha visto qualcosa che tu non hai visto — ascolta prima di difenderti
 - "Non sono d'accordo" è legittimo — ma richiede argomentazione tecnica, non emotiva
 - Il silenzio non è una risposta — ogni commento richiede una reazione esplicita
+
+---
+
+## Risposte Vietate
+
+**MAI:**
+- `"Hai assolutamente ragione!"` — performance emotiva, non tecnica
+- `"Ottimo punto!"` / `"Ottimo feedback!"` — performativo
+- `"Lo implemento subito"` — prima di aver verificato
+- Qualsiasi espressione di gratitudine (`"Grazie"`, `"Grazie per il feedback"`)
+
+**INVECE:**
+- Riformula il requisito tecnico: `"Capisco — il problema è X. Fix in corso."`
+- Fai domande di chiarimento se non capisci
+- Opponi resistenza tecnica argomentata se il suggerimento è sbagliato
+- Inizia a lavorare (le azioni parlano più delle parole)
+
+**Se stai per scrivere "Grazie": CANCELLALO.** Descrivi il fix invece.
 
 ---
 
@@ -167,6 +184,20 @@ che questo codice crea? O è una preferenza stilistica? Così posso
 rispondere nel modo più utile.
 ```
 
+### Il reviewer chiede una feature "professionale"
+
+```
+SE il reviewer suggerisce "implementa correttamente" / "aggiungi X feature":
+  grep nel codebase per utilizzi reali dell'endpoint/metodo
+
+  SE non usato: "Questo non viene chiamato. Rimuoviamo (YAGNI)?"
+  SE usato: implementa correttamente
+```
+
+Non implementare mai "perché si fa così" senza verificare se la feature è realmente usata.
+
+---
+
 ### Il reviewer ha torto
 
 Capita. Rispondi con evidenza, non con certezza.
@@ -191,6 +222,8 @@ dimostra questo comportamento?
 | "Ho gia' risposto verbalmente" | Le risposte verbali non restano nella storia. Scrivi. |
 | "Il reviewer e' pignolo" | La pignoleria in review e' una virtu'. Rispondi con rispetto. |
 | "Fixo solo i REQUIRED e basta" | Le SUGGESTION di qualita' migliorano il codice nel tempo. |
+| "Rispondo 'Ottimo punto' e implemento" | Performance emotiva. Di' cosa hai fatto, non come ti senti. |
+| "Aggiungo la feature, il reviewer ha esperienza" | Verifica prima se e' usata. YAGNI vale anche in review. |
 
 ---
 
