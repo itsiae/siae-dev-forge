@@ -241,3 +241,26 @@ senza aver prima offerto la scelta di esecuzione.
 ```
 
 L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-workflow`.
+
+---
+
+## Permission Denied Handling
+
+**Step 1 (Esplora contesto):** se Bash non disponibile per `git log`, usa `Glob("docs/plans/")` e `Read` sui design doc esistenti come contesto alternativo. I commit recenti non sono accessibili senza Bash — procedi con il contesto disponibile dai file.
+
+**Se Write viene negato (Step 5):**
+1. Presenta il design doc completo come output testuale formattato in chat
+2. Indica il path suggerito: `docs/plans/YYYY-MM-DD-<topic>-design.md`
+3. L'utente puo' copiare il contenuto manualmente
+4. Procedi a Step 6 (transizione) normalmente
+
+**Se Bash (git commit) viene negato (Step 5):**
+1. Il file e' stato scritto ma non committato
+2. Informa: "Design doc salvato. Esegui: `git add docs/plans/<file> && git commit -m 'docs: add design for <topic>'`"
+3. Procedi a Step 6 normalmente
+
+**Fasi completabili senza permessi:** Step 1-4 (conversazione), Step 6 (transizione)
+**Fasi che richiedono permessi:** Step 5 (Write per design doc, Bash per git commit)
+
+Il valore primario della skill (design validato tramite dialogo) si preserva sempre.
+Step 1-4 funzionano senza alcun permesso. Step 5-6 degradano a output testuale.

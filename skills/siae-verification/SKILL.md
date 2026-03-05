@@ -181,6 +181,39 @@ Questi pensieri significano che NON hai verificato. Fermati.
 
 ---
 
+## Permission Denied Handling
+
+**Se Bash viene negato (Step 2 — ESEGUI):**
+1. Completa Step 1 (IDENTIFICA) normalmente — e' read-only
+2. Presenta la lista esatta dei comandi da eseguire, con directory e flag corretti
+3. Chiedi all'utente di eseguirli nel suo terminale e incollare l'output
+4. Quando l'utente incolla l'output, procedi con Step 3 (LEGGI) normalmente
+5. Completa Step 4 (VERIFICA) e Step 5 (AFFERMA) sui risultati forniti
+
+**Se l'utente non esegue i comandi:**
+- NON dichiarare completamento
+- Segnala: "Verifica non completabile senza output dei test. Esegui [comandi] e condividi il risultato."
+
+**Formato Step 5 in modalita' degradata:**
+```
+VERIFICA COMPLETATA (manuale):
+  Comandi:   [lista — eseguiti dall'utente]
+  Risultato: [basato su output fornito dall'utente]
+  Claim:     [dichiarazione]
+```
+
+**Fasi completabili senza permessi:** Step 1 (IDENTIFICA), Step 3 (LEGGI), Step 4 (VERIFICA), Step 5 (AFFERMA)
+**Fasi che richiedono permessi:** Step 2 (ESEGUI) — Bash per test/build/lint
+
+Se i permessi sono negati:
+1. Completa tutte le fasi read-only
+2. Presenta riepilogo di cosa e' stato fatto
+3. Lista comandi/operazioni per esecuzione manuale
+4. NON entrare in loop di retry su tool negato
+5. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Risorse Aggiuntive
 
 Per tabelle dettagliate di claim comuni per stack, comandi richiesti, output attesi e errori tipici, vedi [reference/common-failures.md](reference/common-failures.md).

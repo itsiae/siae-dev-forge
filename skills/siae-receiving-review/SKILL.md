@@ -227,6 +227,30 @@ dimostra questo comportamento?
 
 ---
 
+## Permission Denied Handling
+
+**Step 1-2 (Lettura e Categorizzazione) — permission-free:**
+Questi step usano solo Read/Grep per leggere i commenti e il codice. Nessun permesso richiesto.
+
+**Step 3 (Fix codice) — Edit/Write/Bash richiesti:**
+- **Se Edit/Write negato:** degrada come siae-tdd — presenta il codice fix in blocco code fenced con path e istruzioni
+- **Se Bash negato (test):** fornisci il comando test e chiedi all'utente di eseguire e riportare l'output
+
+**Step 4 (Rispondi ai commenti) — permission-free:**
+Le risposte ai commenti PR sono output testuale — nessun permesso richiesto.
+
+**Fasi completabili senza permessi:** Step 1, 2, 4 (lettura, categorizzazione, risposte)
+**Fasi che richiedono permessi:** Step 3 (Edit per fix, Bash per test)
+
+Se i permessi sono negati:
+1. Completa categorizzazione e analisi
+2. Presenta il codice fix come output testuale
+3. Fornisci comandi test per esecuzione manuale
+4. NON entrare in loop di retry su tool negato
+5. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Classificazione Rischio
 
 | Operazione | Livello | Note |

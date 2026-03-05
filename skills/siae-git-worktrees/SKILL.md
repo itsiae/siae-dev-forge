@@ -164,6 +164,40 @@ git worktree remove     →  cleanup
 
 ---
 
+## Permission Denied Handling
+
+**Step 1 (Seleziona directory) — parzialmente permission-free:**
+- Check `.gitignore`: `Grep("\\.worktrees", ".gitignore")` — permission-free
+- Se `.worktrees/` non e' nel `.gitignore`, fornisci i comandi per aggiungerla
+
+**Step 2-4 (Crea worktree, setup, baseline test) — Bash richiesto:**
+Se Bash viene negato, passa a modalita' guida manuale:
+1. Presenta i comandi esatti in lista numerata
+2. Indica lo stack rilevato e le dipendenze da installare
+3. Fornisci il comando test per il baseline check
+4. L'utente esegue nel suo terminale
+
+**Esempio guida manuale:**
+```
+Non ho permessi per eseguire comandi. Ecco i passi:
+1. `git worktree add .worktrees/feature-SDLC-142 feature/SDLC-142-add-login`
+2. `cd .worktrees/feature-SDLC-142`
+3. `npm install` (stack TS rilevato)
+4. `npm test` (baseline check)
+Conferma quando fatto.
+```
+
+**Fasi completabili senza permessi:** check `.gitignore` (Grep), analisi stack
+**Fasi che richiedono permessi:** tutte le operazioni git worktree e setup (Bash)
+
+Se i permessi sono negati:
+1. Completa le verifiche read-only
+2. Presenta tutti i comandi per esecuzione manuale
+3. NON entrare in loop di retry su tool negato
+4. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |

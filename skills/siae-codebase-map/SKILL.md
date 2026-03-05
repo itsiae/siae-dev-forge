@@ -38,12 +38,13 @@ pip install tiktoken
 
 ## Step 1 — Controlla mappa esistente
 
+**Check esistenza (permission-free):** `Glob("docs/CODEBASE_MAP.md")`
+
 **Se `docs/CODEBASE_MAP.md` esiste:**
-1. Leggi il campo `last_mapped` dal frontmatter YAML
+1. `Read("docs/CODEBASE_MAP.md")` — leggi il campo `last_mapped` dal frontmatter YAML
 2. Controlla i cambiamenti da quella data:
-   ```bash
-   git log --oneline --since="<last_mapped>"
-   ```
+   - **Con Bash:** `git log --oneline --since="<last_mapped>"`
+   - **Se Bash negato:** informa l'utente e chiedi di eseguire il comando, oppure procedi con Update Mode per sicurezza
 3. Se ci sono modifiche significative → Update Mode (vai al Step 2)
 4. Se nessun cambiamento → informa l'utente che la mappa è aggiornata
 
@@ -225,6 +226,32 @@ Quando la mappa esiste già:
 |---------|---------|--------------------------|
 | Sonnet  | 200k    | 150.000 token |
 | Haiku   | 200k    | 100.000 token (economico, meno preciso) |
+
+---
+
+## Permission Denied Handling
+
+**Step 1 (Controlla mappa) — parzialmente permission-free:**
+- `Glob("docs/CODEBASE_MAP.md")` + `Read` — permission-free
+- `git log`: se Bash negato, chiedi all'utente o procedi con Update Mode
+
+**Step 2 (Scansione codebase) — fallback permission-free:**
+- **Con Bash:** usa lo scanner Python (`scan-codebase.py`)
+- **Se Bash negato:** usa `Glob("**/*.{java,ts,py,tf,vue,hcl}")` per ottenere l'albero file. Non avrai il conteggio token, ma la struttura directory e' sufficiente per pianificare i subagent
+
+**Step 6-7 (Scrivi CODEBASE_MAP.md e CLAUDE.md) — Write richiesto:**
+- **Se Write negato:** presenta il contenuto completo del documento come output testuale in chat
+- Indica il path dove salvarlo: `docs/CODEBASE_MAP.md`
+- L'utente puo' copiare manualmente
+
+**Fasi completabili senza permessi:** Step 1 (Glob/Read), Step 2 (Glob fallback), Step 3-5 (subagent/analisi)
+**Fasi che richiedono permessi:** Step 2 (Bash per scanner), Step 6-7 (Write per output file)
+
+Se i permessi sono negati:
+1. Completa tutte le fasi di analisi con Glob/Read/subagent
+2. Presenta il documento generato come output testuale
+3. NON entrare in loop di retry su tool negato
+4. NON dichiarare completamento per fasi non eseguite
 
 ---
 
