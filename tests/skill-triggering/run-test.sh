@@ -33,7 +33,10 @@ PROMPT_CONTENT=$(cat "$PROMPT_FILE")
 
 # Invoke Claude with the prompt and capture output
 # Use timeout to prevent hanging (60 seconds max)
+# --dangerously-skip-permissions: necessario in modalita' non-interattiva
+# (la skill invocation richiede permessi che bloccherebbero il test)
 OUTPUT=$(timeout 60 claude -p "$PROMPT_CONTENT" \
+  --dangerously-skip-permissions \
   --output-format stream-json 2>/dev/null || true)
 
 if [ -z "$OUTPUT" ]; then

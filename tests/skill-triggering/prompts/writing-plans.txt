@@ -1,0 +1,1 @@
+Abbiamo appena approvato il design per la nuova feature di ricerca opere per ISWC. Il design doc e' in docs/plans/2026-03-05-iswc-search-design.md. Ora devo scrivere il piano implementativo con i task atomici, i file da modificare e i comandi di test. Come procedo?

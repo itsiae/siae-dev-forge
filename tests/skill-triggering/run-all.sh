@@ -44,6 +44,7 @@ get_expected_skill() {
     subagent-development)   echo "siae-subagent-development" ;;
     finishing-branch)       echo "siae-finishing-branch" ;;
     receiving-review)       echo "siae-receiving-review" ;;
+    writing-plans)          echo "siae-writing-plans" ;;
     *)                      echo "" ;;
   esac
 }
