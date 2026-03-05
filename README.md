@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 23 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 24 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.1.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -94,8 +94,8 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 1. Init & Setup    →  2. Req & Design   →  3. Branching
        ↓                     ↓                    ↓
   siae-onboarding     siae-brainstorming    siae-git-workflow
-  siae-codebase-map   siae-architecture     siae-git-worktrees
-                                            siae-finishing-branch
+  siae-codebase-map   siae-writing-plans    siae-git-worktrees
+                      siae-architecture     siae-finishing-branch
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
@@ -227,8 +227,20 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   3. Proponi 2-3 approcci con trade-off e stima Story Points (scala Fibonacci 1-13)
   4. Presenta design per sezioni con approvazione incrementale
   5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
-  6. Transizione a `siae-git-workflow` per creare il feature branch
+  6. `REQUIRED SUB-SKILL: siae-writing-plans` — produce il piano implementativo bite-sized
 - **Integrazione JIRA:** Cerca ticket correlati, produce output strutturato per creazione ticket
+- **Tipo:** Rigid (segui esattamente)
+
+#### `siae-writing-plans` — Piano implementativo bite-sized (Fase 2: Design)
+
+- **Trigger:** Design approvato da `siae-brainstorming`, spec/requisiti esistenti, piano da aggiornare
+- **HARD-GATE:** Richiede design approvato. Senza design, torna a `siae-brainstorming`
+- **Produce:**
+  - Decomposizione in task indipendenti con dipendenze esplicite
+  - Ogni step = 1 azione (2-5 min): path esatti, codice completo, comando + output atteso
+  - Header obbligatorio con `REQUIRED SUB-SKILL: siae-subagent-development` embedded
+  - Execution handoff: subagent (questa sessione) o sessione separata
+- **Output:** `docs/plans/YYYY-MM-DD-<topic>-plan.md`
 - **Tipo:** Rigid (segui esattamente)
 
 #### `siae-architecture` — Pattern architetturali SIAE (Fase 2: Design)
@@ -685,6 +697,8 @@ siae-devforge/
 │   │   └── scripts/
 │   │       └── scan-codebase.py # Scanner tiktoken (basato su Cartographer MIT)
 │   ├── siae-brainstorming/      # Brainstorming socratico
+│   │   └── SKILL.md
+│   ├── siae-writing-plans/      # Piano implementativo bite-sized
 │   │   └── SKILL.md
 │   ├── siae-architecture/       # Pattern C4, AWS, HLD
 │   │   ├── SKILL.md

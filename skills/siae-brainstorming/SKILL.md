@@ -83,42 +83,21 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
 ### 6. REQUIRED: Transizione al piano implementativo
 
-Includi nel design doc (step 5) una sezione **Piano Implementativo** con step atomici.
-
-**Ogni piano DEVE iniziare con questo header:**
-
-```markdown
-# [Nome Feature] — Piano Implementativo
-
-> **Per Claude:** REQUIRED SUB-SKILL: Usa `siae-subagent-development` per implementare questo piano task per task.
-
-**Goal:** [Una frase su cosa costruisce]
-**Architettura:** [2-3 frasi sull'approccio]
-**Stack:** [Tecnologie principali]
-
----
-```
-
-Questo header garantisce che il Claude che aprirà il piano in una nuova sessione sappia quale skill usare senza doverlo ricordare.
-
-**Dopo aver salvato e committato il piano, offri la scelta di esecuzione:**
+Design approvato? Il design doc e' committato?
 
 ```
-Piano salvato in docs/plans/<filename>.md. Come vuoi procedere?
-
-1. Subagent (questa sessione) — dispatcho subagent freschi per ogni task,
-   review tra i task, iterazione rapida
-
-2. Sessione separata — apri una nuova sessione con il file piano,
-   esecuzione a batch con checkpoint
-
-Quale preferisci?
+REQUIRED SUB-SKILL: siae-writing-plans
 ```
 
-- Se **Subagent**: `REQUIRED SUB-SKILL: siae-subagent-development`
-- Se **Sessione separata**: guida l'utente ad aprire una nuova sessione nella directory del progetto e caricare il piano
+Invoca `siae-writing-plans` per trasformare il design in un piano implementativo
+bite-sized con path esatti, codice completo e comandi con output atteso.
 
-NON invocare skill di implementazione senza questa scelta esplicita.
+`siae-writing-plans` gestisce:
+- Decomposizione in task indipendenti
+- Template per ogni step (TDD: test → run → impl → run → commit)
+- Execution handoff: subagent (questa sessione) o sessione separata
+
+NON scrivere il piano direttamente in questa skill. Delega a `siae-writing-plans`.
 
 ---
 
