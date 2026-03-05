@@ -1,9 +1,8 @@
 ---
 name: siae-git-workflow
 description: >
-  Applica la branch strategy e il git flow SIAE. Trigger: operazioni git
-  (branch, merge, release, tag), inizio feature, preparazione deploy.
-  Enforces conventional commits, tag-based deployment, branch naming.
+  Trigger: operazioni git (branch, merge, release, tag), inizio feature,
+  preparazione deploy.
 ---
 
 # SIAE Git Workflow
