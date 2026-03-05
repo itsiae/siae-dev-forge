@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 20 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 22 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.1.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (20)](#skill-20)
+- [Skill (22)](#skill-22)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -93,15 +93,18 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 1. Init & Setup    →  2. Req & Design   →  3. Branching
        ↓                     ↓                    ↓
   siae-onboarding     siae-brainstorming    siae-git-workflow
-                      siae-architecture
+                      siae-architecture     siae-git-worktrees
+                                            siae-finishing-branch
 
-4. Implementation  →  5. Testing           →  6. QA Gate        →  7. Release
-       ↓                     ↓                      ↓                    ↓
-  siae-code-standards   siae-tdd             siae-debugging       siae-documentation
-  siae-security         siae-qa (Xray TC)
+4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
+       ↓                     ↓                      ↓                       ↓
+  siae-code-standards   siae-tdd             siae-debugging            siae-documentation
+  siae-security         siae-qa (Xray TC)    siae-parallel-agents
   siae-iac              siae-automation
   siae-data-engineering (Appium/Cypress)
   siae-frontend
+
+Cross-cutting (ogni fase): siae-verification
 ```
 
 ### Esempio: nuova feature end-to-end
@@ -162,7 +165,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (20)
+## Skill (22)
 
 ### Meta-skill
 
@@ -236,6 +239,26 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Template PR:** titolo, body strutturato, checklist per reviewer
 - **Integrazione:** se test falliscono → `REQUIRED SUB-SKILL: siae-debugging`. Se sviluppo è avanzato → `REQUIRED SUB-SKILL: siae-git-workflow`
 - **Tipo:** Rigid
+
+#### `siae-git-worktrees` — Workspace isolato prima dell'implementazione (Fase 3: Branching)
+
+- **Trigger:** Prima di eseguire un piano implementativo, inizio feature, setup workspace isolato
+- **La regola:** Non iniziare mai l'implementazione nel branch corrente — crea sempre un worktree isolato
+- **Selezione directory (ordine di priorita'):** `.worktrees/` > `worktrees/` > `CLAUDE.md` > chiedi all'utente
+- **Safety gate:** `git check-ignore` prima di creare directory locali. Se non ignorata → aggiunge a `.gitignore` + commit automatico
+- **Branch base SIAE:** sempre `sviluppo` (mai `main`/`master`)
+- **Auto-detect setup:** `mvn dependency:resolve` / `npm install` / `pip install` / `poetry install` per stack rilevato
+- **Baseline test:** esegue test suite dopo creazione — se falliscono, riporta e chiede consenso prima di procedere
+- **Tipo:** Rigid
+
+#### `siae-parallel-agents` — Dispatch parallelo per task/failure indipendenti (Fase 4 / 6)
+
+- **Trigger:** 2+ failure indipendenti, 2+ task senza dipendenze, debugging multi-dominio
+- **Principio:** Investigare o implementare problemi indipendenti in sequenza e' spreco — dispatch un agente per dominio
+- **Il pattern a 4 step:** Identifica domini indipendenti → Crea task (scope/goal/vincoli/output) → Dispatch in parallelo → Review, verifica conflitti, esegui suite completa
+- **Quando NON usare:** failure correlati, stato condiviso tra agenti, fase esplorativa (non sai ancora cosa e' rotto)
+- **Integrazione:** si combina con `siae-subagent-development` per implementazioni parallele con review a 2 stadi
+- **Tipo:** Flexible
 
 #### `siae-tdd` — Test-Driven Development obbligatorio (Fase 5: Testing)
 
