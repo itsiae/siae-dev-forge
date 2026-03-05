@@ -34,12 +34,12 @@ Mostra questo banner ASCII all'inizio di ogni esecuzione skill:
 
 Ogni azione ha un livello di rischio con colore ANSI associato — sia nelle etichette di testo che nella pre-flight card.
 
-| Livello  | Emoji | Colore terminale   | ANSI         | Quando si usa                                  |
-|----------|-------|--------------------|--------------|------------------------------------------------|
-| Sicuro   | 🟢    | Verde              | `\e[32m`     | Lettura file, analisi, spiegazioni             |
-| Medio    | 🟡    | Giallo             | `\e[33m`     | Scrittura file, modifica codice, test run      |
-| Alto     | 🔴    | Rosso              | `\e[31m`     | Operazioni git, chiamate API esterne, delete   |
-| Critico  | 🚨    | Rosso grassetto    | `\e[1;31m`   | Push remoto, modifiche config CI/CD, segreti   |
+| Livello  | Emoji | Significato                        | ANSI         | Quando si usa                                  |
+|----------|-------|------------------------------------|--------------|------------------------------------------------|
+| Sicuro   | 🟢    | Solo lettura, nessun effetto       | `\e[32m`     | Lettura file, analisi, spiegazioni             |
+| Medio    | 🟡    | Modifiche locali, reversibili      | `\e[33m`     | Scrittura file, modifica codice, test run      |
+| Alto     | 🔴    | Difficile da annullare             | `\e[31m`     | Operazioni git, chiamate API esterne, delete   |
+| Critico  | 🚨    | Irreversibile o impatto esteso     | `\e[1;31m`   | Push remoto, modifiche config CI/CD, segreti   |
 
 Reset colore dopo ogni etichetta: `\e[0m`
 
@@ -86,7 +86,7 @@ Struttura footer (motivazione e alternativa condivise per tutte le operazioni de
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — 🟡 RISCHIO MEDIO  ·  [N] operazioni               ║
+║  🔨 DevForge — 🟡 MEDIO (reversibile)  ·  [N] operazioni         ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  1.  Azione:    [descrizione prima operazione]                   ║
 ║      File/Path: [percorso/del/file1]                             ║
@@ -104,7 +104,7 @@ Struttura footer (motivazione e alternativa condivise per tutte le operazioni de
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  [N] operazioni                ┃
+┃  🔨 DevForge — 🔴 ALTO (difficile da annullare)  ·  [operazione] ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃  1.  Azione:    [descrizione prima operazione]                   ┃
 ┃      File/Path: [percorso/del/file1]                             ┃
@@ -122,7 +122,7 @@ Struttura footer (motivazione e alternativa condivise per tutte le operazioni de
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🚨 CRITICO  ·  [N] operazioni                     ┃
+┃  🔨 DevForge — 🚨 CRITICO (irreversibile)  ·  [operazione]       ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃  1.  Azione:    [descrizione prima operazione]                   ┃
 ┃      File/Path: [percorso/del/file1]                             ┃

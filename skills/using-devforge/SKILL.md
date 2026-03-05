@@ -47,9 +47,6 @@ Questo non e' negoziabile. Non e' opzionale. Non puoi razionalizzare per evitarl
 
 ```dot
 digraph skill_flow {
-    rankdir=TB;
-    node [fontname="Helvetica", fontsize=10];
-
     "Messaggio utente ricevuto" [shape=doublecircle];
     "About to EnterPlanMode?" [shape=doublecircle];
     "Brainstorming gia' fatto?" [shape=diamond];
@@ -122,35 +119,6 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
-"Nuovo branch per feature Y" → git-workflow prima, poi skill di design/implementazione.
-"Deploy questa Lambda" → iac prima, poi security, poi code-standards.
-"Aggiungi una colonna alla tabella Glue" → data-engineering prima, poi tdd.
-
-## Skill Disponibili
-
-> **Nota:** Il catalogo skill viene generato automaticamente dall'hook SessionStart
-> tramite `lib/skills-core.js`. La tabella sotto e' un riferimento statico di fallback.
-> Le nuove skill aggiunte nella directory `skills/` appaiono automaticamente al prossimo boot.
-
-| Skill | Trigger | Tipo | Fase SDLC |
-|-------|---------|------|-----------|
-| siae-onboarding | Inizio sessione, nuovo progetto | Auto | 1. Init |
-| siae-brainstorming | Feature nuova, design, componente | Rigid | 2. Design |
-| siae-architecture | Design sistema, pattern C4, AWS | Flexible | 2. Design |
-| siae-git-workflow | Branch, merge, release, tag | Rigid | 3. Branching |
-| siae-code-standards | Scrittura codice Java/TS/Python/HCL | Flexible | 4. Implementation |
-| siae-security | Codice security-sensitive, IAM, PII | Flexible | 4. Implementation |
-| siae-iac | Terraform, Terragrunt, IaC | Flexible | 4. Implementation |
-| siae-data-engineering | Glue, PySpark, Medallion, ETL | Flexible | 4. Implementation |
-| siae-subagent-development | Piano implementativo, task indipendenti, /forge-implement | Rigid | 4. Implementation |
-| siae-frontend | Vue.js/Angular/React, vitest, Firebase, GA | Flexible | 4. Implementation |
-| siae-tdd | Implementazione feature, bug fix | Rigid | 5. Testing |
-| siae-qa | Fine brainstorming (AC ready), fine TDD (test pronti), /forge-qa | Rigid | 5. Testing / QA |
-| siae-automation | Dopo siae-qa (TC con Automazione=Y pronti), /forge-automate | Rigid | 5. Testing / Automation |
-| siae-debugging | Debug issue, errore, incident | Rigid | 6. QA Gate |
-| siae-documentation | Richiesta doc HLD/LLD/API | Flexible | 7. Release |
-| siae-verification | Prima di claim completamento, commit, PR, "fatto" | Rigid | Cross-cutting |
-| siae-writing-skills | Creazione nuove skill DevForge | Flexible | Meta |
 
 ## Tipi di Skill
 
@@ -162,37 +130,8 @@ La skill stessa ti dice quale tipo e'. In caso di dubbio, trattala come Rigid.
 
 ## Catena SDLC
 
-Le 7 fasi del ciclo di sviluppo SIAE. Ogni fase ha skill, comandi e agenti dedicati.
-
-```
-1. Init & Setup    →  2. Req & Design   →  3. Branching
-       ↓                     ↓                    ↓
-  siae-onboarding     siae-brainstorming    siae-git-workflow
-                      siae-architecture
-
-4. Implementation  →  5. Testing           →  6. QA Gate        →  7. Release
-       ↓                     ↓                      ↓                    ↓
-  siae-code-standards   siae-tdd             siae-debugging       siae-documentation
-  siae-security         siae-qa (Xray TC)
-  siae-iac              siae-automation
-  siae-data-engineering (Appium/Cypress)
-  siae-frontend
-```
-
-Le skill di processo (fasi 1-3, 5-6) precedono sempre le skill di implementazione (fase 4). Non saltare alla fase 4 senza aver attraversato le fasi precedenti rilevanti.
-
-### Regola della Catena
-
-Non tutte le fasi sono necessarie per ogni task. Ma l'ORDINE e' sacro. Se un task tocca la fase 4 e la fase 5, devi attraversare la 4 prima della 5. Se tocca la 2 e la 4, devi attraversare la 2 prima della 4.
-
-Esempio completo per una nuova feature:
-1. **Init**: siae-onboarding (se nuovo progetto)
-2. **Design**: siae-brainstorming → siae-architecture
-3. **Branching**: siae-git-workflow (crea feature branch)
-4. **Implementation**: siae-code-standards + siae-security + skill di dominio
-5. **Testing**: siae-tdd (test prima del codice, o insieme)
-6. **QA Gate**: siae-debugging (se falliscono test o emergono issue)
-7. **Release**: siae-documentation (aggiorna HLD/LLD se necessario)
+7 fasi: Init → Design → Branching → Implementation → Testing → QA Gate → Release.
+L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si applica a ogni fase.
 
 ## DevForge Visual Design System
 
@@ -205,7 +144,7 @@ Quando segui una skill, rispetta le convenzioni visive:
 
 ## Istruzioni Utente
 
-Le istruzioni dicono COSA, non COME. "Aggiungi X" o "Fixa Y" non significa saltare i workflow. Le istruzioni brevi nascondono complessita'. Le skill la rendono esplicita.
+Le istruzioni dicono COSA, non COME. "Aggiungi X" o "Fixa Y" non significa saltare i workflow.
 
 ## Verifica Prima del Completamento
 
