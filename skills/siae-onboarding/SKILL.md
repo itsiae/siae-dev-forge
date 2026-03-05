@@ -212,6 +212,20 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+**Dopo il welcome message**, controlla se la mappa architetturale esiste:
+
+```bash
+test -f docs/CODEBASE_MAP.md && echo "MAP_EXISTS" || find . -name "*.java" -o -name "*.ts" -o -name "*.py" -o -name "*.tf" 2>/dev/null | head -60 | wc -l
+```
+
+- Se `docs/CODEBASE_MAP.md` esiste → carica il sommario e mostralo nel welcome
+- Se non esiste **e** il repo ha > 50 file sorgente → aggiungi al welcome:
+  ```
+  💡 Questo progetto non ha una mappa architetturale.
+     Esegui /forge-map per generarla (subagent Sonnet, ~5 min).
+  ```
+- Se non esiste e il repo è piccolo (≤ 50 file) → nessun suggerimento
+
 Adatta le righe `Skill disponibili` in base allo stack rilevato:
 - Java -> aggiungi `siae-architecture`
 - TS Frontend -> aggiungi `siae-frontend`
