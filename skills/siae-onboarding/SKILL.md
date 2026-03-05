@@ -65,28 +65,21 @@ Esegui i probe in ordine. Raccogli TUTTI i match, non fermarti al primo.
 | 5 | `terragrunt.hcl` oppure file `*.tf` | **IaC** (Terraform + Terragrunt) | DevOps/Infra |
 | 6 | `config.yaml` con pattern Terragrunt (`terraform { source = ...}`) | **IaC** | DevOps/Infra |
 
-### 1.3 Probe commands
+### 1.3 Probe con tool nativi (permission-free)
 
-```bash
-# 1 - Java / Spring Boot
-test -f pom.xml && echo "DETECTED: java"
+Tutti i probe usano Glob, Read e Grep — **nessun Bash richiesto**.
+Lancia tutti i probe in parallelo (chiamate multiple in un singolo messaggio).
 
-# 2 - TS Frontend (Vue.js)
-test -f package.json && grep -q '"vue"' package.json && echo "DETECTED: ts-frontend"
+| # | Probe | Tool |
+|---|-------|------|
+| 1 | Java / Spring Boot | `Glob("pom.xml")` — se trova risultati → DETECTED: java |
+| 2 | TS Frontend (Vue.js) | `Glob("package.json")` + `Read(package.json)` → cerca `"vue"` nelle dipendenze → DETECTED: ts-frontend |
+| 3 | TS Backend (Lambda) | `Read(package.json)` → cerca `"express"` o `"serverless-http"` → DETECTED: ts-backend |
+| 4 | Python Data Engineering | `Glob("requirements.txt")` + `Grep("pyspark\|awsglue", "requirements.txt")` oppure `Glob("Makefile")` + `Grep("glue", "Makefile")` → DETECTED: python |
+| 5 | IaC (Terraform / Terragrunt) | `Glob("terragrunt.hcl")` + `Glob("*.tf")` — se uno dei due trova risultati → DETECTED: iac |
+| 6 | IaC via config.yaml | `Glob("config.yaml")` + `Grep("terraform", "config.yaml")` → DETECTED: iac |
 
-# 3 - TS Backend (Lambda)
-test -f package.json && grep -qE '"(express|serverless-http)"' package.json && echo "DETECTED: ts-backend"
-
-# 4 - Python Data Engineering
-(test -f requirements.txt && grep -qi 'pyspark\|awsglue' requirements.txt) || \
-(test -f Makefile && grep -qi 'glue' Makefile) && echo "DETECTED: python"
-
-# 5 - IaC (Terraform / Terragrunt)
-(test -f terragrunt.hcl || ls *.tf 1>/dev/null 2>&1) && echo "DETECTED: iac"
-
-# 6 - IaC via config.yaml
-test -f config.yaml && grep -q 'terraform' config.yaml && echo "DETECTED: iac"
-```
+**Nota:** i probe 2 e 3 condividono `package.json` — una singola `Read` basta per entrambi.
 
 ---
 
@@ -212,11 +205,12 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**Dopo il welcome message**, controlla se la mappa architetturale esiste:
+**Dopo il welcome message**, controlla se la mappa architetturale esiste (permission-free):
 
-```bash
-test -f docs/CODEBASE_MAP.md && echo "MAP_EXISTS" || find . -name "*.java" -o -name "*.ts" -o -name "*.py" -o -name "*.tf" 2>/dev/null | head -60 | wc -l
-```
+1. `Glob("docs/CODEBASE_MAP.md")` — se trova risultati → mappa esiste, carica il sommario con `Read`
+2. Se non esiste → conta i file sorgente in parallelo:
+   - `Glob("**/*.java")`, `Glob("**/*.ts")`, `Glob("**/*.py")`, `Glob("**/*.tf")`
+   - Somma i risultati per ottenere il conteggio totale
 
 - Se `docs/CODEBASE_MAP.md` esiste → carica il sommario e mostralo nel welcome
 - Se non esiste **e** il repo ha > 50 file sorgente → aggiungi al welcome:
@@ -250,7 +244,7 @@ Se lo stack non e' stato rilevato, mostra un avviso:
 3. **Non assumere lo stack** se nessun probe ha match. Chiedi conferma esplicita.
 4. **Rispetta l'ordine dei probe**: il primo match in 1.2 determina la factory primaria, ma raccogli tutti i match per progetti multi-stack.
 5. **Esegui l'onboarding una sola volta** per sessione, a meno che l'utente non cambi contesto esplicitamente.
-6. **Rischio**: tutte le operazioni di questa skill sono 🟢 SICURO (sola lettura). Nessuna pre-flight card richiesta.
+6. **Rischio**: tutte le operazioni di questa skill sono 🟢 SICURO (sola lettura). Questa skill usa esclusivamente Glob, Read e Grep. Non richiede approvazione utente per nessuna operazione.
 7. **Riferimento factory**: per le configurazioni dettagliate delle factory, consulta `reference/factory-configs.md`.
 
 ---

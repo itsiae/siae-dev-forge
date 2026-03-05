@@ -140,6 +140,25 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 
 ---
 
+## Permission Denied Handling
+
+**Se Write viene negato (scrittura documento su disco):**
+1. Presenta il documento completo come output testuale formattato in chat
+2. Indica il path suggerito (es. `docs/hld-<progetto>.md`, `docs/lld-<feature>.md`)
+3. L'utente puo' copiare il contenuto manualmente nel file
+4. Se anche la pubblicazione Confluence e' richiesta, fornisci il contenuto pronto per copia
+
+**Fasi completabili senza permessi:** generazione documento (analisi codebase con Read/Grep), diagrammi Mermaid
+**Fasi che richiedono permessi:** Write (salvataggio file), MCP Atlassian (pubblicazione Confluence)
+
+Se i permessi sono negati:
+1. Completa la generazione del documento
+2. Presenta il contenuto completo in chat
+3. NON entrare in loop di retry su tool negato
+4. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## 6. Vincoli
 
 1. **Ogni HLD include diagramma C4** — almeno Livello 1 (Context), in Mermaid

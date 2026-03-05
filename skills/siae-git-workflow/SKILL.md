@@ -100,6 +100,32 @@ Queste regole sono **non negoziabili**. Nessuna eccezione.
 
 ---
 
+## Permission Denied Handling
+
+Questa skill richiede Bash per tutte le operazioni git.
+
+**Se Bash viene negato:**
+1. Passa a modalita' "guida manuale" per l'intera sessione git
+2. Presenta i comandi esatti in lista numerata con spiegazione
+3. Mantieni tutte le regole (branch naming, conventional commits, pre-flight)
+4. NON entrare in loop di retry — un rifiuto = guida manuale
+
+**Esempio:**
+```
+Non ho permessi per eseguire comandi git. Ecco i comandi:
+1. `git checkout sviluppo && git pull origin sviluppo`
+2. `git checkout -b feature/PROJ-123-add-login`
+Eseguili nel tuo terminale e conferma quando fatto.
+```
+
+**Fasi completabili senza permessi:** strategia, naming, merge strategy, pre-flight check verbale
+**Fasi che richiedono permessi:** tutte le operazioni git (Bash)
+
+Il valore della skill (strategia corretta, naming, merge strategy) si preserva.
+Le HARD-GATE rules si applicano anche in guida manuale.
+
+---
+
 ## 7. Vincoli Operativi
 
 | Operazione                  | Rischio | Vincolo                                        |

@@ -326,6 +326,28 @@ Prima di dichiarare la skill completata:
 
 ---
 
+## Permission Denied Handling
+
+**Se Write viene negato (export CSV — Tier 3):**
+1. Presenta il contenuto CSV completo come output testuale in chat (blocco code fenced)
+2. Indica il path suggerito per il file CSV
+3. L'utente puo' copiare il contenuto e salvarlo manualmente
+4. Le istruzioni di import Xray rimangono invariate
+
+**Se MCP non disponibile (gia' gestito dal Tier system):**
+- Il Tier 3 (CSV) e' gia' il fallback — non richiede MCP
+
+**Fasi completabili senza permessi:** Fase 1-4 (conversazionali — lettura AC, elicitazione scenari, generazione TC)
+**Fasi che richiedono permessi:** Fase 5 (Write per CSV, MCP per Xray)
+
+Se i permessi sono negati:
+1. Completa tutte le fasi conversazionali (1-4)
+2. Presenta CSV/TC come output testuale
+3. NON entrare in loop di retry su tool negato
+4. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## QUANDO SEI BLOCCATO
 
 | Problema | Soluzione |

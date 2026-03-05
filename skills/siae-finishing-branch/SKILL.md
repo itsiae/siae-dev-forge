@@ -263,6 +263,42 @@ Considera di spezzarla in PR più piccole con un branch intermedio.
 
 ---
 
+## Permission Denied Handling
+
+**Step 1 (Stato branch) — Bash negato:**
+- `git status`, `git log`, `git fetch`: fornisci i comandi esatti e chiedi all'utente di eseguirli e incollare l'output
+- L'analisi dello stato procede normalmente sull'output fornito
+
+**Step 2 (Test e Build) — Bash negato:**
+- Presenta il comando test corretto per lo stack rilevato
+- Chiedi all'utente di eseguirlo e riportare l'output
+- Analizza l'output per determinare se procedere
+
+**Step 3 (Revisione diff) — parzialmente permission-free:**
+- `Read` dei file modificati — permission-free (ma richiede la lista dei file)
+- `git diff`: se Bash negato, chiedi all'utente di eseguire e incollare
+- Grep per `console.log`, `TODO`, credenziali: `Grep(pattern, path)` — permission-free
+
+**Step 4 (Commit history) — Bash negato:**
+- Fornisci il comando `git log` e chiedi l'output
+
+**Step 5 (Apri PR) — Bash negato:**
+- Presenta il template PR completo come output testuale
+- Fornisci i comandi `git push` e `gh pr create` pronti per copia-incolla
+- L'utente esegue manualmente
+
+**Fasi completabili senza permessi:** analisi diff parziale (Read/Grep), template PR
+**Fasi che richiedono permessi:** Step 1-2, 4-5 (Bash per git e test)
+
+Se i permessi sono negati:
+1. Completa le verifiche possibili con Read/Grep
+2. Presenta tutti i comandi da eseguire manualmente
+3. Fornisci il template PR completo pronto per copia
+4. NON entrare in loop di retry su tool negato
+5. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Anti-Rationalization Table
 
 | Pensiero | Realta' |

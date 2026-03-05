@@ -119,8 +119,8 @@ Devi completare ogni fase PRIMA di procedere alla successiva.
    - Controlla se il bug esiste in altri ambienti
 
 2. **Cerca Pattern Simili nel Repo**
-   - `grep -r "pattern_sospetto" src/`
-   - `git log --oneline --all -S "stringa_rilevante"`
+   - `Grep("pattern_sospetto", "src/")` (tool nativo, permission-free)
+   - `git log --oneline --all -S "stringa_rilevante"` (richiede Bash — se negato, chiedi all'utente di eseguire e incollare l'output)
    - Cerca issue JIRA correlate via MCP
 
 3. **Confronta con Riferimenti Funzionanti**
@@ -292,6 +292,30 @@ Per incident significativi (P1/P2), compila: `skills/siae-debugging/template/rca
 - **[defense-in-depth.md](defense-in-depth.md)** — Pattern a 4 layer per validare il fix (Entry Point, Business Logic, Environment Guards, Debug Instrumentation). Da applicare quando un bug riappare dopo il fix o quando opera su sistemi critici.
 
 - **[find-polluter.sh](find-polluter.sh)** — Script per test bisection. Identifica quale test causa "pollution" (stato condiviso, file temporanei, modifiche globali). Uso: `./skills/siae-debugging/find-polluter.sh '<pattern>' '<glob>'`.
+
+---
+
+## Permission Denied Handling
+
+**Fase 1-3 (investigazione):**
+- Lettura codice: `Read(file)` — permission-free
+- Ricerca pattern: `Grep(pattern, path)` — permission-free
+- `git log`, `git diff`: richiedono Bash — se negato, chiedi all'utente di eseguire e incollare l'output
+- CloudWatch/AWS CLI: richiedono Bash — se negato, fornisci i comandi esatti e chiedi l'output
+
+**Fase 4 (fix):**
+- Edit/Write: se negato, degrada come siae-tdd (codice in blocco fenced + path)
+- Bash (test): se negato, fornisci comando test e chiedi all'utente di eseguire
+
+**Fasi completabili senza permessi:** gran parte di Fase 1-3 (Read, Grep nativi)
+**Fasi che richiedono permessi:** `git log/diff` (Bash), Fase 4 (Edit + Bash per test)
+
+Se i permessi sono negati:
+1. Completa l'investigazione con Read/Grep nativi
+2. Presenta i comandi git/AWS che l'utente deve eseguire
+3. Attendi l'output per procedere con l'analisi
+4. NON entrare in loop di retry su tool negato
+5. NON dichiarare completamento per fasi non eseguite
 
 ---
 

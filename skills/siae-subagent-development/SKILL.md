@@ -191,6 +191,31 @@ IMPLEMENTAZIONE COMPLETATA:
 
 ---
 
+## Permission Denied Handling
+
+**Se Agent tool viene negato (dispatch subagent):**
+1. Presenta il prompt completo del subagent come output testuale
+2. Suggerisci all'utente di aprire una sessione Claude Code separata con il prompt
+3. Fornisci istruzioni per ogni tipo di subagent:
+   - **Implementer:** "Apri una nuova sessione nella directory del progetto e incolla questo prompt"
+   - **Spec-reviewer:** "Dopo l'implementazione, apri una nuova sessione per la review con questo prompt"
+   - **Code-quality-reviewer:** "Dopo la spec-review, usa questo prompt per la quality review"
+
+**Se Bash viene negato (test suite finale — Step 6):**
+- Fornisci i comandi test esatti per esecuzione manuale
+- Chiedi all'utente di eseguire e riportare l'output
+
+**Fasi completabili senza permessi:** Step 1 (Read piano), analisi dipendenze, generazione prompt
+**Fasi che richiedono permessi:** Step 2-4 (Agent per subagent), Step 5-6 (Bash per test)
+
+Se i permessi sono negati:
+1. Completa l'analisi del piano e la generazione dei prompt
+2. Presenta i prompt come istruzioni per sessioni separate
+3. NON entrare in loop di retry su tool negato
+4. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Vincoli
 
 1. **SEMPRE** usare subagent freschi — mai implementare direttamente

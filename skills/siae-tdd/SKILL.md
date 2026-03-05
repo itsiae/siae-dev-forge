@@ -149,6 +149,42 @@ Prossimo test fallente per la prossima feature.
 
 ---
 
+## Permission Denied Handling
+
+**Se Edit/Write viene negato:**
+1. Presenta il codice (test o implementazione) in un blocco code fenced
+2. Indica file path e nome dove deve essere scritto
+3. L'utente copia il codice manualmente nel file
+4. Procedi con la guida al passo successivo
+
+**Se Bash viene negato (esecuzione test):**
+1. Presenta il comando test esatto da eseguire (con flag e directory)
+2. Chiedi all'utente di eseguirlo e riportare l'output
+3. Analizza l'output riportato per determinare RED/GREEN
+4. NON assumere il risultato — attendi l'output reale
+
+**Se entrambi sono negati (Guida TDD Assistita):**
+La skill diventa una guida interattiva:
+- Genera codice test e implementazione come output testuale
+- Indica i comandi da eseguire per ogni fase (RED, GREEN, REFACTOR)
+- L'utente esegue manualmente e riporta i risultati
+- Claude analizza e guida il passo successivo
+
+**Fasi completabili senza permessi:** analisi, generazione codice, guida step-by-step
+**Fasi che richiedono permessi:** Edit/Write (scrittura file), Bash (esecuzione test)
+
+La disciplina TDD (test prima del codice, codice minimo, refactor solo dopo GREEN)
+si preserva anche in modalita' assistita.
+
+Se i permessi sono negati:
+1. Completa tutte le fasi di analisi e generazione codice
+2. Presenta riepilogo di cosa e' stato generato
+3. Lista comandi/operazioni per esecuzione manuale
+4. NON entrare in loop di retry su tool negato
+5. NON dichiarare completamento per fasi non eseguite
+
+---
+
 ## Framework per Linguaggio
 
 ### Java
