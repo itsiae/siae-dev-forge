@@ -330,4 +330,6 @@ Nessuna eccezione senza il permesso esplicito del tuo partner umano.
 
 ## Tecniche di Supporto
 
+- **[testing-anti-patterns.md](testing-anti-patterns.md)** — 5 anti-pattern comuni nei test (mock sbagliati, metodi test-only nel codice di produzione, mock incompleti). Da leggere quando aggiungi mock o utility di test.
+
 - **[condition-based-waiting.md](condition-based-waiting.md)** — Elimina test flaky da `setTimeout` fissi. Pattern `waitFor()` per TypeScript, Python e Java (Awaitility). Da applicare quando un test fallisce sporadicamente in CI o usa sleep arbitrari.

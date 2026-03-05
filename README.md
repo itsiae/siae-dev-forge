@@ -274,7 +274,9 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Coverage target:** >= 70% linee
 - **Tabella anti-rationalization:** 12+ scuse riconosciute e bloccate
 - **Reference file:** `reference/framework-configs.md` — configurazione CI per test
-- **Tecnica di supporto:** `condition-based-waiting.md` — pattern `waitFor()` per eliminare test flaky da `setTimeout` fissi (TypeScript, Python, Java/Awaitility)
+- **Tecniche di supporto:**
+  - `testing-anti-patterns.md` — 5 anti-pattern comuni nei test (mock sbagliati, metodi test-only nel codice di produzione, mock incompleti). Da leggere quando aggiungi mock o utility di test
+  - `condition-based-waiting.md` — pattern `waitFor()` per eliminare test flaky da `setTimeout` fissi (TypeScript, Python, Java/Awaitility)
 - **Tipo:** Rigid
 
 #### `siae-qa` — Orchestrazione QA Xray (Fase 5: Testing / QA)
@@ -676,6 +678,8 @@ siae-devforge/
 │   │   └── SKILL.md
 │   ├── siae-tdd/                # TDD obbligatorio
 │   │   ├── SKILL.md
+│   │   ├── testing-anti-patterns.md  # 5 anti-pattern comuni nei test
+│   │   ├── condition-based-waiting.md # Pattern waitFor() per test flaky
 │   │   └── reference/
 │   │       └── framework-configs.md
 │   ├── siae-qa/                 # Orchestrazione QA Xray (AC, Test Plan, Test Case)
