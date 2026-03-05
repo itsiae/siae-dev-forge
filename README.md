@@ -40,6 +40,7 @@
 - [Stack Supportati](#stack-supportati)
 - [Integrazione Atlassian (MCP)](#integrazione-atlassian-mcp)
 - [Architettura del Plugin](#architettura-del-plugin)
+  - [Token Efficiency](#token-efficiency)
 - [Come Contribuire](#come-contribuire)
 
 ---
@@ -750,6 +751,20 @@ Per configurare MCP Atlassian, segui la [documentazione ufficiale](https://devel
 ---
 
 ## Architettura del Plugin
+
+### Token Efficiency
+
+Il plugin e' progettato per minimizzare il consumo di token per sessione senza rinunciare alla copertura comportamentale.
+
+Ogni parola nel context window **costa token ad ogni singolo messaggio** della sessione — non una volta sola, ma ogni volta che Claude ragiona. Su una sessione di 30 messaggi, 1000 parole extra equivalgono a ~40.000 token sprecati.
+
+**Le 3 ottimizzazioni implementate:**
+
+| Tecnica | Implementazione | Impatto |
+|---------|----------------|---------|
+| **Lazy Loading** | `SessionStart` inietta solo `using-devforge`. Le 19 skill operative sono caricate on-demand via Skill tool, solo quando servono | Le skill non usate non pesano nulla in sessione |
+| **Sub-skill Extraction** | `siae-verification` e' una skill separata, caricata solo su commit/PR/claim di completamento — non sempre in context | Meno token in boot, caricata solo quando serve |
+| **Description Trap Fix** | Le description YAML devono essere trigger-only: Claude carica il corpo completo solo quando serve, non segue la description come sostituto | Compliance: Claude legge sempre il corpo della skill |
 
 ### Principi di Design
 
