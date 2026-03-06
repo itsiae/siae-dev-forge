@@ -13,9 +13,9 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 24 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 25 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.1.0-mvp
+> **Versione:** 1.2.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (23)](#skill-23)
+- [Skill (25)](#skill-25)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -99,11 +99,13 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
-  siae-code-standards   siae-tdd             siae-debugging            siae-documentation
-  siae-security         siae-qa (Xray TC)    siae-parallel-agents
-  siae-iac              siae-automation
-  siae-data-engineering (Appium/Cypress)
+  siae-code-standards      siae-tdd             siae-debugging            siae-documentation
+  siae-security            siae-qa (Xray TC)    siae-parallel-agents
+  siae-iac                 siae-automation
+  siae-data-engineering    (Appium/Cypress)
   siae-frontend
+  siae-subagent-development
+  siae-executing-plans
 
 Cross-cutting (ogni fase): siae-verification
 ```
@@ -171,7 +173,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (23)
+## Skill (25)
 
 ### Meta-skill
 
@@ -239,7 +241,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   - Decomposizione in task indipendenti con dipendenze esplicite
   - Ogni step = 1 azione (2-5 min): path esatti, codice completo, comando + output atteso
   - Header obbligatorio con `REQUIRED SUB-SKILL: siae-subagent-development` embedded
-  - Execution handoff: subagent (questa sessione) o sessione separata
+  - Execution handoff: subagent (questa sessione) → `siae-subagent-development`, o sessione separata → `siae-executing-plans`
 - **Output:** `docs/plans/YYYY-MM-DD-<topic>-plan.md`
 - **Tipo:** Rigid (segui esattamente)
 
@@ -447,6 +449,15 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Self-review checklist a 4 aree:** completezza, qualità, disciplina (YAGNI), testing — obbligatoria prima del report
 - **Max 2 iterazioni** fix-review per stadio, poi escalation all'utente
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per implementer, `REQUIRED SUB-SKILL: siae-verification` per tutti
+- **Tipo:** Rigid
+
+#### `siae-executing-plans` — Esecuzione piano in sessione separata (Fase 4)
+
+- **Trigger:** Sessione separata aperta con piano in `docs/plans/`, batch execution con checkpoint umani
+- **Differenza da `siae-subagent-development`:** Claude esegue direttamente (non dispatcha subagent); checkpoint = l'utente decide se continuare; adatto per iterazione lenta e controllata
+- **Processo:** carica piano → revisione critica → batch 3 task → report + attesa feedback → batch successivo → `siae-verification` + `siae-finishing-branch`
+- **Stop immediato** in caso di blocco — non indovinare, non deviare dal piano
+- **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per ogni task, `REQUIRED SUB-SKILL: siae-verification` a fine piano
 - **Tipo:** Rigid
 
 #### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Fase 4)
@@ -751,6 +762,8 @@ siae-devforge/
 │   │   ├── implementer-prompt.md
 │   │   ├── spec-reviewer-prompt.md
 │   │   └── code-quality-reviewer-prompt.md
+│   ├── siae-executing-plans/    # Esecuzione piano in sessione separata
+│   │   └── SKILL.md
 │   └── siae-writing-skills/     # Guida per creare nuove skill
 │       ├── SKILL.md
 │       └── reference/
