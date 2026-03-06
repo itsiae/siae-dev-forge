@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -150,7 +151,7 @@ jobs:
 
           git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
           git commit -m "chore(release): bump version to $NEW"
-          git push origin "$BRANCH"
+          git push origin "$BRANCH" --force
 
           gh pr create \
             --base main \
