@@ -219,6 +219,7 @@ rispondi nel thread del commento — **non** come commento top-level alla PR.
 
 ```bash
 # Rispondi a un commento inline (mantieni il thread)
+# Esegui manualmente da terminale — non automatizzare senza revisione del body
 gh api \
   repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   -f body="[tua risposta]"
@@ -266,6 +267,8 @@ prima di procedere. Il significato è noto al team.
 
 **Non usarla per evitare pushback legittimo.** Usala quando il contesto
 interpersonale rende il pushback tecnico difficile da articolare in chat.
+
+Per la gestione della PR prima che il reviewer risponda, vedi `siae-requesting-review`.
 
 ---
 

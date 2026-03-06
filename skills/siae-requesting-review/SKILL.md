@@ -1,9 +1,8 @@
 ---
 name: siae-requesting-review
 description: >
-  Usa quando hai completato l'implementazione e devi richiedere una code review
-  su una PR. Trigger: "pronto per review", "apro la PR", "chiedo il review",
-  PR creata ma reviewer non ancora assegnato.
+  Trigger: "pronto per review", "ho aperto la PR", "chiedo il review",
+  PR aperta senza reviewer assegnato.
 ---
 
 # SIAE Requesting Review — Richiedere una Code Review Efficace
@@ -66,18 +65,21 @@ Decisioni architetturali contestabili? Tradeoff tecnici?]
 
 **Non difenderti prima che il reviewer dica nulla.** Offri contesto, non giustificazioni preventive.
 
-### Step 2 — Crea la PR via `gh`
+### Step 2 — Apri la PR e Assegna il Reviewer
 
-```bash
-git push -u origin $(git branch --show-current)
-
-gh pr create \
-  --title "feat(modulo): descrizione [PROJ-NNN]" \
-  --body "$(cat .github/pull_request_template.md 2>/dev/null || echo '## Cosa\n\n## Perche\n\n## Come verificare\n- [ ] Test passano')" \
-  --assignee "@me"
+```
+REQUIRED PRE-SKILL: siae-finishing-branch
 ```
 
-Poi assegna il reviewer corretto:
+La PR deve essere gia' stata creata da `siae-finishing-branch`. Se non lo e' ancora,
+torna a quella skill prima di procedere qui.
+
+Una volta che la PR esiste, assegna il reviewer corretto:
+
+```bash
+# Assegna reviewer alla PR gia' aperta
+gh pr edit {pr_number} --add-reviewer {github-username}
+```
 
 | Tipo di cambiamento | Reviewer consigliato |
 |--------------------|---------------------|
@@ -112,7 +114,7 @@ Durante l'attesa:
 - **SI'** lavora su altri task nel frattempo
 - **SI'** segnala blocchi urgenti al tech lead
 
-Se il review non arriva entro la soglia del team:
+Se il review non arriva entro **24 ore lavorative** (soglia default SIAE):
 
 ```
 @reviewer PR [link] — hai bisogno di piu' contesto?
@@ -133,6 +135,12 @@ direttamente in chat:
 
 Questa frase segnala al tech lead che hai bisogno di un allineamento sincrono.
 Il significato e' noto al team — non serve spiegare.
+
+**Quando NON usarla:** per evitare pushback legittimo o per rimandare una
+conversazione tecnica normale. Usala solo quando il contesto interpersonale
+rende il confronto diretto genuinamente difficile da articolare in chat.
+
+Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-review`.
 
 ---
 

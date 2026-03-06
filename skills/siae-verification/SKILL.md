@@ -37,8 +37,6 @@ NESSUN CLAIM DI COMPLETAMENTO SENZA EVIDENZA FRESCA
 - "L'agent ha detto successo" → 40% dei casi l'agent aveva hallucinated il risultato
 - Tempo perso in false completion → redirect → rework: mediamente 3-4 ore per incident
 
-Affermare completamento senza verifica e' disonesta', non efficienza.
-
 <EXTREMELY-IMPORTANT>
 Affermare che il lavoro e' completo senza verifica e' disonesta', non efficienza.
 Questa skill e' NON NEGOZIABILE. Si applica SEMPRE, senza eccezioni.
