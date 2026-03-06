@@ -50,95 +50,153 @@ Usa il colore ANSI per colorare:
 
 ---
 
-## 0.3 Pre-flight Card — Permission Mindfulness
+## 0.3 Pre-flight Card — Template Unificato a 4 Zone
 
-**Regola di raggruppamento:** prima di iniziare qualsiasi sequenza di azioni, Claude raccoglie TUTTE le operazioni pianificate, le raggruppa per livello di rischio, e mostra **una sola card per livello** — con tutte le operazioni di quel livello elencate al suo interno. L'utente vede il piano completo in una volta sola, non N popup separati.
+**Regola fondamentale: la pre-flight card e' OBBLIGATORIA per qualsiasi azione con rischio >= 🟡 MEDIO.**
+Non e' opzionale. Non si omette "per velocita'". Si mostra PRIMA che Claude esegua l'azione, non dopo.
 
-**Regola fondamentale: la pre-flight card è OBBLIGATORIA per qualsiasi azione con rischio ≥ 🟡 MEDIO.**
-Non è opzionale. Non si omette "per velocità". Si mostra PRIMA che Claude esegua l'azione, non dopo.
+**Regola di raggruppamento:** Claude raccoglie TUTTE le operazioni pianificate, le raggruppa per livello di rischio, e mostra **una sola card per livello**.
 
-**Regola multi-step:** se la skill è strutturata in più fasi (es. Step 3 = conferma piano, Step 4 = esecuzione), la card va mostrata SEMPRE come ultimo output prima del tool call di esecuzione — anche se era già stata mostrata in una fase precedente. Lo scope può cambiare tra una fase e l'altra.
+**Regola multi-step:** se la skill ha piu' fasi, la card va mostrata SEMPRE come ultimo output prima del tool call di esecuzione — anche se era gia' stata mostrata in una fase precedente.
 
-**Regola operazioni fuori flusso:** se la tabella di classificazione di una skill elenca operazioni non presenti nel flusso standard (es. `git push`, `rm`, `deploy`), la card rimane obbligatoria se l'utente le richiede esplicitamente. Nella tabella di classificazione aggiungi una nota che indica quale tipo di card usare per ciascuna:
-- operazione 🔴 ALTO → card con bordo `┏━┓` rosso
-- operazione 🚨 CRITICO → card con bordo `┏━┓` rosso grassetto
+### Come generare una card
 
-Il colore della card comunica il livello a colpo d'occhio: giallo → medio, rosso → alto, rosso grassetto → critico.
+<EXTREMELY-IMPORTANT>
+NON costruire le card a mano. Usa SEMPRE lo script `design-system/generate-card.py`.
+
+Claude non sa calcolare correttamente la larghezza visiva delle emoji. Lo script gestisce
+automaticamente padding, allineamento, wrapping e colori ANSI.
+</EXTREMELY-IMPORTANT>
+
+**Uso da Bash (JSON su stdin):**
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-finishing-branch",
+  "context": [
+    {"emoji": "🌿", "label": "Branch", "value": "feature/PROJ-123-add-login"},
+    {"emoji": "🎯", "label": "Target", "value": "sviluppo"}
+  ],
+  "actions": [
+    {"emoji": "🚀", "label": "Push branch + apertura PR", "path": "origin/feature/PROJ-123"}
+  ],
+  "reason": "Branch pronto, test verdi",
+  "ifno": "Il branch resta locale"
+}' | python3 design-system/generate-card.py
+```
+
+**Flags:**
+- `--no-color` — disabilita colori ANSI (per output in file .md)
+
+### Le 4 Zone
+
+Ogni card e' composta da 4 zone in ordine fisso:
+
+| Zona | Nome | Contenuto | Obbligatoria? |
+|------|------|-----------|---------------|
+| Z1 | **Header** | `🔨 DevForge — [EMOJI] [LIVELLO] ([sottotitolo]) · [skill]` | SEMPRE |
+| Z2 | **Contesto** | Righe `emoji label: valore` con stato/ambiente rilevato | Se la skill ha info di contesto |
+| Z3 | **Operazioni** | Lista numerata `N. emoji Azione: desc` + `📂 File/Path: path` | Se ci sono azioni da eseguire |
+| Z4 | **Footer** | `💡 Perche': motivazione` + `🚫 Se NO: alternativa` | SEMPRE |
+
+### Combinazioni valide
+
+| Caso d'uso | Z1 | Z2 | Z3 | Z4 |
+|------------|----|----|----|----|
+| Contesto puro (QA/Automation apertura) | ✅ | ✅ | — | ✅ |
+| Operazioni pure (documentation publish) | ✅ | — | ✅ | ✅ |
+| Contesto + operazioni (finishing-branch, security) | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-### Come costruire una card raggruppata
+## 0.4 Griglia Adattiva
 
-Struttura delle righe operazione (colonne allineate a 17 caratteri):
-```
-  N.  Azione:    [descrizione dell'azione]
-      File/Path: [percorso esatto del file]
-```
-Struttura footer (motivazione e alternativa condivise per tutte le operazioni del gruppo):
-```
-  Perché:        [motivazione valida per tutte le operazioni del gruppo]
-  Se NO:         [cosa succede se l'utente rifiuta l'intero gruppo]
-```
+Lo script `generate-card.py` gestisce automaticamente:
 
----
-
-### Card 🟡 MEDIO — bordo doppio · `\e[33m` giallo · `\e[0m` reset
-
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — 🟡 MEDIO (reversibile)  ·  [N] operazioni         ║
-╠══════════════════════════════════════════════════════════════════╣
-║  1.  Azione:    [descrizione prima operazione]                   ║
-║      File/Path: [percorso/del/file1]                             ║
-║  2.  Azione:    [descrizione seconda operazione]                 ║
-║      File/Path: [percorso/del/file2]                             ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Perché:        [motivazione contestuale in italiano]            ║
-║  Se NO:         [cosa succede se rifiuti]                        ║
-╠══════════════════════════════════════════════════════════════════╣
-║  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ║
-╚══════════════════════════════════════════════════════════════════╝
-```
-
-### Card 🔴 ALTO — bordo pesante · `\e[31m` rosso · `\e[0m` reset
-
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 ALTO (difficile da annullare)  ·  [operazione] ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    [descrizione prima operazione]                   ┃
-┃      File/Path: [percorso/del/file1]                             ┃
-┃  2.  Azione:    [descrizione seconda operazione]                 ┃
-┃      File/Path: [percorso/del/file2]                             ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perché:        [motivazione contestuale in italiano]            ┃
-┃  Se NO:         [cosa succede se rifiuti]                        ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-```
-
-### Card 🚨 CRITICO — bordo pesante · `\e[1;31m` rosso grassetto · `\e[0m` reset
-
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🚨 CRITICO (irreversibile)  ·  [operazione]       ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    [descrizione prima operazione]                   ┃
-┃      File/Path: [percorso/del/file1]                             ┃
-┃  2.  Azione:    [descrizione seconda operazione]                 ┃
-┃      File/Path: [percorso/del/file2]                             ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perché:        [motivazione contestuale in italiano]            ┃
-┃  Se NO:         [cosa succede se rifiuti]                        ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-```
+- **Larghezza adattiva:** min 60, max 100 caratteri (bordi inclusi)
+- **Margine sinistro:** 2 spazi sempre
+- **Label column:** allineata a `:` + spazi (18 char)
+- **Emoji:** contano 2 char di larghezza display
+- **Wrapping testo:** su confini di parola (spazi)
+- **Wrapping path:** su `/` per token senza spazi
+- **Righe di continuazione:** indent allineato al valore (dopo `:`)
+- **Bordi:** MAI sfondati — il contenuto si adatta, non il bordo
 
 ---
 
-## Trigger obbligatori per rischio ≥ 🟡
+## 0.5 Bordo e Colore per Livello
+
+| Livello | Bordo | Caratteri | Colore ANSI |
+|---------|-------|-----------|-------------|
+| 🟢 SICURO | Nessuna card | — | — |
+| 🟡 MEDIO | Doppio | `╔═╗ ║ ╠ ╚╝` | `\e[33m` giallo |
+| 🔴 ALTO | Pesante | `┏━┓ ┃ ┣ ┗┛` | `\e[31m` rosso |
+| 🚨 CRITICO | Pesante | `┏━┓ ┃ ┣ ┗┛` | `\e[1;31m` rosso bold |
+
+Ogni riga della card: `[COLORE]bordo_sx[RESET] contenuto paddato [COLORE]bordo_dx[RESET]`
+
+---
+
+## 0.6 Emoji Catalog
+
+### Z2 Contesto — emoji per campo
+
+| Emoji | Uso |
+|-------|-----|
+| 📡 | Tier/connessione |
+| 🎫 | Ticket Jira/Story |
+| ✅ | Disponibilita'/check |
+| 📚 | Confluence/docs |
+| 🌿 | Branch git |
+| 🎯 | Target/base |
+| 📝 | Commit/note |
+| 🧪 | Test suite |
+| 📋 | Piano/modulo |
+| 🔢 | Task/numerazione |
+| 🤖 | Subagent/bot |
+| 📱 | Canale mobile |
+| ☁️ | Cloud/BrowserStack |
+| 🔄 | Sync/tipo |
+| 📦 | Package/dipendenza |
+| 📁 | Directory/working dir |
+| 🔧 | Comando/config |
+| 🔑 | Pattern/secret |
+| 📊 | Confidence/stats |
+| 🗄️ | Database |
+| 🔐 | Credenziali/rotazione |
+| 🌍 | Scope/ambiente |
+| 🏗️ | Ambiente infra |
+
+### Z3 Operazioni — emoji per azione
+
+| Emoji | Uso |
+|-------|-----|
+| ✏️ | Creazione file |
+| 📝 | Modifica file |
+| 🗑️ | Eliminazione |
+| 📥 | Installazione dipendenza |
+| 🔀 | Refactoring/rinomina |
+| 🖥️ | Esecuzione shell |
+| 🔧 | Modifica schema/config |
+| 📌 | Git commit |
+| 🚀 | Git push / PR |
+| 📤 | Pubblicazione esterna |
+| ⚡ | Dispatch subagent |
+| 🧪 | Test |
+| ⚠️ | Alert critico |
+
+### Z4 Footer + Z3 Path — fissi
+
+| Emoji | Uso |
+|-------|-----|
+| 📂 | File/Path (sempre in Z3) |
+| 💡 | Perche' (sempre in Z4) |
+| 🚫 | Se NO (sempre in Z4) |
+
+---
+
+## Trigger obbligatori per rischio >= 🟡
 
 | Categoria          | Esempi di azione                                              | Livello |
 |--------------------|---------------------------------------------------------------|---------|
