@@ -1,7 +1,7 @@
 ---
 name: siae-automation
 description: >
-  Orchestrazione automation test E2E mobile e web.
+  Use after QA phase to set up and run E2E automated tests.
   Trigger: dopo siae-qa, /forge-automate.
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: siae-debugging
 description: >
-  Debug sistematico con template RCA.
+  Use when encountering any bug, error, or unexpected behavior — before proposing fixes.
   Trigger: bug, errore, incident, test che fallisce, comportamento inatteso.
 ---
 
