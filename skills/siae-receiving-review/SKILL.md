@@ -179,10 +179,11 @@ Il reviewer può insistere — ha questo diritto. Se insiste, allineati o escala
 
 Risposta consigliata:
 ```
-Grazie per il feedback. Per capire meglio: c'è un problema specifico
-che questo codice crea? O è una preferenza stilistica? Così posso
-rispondere nel modo più utile.
+Per capire meglio: c'è un problema specifico che questo codice crea?
+O è una preferenza stilistica? Così posso rispondere nel modo più utile.
 ```
+
+(Niente "Grazie" — le azioni parlano, non le formule di cortesia.)
 
 ### Il reviewer chiede una feature "professionale"
 
@@ -211,6 +212,29 @@ dimostra questo comportamento?
 
 ---
 
+### Risposta ai Commenti Inline su GitHub
+
+Quando il reviewer lascia commenti inline su righe specifiche di codice,
+rispondi nel thread del commento — **non** come commento top-level alla PR.
+
+```bash
+# Rispondi a un commento inline (mantieni il thread)
+gh api \
+  repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
+  -f body="[tua risposta]"
+
+# Ottieni l'ID del commento inline
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments | jq '.[].id'
+```
+
+Rispondere come commento top-level rompe il thread e rende il review difficile
+da seguire per il reviewer. Usa sempre il thread corretto.
+
+**Eccezione:** commenti generali sulla PR (non legati a righe specifiche) vanno
+come commento top-level via `gh pr comment {pr_number} --body "[testo]"`.
+
+---
+
 ## Anti-Rationalization Table
 
 | Pensiero | Realta' |
@@ -224,6 +248,24 @@ dimostra questo comportamento?
 | "Fixo solo i REQUIRED e basta" | Le SUGGESTION di qualita' migliorano il codice nel tempo. |
 | "Rispondo 'Ottimo punto' e implemento" | Performance emotiva. Di' cosa hai fatto, non come ti senti. |
 | "Aggiungo la feature, il reviewer ha esperienza" | Verifica prima se e' usata. YAGNI vale anche in review. |
+
+---
+
+## Signal Phrase — Discomfort nel Pushback
+
+Se sei a disagio nel pushback su un suggerimento del reviewer (senti pressione
+a non contestare, la situazione è ambigua, il reviewer è senior) ma non
+riesci a dirlo direttamente:
+
+```
+"Situazione insolita al Circle K."
+```
+
+Questa frase segnala al tech lead che hai bisogno di un allineamento sincrono
+prima di procedere. Il significato è noto al team.
+
+**Non usarla per evitare pushback legittimo.** Usala quando il contesto
+interpersonale rende il pushback tecnico difficile da articolare in chat.
 
 ---
 
