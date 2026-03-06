@@ -62,32 +62,56 @@ Non e' opzionale. Non si omette "per velocita'". Si mostra PRIMA che Claude eseg
 ### Come generare una card
 
 <EXTREMELY-IMPORTANT>
-NON costruire le card a mano. Usa SEMPRE lo script `design-system/generate-card.py`.
-
-Claude non sa calcolare correttamente la larghezza visiva delle emoji. Lo script gestisce
-automaticamente padding, allineamento, wrapping e colori ANSI.
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
+NON usare Bash. NON usare generate-card.py. Il renderer di Claude Code gestisce
+automaticamente l'allineamento. La card va mostrata PRIMA di eseguire l'azione,
+come output diretto nella risposta.
 </EXTREMELY-IMPORTANT>
 
-**Uso da Bash (JSON su stdin):**
+**Template:**
 
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-finishing-branch",
-  "context": [
-    {"emoji": "🌿", "label": "Branch", "value": "feature/PROJ-123-add-login"},
-    {"emoji": "🎯", "label": "Target", "value": "sviluppo"}
-  ],
-  "actions": [
-    {"emoji": "🚀", "label": "Push branch + apertura PR", "path": "origin/feature/PROJ-123"}
-  ],
-  "reason": "Branch pronto, test verdi",
-  "ifno": "Il branch resta locale"
-}' | python3 design-system/generate-card.py
+```markdown
+| LEVEL_EMOJI LEVEL (subtitle) — 🔨 DevForge · skill-name |
+|:---|
+| [⚠️ WARNING_LINE — solo per ALTO e CRITICO] |
+| CONTEXT_EMOJI Label: `valore` |
+| N. ACTION_EMOJI Azione: descrizione |
+| 📂 `path/al/file` |
+| 💡 Perche': motivazione |
+| 🚫 Se NO: alternativa |
 ```
 
-**Flags:**
-- `--no-color` — disabilita colori ANSI (per output in file .md)
+**Mapping livello → emoji, subtitle, warning:**
+
+| Livello | Emoji | Subtitle | Warning line |
+|---------|-------|----------|-------------|
+| MEDIO | 🟡 | reversibile | — (nessuna) |
+| ALTO | 🔴 | difficile da annullare | `⚠️ OPERAZIONE DIFFICILE DA ANNULLARE` |
+| CRITICO | 🚨 | irreversibile | `⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA` |
+
+**Esempio MEDIO:**
+```markdown
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finishing-branch |
+|:---|
+| 🌿 Branch: `feature/PROJ-123-add-login` |
+| 🎯 Target: `sviluppo` |
+| 1. 🚀 Azione: Push branch + apertura PR |
+| 📂 `origin/feature/PROJ-123-add-login` |
+| 💡 Perche': Branch pronto, test verdi |
+| 🚫 Se NO: Il branch resta locale |
+```
+
+**Esempio CRITICO:**
+```markdown
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-security |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🔐 Segreto: `AWS_SECRET_ACCESS_KEY` |
+| 1. 📝 Azione: Rotazione credenziale |
+| 📂 `.env.production` |
+| 💡 Perche': Leak rilevato in audit |
+| 🚫 Se NO: Rischio attivo |
+```
 
 ### Le 4 Zone
 
@@ -112,29 +136,23 @@ Ogni card e' composta da 4 zone in ordine fisso:
 
 ## 0.4 Griglia Adattiva
 
-Lo script `generate-card.py` gestisce automaticamente:
-
-- **Larghezza adattiva:** min 60, max 100 caratteri (bordi inclusi)
-- **Margine sinistro:** 2 spazi sempre
-- **Label column:** allineata a `:` + spazi (18 char)
-- **Emoji:** contano 2 char di larghezza display
-- **Wrapping testo:** su confini di parola (spazi)
-- **Wrapping path:** su `/` per token senza spazi
-- **Righe di continuazione:** indent allineato al valore (dopo `:`)
-- **Bordi:** MAI sfondati — il contenuto si adatta, non il bordo
+Il renderer di Claude Code gestisce automaticamente l'allineamento delle markdown table.
+Non e' necessario calcolare larghezze, padding o wrapping manualmente.
 
 ---
 
-## 0.5 Bordo e Colore per Livello
+## 0.5 Differenziazione Visiva per Livello
 
-| Livello | Bordo | Caratteri | Colore ANSI |
-|---------|-------|-----------|-------------|
-| 🟢 SICURO | Nessuna card | — | — |
-| 🟡 MEDIO | Doppio | `╔═╗ ║ ╠ ╚╝` | `\e[33m` giallo |
-| 🔴 ALTO | Pesante | `┏━┓ ┃ ┣ ┗┛` | `\e[31m` rosso |
-| 🚨 CRITICO | Pesante | `┏━┓ ┃ ┣ ┗┛` | `\e[1;31m` rosso bold |
+La differenziazione visiva si ottiene tramite:
+- Emoji di livello nell'header (🟡 / 🔴 / 🚨)
+- Riga warning dedicata per ALTO e CRITICO
+- Nessun bordo ANSI — il markdown renderer gestisce il layout
 
-Ogni riga della card: `[COLORE]bordo_sx[RESET] contenuto paddato [COLORE]bordo_dx[RESET]`
+| Livello | Emoji header | Warning line | Impatto visivo |
+|---------|-------------|--------------|----------------|
+| 🟡 MEDIO | 🟡 | — | Sottile, reversibile |
+| 🔴 ALTO | 🔴 | ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE | Notevole |
+| 🚨 CRITICO | 🚨 | ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA | Impossibile ignorare |
 
 ---
 
@@ -220,3 +238,7 @@ Ogni riga della card: `[COLORE]bordo_sx[RESET] contenuto paddato [COLORE]bordo_d
 - Il campo **Alternativa** deve descrivere concretamente cosa succede se l'utente nega
 - Se l'azione tocca più categorie, usa il livello più alto tra quelli applicabili
 - Per azioni 🟢 (solo lettura, analisi, spiegazioni): la card NON si mostra
+- Valori tecnici (branch, path, ARN, S3 URI, ISRC, env vars): sempre in backtick
+- Una riga `📂 path` per ogni file di ogni azione
+- Stessa azione su piu' file: ripetere le righe 📂
+- `generate-card.py` rimane nel repo per uso manuale/documentazione ma NON e' richiesto dalle skill
