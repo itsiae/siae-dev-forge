@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -39,12 +40,35 @@ jobs:
           LATEST_TAG="${{ steps.latest.outputs.tag }}"
           CURRENT="v${{ steps.current.outputs.version }}"
 
-          if [ -z "$LATEST_TAG" ] || [ "$CURRENT" != "$LATEST_TAG" ]; then
-            # plugin.json was bumped ahead of the latest release → create release
+          # Nessun release precedente → crea la prima release
+          if [ -z "$LATEST_TAG" ]; then
             echo "mode=release" >> $GITHUB_OUTPUT
-            echo "Mode: release ($CURRENT != $LATEST_TAG)"
+            echo "Mode: release (nessun release precedente)"
+            exit 0
+          fi
+
+          # Confronto semantico tra versione corrente e latest release
+          COMPARE=$(python3 -c "
+          from packaging.version import Version
+          current = Version('${{ steps.current.outputs.version }}')
+          latest  = Version('$(echo $LATEST_TAG | sed s/^v//)')
+          if current > latest:
+              print('greater')
+          elif current < latest:
+              print('less')
+          else:
+              print('equal')
+          ")
+
+          if [ "$COMPARE" = "greater" ]; then
+            echo "mode=release" >> $GITHUB_OUTPUT
+            echo "Mode: release ($CURRENT > $LATEST_TAG)"
+          elif [ "$COMPARE" = "less" ]; then
+            # plugin.json è indietro rispetto al latest release → bump
+            echo "mode=bump_pr" >> $GITHUB_OUTPUT
+            echo "Mode: bump_pr ($CURRENT < $LATEST_TAG, versione minore)"
           else
-            # plugin.json == latest tag → check for new commits
+            # Stessa versione → controlla se ci sono nuovi commit
             COMMITS=$(git log "${LATEST_TAG}..HEAD" --pretty=format:"%s" | grep -vE "^chore\(release\):" || true)
             if [ -z "$COMMITS" ]; then
               echo "mode=skip" >> $GITHUB_OUTPUT
@@ -156,6 +180,16 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "chore(release): bump version to $NEW" \
-            --body "$(printf 'Bump automatico: **${{ steps.current.outputs.version }}** → **%s** (%s)\n\nMerge questa PR per creare la release **v%s**.' "$NEW" "${{ steps.bump.outputs.type }}" "$NEW")"
+            --body "$(cat <<EOF
+          ## Version Bump Automatico
+
+          **${{ steps.current.outputs.version }}** → **${NEW}** (${{ steps.bump.outputs.type }})
+
+          ### Cosa succede dopo
+          1. ✅ Rivedi le modifiche in questa PR
+          2. ✅ Approva e mergia manualmente (main è protetto)
+          3. 🚀 Al merge, il workflow creerà automaticamente la release **v${NEW}**
+          EOF
+          )"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
