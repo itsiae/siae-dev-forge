@@ -155,6 +155,20 @@ Questi pensieri significano che NON hai verificato. Fermati.
 
 ---
 
+## Perche' Importa
+
+Da sessioni reali SIAE dove la verifica e' stata saltata:
+
+- **L'utente ha detto "Non ci credo"** — la fiducia si rompe in un secondo e ci vogliono settimane per ricostruirla
+- **Funzioni undefined shippe in produzione** — crash su path critici (diritti d'autore, pagamenti SIAE)
+- **Requisiti mancanti scoperti post-release** — feature incomplete che hanno richiesto hotfix urgenti
+- **Tempo sprecato in false completion** → re-apertura ticket → rework del developer
+- **CI fallito dopo push** — tempo di tutti sprecato, pipeline bloccata, deploy saltato
+
+Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la reputazione del team su "probabilmente va bene".
+
+---
+
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |

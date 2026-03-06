@@ -1,7 +1,7 @@
 ---
 name: siae-subagent-development
 description: >
-  Esecuzione piani implementativi con subagent freschi per task indipendenti.
+  Use when a validated implementation plan exists with independent tasks.
   Trigger: piano implementativo presente, task indipendenti, /forge-implement.
 ---
 

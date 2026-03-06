@@ -1,9 +1,8 @@
 ---
 name: siae-documentation
 description: >
-  Genera documentazione tecnica SIAE: HLD, LLD, API doc. Trigger: richiesta
-  documentazione, /forge-doc, design review, pre-release. Output in Markdown
-  con diagrammi Mermaid, pubblicabile su Confluence via MCP Atlassian.
+  Use when technical documentation is needed for a SIAE component or API.
+  Trigger: richiesta documentazione, /forge-doc, design review, pre-release.
 ---
 
 ```

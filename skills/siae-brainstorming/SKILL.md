@@ -1,7 +1,7 @@
 ---
 name: siae-brainstorming
 description: >
-  Brainstorming socratico per trasformare idee in design validati.
+  Use before any creative work — creating features, components, or modifying behavior.
   Trigger: feature nuova, design, componente, funzionalita', modifiche comportamentali,
   qualsiasi lavoro creativo prima dell'implementazione.
 ---

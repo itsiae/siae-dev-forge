@@ -1,7 +1,7 @@
 ---
 name: siae-receiving-review
 description: >
-  Elaborazione strutturata di feedback di code review ricevuto.
+  Use when code review feedback has been received and needs to be actioned.
   Trigger: ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED.
 ---
 

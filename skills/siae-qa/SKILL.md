@@ -1,7 +1,7 @@
 ---
 name: siae-qa
 description: >
-  QA Xray: Test Plan e Test Case step-based compatibili Xray.
+  Use when implementation is complete and formal test documentation for Xray is needed.
   Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5), /forge-qa.
 ---
 
