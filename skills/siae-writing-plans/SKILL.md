@@ -168,6 +168,24 @@ Se il design doc gia' include una sezione piano, aggiungila li' come sezione sep
 
 Committa il file piano:
 
+🟡 MEDIO — Mostra pre-flight card prima del commit
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-writing-plans",
+  "context": [
+    {"emoji": "📋", "label": "Piano", "value": "<filename>.md"},
+    {"emoji": "🔢", "label": "Task", "value": "<N> task definiti"}
+  ],
+  "actions": [
+    {"emoji": "📌", "label": "Commit piano implementativo", "path": "docs/plans/<filename>.md"}
+  ],
+  "reason": "Piano validato, pronto per commit",
+  "ifno": "Il piano resta non committato"
+}' | python3 design-system/generate-card.py
+```
+
 ```bash
 git add docs/plans/YYYY-MM-DD-<topic>-plan.md
 git commit -m "docs(plans): aggiungi piano implementativo per [feature]"
@@ -278,7 +296,7 @@ Step 5: Commit
 |-----------|---------|------|
 | Lettura design doc | 🟢 Sicuro | No |
 | Scrittura piano su file | 🟢 Sicuro | No |
-| Git commit piano | 🟡 Medio | No (commit locale) |
+| Git commit piano | 🟡 Medio | Si |
 | Execution handoff → subagent | 🟡 Medio | Si (in siae-subagent-development) |
 
 ---

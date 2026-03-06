@@ -240,6 +240,28 @@ git log produzione --oneline
 
 # Rimuovi il tag corrente e ricrealo sul commit stabile
 git tag -d PRODUZIONE
+```
+
+**🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-git-workflow",
+  "context": [
+    {"emoji": "🏷️", "label": "Tag da eliminare", "value": "<tag-name>"},
+    {"emoji": "🌍", "label": "Ambiente", "value": "PRODUZIONE"},
+    {"emoji": "📝", "label": "Commit stabile", "value": "<commit-hash>"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Cancellazione tag remoto (trigga rollback deploy)", "path": "origin/refs/tags/<tag-name>"}
+  ],
+  "reason": "Rollback necessario per incident/bug critico in produzione",
+  "ifno": "Il tag resta, nessun rollback — il deploy corrente rimane attivo"
+}' | python3 design-system/generate-card.py
+```
+
+```bash
 git push origin :refs/tags/PRODUZIONE
 git tag PRODUZIONE {SHA_COMMIT_STABILE}
 git push origin PRODUZIONE
@@ -278,3 +300,4 @@ git push origin PRODUZIONE
 | `git tag` + push        | 🔴 ALTO    | Card bordo `┏━━┓` rosso       |
 | `git push --force`      | 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |
 | `git rebase` (condiviso)| 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |
+| `git push origin :refs/tags/*` (rollback) | 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |

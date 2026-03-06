@@ -136,13 +136,66 @@ git worktree list
 
 # Rimuovi un worktree dopo il merge
 git worktree remove .worktrees/{branch-name}
+```
 
+**⚠️ Operazione rischiosa — mostra pre-flight card PRIMA di eseguire:**
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-git-worktrees",
+  "context": [
+    {"emoji": "📁", "label": "Worktree", "value": "<path worktree>"},
+    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"}
+  ],
+  "actions": [
+    {"emoji": "🗑️", "label": "Rimozione forzata worktree (file non committati persi)", "path": "<path worktree>"}
+  ],
+  "reason": "Worktree non rimovibile normalmente (file non committati presenti)",
+  "ifno": "Il worktree resta attivo, commit o stash prima di rimuovere"
+}' | python3 design-system/generate-card.py
+```
+
+```bash
 # Forza rimozione (se ci sono file non committati)
 git worktree remove --force .worktrees/{branch-name}
 
 # Prune worktree rimossi manualmente
 git worktree prune
 ```
+
+---
+
+## Warning: Rebase su Branch Condivisi
+
+🚨 CRITICO — Mostra pre-flight card OBBLIGATORIA prima di eseguire
+
+Se stai per fare `git rebase` su un branch che altri developer usano, questa operazione riscrive la history e può corrompere il lavoro altrui.
+
+<EXTREMELY-IMPORTANT>
+NON eseguire rebase su branch condivisi senza mostrare la pre-flight card e ottenere
+conferma esplicita dall'utente. Questa operazione riscrive la history ed e' IRREVERSIBILE
+per gli altri developer che hanno gia' basato il loro lavoro su questo branch.
+</EXTREMELY-IMPORTANT>
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-git-worktrees",
+  "context": [
+    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"},
+    {"emoji": "🎯", "label": "Target rebase", "value": "<base-branch>"},
+    {"emoji": "👥", "label": "Condiviso", "value": "Si — altri developer usano questo branch"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Rebase interattivo su branch condiviso (riscrive history)", "path": "<branch-name>"}
+  ],
+  "reason": "Rebase necessario per allineare al branch base",
+  "ifno": "STOP — usa merge invece di rebase su branch condivisi"
+}' | python3 design-system/generate-card.py
+```
+
+**Regola:** Se il branch è condiviso (altri developer ci lavorano), preferisci SEMPRE `git merge` a `git rebase`. Il rebase è sicuro solo su branch personali.
 
 ---
 
@@ -222,9 +275,10 @@ Se i permessi sono negati:
 
 ## Classificazione Rischio Operazioni
 
-| Operazione | Rischio |
-|------------|---------|
-| `git worktree list` | 🟢 Sicuro |
-| `git worktree add` | 🟡 Medio |
-| `git worktree remove` | 🟡 Medio |
-| `git worktree remove --force` | 🔴 Alto |
+| Operazione | Rischio | Card |
+|------------|---------|------|
+| `git worktree list` | 🟢 Sicuro | No |
+| `git worktree add` | 🟡 Medio | No |
+| `git worktree remove` | 🟡 Medio | No |
+| `git worktree remove --force` | 🔴 Alto | Si |
+| `git rebase` su branch condiviso | 🚨 Critico | Si |

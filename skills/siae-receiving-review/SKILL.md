@@ -158,6 +158,27 @@ Non lasciare nessun commento senza risposta. Ogni commento = una risposta.
 - [ ] Test passano (`mvn test` / `yarn test` / `pytest`)
 - [ ] Nessun nuovo file di debug introdotto
 
+**Quando i fix sono pronti e la checklist sopra è completa, mostra la pre-flight card PRIMA di pushare:**
+
+🔴 ALTO — Mostra pre-flight card prima di push
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-receiving-review",
+  "context": [
+    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"},
+    {"emoji": "📝", "label": "Fix applicati", "value": "<N> REQUIRED, <M> SUGGESTION"},
+    {"emoji": "🧪", "label": "Test suite", "value": "<risultato test>"}
+  ],
+  "actions": [
+    {"emoji": "🚀", "label": "Push fix al branch della PR", "path": "origin/<branch-name>"}
+  ],
+  "reason": "Fix review completati, test verdi, pronto per re-review",
+  "ifno": "I fix restano locali, il reviewer non vede le modifiche"
+}' | python3 design-system/generate-card.py
+```
+
 ---
 
 ## Casi Speciali
@@ -298,10 +319,10 @@ Se i permessi sono negati:
 
 ## Classificazione Rischio
 
-| Operazione | Livello | Note |
-|-----------|---------|------|
-| Lettura commenti | 🟢 Sicuro | Solo lettura |
-| Categorizzazione | 🟢 Sicuro | Solo analisi |
-| Fix codice | 🟡 Medio | Segui siae-tdd |
-| Push aggiornamento branch | 🔴 Alto | Pre-flight: test verdi |
-| Risposta ai commenti | 🟢 Sicuro | Comunicazione asincrona |
+| Operazione | Livello | Card | Note |
+|-----------|---------|------|------|
+| Lettura commenti | 🟢 Sicuro | No | Solo lettura |
+| Categorizzazione | 🟢 Sicuro | No | Solo analisi |
+| Fix codice | 🟡 Medio | No | Coperto da siae-tdd |
+| Push aggiornamento branch | 🔴 Alto | Si | Pre-flight: test verdi |
+| Risposta ai commenti | 🟢 Sicuro | No | Comunicazione asincrona |

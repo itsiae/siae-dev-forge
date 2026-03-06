@@ -214,6 +214,43 @@ process\.env\.\w+\s*\|\|\s*["'][^"']+["']
 
 ---
 
+## Operazioni Attive — Rotazione Credenziali
+
+Quando Claude gestisce direttamente la rotazione di credenziali o l'aggiornamento di secret:
+
+🚨 CRITICO — Pre-flight card OBBLIGATORIA
+
+<EXTREMELY-IMPORTANT>
+NON eseguire rotazione credenziali o aggiornamento secret senza mostrare la pre-flight
+card e ottenere conferma esplicita dall'utente. Un secret ruotato incorrettamente puo'
+causare downtime immediato su tutti i servizi dipendenti.
+</EXTREMELY-IMPORTANT>
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-security",
+  "context": [
+    {"emoji": "🔐", "label": "Secret", "value": "<secret-name>"},
+    {"emoji": "🌍", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
+    {"emoji": "📦", "label": "Servizi dipendenti", "value": "<lista servizi>"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Rotazione credenziale / aggiornamento secret", "path": "aws secretsmanager update-secret --secret-id <id>"}
+  ],
+  "reason": "Secret scaduto/compromesso, rotazione necessaria",
+  "ifno": "STOP — il secret resta invariato, valuta rischio manuale"
+}' | python3 design-system/generate-card.py
+```
+
+**Checklist pre-rotazione:**
+- [ ] Backup del secret corrente
+- [ ] Lista servizi dipendenti verificata
+- [ ] Strategia di rollout definita (rolling restart / blue-green)
+- [ ] Monitoring attivo per errori post-rotazione
+
+---
+
 ## 5. Vincoli Non Negoziabili
 
 Queste regole non ammettono eccezioni, in **nessun** ambiente.
@@ -254,3 +291,4 @@ Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 | Modifica configurazione encryption | 🔴 Alto | Si |
 | Gestione file con segreti (.env, credenziali) | 🚨 Critico | Si |
 | Modifica configurazione CI/CD security | 🚨 Critico | Si |
+| Rotazione credenziali / Secrets Manager | 🚨 Critico | Si |

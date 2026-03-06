@@ -125,6 +125,25 @@ Organizzazione per dominio infrastrutturale:
 
 Ogni modulo ha: `_input.tf`, `_local.tf`, `_output.tf` + resource file specifici.
 
+**🚨 Quando la risorsa modificata è IAM — pre-flight card CRITICO aggiuntiva:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-iac",
+  "context": [
+    {"emoji": "🔐", "label": "Risorsa IAM", "value": "<role/policy name>"},
+    {"emoji": "🌍", "label": "Ambiente", "value": "<ambiente>"},
+    {"emoji": "📦", "label": "Servizi impattati", "value": "<lista servizi>"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Modifica policy IAM (impatta accesso risorse)", "path": "<file .tf>"}
+  ],
+  "reason": "Modifica necessaria per <motivazione>",
+  "ifno": "STOP — policy invariata, accessi non modificati"
+}' | python3 design-system/generate-card.py
+```
+
 ---
 
 ## 5. CI/CD
@@ -154,17 +173,35 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V7 | Tag obbligatori su ogni risorsa            | `Environment`, `Project`, `ManagedBy`    |
 | V8 | No secret in variabili TF                  | Usa Secrets Manager o SSM                |
 
+**🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di `terraform apply`:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-iac",
+  "context": [
+    {"emoji": "🏗️", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
+    {"emoji": "📋", "label": "Plan output", "value": "<N> to add, <N> to change, <N> to destroy"},
+    {"emoji": "🎫", "label": "Ticket", "value": "<PROJ-NNN>"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Applicazione modifiche infrastruttura AWS", "path": "<modulo terraform>"}
+  ],
+  "reason": "Plan verificato, risorse da creare/modificare",
+  "ifno": "STOP — nessuna modifica applicata all'infrastruttura"
+}' | python3 design-system/generate-card.py
+```
+
 ---
 
 ## Classificazione Rischio Operazioni
 
-| Operazione                    | Rischio   |
-|-------------------------------|-----------|
-| Lettura/analisi file .tf      | 🟢 Sicuro |
-| Creazione/modifica file .tf   | 🟡 Medio  |
-| Modifica terragrunt.hcl       | 🟡 Medio  |
-| terraform plan                | 🟡 Medio  |
-| terraform apply               | 🚨 Critico|
-| Modifica IAM policy           | 🔴 Alto   |
-| Modifica security group rules | 🔴 Alto   |
-| Tag deploy (rc-*)             | 🚨 Critico|
+| Operazione                    | Rischio   | Card       |
+|-------------------------------|-----------|------------|
+| Lettura/analisi file .tf      | 🟢 Sicuro | No         |
+| Creazione/modifica file .tf   | 🟡 Medio  | No         |
+| Modifica terragrunt.hcl       | 🟡 Medio  | No         |
+| terraform plan                | 🟡 Medio  | No         |
+| `terraform apply`             | 🚨 Critico| Si         |
+| Modifica IAM policy / security group | 🚨 Critico | Si |
+| Tag deploy (rc-*)             | 🚨 Critico| No         |
