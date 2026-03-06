@@ -1,9 +1,8 @@
 ---
 name: siae-onboarding
 description: >
-  Rileva automaticamente la factory, il tech stack e le regole di progetto
-  all'avvio di una sessione Claude Code su un repo SIAE. Trigger: inizio sessione,
-  apertura nuovo progetto, cambio contesto.
+  Use at the start of any SIAE project session to establish project context.
+  Trigger: inizio sessione, apertura nuovo progetto, cambio contesto.
 user-invocable: false
 ---
 

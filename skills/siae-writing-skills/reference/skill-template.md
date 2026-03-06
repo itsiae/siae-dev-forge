@@ -65,6 +65,28 @@ description: >
 
 🟡 MEDIO — Mostra pre-flight card prima di eseguire
 
+<EXTREMELY-IMPORTANT>
+NON costruire card a mano. Usa SEMPRE `design-system/generate-card.py`.
+Vedi `design-system/devforge-visual.md` sezione 0.3 per il template a 4 zone.
+</EXTREMELY-IMPORTANT>
+
+Genera la card con:
+
+```bash
+echo '{
+  "level": "<MEDIO|ALTO|CRITICO>",
+  "skill": "<nome-skill>",
+  "context": [
+    {"emoji": "<emoji>", "label": "<Label>", "value": "<valore rilevato>"}
+  ],
+  "actions": [
+    {"emoji": "<emoji>", "label": "<Descrizione azione>", "path": "<file o path>"}
+  ],
+  "reason": "<motivazione>",
+  "ifno": "<cosa succede se rifiutato>"
+}' | python3 design-system/generate-card.py
+```
+
 <Istruzioni per lo step.>
 
 ### Step 3 — <Nome Step>
@@ -111,7 +133,7 @@ description: >
 2. **NON** <vincolo negativo>
 3. **SEMPRE** <vincolo positivo>
 4. **SEMPRE** <vincolo positivo>
-5. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡
+5. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡 — genera con `design-system/generate-card.py`
 
 ---
 

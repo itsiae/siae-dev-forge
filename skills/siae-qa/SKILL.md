@@ -1,7 +1,7 @@
 ---
 name: siae-qa
 description: >
-  QA Xray: Test Plan e Test Case step-based compatibili Xray.
+  Use when implementation is complete and formal test documentation for Xray is needed.
   Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5), /forge-qa.
 ---
 
@@ -69,18 +69,22 @@ Ogni operazione deve esplicitare il tier usato nella pre-flight card di apertura
 
 Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — SIAE QA · Pre-flight Check                        ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Tier attivo:   [Tier 1 MCP / Tier 3 CSV]                        ║
-║  Story Jira:    [PROJ-XXX o "da richiedere"]                     ║
-║  AC disponibili: [Si / No — leggo da description/commenti]       ║
-║  Confluence:    [Spazio QA trovato / Non configurato]            ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Perche': Il tier determina come vengono sincronizzati i TC      ║
-║  Se Tier 3: esporto CSV importabile manualmente in Xray          ║
-╚══════════════════════════════════════════════════════════════════╝
+Genera la pre-flight card con `design-system/generate-card.py`:
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-qa",
+  "context": [
+    {"emoji": "📡", "label": "Tier attivo", "value": "Tier 1 MCP / Tier 3 CSV"},
+    {"emoji": "🎫", "label": "Story Jira", "value": "PROJ-XXX"},
+    {"emoji": "✅", "label": "AC disponibili", "value": "Si / No"},
+    {"emoji": "📚", "label": "Confluence", "value": "Spazio QA trovato / Non configurato"}
+  ],
+  "actions": [],
+  "reason": "Il tier determina come vengono sincronizzati i TC",
+  "ifno": "Se Tier 3: esporto CSV importabile manualmente in Xray"
+}' | python3 design-system/generate-card.py
 ```
 
 ---

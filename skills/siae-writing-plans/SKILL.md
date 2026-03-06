@@ -1,9 +1,7 @@
 ---
 name: siae-writing-plans
 description: >
-  Trasforma un design approvato in un piano implementativo bite-sized con path esatti,
-  codice completo e comandi con output atteso. Produce l'execution handoff verso
-  siae-subagent-development o sessione separata.
+  Use when a design has been approved and needs to become an implementation plan.
   Trigger: design approvato da siae-brainstorming, spec/requisiti esistenti, piano da aggiornare.
 ---
 

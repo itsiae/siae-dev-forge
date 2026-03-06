@@ -1,9 +1,8 @@
 ---
 name: siae-documentation
 description: >
-  Genera documentazione tecnica SIAE: HLD, LLD, API doc. Trigger: richiesta
-  documentazione, /forge-doc, design review, pre-release. Output in Markdown
-  con diagrammi Mermaid, pubblicabile su Confluence via MCP Atlassian.
+  Use when technical documentation is needed for a SIAE component or API.
+  Trigger: richiesta documentazione, /forge-doc, design review, pre-release.
 ---
 
 ```
@@ -111,18 +110,22 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 2. Mostra anteprima all'utente
 3. Pre-flight card 🔴 ALTO prima della pubblicazione:
 
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🔴 RISCHIO ALTO  ·  1 operazione                  ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    Pubblicazione pagina su Confluence               ┃
-┃      File/Path: Space/{space} Parent/{parent-page}               ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche':       Crea/aggiorna pagina visibile a tutto il team    ┃
-┃  Se NO:         Il documento resta solo in locale (Markdown)     ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ⬆️  Leggi prima, poi decidi nella dialog qui sopra              ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+Genera la pre-flight card con `design-system/generate-card.py`:
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-documentation",
+  "context": [
+    {"emoji": "📚", "label": "Space", "value": "{space}"},
+    {"emoji": "📄", "label": "Parent", "value": "{parent-page}"}
+  ],
+  "actions": [
+    {"emoji": "📤", "label": "Pubblicazione pagina su Confluence", "path": "Space/{space} Parent/{parent-page}"}
+  ],
+  "reason": "Crea/aggiorna pagina visibile a tutto il team",
+  "ifno": "Il documento resta solo in locale (Markdown)"
+}' | python3 design-system/generate-card.py
 ```
 
 4. Pubblica via `createConfluencePage` o `updateConfluencePage`

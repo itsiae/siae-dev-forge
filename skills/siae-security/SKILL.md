@@ -168,16 +168,22 @@ log.info("Pagamento per autore ID: {}, operazione: {}", autorId, operazioneId);
 
 Quando un file contiene pattern sospetti, mostra la card:
 
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  🔨 DevForge — 🚨 CRITICO  ·  Secret rilevato                    ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  1.  Azione:    Rilevato pattern segreto nel file                ┃
-┃      File/Path: [percorso del file]                              ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche':      Il file contiene potenziali credenziali           ┃
-┃  Se NO:        Le credenziali potrebbero finire nel repository   ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+Genera la pre-flight card con `design-system/generate-card.py`:
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-security",
+  "context": [
+    {"emoji": "🔑", "label": "Pattern", "value": "Secret rilevato nel file"},
+    {"emoji": "📁", "label": "File", "value": "[percorso del file]"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Rilevato pattern segreto", "path": "[percorso del file]"}
+  ],
+  "reason": "Il file contiene potenziali credenziali",
+  "ifno": "Le credenziali potrebbero finire nel repository"
+}' | python3 design-system/generate-card.py
 ```
 
 ### 4.2 Pattern Regex da Intercettare
