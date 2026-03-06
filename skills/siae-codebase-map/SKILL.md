@@ -135,6 +135,24 @@ Rispondi in markdown con header chiari per file/modulo.
 date -u +"%Y-%m-%dT%H:%M:%SZ"
 ```
 
+🟡 MEDIO — Mostra pre-flight card prima di scrivere
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-codebase-map",
+  "context": [
+    {"emoji": "📊", "label": "File analizzati", "value": "<N> file, <N> token"},
+    {"emoji": "🤖", "label": "Subagent", "value": "<N> report sintetizzati"}
+  ],
+  "actions": [
+    {"emoji": "✏️", "label": "Scrittura mappa codebase", "path": "docs/CODEBASE_MAP.md"}
+  ],
+  "reason": "Analisi completa, mappa pronta per scrittura",
+  "ifno": "La mappa non viene scritta, analisi disponibile solo in chat"
+}' | python3 design-system/generate-card.py
+```
+
 Struttura del file:
 
 ````markdown
@@ -193,6 +211,24 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 ## Step 7 — Aggiorna `CLAUDE.md`
 
+🟡 MEDIO — Mostra pre-flight card prima di aggiornare
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-codebase-map",
+  "context": [
+    {"emoji": "📋", "label": "Sezione", "value": "Architettura Codebase"},
+    {"emoji": "🔄", "label": "Tipo", "value": "<nuovo | aggiornamento>"}
+  ],
+  "actions": [
+    {"emoji": "📝", "label": "Aggiornamento sezione architettura", "path": "CLAUDE.md"}
+  ],
+  "reason": "Mappa aggiornata, CLAUDE.md da sincronizzare",
+  "ifno": "CLAUDE.md non aggiornato, future sessioni usano info vecchie"
+}' | python3 design-system/generate-card.py
+```
+
 Aggiungi o aggiorna la sezione architettura:
 
 ```markdown
@@ -226,6 +262,19 @@ Quando la mappa esiste già:
 |---------|---------|--------------------------|
 | Sonnet  | 200k    | 150.000 token |
 | Haiku   | 200k    | 100.000 token (economico, meno preciso) |
+
+---
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Controllo mappa esistente | 🟢 Sicuro | No |
+| Scansione codebase (scanner) | 🟢 Sicuro | No |
+| Dispatch subagent Explore | 🟡 Medio | No |
+| Scrittura `docs/CODEBASE_MAP.md` | 🟡 Medio | Si |
+| Aggiornamento `CLAUDE.md` | 🟡 Medio | Si |
+| Git commit | 🟡 Medio | No (commit locale) |
 
 ---
 

@@ -76,6 +76,25 @@ torna a quella skill prima di procedere qui.
 
 Una volta che la PR esiste, assegna il reviewer corretto:
 
+🟡 MEDIO — Mostra pre-flight card prima di assegnare
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-requesting-review",
+  "context": [
+    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"},
+    {"emoji": "🎯", "label": "Target", "value": "sviluppo"},
+    {"emoji": "📝", "label": "Commit", "value": "<N> commit"}
+  ],
+  "actions": [
+    {"emoji": "🚀", "label": "Assegnazione reviewer alla PR", "path": "PR #<number>"}
+  ],
+  "reason": "PR pronta, reviewer da assegnare",
+  "ifno": "La PR resta senza reviewer assegnato"
+}' | python3 design-system/generate-card.py
+```
+
 ```bash
 # Assegna reviewer alla PR gia' aperta
 gh pr edit {pr_number} --add-reviewer {github-username}
@@ -159,12 +178,12 @@ Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-re
 
 ## Classificazione Rischio
 
-| Operazione | Livello | Note |
-|-----------|---------|------|
-| Scrivere PR description | 🟢 Sicuro | Solo testo |
-| Push branch | 🟡 Medio | Verifica test prima |
-| Creare PR su GitHub | 🟡 Medio | Irreversibile, verifica title |
-| Assegnare reviewer | 🟢 Sicuro | Modificabile dopo |
+| Operazione | Livello | Card | Note |
+|-----------|---------|------|------|
+| Scrivere PR description | 🟢 Sicuro | No | Solo testo |
+| Push branch | 🟡 Medio | No | Coperto da siae-finishing-branch |
+| Creare PR su GitHub | 🟡 Medio | No | Coperto da siae-finishing-branch |
+| Assegnare reviewer | 🟡 Medio | Si | Notifica visibile al reviewer |
 
 ---
 

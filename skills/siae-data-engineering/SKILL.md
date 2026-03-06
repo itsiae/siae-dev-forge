@@ -85,6 +85,44 @@ job.commit()
 - Job definitions in `glue-definitions.yaml` (name, script_path, glue_version 4.0, worker_type, arguments)
 - Risorse Terraform: `glue-jobs-{domain}.tf`
 
+**🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di deploy Glue job:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-data-engineering",
+  "context": [
+    {"emoji": "🏗️", "label": "Ambiente", "value": "<ambiente>"},
+    {"emoji": "📋", "label": "Job", "value": "<job-name>"},
+    {"emoji": "🔄", "label": "Layer", "value": "<bronze|silver|gold>"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Deploy Glue job via terraform apply", "path": "<modulo terraform>"}
+  ],
+  "reason": "Job aggiornato, test locali verdi",
+  "ifno": "STOP — job non deployato, versione precedente resta attiva"
+}' | python3 design-system/generate-card.py
+```
+
+**🔴 Operazione ALTO rischio — pre-flight card prima di modifica schema:**
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-data-engineering",
+  "context": [
+    {"emoji": "🗄️", "label": "Database", "value": "<glue-database>"},
+    {"emoji": "🔧", "label": "Tabella", "value": "<table-name>"},
+    {"emoji": "📦", "label": "Downstream", "value": "<query/job dipendenti>"}
+  ],
+  "actions": [
+    {"emoji": "🔧", "label": "Modifica schema Glue Catalog (backward compatibility)", "path": "<file schema/terraform>"}
+  ],
+  "reason": "Schema da aggiornare per nuovi requisiti dati",
+  "ifno": "Schema invariato, downstream non impattati"
+}' | python3 design-system/generate-card.py
+```
+
 ---
 
 ## 3. Step Functions
@@ -105,6 +143,25 @@ Ogni state Glue usa `arn:aws:states:::glue:startJobRun.sync` con:
 - `.sync` per attesa completamento Glue job
 - State machine definition in file JSON separato
 
+**🔴 Operazione ALTO rischio — pre-flight card prima di esecuzione manuale:**
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-data-engineering",
+  "context": [
+    {"emoji": "📋", "label": "Job", "value": "<job-name>"},
+    {"emoji": "🏗️", "label": "Ambiente", "value": "<ambiente>"},
+    {"emoji": "🔧", "label": "Parametri", "value": "<parametri input>"}
+  ],
+  "actions": [
+    {"emoji": "🖥️", "label": "Esecuzione manuale Glue job (consuma risorse, scrive S3)", "path": "aws glue start-job-run --job-name <name>"}
+  ],
+  "reason": "Esecuzione manuale necessaria per <motivazione>",
+  "ifno": "Job non eseguito, nessun dato processato"
+}' | python3 design-system/generate-card.py
+```
+
 ---
 
 ## 4. EventBridge
@@ -121,6 +178,25 @@ Esempio: `s3://siae-datalake-prod/bronze/performing/events/year=2025/month=06/da
 
 - Partizione obbligatoria: `year`, `month`, `day`. Formato: Parquet (Snappy)
 - Landing zone raw: `s3://{bucket}/landing/{domain}/`
+
+**🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di cancellazione S3:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-data-engineering",
+  "context": [
+    {"emoji": "🗄️", "label": "Bucket", "value": "<bucket-name>"},
+    {"emoji": "📁", "label": "Prefix", "value": "<s3-prefix>"},
+    {"emoji": "📊", "label": "File coinvolti", "value": "<N> file, <size>"}
+  ],
+  "actions": [
+    {"emoji": "🗑️", "label": "Cancellazione dati S3 (irreversibile senza backup)", "path": "s3://<bucket>/<prefix>"}
+  ],
+  "reason": "Dati obsoleti/corrotti da rimuovere",
+  "ifno": "STOP — dati preservati, nessuna cancellazione"
+}' | python3 design-system/generate-card.py
+```
 
 ---
 
@@ -143,13 +219,14 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 
 ## Classificazione Rischio Operazioni
 
-| Operazione                        | Rischio    |
-|-----------------------------------|------------|
-| Lettura/analisi codice ETL        | 🟢 Sicuro  |
-| Creazione/modifica script PySpark | 🟡 Medio   |
-| Modifica glue-definitions.yaml    | 🟡 Medio   |
-| Modifica Step Function definition | 🟡 Medio   |
-| Deploy Glue job (terraform apply) | 🚨 Critico |
-| Esecuzione manuale Glue job       | 🔴 Alto    |
-| Modifica EventBridge schedule     | 🔴 Alto    |
-| Cancellazione dati S3             | 🚨 Critico |
+| Operazione                        | Rischio    | Card            |
+|-----------------------------------|------------|-----------------|
+| Lettura/analisi codice ETL        | 🟢 Sicuro  | No              |
+| Creazione/modifica script PySpark | 🟡 Medio   | No              |
+| Modifica glue-definitions.yaml    | 🟡 Medio   | No              |
+| Modifica Step Function definition | 🟡 Medio   | No              |
+| Deploy Glue job (`terraform apply`) | 🚨 Critico | Si            |
+| Cancellazione dati S3             | 🚨 Critico | Si              |
+| Modifica schema Glue Catalog      | 🔴 Alto    | Si              |
+| `aws glue start-job-run` manuale  | 🔴 Alto    | Si              |
+| Modifica EventBridge schedule     | 🔴 Alto    | No              |

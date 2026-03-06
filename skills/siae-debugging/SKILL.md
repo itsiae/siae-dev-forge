@@ -162,6 +162,24 @@ Devi completare ogni fase PRIMA di procedere alla successiva.
 
 **Fixa la root cause, non il sintomo:**
 
+🟡 MEDIO — Mostra pre-flight card prima di applicare il fix
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-debugging",
+  "context": [
+    {"emoji": "🔑", "label": "Root cause", "value": "<descrizione root cause identificata>"},
+    {"emoji": "📊", "label": "Ipotesi", "value": "Confermata in Fase 3"}
+  ],
+  "actions": [
+    {"emoji": "🧪", "label": "Scrivi test di regressione + fix minimale", "path": "<file target>"}
+  ],
+  "reason": "Root cause confermata, fix minimale pronto",
+  "ifno": "Nessun fix applicato, torna a Fase 3 per nuova ipotesi"
+}' | python3 design-system/generate-card.py
+```
+
 1. **Test di Regressione Obbligatorio (TDD)**
    - Scrivi il test che riproduce il bug PRIMA del fix
    - Riproduzione piu' semplice possibile
@@ -268,6 +286,19 @@ aws logs filter-log-events \
 - Collega il bug al ticket se disponibile
 - Aggiorna lo stato del ticket durante l'investigazione
 - Documenta la root cause nel ticket
+
+---
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Lettura messaggi di errore / log | 🟢 Sicuro | No |
+| Ricerca pattern nel repo | 🟢 Sicuro | No |
+| `git log`, `git diff` | 🟢 Sicuro | No |
+| Formula e test ipotesi (Fase 3) | 🟢 Sicuro | No |
+| Implementazione fix (Fase 4) | 🟡 Medio | Si |
+| Commit fix | 🟡 Medio | No (commit locale) |
 
 ---
 

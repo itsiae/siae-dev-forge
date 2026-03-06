@@ -113,6 +113,24 @@ Output:  .tf aggiornato + terraform plan pulito
 
 ### Step 3 — Dispatch
 
+🟡 MEDIO — Mostra pre-flight card prima del dispatch
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-parallel-agents",
+  "context": [
+    {"emoji": "🤖", "label": "Agenti", "value": "<N> agenti paralleli"},
+    {"emoji": "🔢", "label": "Domini", "value": "<lista domini>"}
+  ],
+  "actions": [
+    {"emoji": "⚡", "label": "Dispatch agenti in parallelo", "path": "<scope per agente>"}
+  ],
+  "reason": "Task indipendenti confermati, nessuno stato condiviso",
+  "ifno": "Dispatch annullato, esecuzione sequenziale"
+}' | python3 design-system/generate-card.py
+```
+
 Usa il tool `Agent` in parallelo per ogni dominio identificato.
 
 Ogni agente riceve:
@@ -121,6 +139,24 @@ Ogni agente riceve:
 - Contesto minimo necessario (non l'intera conversazione)
 
 ### Step 4 — Review e Integrazione
+
+🔴 ALTO — Mostra pre-flight card prima di integrare
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-parallel-agents",
+  "context": [
+    {"emoji": "🤖", "label": "Agenti completati", "value": "<N>/<N>"},
+    {"emoji": "📁", "label": "File modificati", "value": "<lista file>"}
+  ],
+  "actions": [
+    {"emoji": "🔀", "label": "Integrazione output agenti + risoluzione conflitti", "path": "<file coinvolti>"}
+  ],
+  "reason": "Tutti gli agenti completati, integrazione necessaria",
+  "ifno": "Output agenti non integrati, verifiche manuali necessarie"
+}' | python3 design-system/generate-card.py
+```
 
 Dopo che tutti gli agenti completano:
 
@@ -161,10 +197,10 @@ Quando usi `/forge-implement` con un piano che ha task indipendenti, questa skil
 
 ## Classificazione Rischio Operazioni
 
-| Operazione | Rischio |
-|------------|---------|
-| Analisi dipendenze tra task | 🟢 Sicuro |
-| Dispatch agente singolo | 🟡 Medio |
-| Dispatch agenti multipli in parallelo | 🟡 Medio |
-| Integrazione output (risoluzione conflitti) | 🔴 Alto |
-| Suite test completa post-integrazione | 🟡 Medio |
+| Operazione | Rischio | Card |
+|------------|---------|------|
+| Analisi dipendenze tra task | 🟢 Sicuro | No |
+| Dispatch agente singolo | 🟡 Medio | Si |
+| Dispatch agenti multipli in parallelo | 🟡 Medio | Si |
+| Integrazione output (risoluzione conflitti) | 🔴 Alto | Si |
+| Suite test completa post-integrazione | 🟡 Medio | No (coperta da siae-verification) |
