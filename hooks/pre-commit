@@ -147,12 +147,16 @@ Se il progetto ha un linter configurato, eseguilo sui file staged:
 | **Flake8** | `.flake8`, `setup.cfg` | `flake8 [files]` |
 | **tflint** | `.tflint.hcl` | `tflint` |
 | **Prettier** | `.prettierrc*` | `npx prettier --check [files]` |
+| **Shellcheck** | `.shellcheckrc` | `shellcheck [files.sh]` |
 
-Verifica se il file di configurazione esiste nella root del progetto.
-Se il linter e' presente, eseguilo. Se rileva errori, mostra una pre-flight card MEDIO
-con il riepilogo degli errori prima di procedere con il commit.
+Verifica se il file di configurazione esiste nella root del progetto E se il binary del linter
+e' disponibile nel PATH (usa `which <linter>` o `command -v <linter>`).
 
-Se nessun linter e' configurato, salta questo controllo silenziosamente.
+Se entrambe le condizioni sono vere, esegui il linter. Se rileva errori, mostra una pre-flight
+card MEDIO con il riepilogo degli errori prima di procedere con il commit.
+
+In tutti gli altri casi (config assente, binary non installato, errore di rete, timeout),
+salta silenziosamente con SKIP — non bloccare mai il commit per tool assenti.
 
 ---
 
