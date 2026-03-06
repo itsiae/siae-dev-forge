@@ -42,10 +42,14 @@ jobs:
 
           if [ -z "$LATEST_TAG" ] || [ "$CURRENT" != "$LATEST_TAG" ]; then
             # Confronto semantico per distinguere version > o < del latest release
+            # Usa solo la parte semver (X.Y.Z) per evitare errori con suffissi custom come -mvp
             COMPARE=$(python3 -c "
-          from packaging.version import Version
-          current = Version('${{ steps.current.outputs.version }}')
-          latest  = Version('$(echo ${LATEST_TAG:-v0.0.0} | sed s/^v//)')
+          import re
+          def semver(v):
+              m = re.match(r'(\d+)\.(\d+)\.(\d+)', v)
+              return tuple(int(x) for x in m.groups()) if m else (0,0,0)
+          current = semver('${{ steps.current.outputs.version }}')
+          latest  = semver('$(echo ${LATEST_TAG:-v0.0.0} | sed s/^v//)')
           print('greater' if current > latest else 'less')
           ")
 
