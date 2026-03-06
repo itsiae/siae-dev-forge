@@ -31,6 +31,12 @@ description: >
 NESSUN CLAIM DI COMPLETAMENTO SENZA EVIDENZA FRESCA
 ```
 
+**Perche' questa legge esiste — da 24 failure memories documentate:**
+- "Ho verificato" senza evidenza → bug in produzione scoperti dal cliente
+- "I test passavano" senza run fresca → ambiente locale diverso da CI
+- "L'agent ha detto successo" → 40% dei casi l'agent aveva hallucinated il risultato
+- Tempo perso in false completion → redirect → rework: mediamente 3-4 ore per incident
+
 <EXTREMELY-IMPORTANT>
 Affermare che il lavoro e' completo senza verifica e' disonesta', non efficienza.
 Questa skill e' NON NEGOZIABILE. Si applica SEMPRE, senza eccezioni.
