@@ -147,6 +147,7 @@ Se il progetto ha un linter configurato, eseguilo sui file staged:
 | **Flake8** | `.flake8`, `setup.cfg` | `flake8 [files]` |
 | **tflint** | `.tflint.hcl` | `tflint` |
 | **Prettier** | `.prettierrc*` | `npx prettier --check [files]` |
+| **Shellcheck** | `.shellcheckrc` | `shellcheck [files.sh]` |
 
 Verifica se il file di configurazione esiste nella root del progetto.
 Se il linter e' presente, eseguilo. Se rileva errori, mostra una pre-flight card MEDIO

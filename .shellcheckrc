@@ -1,0 +1,12 @@
+# shellcheck configuration for siae-dev-forge
+# https://www.shellcheck.net/wiki/Ignore
+
+# Target shell
+shell=bash
+
+# Minimum severity to report: error, warning, info, style
+severity=warning
+
+# Disable specific checks globally:
+# SC2034 — variabili non usate (falsi positivi nei template)
+disable=SC2034
