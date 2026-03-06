@@ -185,23 +185,23 @@ git rebase -i origin/sviluppo
 
 🔴 ALTO — Pre-flight card obbligatoria
 
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  PRE-FLIGHT CARD — Apertura PR           ┃
-┃  Rischio: 🔴 ALTO                         ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Branch:   feature/{JIRA-ID}-...         ┃
-┃  Target:   sviluppo                      ┃
-┃  Commit:   N commit                      ┃
-┃                                          ┃
-┃  Checklist:                              ┃
-┃  [ ] git status clean                   ┃
-┃  [ ] Test suite: tutti verdi             ┃
-┃  [ ] Diff revisionato (no debug code)    ┃
-┃  [ ] Commit history ordinata             ┃
-┃                                          ┃
-┃  Confermi apertura PR? [s/N]             ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+Genera la pre-flight card con `design-system/generate-card.py`:
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-finishing-branch",
+  "context": [
+    {"emoji": "🌿", "label": "Branch", "value": "feature/{JIRA-ID}-descrizione"},
+    {"emoji": "🎯", "label": "Target", "value": "sviluppo"},
+    {"emoji": "📝", "label": "Commit", "value": "N commit"}
+  ],
+  "actions": [
+    {"emoji": "🚀", "label": "Push branch + apertura PR", "path": "origin/feature/{JIRA-ID}-descrizione"}
+  ],
+  "reason": "Branch pronto, test verdi, diff revisionato",
+  "ifno": "Il branch resta locale, nessuna PR aperta"
+}' | python3 design-system/generate-card.py
 ```
 
 **Dopo la conferma:**
