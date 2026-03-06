@@ -1,37 +1,23 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
-
   "permissions": {
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./.aws/credentials)",
       "Read(./secrets/**)"
-    ],
-    "defaultMode": "default"
-  },
-
-  "companyAnnouncements": [
-    "SIAE DevForge attivo. Usa /forge-plan, /forge-test, /forge-review, /forge-doc, /forge-rca.",
-    "Ricorda: branch policy sviluppo > collaudo > certificazione > produzione. Mai push diretto."
-  ],
-
-  "attribution": {
-    "commit": "\nCo-Authored-By: SIAE DevForge <ai-cc@siae.it>"
+    ]
   },
 
   "strictKnownMarketplaces": [
-    {
-      "source": "github",
-      "repo": "itsiae/siae-dev-forge"
-    },
-    {
-      "source": "github",
-      "repo": "thedotmack/claude-mem"
-    }
+    { "source": "github", "repo": "itsiae/siae-dev-forge" },
+    { "source": "github", "repo": "thedotmack/claude-mem" }
   ],
 
-  "allowManagedMcpServersOnly": false,
+  "companyAnnouncements": [
+    "SIAE DevForge attivo. Usa /forge-plan, /forge-test, /forge-review, /forge-doc, /forge-rca.",
+    "Ricorda: branch policy sviluppo > collaudo > certificazione > produzione. Mai push diretto.",
+    "Per domande: lorenzo.detomasi@siae.it"
+  ],
 
   "allowedMcpServers": [
     { "serverName": "atlassian" },
@@ -39,7 +25,14 @@
     { "serverName": "playwright" }
   ],
 
-  "deniedMcpServers": [],
+  "language": "italian",
 
-  "language": "italian"
+  "attribution": {
+    "commit": "\nCo-Authored-By: SIAE DevForge",
+    "pr": ""
+  },
+
+  "allowManagedMcpServersOnly": false,
+
+  "deniedMcpServers": []
 }
