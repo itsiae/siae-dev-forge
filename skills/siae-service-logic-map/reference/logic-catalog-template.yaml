@@ -1,0 +1,42 @@
+# Template scheda evidenza L1+L2 per siae-service-logic-map
+# Generato da forge-logic-build, un file per repo
+# Versione: 1.0
+
+repo: "sport-{service-name}"
+extracted_at: "YYYY-MM-DD"
+skill_version: "1.0"
+confidence: CONFIRMED   # CONFIRMED | PARTIAL | FILE_NOT_FOUND
+
+l1:
+  domain: "[nome dominio business — es. 'Gestione Abbonamenti MDA']"
+  bounded_context: "[1-2 frasi sulla responsabilita' del servizio]"
+  main_entities:
+    - name: "[ClassName]"
+      source: "src/main/java/.../{ClassName}.java"
+      confidence: CONFIRMED
+    # Aggiungi una entry per ogni @Entity class trovata
+  exposes:
+    - path: "/api/..."
+      method: "POST"    # GET | POST | PUT | DELETE | PATCH
+      description: "[cosa fa questo endpoint in italiano]"
+      source: "openapi/{repo}.yaml:riga"
+      confidence: CONFIRMED
+    # Se openapi non disponibile, usa @RequestMapping dal Controller
+
+l2:
+  workflows:
+    - name: "[nomeMetodoCamelCase]"
+      type: "use-case"      # use-case | scheduled | event-driven | batch
+      trigger: "[POST /api/... | @Scheduled(cron='...') | @KafkaListener(topics='...')]"
+      transactional: true   # true se @Transactional presente sulla firma
+      source: "src/main/java/.../{ClassName}Service.java:riga"
+      confidence: CONFIRMED
+    # Aggiungi una entry per ogni metodo public rilevante trovato nei *Service.java
+
+gaps:
+  - "[descrive cosa NON e' stato trovato o analizzato]"
+  - "Implementazione interna metodi non analizzata (L3 out of scope)"
+  # Esempi di gap comuni:
+  # - "openapi.yaml non trovato — endpoints inferiti da @RequestMapping"
+  # - "Nessun *Service.java trovato — solo Controller analizzato"
+  # - "application.yml non accessibile — config runtime sconosciuta"

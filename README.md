@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 25 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 26 skill, 11 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.2.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -137,6 +137,8 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality) | `siae-subagent-development` |
 | `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
 | `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
+| `/forge-logic-build` | Costruisce catalogo L1+L2 (domain profile + workflow map) per tutti i microservizi | `siae-service-logic-map` |
+| `/forge-logic-search` | Cerca concetto o workflow nel catalogo logic (es. "preventivo", "rinnovo") | `siae-service-logic-map` |
 
 ### Uso
 
@@ -780,7 +782,9 @@ siae-devforge/
 │   ├── forge-review.md          # /forge-review → code-reviewer + spec-reviewer
 │   ├── forge-implement.md       # /forge-implement → siae-subagent-development
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
-│   └── forge-rca.md             # /forge-rca → siae-debugging
+│   ├── forge-rca.md             # /forge-rca → siae-debugging
+│   ├── forge-logic-build.md     # /forge-logic-build → siae-service-logic-map
+│   └── forge-logic-search.md    # /forge-logic-search → siae-service-logic-map
 │
 ├── agents/
 │   ├── code-reviewer.md         # Review a 6 punti con distrust pattern
