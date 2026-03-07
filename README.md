@@ -15,7 +15,7 @@
 
 **siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 26 skill, 11 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.2.0-mvp
+> **Versione:** 1.3.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (25)](#skill-25)
+- [Skill (26)](#skill-26)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -137,7 +137,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality) | `siae-subagent-development` |
 | `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
 | `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
-| `/forge-logic-build` | Costruisce catalogo L1+L2 (domain profile + workflow map) per tutti i microservizi | `siae-service-logic-map` |
+| `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per tutti i microservizi | `siae-service-logic-map` |
 | `/forge-logic-search` | Cerca concetto o workflow nel catalogo logic (es. "preventivo", "rinnovo") | `siae-service-logic-map` |
 
 ### Uso
@@ -723,13 +723,17 @@ jq -r 'select(.branch=="feature/SPORT-456-fix-sync") | "\(.ts) [\(.sid)] \(.even
 
 Tutte le skill seguono il **DevForge Visual Design System** definito in `design-system/devforge-visual.md`:
 
-- **Banner ASCII** di apertura con nome skill
-- **Pre-flight cards** con bordi ASCII e livelli di rischio codificati a colori:
-  - `LOW` (verde) — Informativo
-  - `MEDIO` (giallo) — Richiede attenzione
-  - `ALTO` (rosso) — Richiede conferma esplicita
-  - `CRITICO` (rosso lampeggiante) — Blocca l'operazione
-- **Codifica rischio** per classificare ogni operazione
+- **Banner ASCII** di apertura con nome skill e fase SDLC
+- **Legge di Ferro** — principio non negoziabile in maiuscolo (skill Rigid)
+- **Pre-flight cards** generate dinamicamente via `design-system/generate-card.py` con bordi ASCII e livelli di rischio codificati a colori:
+  - `MEDIO` (giallo, bordo `╔╗`) — Richiede attenzione, reversibile
+  - `ALTO` (rosso, bordo `┏┓`) — Difficile da annullare, richiede conferma
+  - `CRITICO` (rosso intenso) — Blocca l'operazione
+- **Classificazione Rischio Operazioni** — tabella con colonna Card (Si/No) per ogni step
+- **Tabella Anti-Razionalizzazione** — blocca le scorciatoie cognitive tipiche del dominio
+
+> Copertura completa su tutte le 26 skill: ogni skill Rigid ha Legge di Ferro + Anti-Razi,
+> ogni skill ha Risk Table e pre-flight cards per le operazioni con rischio >= MEDIO.
 
 ---
 
@@ -954,7 +958,9 @@ Claude Code Session
 2. Crea `SKILL.md` seguendo il template in `design-system/devforge-visual.md`
 3. Frontmatter YAML obbligatorio: `name`, `description`
 4. Includi il banner ASCII DevForge
-5. Per skill rigide: aggiungi tabella anti-rationalization e HARD-GATE
+5. Per skill Rigid: aggiungi LA LEGGE DI FERRO, Tabella Anti-Razionalizzazione e HARD-GATE
+5b. Per tutte le skill: aggiungi Classificazione Rischio Operazioni con colonna Card (Si/No)
+5c. Per operazioni con Card=Si: aggiungi blocco `generate-card.py` nello step corrispondente
 6. Aggiungi la skill alla tabella in `skills/using-devforge/SKILL.md`
 7. Se serve un comando: crea il thin wrapper in `commands/`
 
