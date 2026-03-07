@@ -41,16 +41,39 @@ SE NON HAI LETTO IL FILE, IL WORKFLOW NON ESISTE.
 
 ---
 
-## Prerequisito: SYSTEM_MAP.md
+## Step 0 — SYSTEM_MAP.md: Discovery o Auto-Generate
 
-Questa skill richiede che `/forge-sysmap` sia gia' stato eseguito:
+`SYSTEM_MAP.md` e' l'input per la cluster detection (Step 3).
+Questa skill lo cerca automaticamente — **non serve generarlo prima.**
 
 ```bash
-ls docs/SYSTEM_MAP.md   # deve esistere
+# Cerca SYSTEM_MAP.md in ordine di priorita'
+SYSTEM_MAP=""
+for CANDIDATE in \
+  "docs/SYSTEM_MAP.md" \
+  "docs/systems/"*"/SYSTEM_MAP.md" \
+  /tmp/siae-sysmap-*/SYSTEM_MAP.md; do
+  FOUND=$(ls $CANDIDATE 2>/dev/null | sort | tail -1)
+  if [ -n "$FOUND" ]; then
+    SYSTEM_MAP="$FOUND"
+    echo "[FOUND] SYSTEM_MAP.md: $SYSTEM_MAP"
+    break
+  fi
+done
 ```
 
-Se non esiste: esegui `/forge-sysmap` prima di procedere.
-`SYSTEM_MAP.md` e' l'input per la cluster detection (Step 3).
+**Se trovato:** usa il file trovato → procedi al Step 1.
+
+**Se non trovato:** genera automaticamente eseguendo `siae-microservices-map`
+sul pattern di repo specificato dall'utente, poi riprendi da Step 3.
+
+```
+REQUIRED SUB-SKILL: siae-microservices-map
+```
+
+Non chiedere all'utente di eseguire un comando separato.
+L'output di `siae-microservices-map` viene passato direttamente al Step 3
+senza richiedere commit intermedio — usa il path `/tmp/siae-sysmap-*/SYSTEM_MAP.md`.
 
 ---
 
