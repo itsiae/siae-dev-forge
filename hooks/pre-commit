@@ -17,15 +17,6 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
-# Only activate on git commit commands — exit silently for everything else
-if [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
-    echo '{}'
-    exit 0
-fi
-
-# Log quality gate activation
-devforge_log "quality_gate" "success" "{\"check_name\":\"pre_commit_activated\",\"command\":\"${TOOL_COMMAND}\"}"
-
 # Escape string for JSON embedding using bash parameter substitution.
 escape_for_json() {
     local s="$1"
@@ -36,6 +27,55 @@ escape_for_json() {
     s="${s//$'\t'/\\t}"
     printf '%s' "$s"
 }
+
+# Route to appropriate check based on command
+if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+    : # proceed to quality gate below
+elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
+    # Branch check: warn if feature branch without design doc
+    BRANCH_NAME=$(echo "$TOOL_COMMAND" | grep -oE '[a-zA-Z0-9/_.-]+$' || true)
+    JIRA_ID=$(echo "$BRANCH_NAME" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+
+    if [ -z "$JIRA_ID" ]; then
+        # No JIRA ID — skip silently
+        echo '{}'
+        exit 0
+    fi
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+    PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    PLANS_DIR="${PLUGIN_ROOT}/docs/plans"
+
+    if [ -d "$PLANS_DIR" ] && ls "$PLANS_DIR"/*"${JIRA_ID}"*design* 2>/dev/null | head -1 | grep -q .; then
+        # Design doc found — proceed silently
+        echo '{}'
+        exit 0
+    fi
+
+    # Design doc NOT found — inject warning
+    WARNING_MSG="Stai creando il branch '${BRANCH_NAME}'. Non esiste un design doc in docs/plans/ per ${JIRA_ID}. Hai eseguito siae-brainstorming prima di iniziare il codice? Procedo comunque con git checkout, ma il design e' consigliato prima dell'implementazione."
+
+    warning_escaped=$(escape_for_json "$WARNING_MSG")
+    branch_context="<IMPORTANT>\nDevForge Branch Check: ${warning_escaped}\n</IMPORTANT>"
+
+    cat <<EOF
+{
+  "additional_context": "${branch_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${branch_context}"
+  }
+}
+EOF
+    exit 0
+else
+    # All other commands — exit silently
+    echo '{}'
+    exit 0
+fi
+
+# Log quality gate activation
+devforge_log "quality_gate" "success" "{\"check_name\":\"pre_commit_activated\",\"command\":\"${TOOL_COMMAND}\"}"
 
 # Pre-commit quality gate instructions (embedded directly)
 read -r -d '' PRECOMMIT_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true
