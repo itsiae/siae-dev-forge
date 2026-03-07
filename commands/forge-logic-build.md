@@ -5,8 +5,8 @@ description: Costruisce il catalogo L1+L2+L3 (domain profile + workflow map + bu
 
 # /forge-logic-build
 
-Invoca la skill `siae-service-logic-map` per costruire il catalogo domain profile (L1)
-e workflow map (L2) di tutti i microservizi, organizzati per cluster funzionale.
+Invoca la skill `siae-service-logic-map` per costruire il catalogo domain profile (L1),
+workflow map (L2) e business rules (L3) di tutti i microservizi, organizzati per cluster funzionale.
 
 ## Utilizzo
 
@@ -27,7 +27,7 @@ Flusso automatico a comando singolo — non serve eseguire `/forge-sysmap` prima
 
 1. **SYSTEM_MAP.md DISCOVERY** — Cerca il file in `docs/`, `docs/systems/*/`, `/tmp/siae-sysmap-*/`
    - Trovato → usa quello piu' recente
-   - Non trovato → genera SYSTEM_MAP.md inline tramite `gh api` (grafo dipendenze base),
+   - Non trovato → esegue `siae-microservices-map` automaticamente sul pattern specificato,
      poi continua senza commit intermedio
 2. **PRE-FLIGHT** — Verifica accesso GitHub (`gh auth status`)
 3. **ENUMERATE** — Lista tutti i repo con il pattern (con disambiguazione se nome semantico)
@@ -56,4 +56,4 @@ Flusso automatico a comando singolo — non serve eseguire `/forge-sysmap` prima
 - La conferma cluster e' obbligatoria — i cluster vengono mostrati prima del build
 - Per aggiornare un singolo cluster: ri-esegui indicando il cluster specifico
 - Il catalogo puo' diventare stale — ri-esegui dopo modifiche significative ai repo
-- Se SYSTEM_MAP.md e' stale: cancellalo e ri-esegui `/forge-logic-build` per rigenerarlo
+- Se SYSTEM_MAP.md e' stale: ri-esegui `/forge-sysmap` prima di questo comando

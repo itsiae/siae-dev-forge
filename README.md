@@ -182,17 +182,18 @@ che insieme danno una comprensione completa del sistema:
 
 | Skill | Comando | Risponde a | Output |
 |---|---|---|---|
+| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile L1+L2+L3 per cluster |
 | `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
-| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile + workflow map per cluster |
 
 **Workflow tipico (comando singolo):**
 
 ```
 /forge-logic-build sport-fdc-*
-   → Step 0: cerca SYSTEM_MAP.md — se non esiste, lo genera automaticamente
+   → Step 0: cerca SYSTEM_MAP.md — se non esiste, esegue /forge-sysmap automaticamente
    → Step 3: cluster detection dal grafo (evidenza-based, conferma utente)
-   → Step 4: pre-fetch dati per cluster + dispatch agenti paralleli
-   → Output: docs/logic-catalog/cluster-{nome}.md  (1 per cluster)
+   → Step 4: pre-fetch dati L1+L2+L3 per cluster + dispatch agenti paralleli
+   → Step 5: siae-documentation eseguito automaticamente sui cluster-*.md
+   → Output: docs/logic-catalog/cluster-{nome}.md  (1 per cluster, sezioni L1+L2+L3)
              docs/logic-catalog/clusters.yaml       (indice)
              docs/logic-catalog/system-overview.md  (visione d'insieme)
 
