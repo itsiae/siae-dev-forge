@@ -133,6 +133,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | Comando | Descrizione | Skill/Agent invocato |
 |---------|-------------|---------------------|
 | `/forge-map` | Mappa e documenta il codebase con subagent Sonnet in parallelo. Genera `docs/CODEBASE_MAP.md` | `siae-codebase-map` |
+| `/forge-sysmap` | Mappa un sistema a microservizi multi-repo senza allucinare. Enumera repo con pattern, subagent paralleli, genera `docs/SYSTEM_MAP.md` con C4 diagrams, dependency graph, Kafka map, Gap Report | `siae-microservices-map` |
 | `/forge-plan` | Brainstorming socratico + piano implementativo con stima SP e task JIRA | `siae-brainstorming` |
 | `/forge-test` | Genera suite test TDD seguendo RED-GREEN-REFACTOR | `siae-tdd` |
 | `/forge-qa` | Export QA Xray: legge AC da Jira, genera Test Plan e Test Case step-based (Xray API o CSV) | `siae-qa` |
@@ -889,6 +890,7 @@ siae-devforge/
 │
 ├── commands/
 │   ├── forge-map.md             # /forge-map → siae-codebase-map
+│   ├── forge-sysmap.md         # /forge-sysmap → siae-microservices-map
 │   ├── forge-plan.md            # /forge-plan → siae-brainstorming
 │   ├── forge-test.md            # /forge-test → siae-tdd
 │   ├── forge-qa.md              # /forge-qa → siae-qa
