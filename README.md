@@ -183,7 +183,7 @@ che insieme danno una comprensione completa del sistema:
 | Skill | Comando | Risponde a | Output |
 |---|---|---|---|
 | `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
-| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni servizio?" | `docs/logic-catalog/*.yaml` — domain profile + workflow map |
+| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile + workflow map per cluster |
 
 **Workflow tipico:**
 
@@ -193,11 +193,15 @@ che insieme danno una comprensione completa del sistema:
    → Output: docs/SYSTEM_MAP.md con ogni edge citato con file:riga
 
 2. /forge-logic-build
-   → Per ogni servizio: domain responsibility, entita' principali, workflow (metodi @Service)
-   → Output: docs/logic-catalog/sport-{service}.yaml
+   → Legge SYSTEM_MAP.md: raggruppa servizi in cluster per connettivita'
+   → Propone i cluster all'utente per conferma
+   → Per ogni cluster: domain responsibility, entita', workflow (@Service methods)
+   → Output: docs/logic-catalog/cluster-{nome}.md
+            docs/logic-catalog/clusters.yaml (indice)
+            docs/logic-catalog/system-overview.md
 
 3. /forge-logic-search "preventivo"
-   → Cerca nel catalogo: quali servizi implementano un concetto
+   → Cerca nel catalogo: quali cluster/servizi implementano un concetto
    → Incrocia con SYSTEM_MAP per sapere anche le loro dipendenze
 ```
 

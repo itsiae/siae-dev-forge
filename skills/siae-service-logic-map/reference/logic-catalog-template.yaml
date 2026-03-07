@@ -1,42 +1,67 @@
 # Template scheda evidenza L1+L2 per siae-service-logic-map
-# Generato da forge-logic-build, un file per repo
-# Versione: 1.0
+# Compilato da ogni subagent durante forge-logic-build
+# Un file per CLUSTER (non per repo). Versione: 2.0
 
-repo: "sport-{service-name}"
-extracted_at: "YYYY-MM-DD"
-skill_version: "1.0"
-confidence: CONFIRMED   # CONFIRMED | PARTIAL | FILE_NOT_FOUND
+# --- clusters.yaml (indice, generato dal parent) ---
+# generated_at: "YYYY-MM-DDTHH:MM:SSZ"
+# source: "docs/SYSTEM_MAP.md"
+# clusters:
+#   - name: "cluster-abbonamenti"
+#     services: ["sport-gestione-abbonamento", "sport-contabilita", "sport-pagamenti"]
+#     domain: "Gestione Abbonamenti MDA"
+#     confidence: CONFIRMED   # CONFIRMED se da SYSTEM_MAP.md | INFERRED se modificato dall'utente
+#   - name: "cluster-iscrizioni"
+#     ...
 
-l1:
-  domain: "[nome dominio business — es. 'Gestione Abbonamenti MDA']"
-  bounded_context: "[1-2 frasi sulla responsabilita' del servizio]"
-  main_entities:
-    - name: "[ClassName]"
-      source: "src/main/java/.../{ClassName}.java"
-      confidence: CONFIRMED
-    # Aggiungi una entry per ogni @Entity class trovata
-  exposes:
-    - path: "/api/..."
-      method: "POST"    # GET | POST | PUT | DELETE | PATCH
-      description: "[cosa fa questo endpoint in italiano]"
-      source: "openapi/{repo}.yaml:riga"
-      confidence: CONFIRMED
-    # Se openapi non disponibile, usa @RequestMapping dal Controller
+# --- cluster-{nome}.md (documento tecnico-funzionale, scritto dall'agente) ---
+#
+# Struttura attesa per ogni docs/logic-catalog/cluster-{nome}.md:
+#
+# # Cluster: {nome}
+#
+# Servizi: {lista repo}
+# Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
+# Extracted at: YYYY-MM-DDTHH:MM:SSZ
+#
+# ## {repo-1}
+#
+# ### L1 — Domain Profile
+#
+# - **Domain:** {nome dominio — es. "Abbonamenti MDA"} [CONFIRMED] {Entity.java:riga}
+# - **Bounded context:** {1-2 frasi sulla responsabilita'} [CONFIRMED] {fonte}
+# - **Entities:**
+#   - {ClassName} [CONFIRMED] src/main/java/.../{ClassName}.java:{riga}
+#   - ...
+# - **Exposes:**
+#   - {METHOD} {/api/v1/...} — {descrizione} [CONFIRMED] openapi/{repo}.yaml:{riga}
+#   - ...
+#
+# ### L2 — Workflow Map
+#
+# - **{nomeMetodoCamelCase}():** trigger={REST|KAFKA|SCHEDULED|INTERNAL}
+#   transactional={true|false} [CONFIRMED] src/main/java/.../Service.java:{riga}
+# - ...
+#
+# ### Gap Report
+#
+# - [FILE_NOT_FOUND] {cosa non e' stato trovato}
+# - [UNVERIFIED] {cosa non e' stato possibile verificare}
+# - "Implementazione interna metodi non analizzata (L3 out of scope)"
+#
+# ## {repo-2}
+# ...
+#
+# ## Gap Report Cluster
+# (gap che riguardano il cluster nel suo insieme, non un singolo servizio)
 
-l2:
-  workflows:
-    - name: "[nomeMetodoCamelCase]"
-      type: "use-case"      # use-case | scheduled | event-driven | batch
-      trigger: "[POST /api/... | @Scheduled(cron='...') | @KafkaListener(topics='...')]"
-      transactional: true   # true se @Transactional presente sulla firma
-      source: "src/main/java/.../{ClassName}Service.java:riga"
-      confidence: CONFIRMED
-    # Aggiungi una entry per ogni metodo public rilevante trovato nei *Service.java
+# Confidence tag validi:
+#   CONFIRMED     — evidenza letta direttamente dal file (citare file:riga)
+#   INFERRED      — dedotto da nome classe/metodo (citare file:riga)
+#   UNVERIFIED    — nessuna evidenza — nel Gap Report, MAI rimosso
+#   FILE_NOT_FOUND — file non accessibile — documenta il gap
 
-gaps:
-  - "[descrive cosa NON e' stato trovato o analizzato]"
-  - "Implementazione interna metodi non analizzata (L3 out of scope)"
-  # Esempi di gap comuni:
-  # - "openapi.yaml non trovato — endpoints inferiti da @RequestMapping"
-  # - "Nessun *Service.java trovato — solo Controller analizzato"
-  # - "application.yml non accessibile — config runtime sconosciuta"
+# Tipi di workflow:
+#   use-case      — metodo public su *Service.java invocato da REST
+#   scheduled     — @Scheduled o @KafkaListener su *Service.java o *Scheduler.java
+#   event-driven  — @KafkaListener
+#   batch         — job batch, tipicamente @Scheduled con logica complessa

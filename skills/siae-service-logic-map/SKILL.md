@@ -40,13 +40,29 @@ SE NON HAI LETTO IL FILE, IL WORKFLOW NON ESISTE.
 
 ---
 
+## Prerequisito: SYSTEM_MAP.md
+
+Questa skill richiede che `/forge-sysmap` sia gia' stato eseguito:
+
+```bash
+ls docs/SYSTEM_MAP.md   # deve esistere
+```
+
+Se non esiste: esegui `/forge-sysmap` prima di procedere.
+`SYSTEM_MAP.md` e' l'input per la cluster detection (Step 3).
+
+---
+
 ## Quando si Applica
 
 **Sempre:**
 - Onboarding su servizio sconosciuto: "cosa fa sport-X?"
 - Impact analysis cross-repo: "quali servizi gestiscono Y?"
-- Build catalogo logic: `/forge-logic-build`
+- Build catalogo logic per cluster: `/forge-logic-build`
 - Ricerca concetti/workflow: `/forge-logic-search`
+
+**Output:** un documento per cluster (non per singolo servizio) che descrive
+il dominio funzionale e i workflow di tutti i servizi del cluster.
 
 ---
 
@@ -95,9 +111,59 @@ gh api /repos/itsiae/{repo}/branches --jq '[.[].name]'
 
 ---
 
-## Step 3 — BUILD CATALOG
+## Step 3 — CLUSTER DETECTION
 
-### 3a — Setup Output Directory
+Legge `docs/SYSTEM_MAP.md` ed estrae i cluster dal grafo delle dipendenze.
+
+🟢 SICURO — Nessuna pre-flight card necessaria.
+
+### 3a — Estrai il Grafo
+
+```bash
+cat docs/SYSTEM_MAP.md
+```
+
+Analizza il blocco Mermaid in SYSTEM_MAP.md:
+1. Estrai le edge `A --> B` (dipendenze dirette tra servizi)
+2. Raggruppa per connettivita': servizi con dipendenze reciproche o path condivisi = stesso cluster
+3. Servizi isolati (nessuna edge) = cluster singleton
+
+**Regola di evidenza:** usa SOLO le dipendenze documentate in SYSTEM_MAP.md.
+MAI inferire cluster dal nome del servizio o dal dominio percepito.
+
+### 3b — Proponi Cluster all'Utente
+
+Presenta i cluster proposti prima di procedere:
+
+```
+Cluster proposti da docs/SYSTEM_MAP.md:
+
+  cluster-abbonamenti (3 servizi):
+    sport-gestione-abbonamento, sport-contabilita, sport-pagamenti
+    [CONFIRMED] da SYSTEM_MAP.md: dipendenze reciproche
+
+  cluster-iscrizioni (2 servizi):
+    sport-iscrizioni, sport-atleti
+    [CONFIRMED] da SYSTEM_MAP.md: sport-iscrizioni --> sport-atleti
+
+  cluster-standalone (1 servizio):
+    sport-notifiche
+    [CONFIRMED] da SYSTEM_MAP.md: nessuna dipendenza rilevata
+
+Confermi questi cluster prima del build? (si / no / modifica)
+```
+
+🟡 MEDIO — Attendere conferma utente prima di procedere al Step 4.
+
+**Se l'utente modifica i cluster:**
+- Aggiorna la mappa manualmente e documenta la modifica come `[INFERRED]`
+- Motivo della modifica va documentato in `clusters.yaml`
+
+---
+
+## Step 4 — BUILD CATALOG
+
+### 4a — Setup Output Directory
 
 ```bash
 OUTPUT_DIR="docs/logic-catalog"
@@ -105,11 +171,13 @@ mkdir -p "$OUTPUT_DIR"
 echo "Logic catalog dir: $OUTPUT_DIR"
 ```
 
-### 3b — Pre-fetch Dati (Parent via Bash)
+### 4b — Pre-fetch Dati per Cluster (Parent via Bash)
 
-Per ogni repo, il parent pre-fetcha prima di dispatchar gli agenti:
+Per ogni cluster, pre-fetcha i dati di TUTTI i repo del cluster prima di dispatchar l'agente:
 
 ```bash
+# Per ogni repo nel cluster:
+
 # 1. File tree per trovare *Service.java, *Entity.java, openapi*.yaml
 gh api "/repos/itsiae/{repo}/git/trees/HEAD?recursive=1" \
   --jq '[.tree[].path | select(test("Service\\.java$|Entity\\.java$|Controller\\.java$|openapi.*\\.ya?ml$|Scheduler\\.java$"))] | .[0:20]'
@@ -122,9 +190,9 @@ gh api /repos/itsiae/{repo}/contents/{path} --jq '.content' | base64 -d \
 gh api /repos/itsiae/{repo}/contents/{openapi-path} --jq '.content' | base64 -d | head -100
 ```
 
-**Regola critica:** il parent esegue SEMPRE il pre-fetch via Bash. Gli agenti ricevono i dati inline nel prompt — non hanno permesso di usare Bash autonomamente.
+**Regola critica:** il parent pre-fetcha SEMPRE via Bash. Gli agenti ricevono i dati inline — non hanno permesso di usare Bash autonomamente.
 
-### 3c — Pilot Test (OBBLIGATORIO su sistemi con 5+ repo)
+### 4c — Pilot Test (OBBLIGATORIO su sistemi con 3+ cluster)
 
 🟡 MEDIO — Mostra pre-flight card prima del pilot test.
 
@@ -133,12 +201,12 @@ echo '{
   "level": "MEDIO",
   "skill": "siae-service-logic-map",
   "context": [
-    {"emoji": "🔬", "label": "Pilot test", "value": "2 repo su N totali"},
+    {"emoji": "🔬", "label": "Pilot test", "value": "1 cluster su N totali"},
     {"emoji": "📦", "label": "Dati pre-fetchati", "value": "Service.java + Entity.java + openapi"}
   ],
   "actions": [
-    {"emoji": "🤖", "label": "Dispatch 2 agenti pilot", "path": "docs/logic-catalog/"},
-    {"emoji": "📄", "label": "Scrittura 2 file YAML", "path": "docs/logic-catalog/{repo1}.yaml, {repo2}.yaml"}
+    {"emoji": "🤖", "label": "Dispatch 1 agente pilot (cluster piu piccolo)", "path": "docs/logic-catalog/"},
+    {"emoji": "📄", "label": "Scrittura 1 file cluster", "path": "docs/logic-catalog/cluster-{nome}.md"}
   ],
   "reason": "Validazione pipeline prima del full run",
   "ifno": "Pilot annullato, full run non garantito senza validazione"
@@ -146,13 +214,13 @@ echo '{
 ```
 
 Procedura pilot:
-1. Pre-fetcha dati per 2 repo scelti a campione
-2. Dispatcha 2 agenti con dati inline nel prompt
-3. Verifica output: `ls docs/logic-catalog/*.yaml | wc -l` → deve essere `2`
-4. Se OK → procedi con full run (Step 3d)
-5. Se file mancanti → STOP, diagnostica istruzioni agente prima di continuare
+1. Pre-fetcha dati per il cluster piu' piccolo (meno repo)
+2. Dispatcha 1 agente con dati inline nel prompt
+3. Verifica output: `ls docs/logic-catalog/cluster-*.md | wc -l` → deve essere `1`
+4. Se OK → procedi con full run (Step 4d)
+5. Se file mancante → STOP, diagnostica istruzioni agente prima di continuare
 
-### 3d — Dispatch Agenti in Parallelo (Full Run)
+### 4d — Dispatch Agenti per Cluster (Full Run)
 
 🟡 MEDIO — Mostra pre-flight card prima del full run.
 
@@ -161,92 +229,119 @@ echo '{
   "level": "MEDIO",
   "skill": "siae-service-logic-map",
   "context": [
-    {"emoji": "🤖", "label": "Agenti", "value": "N agenti in parallelo"},
-    {"emoji": "📦", "label": "Repo", "value": "lista repo target"},
-    {"emoji": "✅", "label": "Pilot", "value": "2/2 file verificati"}
+    {"emoji": "🤖", "label": "Agenti", "value": "K agenti (1 per cluster) in parallelo"},
+    {"emoji": "📦", "label": "Cluster", "value": "lista cluster confermati al Step 3"},
+    {"emoji": "✅", "label": "Pilot", "value": "1/1 file verificato"}
   ],
   "actions": [
     {"emoji": "⚡", "label": "Dispatch tutti gli agenti in parallelo", "path": "docs/logic-catalog/"},
-    {"emoji": "📄", "label": "Scrittura N file YAML", "path": "docs/logic-catalog/*.yaml"}
+    {"emoji": "📄", "label": "Scrittura K file cluster", "path": "docs/logic-catalog/cluster-*.md"}
   ],
   "reason": "Pilot OK, full run pronto",
   "ifno": "Full run annullato, catalogo parziale"
 }' | python3 design-system/generate-card.py
 ```
 
-Dispatcha TUTTI in un blocco parallelo.
+Dispatcha TUTTI i cluster in un blocco parallelo (1 agente per cluster).
 
 **ISTRUZIONE CRITICA DA INCLUDERE IN OGNI AGENTE:**
 
 ```
-Hai tutti i dati nel prompt. NON usare Bash. Usa SOLO il Write tool.
-1. Analizza i dati e compila la scheda L1+L2 YAML
+Hai tutti i dati nel prompt per il cluster {nome} ({lista servizi}).
+NON usare Bash. Usa SOLO il Write tool.
+1. Analizza i dati e compila la doc L1+L2 per ogni servizio del cluster
    (formato: reference/logic-catalog-template.yaml)
-2. Scrivi in: docs/logic-catalog/{repo-name}.yaml
-3. Rispondi con UNA SOLA RIGA: "OK {repo-name} salvato"
-4. NON includere YAML nel corpo della risposta
+2. Scrivi in: docs/logic-catalog/cluster-{nome}.md
+3. Rispondi con UNA SOLA RIGA: "OK cluster-{nome} salvato"
+4. NON includere Markdown nel corpo della risposta
 ```
 
-### 3e — Collect: Verifica File Scritti
+### 4e — Genera clusters.yaml (Parent)
+
+Dopo che tutti gli agenti hanno scritto i file cluster, il parent genera il file indice:
 
 ```bash
-ls docs/logic-catalog/*.yaml | wc -l   # deve == N repo dispatchati
+# Verifica file cluster scritti
+ls docs/logic-catalog/cluster-*.md | wc -l   # deve == K cluster
 ```
 
-Se mancano file → re-dispatcha solo i repo mancanti (non tutto il batch).
+Il parent scrive `docs/logic-catalog/clusters.yaml`:
+
+```yaml
+generated_at: YYYY-MM-DDTHH:MM:SSZ
+source: docs/SYSTEM_MAP.md
+clusters:
+  - name: "{cluster-name}"
+    services: ["{repo1}", "{repo2}"]
+    domain: "{dominio funzionale — da cluster-{nome}.md}"
+    confidence: CONFIRMED | INFERRED
+```
+
+E `docs/logic-catalog/system-overview.md` con la visione d'insieme di tutti i cluster.
+
+### 4f — Collect: Verifica File Scritti
+
+```bash
+ls docs/logic-catalog/cluster-*.md | wc -l   # deve == K cluster
+ls docs/logic-catalog/clusters.yaml           # deve esistere
+ls docs/logic-catalog/system-overview.md      # deve esistere
+```
+
+Se mancano file → re-dispatcha solo i cluster mancanti (non tutto il batch).
 
 ---
 
-## Step 4 — QUERY (forge-logic-search)
+## Step 5 — QUERY (forge-logic-search)
 
 Riceve keyword dall'utente, cerca nel catalogo locale.
 
 ```bash
-# Cerca nei file YAML del catalogo
-grep -ri "{keyword}" docs/logic-catalog/ --include="*.yaml" -l
+# Cerca nei file cluster (Markdown)
+grep -ri "{keyword}" docs/logic-catalog/ --include="*.md" -l
+
+# Cerca nel catalogo cluster
+grep -ri "{keyword}" docs/logic-catalog/clusters.yaml
 
 # Per ogni file con match: mostra contesto
-grep -ri "{keyword}" docs/logic-catalog/{file}.yaml -B2 -A2
+grep -ri "{keyword}" docs/logic-catalog/{file} -B2 -A2
 ```
 
-**Output atteso:** tabella con colonne `repo | layer | campo | valore | source`
+**Output atteso:** tabella con colonne `cluster | servizio | layer | campo | valore | source`
 
 Esempio:
-| repo | layer | campo | valore | source |
-|------|-------|-------|--------|--------|
-| sport-iscrizioni | domain | entity | Iscrizione, Atleta | `[CONFIRMED]` SportService.java:42 |
-| sport-pagamenti | domain | workflow | pagamento-quota | `[CONFIRMED]` PagamentoService.java:78 |
+| cluster | servizio | layer | campo | valore | source |
+|---------|----------|-------|-------|--------|--------|
+| cluster-abbonamenti | sport-gestione-abbonamento | l2.workflow | name | calcolaPreventivo | `[CONFIRMED]` GestioneAbbonamentoService.java:45 |
+| cluster-abbonamenti | sport-contabilita | l2.workflow | name | elaboraPreventivo | `[CONFIRMED]` ContabilitaService.java:12 |
 
 ---
 
-## Formato Output YAML (L1+L2)
+## Formato Output per Cluster
 
-Ogni agente produce un file `docs/logic-catalog/{repo-name}.yaml` con questo schema:
+**`docs/logic-catalog/cluster-{nome}.md`** — documento tecnico-funzionale del cluster:
 
-```yaml
-repo: itsiae/{repo-name}
-generated_at: YYYY-MM-DDTHH:MM:SSZ
-domain:
-  name: "{dominio principale}"
-  description: "{descrizione breve}"
-entities:
-  - name: "{EntityName}"
-    source: "{path/to/Entity.java}:{riga}"
-    confidence: CONFIRMED | INFERRED | UNVERIFIED
-workflows:
-  - name: "{nome-workflow}"
-    entry_point: "{ClassName}.{methodName}()"
-    source: "{path/to/Service.java}:{riga}"
-    trigger: REST | KAFKA | SCHEDULED | INTERNAL
-    confidence: CONFIRMED | INFERRED | UNVERIFIED
-api_endpoints:
-  - path: "{/api/v1/...}"
-    method: GET | POST | PUT | DELETE
-    source: "{openapi.yaml}:{riga} | {Controller.java}:{riga}"
-    confidence: CONFIRMED | INFERRED | UNVERIFIED
-gap_report:
-  - type: FILE_NOT_FOUND | UNVERIFIED
-    description: "{cosa manca o non e' stato possibile verificare}"
+```markdown
+# Cluster: {nome}
+
+Servizi: {lista repo}
+Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
+
+## {repo-1}
+
+### L1 — Domain Profile
+- Domain: {nome dominio} [CONFIRMED] {Entity.java:riga}
+- Entities: {ClassName1}, {ClassName2} [CONFIRMED] {Entity.java:riga}
+- Exposes: {/api/v1/...} [CONFIRMED] {openapi.yaml:riga}
+
+### L2 — Workflow Map
+- {nomeMetodo}(): trigger=REST [CONFIRMED] {Service.java:riga}
+- {nomeScheduled}(): trigger=SCHEDULED [CONFIRMED] {Scheduler.java:riga}
+
+## {repo-2}
+...
+
+## Gap Report
+- [FILE_NOT_FOUND] {repo}: Service.java non trovato
 ```
 
 ---
@@ -261,7 +356,9 @@ gap_report:
 | "Ho gia' visto servizi simili" | Ogni repo e' diverso. Analizza questo specifico. |
 | "Non trovo il Service.java, ma fa sicuramente X" | `[FILE_NOT_FOUND]`. Documenta il gap. |
 | "Il pilot e' lento, salto al full run" | Senza pilot, non sai se gli agenti scrivono i file. |
-| "Posso inferire le entita' dal nome del repo" | Solo `@Entity` class names letti da file sono evidenza. |
+| "I cluster si capiscono dal nome dei servizi" | Solo edge in SYSTEM_MAP.md sono evidenza. |
+| "Questo cluster mi sembra ovvio" | Ovvio non e' CONFIRMED. Leggi SYSTEM_MAP.md. |
+| "Salto la conferma cluster, e' chiaro" | La conferma protegge da cluster sbagliati nel catalogo. |
 
 ---
 
@@ -271,9 +368,11 @@ gap_report:
 |------------|---------|------|
 | Verifica accesso GitHub (`gh auth status`) | 🟢 Sicuro | No |
 | Enumerate repo (`gh repo list`) | 🟢 Sicuro | No |
+| Lettura SYSTEM_MAP.md + estrazione cluster | 🟢 Sicuro | No |
+| Proposta cluster all'utente | 🟢 Sicuro | No |
 | Pre-fetch file via Bash (parent) | 🟢 Sicuro | No |
-| Pilot test — dispatch 2 agenti | 🟡 Medio | Si |
-| Full run — dispatch N agenti in parallelo | 🟡 Medio | Si |
+| Pilot test — dispatch 1 agente | 🟡 Medio | Si |
+| Full run — dispatch K agenti in parallelo | 🟡 Medio | Si |
 | Query catalogo locale (`grep`) | 🟢 Sicuro | No |
 | Scrittura `docs/logic-catalog/` | 🟡 Medio | Si |
 
@@ -281,17 +380,20 @@ gap_report:
 
 ## Vincoli Non Negoziabili
 
-1. MAI descrivere workflow senza firma metodo reale con `source:riga`
-2. MAI inferire entita' dal nome del servizio — solo `@Entity` class names
-3. SEMPRE Gap Report per ogni repo, anche se vuoto
-4. SEMPRE pilot test con 2 repo prima del full run (su sistemi con 5+ repo)
-5. Gli agenti usano SOLO Write tool — il parent pre-fetcha i dati via Bash
-6. I Confidence Tag sono obbligatori su ogni voce del catalogo YAML
+1. MAI procedere senza `docs/SYSTEM_MAP.md` — prerequisito assoluto
+2. MAI assegnare un servizio a un cluster senza evidenza da SYSTEM_MAP.md
+3. MAI descrivere workflow senza firma metodo reale con `source:riga`
+4. MAI inferire entita' dal nome del servizio — solo `@Entity` class names
+5. SEMPRE conferma utente sui cluster prima del build (Step 3b)
+6. SEMPRE Gap Report per ogni repo, anche se vuoto
+7. SEMPRE pilot test con 1 cluster prima del full run (su sistemi con 3+ cluster)
+8. Gli agenti usano SOLO Write tool — il parent pre-fetcha i dati via Bash
+9. I Confidence Tag sono obbligatori su ogni voce del catalogo
 
 ```
 REQUIRED SUB-SKILL: siae-verification
 ```
 
 Prima di dichiarare il build del catalogo completato, invoca `siae-verification`
-con evidenza: `ls docs/logic-catalog/*.yaml | wc -l` deve corrispondere al numero
-di repo enumerati al Step 2.
+con evidenza: `ls docs/logic-catalog/cluster-*.md | wc -l` deve corrispondere
+al numero di cluster confermati al Step 3b.
