@@ -185,24 +185,33 @@ che insieme danno una comprensione completa del sistema:
 | `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
 | `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile + workflow map per cluster |
 
-**Workflow tipico:**
+**Workflow tipico (comando singolo):**
 
 ```
-1. /forge-sysmap
-   → Mappa la topologia: chi chiama chi, quali Kafka topics, quali DB
-   → Output: docs/SYSTEM_MAP.md con ogni edge citato con file:riga
+/forge-logic-build sport-fdc-*
+   → Step 0: cerca SYSTEM_MAP.md — se non esiste, lo genera automaticamente
+   → Step 3: cluster detection dal grafo (evidenza-based, conferma utente)
+   → Step 4: pre-fetch dati per cluster + dispatch agenti paralleli
+   → Output: docs/logic-catalog/cluster-{nome}.md  (1 per cluster)
+             docs/logic-catalog/clusters.yaml       (indice)
+             docs/logic-catalog/system-overview.md  (visione d'insieme)
 
-2. /forge-logic-build
-   → Legge SYSTEM_MAP.md: raggruppa servizi in cluster per connettivita'
-   → Propone i cluster all'utente per conferma
-   → Per ogni cluster: domain responsibility, entita', workflow (@Service methods)
-   → Output: docs/logic-catalog/cluster-{nome}.md
-            docs/logic-catalog/clusters.yaml (indice)
-            docs/logic-catalog/system-overview.md
-
-3. /forge-logic-search "preventivo"
+/forge-logic-search "diffida"
    → Cerca nel catalogo: quali cluster/servizi implementano un concetto
-   → Incrocia con SYSTEM_MAP per sapere anche le loro dipendenze
+   → Incrocia con SYSTEM_MAP per le dipendenze
+```
+
+**Esempio reale — Sport FDC (Filiera del Credito, 3 repo):**
+
+```
+Cluster rilevati da SYSTEM_MAP.md:
+  fdc-core (2 servizi): fascicolo ↔ evidenza (dipendenza bidirezionale CONFIRMED)
+  fdc-documento (1 servizio): standalone
+
+Output:
+  docs/systems/sport-fdc/logic-catalog/cluster-fdc-core.md
+  docs/systems/sport-fdc/logic-catalog/cluster-fdc-documento.md
+  docs/systems/sport-fdc/logic-catalog/clusters.yaml
 ```
 
 **Domande che ogni skill risponde:**
