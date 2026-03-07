@@ -373,7 +373,7 @@ echo '{
 
 ---
 
-## TABELLA ANTI-RAZIONALIZZAZIONE
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -384,6 +384,12 @@ echo '{
 | "Il test E2E sostituisce il TC manuale in Xray" | No. Il test automatizzato aggiorna lo stato del TC manuale nella Test Execution. Il TC manuale resta — e' la fonte di verita'. |
 | "Non serve la Test Execution di automation separata" | Serve. Mescolare risultati manuali e automatizzati nella stessa TE rende i report Xray illeggibili. |
 | "Il test passa in locale, non serve BrowserStack" | BrowserStack esegue su device e browser reali. Un test che passa in locale puo' fallire su Android 12 Samsung o Safari iOS. |
+| "Questo scenario lo testo a mano, e' piu' veloce che scrivere il test" | Un test manuale non si ripete. Un test E2E gira su ogni PR, ogni notte, su ogni ambiente. Il costo di scrittura si ammortizza al terzo run. |
+| "Non ho tempo per automatizzare ora, lo faccio nel prossimo sprint" | Il debito di automation si accumula: piu' TC manuali si accumulano, piu' costoso e' recuperare. I bug di regressione trovati in produzione costano 10x di un test automatizzato scritto ora. |
+| "Il sync con Xray e' opzionale, basta avere i test che passano" | Senza sync Xray i manager non vedono la copertura, le audit falliscono e i TC restano in stato 'Non eseguito' anche se il test verde gira in CI. La tracciabilita' Story→TC→Execution e' un requisito SIAE. |
+| "Configuro la CI pipeline dopo il rilascio, ora ho fretta" | Una pipeline non configurata significa che i test E2E non proteggono main. Un bug introdotto passa inosservato fino al collaudo. Il gate CI e' la rete di sicurezza: va tesa prima, non dopo la caduta. |
+| "I test E2E sono lenti, preferisco unit test" | Gli unit test non validano i flussi utente reali end-to-end. Un'app con 100% unit test puo' avere il login rotto in produzione. I due livelli sono complementari, non alternativi. |
+| "Non sincronizo con Xray perche' la chiave Jira e' cambiata" | Aggiorna la mappatura nel titolo it() e riesegui. Non sincronizzare lascia la Test Execution con risultati obsoleti e invalida la reportistica di sprint. |
 
 ---
 

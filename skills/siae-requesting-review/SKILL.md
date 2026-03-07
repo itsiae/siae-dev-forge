@@ -171,7 +171,7 @@ Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-re
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -184,7 +184,7 @@ Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-re
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card | Note |
 |-----------|---------|------|------|

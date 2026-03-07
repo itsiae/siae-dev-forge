@@ -279,7 +279,7 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 
 ---
 
-## TABELLA ANTI-RAZIONALIZZAZIONE
+## Tabella Anti-Razionalizzazione
 
 **Stai per razionalizzare? Leggi questa tabella. Poi torna al workflow.**
 

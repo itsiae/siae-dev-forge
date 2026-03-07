@@ -33,7 +33,7 @@ I fix casuali sprecano tempo e creano nuovi bug. Le patch rapide mascherano prob
 
 ---
 
-## La Legge Ferrea
+## LA LEGGE DI FERRO
 
 ```
 NESSUN FIX SENZA ROOT CAUSE INVESTIGATION COMPLETATA (FASE 1)
@@ -231,7 +231,7 @@ Questo NON e' un'ipotesi fallita — e' un'architettura sbagliata.
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|

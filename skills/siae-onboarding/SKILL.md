@@ -248,6 +248,20 @@ Se lo stack non e' stato rilevato, mostra un avviso:
 
 ---
 
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Conosco gia' questo progetto, posso iniziare direttamente." | La codebase cambia tra una sessione e l'altra. Commit, PR, refactoring e nuove feature sono accaduti mentre non eri connesso. Saltare l'onboarding significa lavorare su un modello mentale obsoleto. |
+| "CODEBASE_MAP.md e' documentazione, non e' critica per iniziare." | CODEBASE_MAP.md e' la fonte di verita' sull'architettura attuale. Senza leggerla, rischi di duplicare moduli esistenti, ignorare dependency critiche o violare pattern stabiliti dal team. |
+| "Ho letto il codice una volta, ricordo la struttura." | La memoria della sessione precedente non e' affidabile per decisioni architetturali. Il progetto evolve. Leggere CODEBASE_MAP.md richiede 2 minuti. Correggere un'assunzione errata richiede ore. |
+| "I design doc sono teorici, guardo direttamente il codice." | I design doc recenti (es. `docs/plans/`) contengono decisioni prese dopo l'ultimo deploy: ADR, vincoli tecnici, workaround noti. Il codice mostra il 'come', i design doc spiegano il 'perche''. |
+| "L'onboarding rallenta il lavoro vero." | L'onboarding di questa skill e' sola lettura e richiede meno di 5 minuti. Iniziare senza contesto produce errori che impiegano ore a debuggare, PR rifiutate per violazioni di standard ignoti, e regressioni evitabili. |
+| "Se c'e' un problema lo vedro' durante il test." | Alcuni errori contestuali (factory sbagliata, stack assumptions errate, ambiente target non identificato) non emergono nei test unitari. Emergono in produzione o nella PR review, quando il costo del fix e' massimo. |
+| "La detection automatica e' opzionale se so gia' il progetto." | La detection popola il contesto per TUTTE le skill successive della sessione. Senza di essa, skill come siae-tdd, siae-security e siae-architecture operano senza sapere framework, test runner e standard di copertura applicabili a questo stack specifico. |
+
+---
+
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |

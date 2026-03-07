@@ -265,7 +265,7 @@ come commento top-level via `gh pr comment {pr_number} --body "[testo]"`.
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -325,7 +325,7 @@ Se i permessi sono negati:
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card | Note |
 |-----------|---------|------|------|

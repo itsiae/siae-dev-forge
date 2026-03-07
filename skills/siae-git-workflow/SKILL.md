@@ -284,7 +284,7 @@ git push origin PRODUZIONE
 
 ---
 
-## 10. Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|

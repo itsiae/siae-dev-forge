@@ -23,11 +23,10 @@ description: >
 
 ---
 
-## La Regola
+## LA LEGGE DI FERRO
 
 ```
 NON INIZIARE MAI L'IMPLEMENTAZIONE NEL BRANCH CORRENTE
-Crea sempre un worktree isolato prima di toccare qualsiasi file.
 ```
 
 **Violare la lettera di questa regola significa violare lo spirito della regola.**
