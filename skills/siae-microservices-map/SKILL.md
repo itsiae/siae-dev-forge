@@ -205,7 +205,51 @@ gh api /repos/{org}/{repo}/contents/{path} --jq '.name' 2>/dev/null
 
 Output: per ogni repo → lista file da fetchare (solo esistenti).
 
-#### 3b — EXTRACT: Dispatch Subagent Paralleli
+#### 3b — EXTRACT: Setup Output Directory e Pre-fetch Dati
+
+**ANTI-CONTEXT-OVERFLOW — OBBLIGATORIO.**
+Il **parent** pre-fetcha TUTTI i dati via Bash. I subagent ricevono i dati inline nel prompt
+e usano SOLO il Write tool. I subagent NON usano Bash. NON chiamano `gh api`.
+
+```bash
+# Crea la directory di raccolta evidenze PRIMA di qualsiasi fetch
+OUTPUT_DIR="/tmp/siae-sysmap-$(date +%Y%m%d%H%M%S)"
+mkdir -p "$OUTPUT_DIR"
+echo "Evidence dir: $OUTPUT_DIR"
+```
+
+Per ogni repo, il parent pre-fetcha:
+```bash
+# 1. Manifest principale
+gh api /repos/{org}/{repo}/contents/pom.xml --jq '.content' | base64 -d
+
+# 2. File rilevanti (FeignClient, Kafka, config, datasource)
+gh api "/repos/{org}/{repo}/git/trees/HEAD?recursive=1" \
+  --jq '[.tree[].path | select(test("Client\\.java$|FeignClient|kafka|Kafka|datasource|application\\.yml|application\\.properties|openapi"))] | .[0:20]'
+
+# 3. Contenuto di ogni file rilevante trovato
+gh api /repos/{org}/{repo}/contents/{path} --jq '.content' | base64 -d
+```
+
+Salva `$OUTPUT_DIR` e tutti i dati pre-fetchati — li passerai inline nei prompt dei subagent.
+
+#### 3c — EXTRACT: Pilot Test (OBBLIGATORIO su sistemi con 5+ repo)
+
+Prima del full run, verifica il pattern con 2 repo:
+
+1. Pre-fetcha i dati per i **primi 2 repo** usando i comandi in 3b (parent, via Bash)
+2. Dispatcha **2 subagent** con i dati già inline nel prompt + istruzione ISTRUZIONE CRITICA
+3. Attendi che completino e verifica:
+   ```bash
+   ls -la "$OUTPUT_DIR/"             # devono esistere 2 file .yaml
+   cat "$OUTPUT_DIR/{repo-1}.yaml"   # YAML valido e leggibile
+   ```
+4. Se i file esistono e sono leggibili → **procedi al full run (Step 3d)**
+5. Se i file NON esistono → l'agente non ha usato il Write tool → rivedi istruzioni, STOP e diagnostica
+
+**Non saltare il pilot.** Il costo è 2 agenti. Il risparmio è non perdere 42 agenti.
+
+#### 3d — EXTRACT: Dispatch Subagent Paralleli (Full Run)
 
 **FULL RUN SEMPRE** — non chiedere mai all'utente se fare campione o run completa.
 Tutti i repo enumerati devono essere processati. Nessuna eccezione.
@@ -216,7 +260,24 @@ per leggere 5-10 file per repo. Se un singolo file supera il budget → tronca e
 
 **Dispatcha TUTTI i subagent in un singolo blocco parallelo** (1 per repo).
 
-Ogni subagent riceve i file fetchati del suo repo e produce una **scheda evidenza strutturata**:
+Ogni subagent riceve i file pre-fetchati del suo repo inline nel prompt e produce una **scheda evidenza strutturata**.
+
+**⚠️ ISTRUZIONE CRITICA DA INCLUDERE IN OGNI SUBAGENT (copia verbatim):**
+
+```
+Hai già tutti i dati necessari nel prompt. NON usare Bash. NON usare gh api. Usa SOLO il Write tool.
+
+  1. Analizza i dati forniti e compila la scheda evidenza YAML (formato sotto).
+  2. Applica il protocollo bias da conferma per ogni edge: quale file? quale riga?
+     Se non puoi rispondere → confidence: INFERRED o UNVERIFIED.
+  3. Scrivi la scheda in: {OUTPUT_DIR}/{repo-name}.yaml  (usa il Write tool)
+  4. Rispondi con UNA SOLA RIGA: "✅ {repo-name} salvato in {OUTPUT_DIR}/{repo-name}.yaml"
+  5. NON includere il contenuto YAML nel tuo output testuale.
+     Il YAML va SOLO nel file — mai nel corpo della risposta.
+```
+
+Il parent non ingestisce l'analisi: riceve solo la riga di conferma (~50 token).
+Con 42 agenti: 42 × 50 token = 2.1k token nel parent (invece di ~210k → context overflow).
 
 ```yaml
 repo: sport-anagrafe
@@ -267,6 +328,29 @@ gaps:
 3. L'evidenza e' diretta (codice) o indiretta (config → URL)?
 
 Se non si risponde alla domanda 1 con un path preciso → `[UNVERIFIED]`.
+
+---
+
+### Step 3e — COLLECT: Raccogli Evidence Files
+
+🟢 SICURO
+
+Dopo che **tutti** i subagent hanno completato:
+
+```bash
+# Conta i file salvati — deve corrispondere al numero di repo
+ls "$OUTPUT_DIR"/*.yaml | wc -l
+
+# Lista file per verifica rapida
+ls -la "$OUTPUT_DIR"/*.yaml
+```
+
+**Se il conteggio non corrisponde:**
+- Identifica quali repo mancano (confronta lista repo con file in OUTPUT_DIR)
+- Re-dispatcha SOLO i repo mancanti (singolo agente per ognuno)
+- NON rieseguire repo già presenti
+
+Procedi a Step 4 leggendo i file YAML uno per uno con il Read tool.
 
 ---
 
