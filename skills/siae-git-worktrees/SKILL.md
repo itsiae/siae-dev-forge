@@ -1,7 +1,7 @@
 ---
 name: siae-git-worktrees
 description: >
-  Trigger: prima di eseguire un piano implementativo, inizio feature,
+  Trigger: prima di eseguire un piano implementativo,
   setup workspace isolato, implementazione su branch separato.
 ---
 

@@ -19,6 +19,10 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Rigid | **Fase SDLC:** 6. QA Gate
+
+---
+
 ## Panoramica
 
 I fix casuali sprecano tempo e creano nuovi bug. Le patch rapide mascherano problemi profondi.

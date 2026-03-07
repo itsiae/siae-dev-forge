@@ -21,6 +21,10 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 4. Implementation
+
+---
+
 ## Panoramica
 
 Pattern frontend SIAE per sviluppo, testing, deploy e brand. **Vue.js 3 è lo stack standard SIAE** per i nuovi progetti. Angular e React sono supportati dove già adottati.
@@ -74,6 +78,26 @@ Struttura `src/`: `components/`, `hooks/`, `services/`, `store/`, `types/`
 ---
 
 ## 2. Deploy (S3 + CloudFront)
+
+🚨 **Pre-flight OBBLIGATORIA prima del deploy:**
+
+```bash
+echo '{
+  "level": "CRITICO",
+  "skill": "siae-frontend",
+  "context": [
+    {"emoji": "🏗️", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
+    {"emoji": "🏷️", "label": "Tag rc-*", "value": "<rc-YYYY-MM-DD-N>"},
+    {"emoji": "✅", "label": "Build locale", "value": "OK / Fallita"},
+    {"emoji": "🧪", "label": "Test suite", "value": "N passed, 0 failed"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "S3 sync + CloudFront invalidation", "path": "<bucket-name>"}
+  ],
+  "reason": "Deploy frontend — assets sovrascritta, CloudFront invalidata",
+  "ifno": "STOP — nessun deploy eseguito"
+}' | python3 design-system/generate-card.py
+```
 
 `vite build` -> `dist/` -> S3 bucket (no static hosting, access via CloudFront OAI/OAC). `index.html` no-cache, assets con hash per cache busting.
 
@@ -240,6 +264,20 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V6 | No secret in codice frontend               | Usa env variables (`VITE_*`)             |
 | V7 | Componenti tipizzati con `defineComponent` | Props, emits, slots tipizzati            |
 | V8 | No dipendenze non approvate                | Review team lead per nuovi package       |
+
+---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Questo componente e' solo per questa pagina" | I componenti 'locali' vengono riusati. Costruiscili per il riuso. |
+| "I test Vitest rallentano il build" | I bug UI in produzione rallentano i developer per giorni. |
+| "Il CSS lo sistemo dopo" | Il CSS non sistemato diventa tech debt che blocca il restyling. |
+| "Non serve il brand SIAE per questo prototipo" | I prototipi diventano produzione. Il brand si aggiunge male in corsa. |
+| "Firebase config la metto nel codice" | Le config hardcoded vanno in git. Le credenziali non devono andare in git. |
+| "L'error tracking lo aggiungo in produzione" | Senza error tracking non sai cosa sta rompendosi in produzione. |
+| "Vue 2 funziona ancora, non migro" | Vue 2 e' EOL. Il debito di migrazione cresce ogni giorno. |
 
 ---
 

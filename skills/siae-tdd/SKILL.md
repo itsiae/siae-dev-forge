@@ -19,6 +19,8 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Rigid | **Fase SDLC:** 5. Testing
+
 ---
 
 ## LA LEGGE DI FERRO
@@ -258,6 +260,19 @@ def test_should_reject_empty_email_when_submitting_form(form_service):
 ```
 
 > Per configurazioni CI dettagliate di ogni framework, vedi `reference/framework-configs.md`.
+
+---
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Scrittura test fallente (RED) | 🟢 Sicuro | No |
+| Esecuzione test per verifica RED | 🟢 Sicuro | No |
+| Implementazione minimale (GREEN) | 🟢 Sicuro | No |
+| Esecuzione test per verifica GREEN | 🟢 Sicuro | No |
+| Refactor del codice | 🟡 Medio | Si |
+| Git commit del ciclo RED-GREEN-REFACTOR | 🟡 Medio | Si |
 
 ---
 

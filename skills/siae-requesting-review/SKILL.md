@@ -24,6 +24,14 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
+```
+
+---
+
 ## Il Principio Fondamentale
 
 La code review e' un dialogo tra colleghi tecnici, non un esame.

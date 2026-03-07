@@ -18,6 +18,8 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 2. Design
+
 ---
 
 ## 1. Modello C4
@@ -140,3 +142,27 @@ Servizi AWS approvati e in uso nei repository SIAE.
    Per servizi non in lista, richiedere approvazione esplicita.
 5. **Diagrammi in Mermaid** — tutti i diagrammi architetturali devono essere in sintassi Mermaid,
    renderizzabili in GitHub e Confluence.
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Abbiamo gia' un pattern uguale altrove" | Il contesto cambia. Il pattern va validato per questo caso. |
+| "E' solo un CRUD, non serve architettura" | I CRUD diventano complessi. L'ADR previene il debito tecnico. |
+| "Lo decidiamo durante l'implementazione" | Le decisioni architetturali in corso d'opera costano di piu'. |
+| "Il team conosce gia' il sistema" | La conoscenza tacita non scala. Documentala. |
+| "Aggiorniamo l'ADR dopo il rilascio" | Dopo il rilascio non si aggiorna mai. |
+| "Non abbiamo tempo per HLD" | Il tempo risparmiato ora viene perso nel refactoring. |
+| "L'architettura e' ovvia" | Ovvia per te. Non per chi entra nel team dopo. |
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Analisi requisiti non funzionali | 🟢 Sicuro | No |
+| Proposta pattern architetturale | 🟢 Sicuro | No |
+| Confronto trade-off tra opzioni | 🟢 Sicuro | No |
+| Scrittura ADR in docs/architecture/ | 🟢 Sicuro | No |
+| Scelta librerie/dipendenze esterne | 🟡 Medio | Si |
+| Pubblicazione ADR su Confluence | 🟡 Medio | Si |
+| Modifica architettura di sistema esistente | 🔴 Alto | Si |

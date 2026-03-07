@@ -24,6 +24,14 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+OGNI COMMENTO RICHIEDE UNA REAZIONE ESPLICITA — IL SILENZIO NON E' UNA RISPOSTA
+```
+
+---
+
 ## Il Principio Fondamentale
 
 La code review richiede **valutazione tecnica**, non performance emotiva.

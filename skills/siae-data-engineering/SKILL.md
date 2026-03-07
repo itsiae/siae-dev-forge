@@ -20,6 +20,10 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 4. Implementation
+
+---
+
 ## Panoramica
 
 Pattern data engineering da 23 repo Python itsiae (dataplatform-datalake-etl, performing-etl, datalake-sport-etl, etc.). Guida pipeline ETL, Glue jobs, Step Functions e data lake.
@@ -216,6 +220,18 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V8 | Retry obbligatorio in Step Functions       | Glue job puo' fallire per risorse temp   |
 
 ---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Il job funziona, non serve il Medallion" | Senza struttura Bronze/Silver/Gold il data lake diventa data swamp. |
+| "I test sui Glue job sono lenti" | Un job non testato che va in produzione costa giorni di recovery. |
+| "Lo schema lo valido a runtime" | La validazione a runtime arriva tardi. Valida all'ingresso. |
+| "La pipeline e' semplice, non serve Step Functions" | Le pipeline 'semplici' crescono. L'orchestrazione si aggiunge male in corsa. |
+| "Il checkpoint lo aggiungo se serve" | Senza checkpoint, un job da 6 ore riparte dall'inizio al primo errore. |
+| "I log sono nel CloudWatch, non nel job" | I log strutturati nel job permettono alert e dashboard. CloudWatch non basta. |
+| "La partizione non serve per questo volume" | Il volume cresce. La ripartizione a posteriori e' costosa. |
 
 ## Classificazione Rischio Operazioni
 

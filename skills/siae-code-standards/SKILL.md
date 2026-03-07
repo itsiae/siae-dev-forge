@@ -233,6 +233,19 @@ Tutti gli stack SIAE usano logging strutturato in formato JSON.
 
 ---
 
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Questo naming e' piu' chiaro per me" | Il codice viene letto dal team, non solo da te. Segui il pattern. |
+| "I test rallentano la delivery" | I bug in produzione rallentano di piu'. I test sono investimento. |
+| "Il logging lo aggiungo dopo" | 'Dopo' non arriva mai. I log mancanti rendono il debug cieco. |
+| "Questa classe fa due cose ma e' piccola" | Le classi piccole crescono. Single Responsibility va applicata ora. |
+| "Gli altri nel team capiscono lo stesso" | Il prossimo developer non conosce il tuo contesto. |
+| "L'exception handler non serve qui" | I casi impossibili accadono in produzione. Gestiscili. |
+| "Questo metodo ha 200 righe ma e' leggibile" | Oltre 30 righe e' un segnale. Spezza il metodo. |
+| "I commenti spiegano il codice brutto" | Il codice dovrebbe spiegare se stesso. Riscrivi, non commentare. |
+
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
