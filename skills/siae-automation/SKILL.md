@@ -59,26 +59,17 @@ Se nessun segnale, chiedi: "Stai automatizzando una app mobile (iOS/Android) o u
 
 ## PRE-FLIGHT CARD DI APERTURA
 
-Genera la pre-flight card con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-automation",
-  "context": [
-    {"emoji": "📱", "label": "Canale", "value": "Mobile iOS / Mobile Android / Web"},
-    {"emoji": "📡", "label": "Tier", "value": "Tier 1 / 2 / 3"},
-    {"emoji": "🎫", "label": "TL Xray", "value": "Trovata XP-XXX / Non trovata / Da CSV"},
-    {"emoji": "🔢", "label": "TC totali TL", "value": "N TC nella Test List"},
-    {"emoji": "🤖", "label": "appium-mcp", "value": "Disponibile / Non disponibile"},
-    {"emoji": "☁️", "label": "BrowserStack", "value": "Configurato / Mancante"},
-    {"emoji": "🔄", "label": "Xray sync", "value": "MCP / CSV"}
-  ],
-  "actions": [],
-  "reason": "Leggo prima la TL, poi propongo il piano automation",
-  "ifno": "Workflow automation non inizia"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-automation |
+|:---|
+| 📱 Canale: Mobile iOS / Mobile Android / Web |
+| 📡 Tier: Tier 1 / 2 / 3 |
+| 🎫 TL Xray: Trovata `XP-XXX` / Non trovata / Da CSV |
+| 🔢 TC totali TL: N TC nella Test List |
+| 🤖 appium-mcp: Disponibile / Non disponibile |
+| ☁️ BrowserStack: Configurato / Mancante |
+| 🔄 Xray sync: MCP / CSV |
+| 💡 Perche': Leggo prima la TL, poi propongo il piano automation |
+| 🚫 Se NO: Workflow automation non inizia |
 
 ---
 
@@ -494,26 +485,17 @@ Se il sync non è avvenuto: usa il fallback JUnit XML (vedi `reference/cypress-x
 
 **Report finale:**
 
-Genera la card report con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-automation",
-  "context": [
-    {"emoji": "🎫", "label": "Story", "value": "PROJ-XXX"},
-    {"emoji": "🧪", "label": "Test Exec", "value": "XE-456 [nuova / aggiornata]"},
-    {"emoji": "📱", "label": "Canale", "value": "Mobile Android / Web"},
-    {"emoji": "✅", "label": "PASS", "value": "N TC"},
-    {"emoji": "❌", "label": "FAIL", "value": "N TC"},
-    {"emoji": "⏭️", "label": "SKIP", "value": "N TC"},
-    {"emoji": "🔄", "label": "Xray sync", "value": "Completato / CSV generato"}
-  ],
-  "actions": [],
-  "reason": "Report finale esecuzione automation test",
-  "ifno": "Nessun report generato"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-automation |
+|:---|
+| 🎫 Story: `PROJ-XXX` |
+| 🧪 Test Exec: `XE-456` [nuova / aggiornata] |
+| 📱 Canale: Mobile Android / Web |
+| ✅ PASS: N TC |
+| ❌ FAIL: N TC |
+| ⏭️ SKIP: N TC |
+| 🔄 Xray sync: Completato / CSV generato |
+| 💡 Perche': Report finale esecuzione automation test |
+| 🚫 Se NO: Nessun report generato |
 
 ---
 

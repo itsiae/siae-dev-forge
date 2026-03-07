@@ -110,23 +110,15 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 2. Mostra anteprima all'utente
 3. Pre-flight card 🔴 ALTO prima della pubblicazione:
 
-Genera la pre-flight card con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-documentation",
-  "context": [
-    {"emoji": "📚", "label": "Space", "value": "{space}"},
-    {"emoji": "📄", "label": "Parent", "value": "{parent-page}"}
-  ],
-  "actions": [
-    {"emoji": "📤", "label": "Pubblicazione pagina su Confluence", "path": "Space/{space} Parent/{parent-page}"}
-  ],
-  "reason": "Crea/aggiorna pagina visibile a tutto il team",
-  "ifno": "Il documento resta solo in locale (Markdown)"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-documentation |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 📚 Space: `{space}` |
+| 📄 Parent: `{parent-page}` |
+| 1. 📤 Azione: Pubblicazione pagina su Confluence |
+| 📂 `Space/{space} Parent/{parent-page}` |
+| 💡 Perche': Crea/aggiorna pagina visibile a tutto il team |
+| 🚫 Se NO: Il documento resta solo in locale (Markdown) |
 
 4. Pubblica via `createConfluencePage` o `updateConfluencePage`
 

@@ -168,23 +168,15 @@ log.info("Pagamento per autore ID: {}, operazione: {}", autorId, operazioneId);
 
 Quando un file contiene pattern sospetti, mostra la card:
 
-Genera la pre-flight card con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-security",
-  "context": [
-    {"emoji": "🔑", "label": "Pattern", "value": "Secret rilevato nel file"},
-    {"emoji": "📁", "label": "File", "value": "[percorso del file]"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Rilevato pattern segreto", "path": "[percorso del file]"}
-  ],
-  "reason": "Il file contiene potenziali credenziali",
-  "ifno": "Le credenziali potrebbero finire nel repository"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-security |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🔑 Pattern: Secret rilevato nel file |
+| 📁 File: `[percorso del file]` |
+| 1. ⚠️ Azione: Rilevato pattern segreto |
+| 📂 `[percorso del file]` |
+| 💡 Perche': Il file contiene potenziali credenziali |
+| 🚫 Se NO: Le credenziali potrebbero finire nel repository |
 
 ### 4.2 Pattern Regex da Intercettare
 
@@ -226,22 +218,16 @@ card e ottenere conferma esplicita dall'utente. Un secret ruotato incorrettament
 causare downtime immediato su tutti i servizi dipendenti.
 </EXTREMELY-IMPORTANT>
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-security",
-  "context": [
-    {"emoji": "🔐", "label": "Secret", "value": "<secret-name>"},
-    {"emoji": "🌍", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
-    {"emoji": "📦", "label": "Servizi dipendenti", "value": "<lista servizi>"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Rotazione credenziale / aggiornamento secret", "path": "aws secretsmanager update-secret --secret-id <id>"}
-  ],
-  "reason": "Secret scaduto/compromesso, rotazione necessaria",
-  "ifno": "STOP — il secret resta invariato, valuta rischio manuale"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-security |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🔐 Secret: `<secret-name>` |
+| 🌍 Ambiente: `<dev|collaudo|produzione>` |
+| 📦 Servizi dipendenti: `<lista servizi>` |
+| 1. ⚠️ Azione: Rotazione credenziale / aggiornamento secret |
+| 📂 `aws secretsmanager update-secret --secret-id <id>` |
+| 💡 Perche': Secret scaduto/compromesso, rotazione necessaria |
+| 🚫 Se NO: STOP — il secret resta invariato, valuta rischio manuale |
 
 **Checklist pre-rotazione:**
 - [ ] Backup del secret corrente

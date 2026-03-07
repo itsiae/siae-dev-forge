@@ -162,22 +162,16 @@ Non lasciare nessun commento senza risposta. Ogni commento = una risposta.
 
 🔴 ALTO — Mostra pre-flight card prima di push
 
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-receiving-review",
-  "context": [
-    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"},
-    {"emoji": "📝", "label": "Fix applicati", "value": "<N> REQUIRED, <M> SUGGESTION"},
-    {"emoji": "🧪", "label": "Test suite", "value": "<risultato test>"}
-  ],
-  "actions": [
-    {"emoji": "🚀", "label": "Push fix al branch della PR", "path": "origin/<branch-name>"}
-  ],
-  "reason": "Fix review completati, test verdi, pronto per re-review",
-  "ifno": "I fix restano locali, il reviewer non vede le modifiche"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-receiving-review |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 🌿 Branch: `<branch-name>` |
+| 📝 Fix applicati: `<N> REQUIRED, <M> SUGGESTION` |
+| 🧪 Test suite: `<risultato test>` |
+| 1. 🚀 Azione: Push fix al branch della PR |
+| 📂 `origin/<branch-name>` |
+| 💡 Perche': Fix review completati, test verdi, pronto per re-review |
+| 🚫 Se NO: I fix restano locali, il reviewer non vede le modifiche |
 
 ---
 

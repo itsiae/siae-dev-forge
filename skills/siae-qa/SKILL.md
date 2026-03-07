@@ -69,23 +69,14 @@ Ogni operazione deve esplicitare il tier usato nella pre-flight card di apertura
 
 Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
-Genera la pre-flight card con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-qa",
-  "context": [
-    {"emoji": "📡", "label": "Tier attivo", "value": "Tier 1 MCP / Tier 3 CSV"},
-    {"emoji": "🎫", "label": "Story Jira", "value": "PROJ-XXX"},
-    {"emoji": "✅", "label": "AC disponibili", "value": "Si / No"},
-    {"emoji": "📚", "label": "Confluence", "value": "Spazio QA trovato / Non configurato"}
-  ],
-  "actions": [],
-  "reason": "Il tier determina come vengono sincronizzati i TC",
-  "ifno": "Se Tier 3: esporto CSV importabile manualmente in Xray"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-qa |
+|:---|
+| 📡 Tier attivo: Tier 1 MCP / Tier 3 CSV |
+| 🎫 Story Jira: `PROJ-XXX` |
+| ✅ AC disponibili: Si / No |
+| 📚 Confluence: Spazio QA trovato / Non configurato |
+| 💡 Perche': Il tier determina come vengono sincronizzati i TC |
+| 🚫 Se NO: Se Tier 3: esporto CSV importabile manualmente in Xray |
 
 ---
 

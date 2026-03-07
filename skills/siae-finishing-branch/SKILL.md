@@ -185,24 +185,16 @@ git rebase -i origin/sviluppo
 
 🔴 ALTO — Pre-flight card obbligatoria
 
-Genera la pre-flight card con `design-system/generate-card.py`:
-
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-finishing-branch",
-  "context": [
-    {"emoji": "🌿", "label": "Branch", "value": "feature/{JIRA-ID}-descrizione"},
-    {"emoji": "🎯", "label": "Target", "value": "sviluppo"},
-    {"emoji": "📝", "label": "Commit", "value": "N commit"}
-  ],
-  "actions": [
-    {"emoji": "🚀", "label": "Push branch + apertura PR", "path": "origin/feature/{JIRA-ID}-descrizione"}
-  ],
-  "reason": "Branch pronto, test verdi, diff revisionato",
-  "ifno": "Il branch resta locale, nessuna PR aperta"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-finishing-branch |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 🌿 Branch: `feature/{JIRA-ID}-descrizione` |
+| 🎯 Target: `sviluppo` |
+| 📝 Commit: `N commit` |
+| 1. 🚀 Azione: Push branch + apertura PR |
+| 📂 `origin/feature/{JIRA-ID}-descrizione` |
+| 💡 Perche': Branch pronto, test verdi, diff revisionato |
+| 🚫 Se NO: Il branch resta locale, nessuna PR aperta |
 
 **Dopo la conferma:**
 

@@ -87,41 +87,29 @@ job.commit()
 
 **🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di deploy Glue job:**
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-data-engineering",
-  "context": [
-    {"emoji": "🏗️", "label": "Ambiente", "value": "<ambiente>"},
-    {"emoji": "📋", "label": "Job", "value": "<job-name>"},
-    {"emoji": "🔄", "label": "Layer", "value": "<bronze|silver|gold>"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Deploy Glue job via terraform apply", "path": "<modulo terraform>"}
-  ],
-  "reason": "Job aggiornato, test locali verdi",
-  "ifno": "STOP — job non deployato, versione precedente resta attiva"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🏗️ Ambiente: `<ambiente>` |
+| 📋 Job: `<job-name>` |
+| 🔄 Layer: `<bronze|silver|gold>` |
+| 1. ⚠️ Azione: Deploy Glue job via terraform apply |
+| 📂 `<modulo terraform>` |
+| 💡 Perche': Job aggiornato, test locali verdi |
+| 🚫 Se NO: STOP — job non deployato, versione precedente resta attiva |
 
 **🔴 Operazione ALTO rischio — pre-flight card prima di modifica schema:**
 
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-data-engineering",
-  "context": [
-    {"emoji": "🗄️", "label": "Database", "value": "<glue-database>"},
-    {"emoji": "🔧", "label": "Tabella", "value": "<table-name>"},
-    {"emoji": "📦", "label": "Downstream", "value": "<query/job dipendenti>"}
-  ],
-  "actions": [
-    {"emoji": "🔧", "label": "Modifica schema Glue Catalog (backward compatibility)", "path": "<file schema/terraform>"}
-  ],
-  "reason": "Schema da aggiornare per nuovi requisiti dati",
-  "ifno": "Schema invariato, downstream non impattati"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 🗄️ Database: `<glue-database>` |
+| 🔧 Tabella: `<table-name>` |
+| 📦 Downstream: `<query/job dipendenti>` |
+| 1. 🔧 Azione: Modifica schema Glue Catalog (backward compatibility) |
+| 📂 `<file schema/terraform>` |
+| 💡 Perche': Schema da aggiornare per nuovi requisiti dati |
+| 🚫 Se NO: Schema invariato, downstream non impattati |
 
 ---
 
@@ -145,22 +133,16 @@ Ogni state Glue usa `arn:aws:states:::glue:startJobRun.sync` con:
 
 **🔴 Operazione ALTO rischio — pre-flight card prima di esecuzione manuale:**
 
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-data-engineering",
-  "context": [
-    {"emoji": "📋", "label": "Job", "value": "<job-name>"},
-    {"emoji": "🏗️", "label": "Ambiente", "value": "<ambiente>"},
-    {"emoji": "🔧", "label": "Parametri", "value": "<parametri input>"}
-  ],
-  "actions": [
-    {"emoji": "🖥️", "label": "Esecuzione manuale Glue job (consuma risorse, scrive S3)", "path": "aws glue start-job-run --job-name <name>"}
-  ],
-  "reason": "Esecuzione manuale necessaria per <motivazione>",
-  "ifno": "Job non eseguito, nessun dato processato"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 📋 Job: `<job-name>` |
+| 🏗️ Ambiente: `<ambiente>` |
+| 🔧 Parametri: `<parametri input>` |
+| 1. 🖥️ Azione: Esecuzione manuale Glue job (consuma risorse, scrive S3) |
+| 📂 `aws glue start-job-run --job-name <name>` |
+| 💡 Perche': Esecuzione manuale necessaria per `<motivazione>` |
+| 🚫 Se NO: Job non eseguito, nessun dato processato |
 
 ---
 
@@ -181,22 +163,16 @@ Esempio: `s3://siae-datalake-prod/bronze/performing/events/year=2025/month=06/da
 
 **🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di cancellazione S3:**
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-data-engineering",
-  "context": [
-    {"emoji": "🗄️", "label": "Bucket", "value": "<bucket-name>"},
-    {"emoji": "📁", "label": "Prefix", "value": "<s3-prefix>"},
-    {"emoji": "📊", "label": "File coinvolti", "value": "<N> file, <size>"}
-  ],
-  "actions": [
-    {"emoji": "🗑️", "label": "Cancellazione dati S3 (irreversibile senza backup)", "path": "s3://<bucket>/<prefix>"}
-  ],
-  "reason": "Dati obsoleti/corrotti da rimuovere",
-  "ifno": "STOP — dati preservati, nessuna cancellazione"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🗄️ Bucket: `<bucket-name>` |
+| 📁 Prefix: `<s3-prefix>` |
+| 📊 File coinvolti: `<N> file, <size>` |
+| 1. 🗑️ Azione: Cancellazione dati S3 (irreversibile senza backup) |
+| 📂 `s3://<bucket>/<prefix>` |
+| 💡 Perche': Dati obsoleti/corrotti da rimuovere |
+| 🚫 Se NO: STOP — dati preservati, nessuna cancellazione |
 
 ---
 

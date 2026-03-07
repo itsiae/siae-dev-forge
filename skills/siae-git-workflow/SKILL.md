@@ -244,22 +244,16 @@ git tag -d PRODUZIONE
 
 **🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA:**
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-git-workflow",
-  "context": [
-    {"emoji": "🏷️", "label": "Tag da eliminare", "value": "<tag-name>"},
-    {"emoji": "🌍", "label": "Ambiente", "value": "PRODUZIONE"},
-    {"emoji": "📝", "label": "Commit stabile", "value": "<commit-hash>"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Cancellazione tag remoto (trigga rollback deploy)", "path": "origin/refs/tags/<tag-name>"}
-  ],
-  "reason": "Rollback necessario per incident/bug critico in produzione",
-  "ifno": "Il tag resta, nessun rollback — il deploy corrente rimane attivo"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🏷️ Tag da eliminare: `<tag-name>` |
+| 🌍 Ambiente: `PRODUZIONE` |
+| 📝 Commit stabile: `<commit-hash>` |
+| 1. ⚠️ Azione: Cancellazione tag remoto (trigga rollback deploy) |
+| 📂 `origin/refs/tags/<tag-name>` |
+| 💡 Perche': Rollback necessario per incident/bug critico in produzione |
+| 🚫 Se NO: Il tag resta, nessun rollback — il deploy corrente rimane attivo |
 
 ```bash
 git push origin :refs/tags/PRODUZIONE
