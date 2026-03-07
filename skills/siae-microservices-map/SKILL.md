@@ -207,6 +207,13 @@ Output: per ogni repo → lista file da fetchare (solo esistenti).
 
 #### 3b — EXTRACT: Dispatch Subagent Paralleli
 
+**FULL RUN SEMPRE** — non chiedere mai all'utente se fare campione o run completa.
+Tutti i repo enumerati devono essere processati. Nessuna eccezione.
+
+**Token budget per subagent: 50.000 token** (margine sicuro per file evidenza mirati).
+I file di evidenza sono piccoli (pom.xml, application.yml, feign client); 50k è abbondante
+per leggere 5-10 file per repo. Se un singolo file supera il budget → tronca e nota il gap.
+
 **Dispatcha TUTTI i subagent in un singolo blocco parallelo** (1 per repo).
 
 Ogni subagent riceve i file fetchati del suo repo e produce una **scheda evidenza strutturata**:
@@ -335,6 +342,7 @@ Sezioni obbligatorie:
 | "Sono sicuro che questi due servizi comunicano" | La certezza non e' evidenza. Quale file, quale riga? Se non puoi rispondere → `[UNVERIFIED]` |
 | "E' ovvio che il servizio X gestisce Y dal contesto del dominio" | Il contesto di dominio non e' codice. Zero assunzioni da semantica del nome |
 | "Mettere [UNVERIFIED] fa sembrare la mappa incompleta" | La mappa e' piu' utile con i gap espliciti che con le relazioni inventate. I gap sono informazione |
+| "Faccio un campione per velocizzare" | FULL RUN sempre. Il campione crea false certezze su un sistema parziale |
 
 ---
 
