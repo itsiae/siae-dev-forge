@@ -357,6 +357,24 @@ Se mancano file → re-dispatcha solo i cluster mancanti (non tutto il batch).
 
 ## Step 5 — POST-BUILD: Documentazione Formale
 
+🟡 MEDIO — Mostra pre-flight card prima di eseguire la documentazione automatica
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-service-logic-map",
+  "context": [
+    {"emoji": "📚", "label": "Input", "value": "docs/logic-catalog/cluster-*.md + clusters.yaml"},
+    {"emoji": "🏗️", "label": "Scope", "value": "Documentazione formale catalogo L1+L2+L3"}
+  ],
+  "actions": [
+    {"emoji": "📄", "label": "Esecuzione siae-documentation su cluster generati", "path": "docs/logic-catalog/"}
+  ],
+  "reason": "POST-BUILD obbligatorio — genera doc navigabile dal team",
+  "ifno": "Il catalogo resta senza documentazione formale"
+}' | python3 design-system/generate-card.py
+```
+
 Dopo COLLECT (Step 4f), eseguire automaticamente `siae-documentation`
 sui cluster-*.md generati. Non proporre — eseguire.
 

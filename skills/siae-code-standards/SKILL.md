@@ -94,12 +94,46 @@ Pattern: `{domain}-{function}-{type}`
 | **JSON** | Jackson (incluso nel parent POM) |
 | **Test** | JUnit 5 + Mockito. Coverage minima da POM |
 
+🔴 ALTO — Mostra pre-flight card prima di modificare la configurazione build
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-code-standards",
+  "context": [
+    {"emoji": "⚙️", "label": "Operazione", "value": "Modifica configurazione build (POM, package.json)"}
+  ],
+  "actions": [
+    {"emoji": "🔧", "label": "Modifica dipendenze / plugin / versioni nel file di build", "path": "pom.xml / package.json"}
+  ],
+  "reason": "Modifiche al POM o package.json impattano tutte le dipendenze, versioni e plugin del progetto. Un errore puo cambiare il comportamento di build in tutti gli ambienti SIAE.",
+  "ifno": "La modifica non viene applicata. Verifica le regole parent POM e versioning prima di procedere."
+}' | python3 design-system/generate-card.py
+```
+
 ### 2.4 Pattern obbligatori
 
 - **Controller**: `@RestController` + `@RequestMapping("/api/v1/{risorsa}")` + `@Slf4j`
 - **Service**: interfaccia `RisorsaService` + implementazione `RisorsaServiceImpl` con `@Service @Slf4j`
 - **DTO**: classi separate con `@Data @Builder` (Lombok)
 - **Mapper**: interfaccia MapStruct con `@Mapper(componentModel = "spring")`
+
+🟡 MEDIO — Mostra pre-flight card prima di creare un nuovo file sorgente
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-code-standards",
+  "context": [
+    {"emoji": "📝", "label": "Operazione", "value": "Creazione nuovo file sorgente"}
+  ],
+  "actions": [
+    {"emoji": "✏️", "label": "Crea nuovo file sorgente seguendo naming e package SIAE", "path": "src/main/java/it/siae/{dominio}/{modulo}/"}
+  ],
+  "reason": "La creazione di un nuovo file introduce naming, package e struttura che devono rispettare i pattern SIAE sin dal primo commit. Errori di naming o package sono costosi da correggere in seguito.",
+  "ifno": "Il file non viene creato. Verifica naming conventions e package structure prima di procedere."
+}' | python3 design-system/generate-card.py
+```
 
 ---
 
@@ -230,6 +264,40 @@ Tutti gli stack SIAE usano logging strutturato in formato JSON.
 3. **Non mischiare stili.** Se un file usa camelCase, tutto il file deve usare camelCase.
 4. **Chiedi conferma** se trovi conflitti tra queste linee guida e il codice esistente nel repo.
 5. **Rischio**: la scrittura di codice e' 🟡 MEDIO. Mostra la pre-flight card prima di creare o modificare file.
+
+🟡 MEDIO — Mostra pre-flight card prima di modificare un file sorgente esistente
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-code-standards",
+  "context": [
+    {"emoji": "📝", "label": "Operazione", "value": "Modifica file sorgente esistente"}
+  ],
+  "actions": [
+    {"emoji": "✏️", "label": "Modifica codice esistente rispettando lo stile e le convenzioni del file", "path": "<path file target>"}
+  ],
+  "reason": "Modificare un file sorgente puo introdurre inconsistenze di stile, naming o struttura rispetto al codice esistente. Seguire il pattern gia presente nel file e prioritario sulle linee guida generali.",
+  "ifno": "La modifica non viene applicata. Analizza le convenzioni del file prima di procedere."
+}' | python3 design-system/generate-card.py
+```
+
+🟡 MEDIO — Mostra pre-flight card prima di eseguire refactoring di naming o struttura
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-code-standards",
+  "context": [
+    {"emoji": "📝", "label": "Operazione", "value": "Refactoring naming / struttura"}
+  ],
+  "actions": [
+    {"emoji": "✏️", "label": "Rinomina classi, metodi, file o riorganizza la struttura del progetto", "path": "<path moduli coinvolti>"}
+  ],
+  "reason": "Il refactoring di naming o struttura impatta tutti i riferimenti al simbolo rinominato. In un monorepo con 816 repo, un rename non coordinato puo rompere dipendenze interne e build pipeline.",
+  "ifno": "Il refactoring non viene eseguito. Verifica tutti i riferimenti e allinea il team prima di procedere."
+}' | python3 design-system/generate-card.py
+```
 
 ---
 
