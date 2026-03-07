@@ -1,9 +1,10 @@
 ---
 name: siae-service-logic-map
 description: >
-  Use when profiling what a microservice does (domain, entities, workflows).
-  Trigger: "cosa fa questo servizio", "onboarding su sport-*", "quali servizi
-  gestiscono X", /forge-logic-build, /forge-logic-search, impact analysis.
+  Use when profiling what microservices do (domain, entities, workflows, clusters).
+  Trigger: "cosa fa questo servizio", "lanciamo su sport-*", "analizziamo {sistema}",
+  "mappa la logica di", "build catalogo", "quali servizi gestiscono X",
+  /forge-logic-build, /forge-logic-search, impact analysis.
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map
@@ -94,15 +95,43 @@ gh repo list itsiae --limit 20 --json name,isPrivate --jq '.[] | [.name, .isPriv
 
 Identifica i repo target per il dominio richiesto.
 
+### 2a — Disambiguazione Pattern (se l'utente usa un nome semantico)
+
+Se l'utente ha descritto il sistema con un nome semantico (es. "filiera del credito",
+"sistema abbonamenti") invece di un prefisso tecnico, prova SEMPRE multiple varianti
+prima di dichiarare "nessun repo trovato":
+
 ```bash
-# Filtra repo per pattern (es. sport-*, musica-*, diritti-*)
-gh repo list itsiae --limit 100 --json name --jq '[.[] | .name | select(test("{pattern}"))]'
+# Testa varianti: nome esteso, acronimo, abbreviazione
+# Es. "filiera del credito" → credito, fdc, filiera
+for PATTERN in "{variante1}" "{variante2}" "{acronimo}"; do
+  echo -n "$PATTERN: "
+  gh repo list itsiae --limit 500 --json name \
+    --jq "[.[] | .name | select(test(\"$PATTERN\"))] | length"
+done
+```
+
+**Regola:** zero risultati su una variante NON significa "nessun repo".
+Prova almeno 3 varianti prima di chiedere conferma all'utente.
+
+Mostra i candidati trovati e chiedi conferma:
+```
+Repo trovati per "{dominio}":
+  sport-fdc-evidenza-service, sport-fdc-fascicolo-service, sport-fdc-documento-service
+Sono questi i repo target? (si / aggiungi altri / rimuovi)
+```
+
+### 2b — Fetch Lista Confermata
+
+```bash
+# Fetch con il pattern confermato
+gh repo list itsiae --limit 500 --json name --jq '[.[] | .name | select(test("{pattern}"))]'
 
 # Per ogni repo: verifica branch default e struttura base
 gh api /repos/itsiae/{repo}/branches --jq '[.[].name]'
 ```
 
-**Output atteso:** lista ordinata di `{org}/{repo}` con branch default.
+**Output atteso:** lista ordinata di `{org}/{repo}` confermata dall'utente.
 
 **Gap Report — repo non accessibili:**
 ```
