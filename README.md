@@ -175,7 +175,48 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (25)
+## Mappa del Sistema — Come Collaborano le Skill di Discovery
+
+Per sistemi a microservizi come SPORT (~42 repo), siae-devforge fornisce due skill complementari
+che insieme danno una comprensione completa del sistema:
+
+| Skill | Comando | Risponde a | Output |
+|---|---|---|---|
+| `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
+| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni servizio?" | `docs/logic-catalog/*.yaml` — domain profile + workflow map |
+
+**Workflow tipico:**
+
+```
+1. /forge-sysmap
+   → Mappa la topologia: chi chiama chi, quali Kafka topics, quali DB
+   → Output: docs/SYSTEM_MAP.md con ogni edge citato con file:riga
+
+2. /forge-logic-build
+   → Per ogni servizio: domain responsibility, entita' principali, workflow (metodi @Service)
+   → Output: docs/logic-catalog/sport-{service}.yaml
+
+3. /forge-logic-search "preventivo"
+   → Cerca nel catalogo: quali servizi implementano un concetto
+   → Incrocia con SYSTEM_MAP per sapere anche le loro dipendenze
+```
+
+**Domande che ogni skill risponde:**
+
+| Domanda | Skill |
+|---|---|
+| "Da cosa dipende sport-gestione-abbonamento?" | siae-microservices-map |
+| "Chi pubblica sul topic `abbonamento.creato`?" | siae-microservices-map |
+| "Cosa fa sport-contabilita?" | siae-service-logic-map |
+| "Quali servizi gestiscono il workflow di rinnovo?" | siae-service-logic-map |
+| "Se modifico la logica di calcolo, chi ne risente?" | entrambe — `/forge-logic-search` + `SYSTEM_MAP.md` |
+
+**Roadmap:** `/forge-impact <concetto>` unifichera' i due cataloghi per rispondere
+all'ultima domanda in un unico comando.
+
+---
+
+## Skill (26)
 
 ### Meta-skill
 
