@@ -133,6 +133,69 @@ echo ""
 echo "  Comandi totali: ${cmd_count} | OK: ${cmd_ok}"
 TOTAL_PASS=$((TOTAL_PASS + cmd_ok))
 
+# --- Visual Design System Validation ---
+echo ""
+echo "=== Visual Design System Validation ==="
+echo ""
+
+vds_ok=0
+vds_fail=0
+
+# using-devforge is the meta-skill/OS of the plugin — excluded from VDS checks
+# (it uses a different structure: Red Flags table instead of Anti-Razi, no Tipo)
+EXCLUDED_FROM_VDS="using-devforge"
+
+for skill_dir in "${PLUGIN_ROOT}"/skills/*/; do
+  skill_name=$(basename "$skill_dir")
+  skill_file="${skill_dir}SKILL.md"
+
+  [ ! -f "$skill_file" ] && continue
+
+  if echo "$EXCLUDED_FROM_VDS" | grep -q "$skill_name"; then
+    echo "  SKIP  ${skill_name}: meta-skill, VDS check escluso"
+    continue
+  fi
+
+  fail_reasons=""
+
+  # Check 1: Skill Rigid → LA LEGGE DI FERRO obbligatoria
+  if grep -qE '\*\*Tipo:\*\*\s+Rigid' "$skill_file"; then
+    if ! grep -q 'LA LEGGE DI FERRO' "$skill_file"; then
+      fail_reasons="${fail_reasons}[MANCA: LA LEGGE DI FERRO] "
+    fi
+  fi
+
+  # Check 2: Tutte le skill → Tabella Anti-Razionalizzazione
+  if ! grep -q 'Tabella Anti-Razionalizzazione' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Tabella Anti-Razionalizzazione] "
+  fi
+
+  # Check 3: Tutte le skill → Classificazione Rischio Operazioni
+  if ! grep -q 'Classificazione Rischio' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni] "
+  fi
+
+  # Check 4: Se Card=Si nel Risk Table → almeno un generate-card.py presente
+  if grep -qE '\|\s*Si\s*\|' "$skill_file"; then
+    if ! grep -q 'generate-card.py' "$skill_file"; then
+      fail_reasons="${fail_reasons}[MANCA: generate-card.py (Risk Table ha Card=Si)] "
+    fi
+  fi
+
+  if [ -z "$fail_reasons" ]; then
+    echo "  PASS  ${skill_name}: VDS completo"
+    vds_ok=$((vds_ok + 1))
+  else
+    echo "  FAIL  ${skill_name}: ${fail_reasons}"
+    vds_fail=$((vds_fail + 1))
+  fi
+done
+
+echo ""
+echo "  Skill VDS totali: $((vds_ok + vds_fail)) | OK: ${vds_ok} | FAIL: ${vds_fail}"
+TOTAL_PASS=$((TOTAL_PASS + vds_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + vds_fail))
+
 # --- Report Finale ---
 echo ""
 echo "╔══════════════════════════════════════════════════════════════════╗"

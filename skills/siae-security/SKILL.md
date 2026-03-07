@@ -280,6 +280,23 @@ Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 
 ---
 
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Ho bisogno di debug veloce, metto la password hardcoded" | Ogni secret in git vive per sempre nella history. `git filter-branch` non basta. |
+| "IAM `*` e' piu' semplice, lo sistemo dopo" | Il "dopo" non arriva mai. Ogni policy over-privileged e' un blast radius illimitato. |
+| "Il bucket S3 e' interno, non serve encryption" | I breach iniziano dall'interno. Encryption at rest e' l'ultima linea di difesa. |
+| "Usiamo JWT senza firma perche' e' solo dev" | I JWT senza firma sono testo base64 che chiunque puo' modificare. |
+| "Non serve VPC per Lambda, e' serverless" | Lambda senza VPC non puo' accedere a RDS/ElastiCache privati e i requisiti GDPR lo richiedono. |
+| "Secrets Manager costa, uso SSM Parameter Store" | SSM Parameter Store Standard tier e' gratuito e supporta encryption KMS. Cost non e' un motivo. |
+| "Il log dell'errore include l'input per debug" | Se l'input e' PII (ISRC, CF autore, IBAN), loggarlo viola il GDPR. Logga ID e tipo, non il dato. |
+| "Questo dato autore non e' sensibile" | Dati SIAE = identita' autori + dati finanziari. Tratta tutto come PII per default. |
+| "Ho verificato manualmente che non ci sono secret" | La review manuale fallisce. Usa il Secret Scan automatico del quality gate. |
+| "L'endpoint e' protetto da Cognito, basta cosi'" | Autenticazione != Autorizzazione. Verifica anche i permessi sull'azione, non solo l'identita'. |
+
+---
+
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |
