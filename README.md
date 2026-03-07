@@ -91,11 +91,11 @@ Riavvia Claude Code per attivare il plugin.
 Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono necessarie per ogni task, ma **l'ordine e' sacro**: non si puo' saltare da fase 2 a fase 5 senza attraversare le intermedie rilevanti.
 
 ```
-1. Init & Setup    →  2. Req & Design   →  3. Branching
-       ↓                     ↓                    ↓
-  siae-onboarding     siae-brainstorming    siae-git-workflow
-  siae-codebase-map   siae-writing-plans    siae-git-worktrees
-                      siae-architecture     siae-finishing-branch
+1. Init & Setup       →  2. Req & Design   →  3. Branching
+       ↓                        ↓                    ↓
+  siae-onboarding          siae-brainstorming    siae-git-workflow
+  siae-codebase-map        siae-writing-plans    siae-git-worktrees
+  siae-service-logic-map   siae-architecture     siae-finishing-branch
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
@@ -107,7 +107,9 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
   siae-subagent-development
   siae-executing-plans
 
-Cross-cutting (ogni fase): siae-verification
+Cross-cutting (ogni fase): siae-verification | siae-requesting-review | siae-receiving-review
+
+Meta: siae-writing-skills
 ```
 
 ### Esempio: nuova feature end-to-end
@@ -119,6 +121,7 @@ Cross-cutting (ogni fase): siae-verification
 5. **Testing** — `siae-tdd` forza il ciclo RED → GREEN → REFACTOR prima del codice
 6. **QA Gate** — `siae-debugging` interviene se i test falliscono, genera RCA se serve
 7. **Release** — `siae-documentation` genera HLD/LLD, pubblica su Confluence via MCP
+   + `siae-requesting-review` guida la PR description e l'assegnazione del reviewer
 
 ---
 
@@ -274,6 +277,19 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Update mode:** se mappa esiste, dispatcha subagent solo per moduli modificati da git
 - **Integrazione `siae-onboarding`:** suggerisce `/forge-map` se repo > 50 file senza mappa
 - **Script:** `skills/siae-codebase-map/scripts/scan-codebase.py` — scanner Python con tiktoken, ignora `.gitignore`
+- **Tipo:** Flexible
+
+#### `siae-service-logic-map` — Domain Profile e Workflow Map L1+L2+L3 (Fase 1: Init)
+
+- **Trigger:** "cosa fa `{servizio}`", `/forge-logic-build`, "mappa la logica", "regole business di", "build catalogo", "quali servizi gestiscono X", impact analysis
+- **Anti-hallucination protocol:** ogni workflow citato DEVE avere un file sorgente. Tag obbligatori: `[CONFIRMED]` / `[INFERRED]` / `[UNVERIFIED]` / `[FILE_NOT_FOUND]`
+- **3 livelli di analisi:**
+  - **L1 Domain Profile:** dominio, entità principali, API esposte (da OpenAPI), dipendenze dichiarate
+  - **L2 Workflow Map:** metodi `public` con `@Transactional`, `@Scheduled`, `@KafkaListener` — flusso operazioni chiave
+  - **L3 Business Rules:** regole Drools (`KieSession`, `fireAllRules`), query JPA con business logic, condizioni di dominio significative
+- **Processo:** SYSTEM_MAP.md discovery (auto-genera con `siae-microservices-map` se assente) → cluster detection → pre-fetch parallelo → dispatch agenti (1 per cluster) → POST-BUILD con `siae-documentation`
+- **Output:** `docs/logic-catalog/cluster-{nome}.md` (L1+L2+L3), `clusters.yaml`, `system-overview.md`
+- **Comandi:** `/forge-logic-build` (costruisce), `/forge-logic-search` (cerca concetto nel catalogo)
 - **Tipo:** Flexible
 
 #### `siae-brainstorming` — Design validato prima del codice (Fase 2: Design)
@@ -517,7 +533,20 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per ogni task, `REQUIRED SUB-SKILL: siae-verification` a fine piano
 - **Tipo:** Rigid
 
-#### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Fase 4)
+#### `siae-requesting-review` — Richiedere una Code Review Efficace (Cross-cutting)
+
+- **Trigger:** "pronto per review", "ho aperto la PR", "chiedo il review", PR aperta senza reviewer assegnato
+- **La Legge di Ferro:** NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
+- **Processo a 4 step:**
+  1. Scrivi PR description completa (cosa / perché / come verificare) con template obbligatorio
+  2. Assegna reviewer: scegli con criterio (dominio, disponibilità, ownership), 1-2 reviewer max
+  3. Self-review obbligatoria: leggi il tuo diff come se fossi il reviewer, rimuovi debug code, verifica test
+  4. Notifica il reviewer con contesto (link PR + deadline + note specifiche se serve)
+- **Categoria PR:** feature / fix / refactor / chore — influenza il tipo di descrizione
+- **Integrazione:** se i test sono rossi → `REQUIRED SUB-SKILL: siae-finishing-branch` prima di aprire la PR
+- **Tipo:** Rigid
+
+#### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Cross-cutting)
 
 - **Trigger:** Ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED
 - **Processo a 4 step:** Leggi tutto prima di agire → Categorizza → Pianifica e implementa → Rispondi a ogni commento
@@ -768,6 +797,9 @@ siae-devforge/
 │   │   ├── SKILL.md
 │   │   └── scripts/
 │   │       └── scan-codebase.py # Scanner tiktoken (basato su Cartographer MIT)
+│   ├── siae-service-logic-map/  # Domain profile L1+L2+L3 per microservizi
+│   │   ├── SKILL.md
+│   │   └── reference/
 │   ├── siae-brainstorming/      # Brainstorming socratico
 │   │   └── SKILL.md
 │   ├── siae-writing-plans/      # Piano implementativo bite-sized
@@ -824,6 +856,11 @@ siae-devforge/
 │   │   ├── spec-reviewer-prompt.md
 │   │   └── code-quality-reviewer-prompt.md
 │   ├── siae-executing-plans/    # Esecuzione piano in sessione separata
+│   │   └── SKILL.md
+│   ├── siae-requesting-review/  # PR description efficace e assegnazione reviewer
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   ├── siae-receiving-review/   # Elaborazione feedback code review ricevuto
 │   │   └── SKILL.md
 │   └── siae-writing-skills/     # Guida per creare nuove skill
 │       ├── SKILL.md
