@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 26 skill, 11 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 27 skill, 12 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.3.0-mvp
 > **Autore:** SIAE AI Competence Center
@@ -91,11 +91,12 @@ Riavvia Claude Code per attivare il plugin.
 Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono necessarie per ogni task, ma **l'ordine e' sacro**: non si puo' saltare da fase 2 a fase 5 senza attraversare le intermedie rilevanti.
 
 ```
-1. Init & Setup       →  2. Req & Design   →  3. Branching
-       ↓                        ↓                    ↓
-  siae-onboarding          siae-brainstorming    siae-git-workflow
-  siae-codebase-map        siae-writing-plans    siae-git-worktrees
-  siae-service-logic-map   siae-architecture     siae-finishing-branch
+1. Init & Setup          →  2. Req & Design   →  3. Branching
+       ↓                           ↓                    ↓
+  siae-onboarding             siae-brainstorming    siae-git-workflow
+  siae-codebase-map           siae-writing-plans    siae-git-worktrees
+  siae-service-logic-map      siae-architecture     siae-finishing-branch
+  siae-microservices-map
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
@@ -233,7 +234,7 @@ all'ultima domanda in un unico comando.
 
 ---
 
-## Skill (26)
+## Skill (27)
 
 ### Meta-skill
 
@@ -290,6 +291,18 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Processo:** SYSTEM_MAP.md discovery (auto-genera con `siae-microservices-map` se assente) → cluster detection → pre-fetch parallelo → dispatch agenti (1 per cluster) → POST-BUILD con `siae-documentation`
 - **Output:** `docs/logic-catalog/cluster-{nome}.md` (L1+L2+L3), `clusters.yaml`, `system-overview.md`
 - **Comandi:** `/forge-logic-build` (costruisce), `/forge-logic-search` (cerca concetto nel catalogo)
+- **Tipo:** Flexible
+
+#### `siae-microservices-map` — Mappa sistemi distribuiti multi-repo senza allucinare (Fase 1: Init)
+
+- **Trigger:** "mappa SPORT", "sistema a microservizi", "dipendenze tra servizi", "chi chiama chi", `/forge-sysmap`, onboarding su sistema distribuito con 2+ repository
+- **Principio:** Anti-Hallucination Protocol — ogni relazione nella mappa deve essere supportata da un'evidenza citata (file + path sorgente). Se l'evidenza non esiste → `[UNVERIFIED]`. Mai inferire relazioni dal nome del servizio, da README o da pattern di sistemi simili
+- **Approccio:** Hybrid — GitHub API per inventario repo, file-fetching mirato per evidenze, subagent paralleli 1 per repo
+- **Gerarchia fonti:** Tier 1 (codice sorgente) > Tier 2 (config runtime) > Tier 3 (infrastruttura) > Tier 4 (contratti API). README e documentazione testuale sono fonti vietate
+- **Confidence tagging:** `[CONFIRMED]` (Tier 1 letto) / `[INFERRED]` (Tier 2-4, con file:riga citato) / `[UNVERIFIED]` (nessuna evidenza) / `[FILE_NOT_FOUND]` (file non accessibile)
+- **5 fasi:** PRE-FLIGHT (exit se GitHub non disponibile) → ENUMERATE (lista repo con pattern) → PROFILE+EXTRACT (subagent paralleli, schede evidenza YAML) → CROSS-REF (grafo dipendenze + Kafka map) → OUTPUT (`docs/SYSTEM_MAP.md` con C4 diagrams, dependency graph, Gap Report, Evidence Index)
+- **Guardrail anti-lazy:** checklist completamento step, verifica formale pre-Gap Report, `REQUIRED SUB-SKILL: siae-verification` prima di dichiarare completa la mappa
+- **Reference:** `reference/system-map-template.md` — template SYSTEM_MAP.md; `reference/evidence-patterns.md` — pattern per stack Java/Node/Python
 - **Tipo:** Flexible
 
 #### `siae-brainstorming` — Design validato prima del codice (Fase 2: Design)
@@ -800,6 +813,11 @@ siae-devforge/
 │   ├── siae-service-logic-map/  # Domain profile L1+L2+L3 per microservizi
 │   │   ├── SKILL.md
 │   │   └── reference/
+│   ├── siae-microservices-map/  # Mappa sistemi distribuiti multi-repo senza allucinare
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   │       ├── system-map-template.md  # Template SYSTEM_MAP.md con C4 + Gap Report
+│   │       └── evidence-patterns.md   # Pattern evidenza per Java/Node/Python
 │   ├── siae-brainstorming/      # Brainstorming socratico
 │   │   └── SKILL.md
 │   ├── siae-writing-plans/      # Piano implementativo bite-sized
