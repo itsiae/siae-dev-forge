@@ -1,6 +1,6 @@
 ---
 name: forge-logic-build
-description: Costruisce il catalogo L1+L2 (domain profile + workflow map) per cluster di microservizi. Invoca siae-service-logic-map in modalita' BUILD. Richiede docs/SYSTEM_MAP.md (eseguire /forge-sysmap prima).
+description: Costruisce il catalogo L1+L2+L3 (domain profile + workflow map + business rules) per cluster di microservizi. Flusso automatico a comando singolo — trova o genera SYSTEM_MAP.md, detecta cluster, pre-fetcha dati L1+L2+L3, dispatcha agenti, esegue siae-documentation post-build. Prerequisiti: gh auth; pattern repo GitHub.
 ---
 
 # /forge-logic-build
@@ -27,7 +27,7 @@ Flusso automatico a comando singolo — non serve eseguire `/forge-sysmap` prima
 
 1. **SYSTEM_MAP.md DISCOVERY** — Cerca il file in `docs/`, `docs/systems/*/`, `/tmp/siae-sysmap-*/`
    - Trovato → usa quello piu' recente
-   - Non trovato → esegue `siae-microservices-map` automaticamente sul pattern specificato,
+   - Non trovato → genera SYSTEM_MAP.md inline tramite `gh api` (grafo dipendenze base),
      poi continua senza commit intermedio
 2. **PRE-FLIGHT** — Verifica accesso GitHub (`gh auth status`)
 3. **ENUMERATE** — Lista tutti i repo con il pattern (con disambiguazione se nome semantico)
@@ -36,13 +36,16 @@ Flusso automatico a comando singolo — non serve eseguire `/forge-sysmap` prima
 5. **PRE-FETCH** — Il parent fetcha i dati di tutti i repo per cluster via `gh api`:
    - File tree → identifica `*Service.java`, `*Entity.java`, `openapi*.yaml`
    - Contenuto file → firma metodi public, @Transactional, @Scheduled, @KafkaListener
+   - Snippet L3 → grep KieSession, fireAllRules, @Query, condizioni if di dominio
 6. **PILOT TEST** — Verifica il pattern con 1 cluster (il piu' piccolo) prima del full run
 7. **DISPATCH** — Agenti paralleli (1 per cluster) con dati inline, usano solo Write tool
 8. **COLLECT** — Verifica file cluster scritti, genera `clusters.yaml` e `system-overview.md`
+9. **POST-BUILD** — Esegue siae-documentation sui cluster-*.md generati (step obbligatorio, non opzionale)
 
 ## Output
 
 - `docs/logic-catalog/cluster-{nome}.md` per ogni cluster — doc tecnica L1+L2
+- Ogni cluster-{nome}.md include sezione L3 — Business Rules (Drools, @Query, condizioni dominio)
 - `docs/logic-catalog/clusters.yaml` — indice dei cluster con metadata
 - `docs/logic-catalog/system-overview.md` — visione d'insieme del sistema
 
@@ -53,4 +56,4 @@ Flusso automatico a comando singolo — non serve eseguire `/forge-sysmap` prima
 - La conferma cluster e' obbligatoria — i cluster vengono mostrati prima del build
 - Per aggiornare un singolo cluster: ri-esegui indicando il cluster specifico
 - Il catalogo puo' diventare stale — ri-esegui dopo modifiche significative ai repo
-- Se SYSTEM_MAP.md e' stale: ri-esegui `/forge-sysmap` prima di questo comando
+- Se SYSTEM_MAP.md e' stale: cancellalo e ri-esegui `/forge-logic-build` per rigenerarlo

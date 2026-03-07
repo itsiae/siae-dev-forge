@@ -1,6 +1,6 @@
-# Template scheda evidenza L1+L2 per siae-service-logic-map
+# Template scheda evidenza L1+L2+L3 per siae-service-logic-map
 # Compilato da ogni subagent durante forge-logic-build
-# Un file per CLUSTER (non per repo). Versione: 2.0
+# Un file per CLUSTER (non per repo). Versione: 3.0
 
 # --- clusters.yaml (indice, generato dal parent) ---
 # generated_at: "YYYY-MM-DDTHH:MM:SSZ"
@@ -41,6 +41,19 @@
 # - **{nomeMetodoCamelCase}():** trigger={REST|KAFKA|SCHEDULED|INTERNAL}
 #   transactional={true|false} [CONFIRMED] src/main/java/.../Service.java:{riga}
 # - ...
+#
+#
+# ### L3 — Business Rules
+#
+# - **{nomeMetodo}():** regola={condizione di dominio — es. "if statoFascicolo == DIFFIDA"}
+#   [CONFIRMED] src/main/java/.../Service.java:{riga}
+# - **Drools:** KieSession.fireAllRules() [CONFIRMED] Service.java:{riga}
+#   → src/main/resources/rules/{file}.drl [CONFIRMED] tree scan
+# - **{NomeRepository}:** @Query("SELECT ...") [CONFIRMED] Repository.java:{riga}
+# - **{NomeEntity}:** @OneToMany → {TargetEntity} [CONFIRMED] Entity.java:{riga}
+#
+# Se nessun pattern L3 trovato nel repo:
+# - [UNVERIFIED] nessun pattern L3 trovato (no Drools, no @Query, no condizioni dominio)
 #
 # ### Gap Report
 #

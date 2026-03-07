@@ -1,10 +1,11 @@
 ---
 name: siae-service-logic-map
 description: >
-  Use when profiling what microservices do (domain, entities, workflows, clusters).
-  Trigger: "cosa fa questo servizio", "lanciamo su sport-*", "analizziamo {sistema}",
-  "mappa la logica di", "build catalogo", "quali servizi gestiscono X",
-  /forge-logic-build, /forge-logic-search, impact analysis.
+  Use when profiling what microservices do: domain, entities, workflows, business
+  rules, clusters. Trigger: "cosa fa {servizio}", "lanciamo su {pattern}",
+  "analizziamo {sistema}", "mappa la logica", "build catalogo L1/L2/L3",
+  "regole business di", "Drools in", "quali servizi gestiscono X",
+  impact analysis, /forge-logic-build, /forge-logic-search.
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map
@@ -240,6 +241,15 @@ gh api /repos/itsiae/{repo}/contents/{path} --jq '.content' | base64 -d \
 
 # 3. openapi*.yaml (se esiste): prime 100 righe
 gh api /repos/itsiae/{repo}/contents/{openapi-path} --jq '.content' | base64 -d | head -100
+
+# 4. Pre-fetch L3 — Business Rules (per ogni *Service.java)
+#    Grep snippet: KieSession/Drools, condizioni dominio, @Query
+gh api /repos/itsiae/{repo}/contents/{ServiceFile} --jq '.content' | base64 -d \
+  | grep -n "KieSession\|fireAllRules\|@Query\|@NamedQuery\|if.*[Ss]tato\|if.*[Tt]ipo\|if.*[Cc]ategoria" -A3 -B1
+
+# 5. Pre-fetch L3 — Repository e DRL files (se esistono nel tree scan)
+gh api /repos/itsiae/{repo}/contents/{RepositoryFile} --jq '.content' | base64 -d \
+  | grep -n "@Query\|@NamedQuery\|@EntityGraph" -A2
 ```
 
 **Regola critica:** il parent pre-fetcha SEMPRE via Bash. Gli agenti ricevono i dati inline — non hanno permesso di usare Bash autonomamente.
@@ -301,7 +311,9 @@ Dispatcha TUTTI i cluster in un blocco parallelo (1 agente per cluster).
 ```
 Hai tutti i dati nel prompt per il cluster {nome} ({lista servizi}).
 NON usare Bash. Usa SOLO il Write tool.
-1. Analizza i dati e compila la doc L1+L2 per ogni servizio del cluster
+1. Analizza i dati e compila la doc L1+L2+L3 per ogni servizio del cluster
+   - L3 usa i snippet grep ricevuti inline: sezione "Business Rules"
+   - Se snippet grep vuoto per un repo → [UNVERIFIED] nessun pattern L3 trovato
    (formato: reference/logic-catalog-template.yaml)
 2. Scrivi in: docs/logic-catalog/cluster-{nome}.md
 3. Rispondi con UNA SOLA RIGA: "OK cluster-{nome} salvato"
@@ -343,7 +355,23 @@ Se mancano file → re-dispatcha solo i cluster mancanti (non tutto il batch).
 
 ---
 
-## Step 5 — QUERY (forge-logic-search)
+## Step 5 — POST-BUILD: Documentazione Formale
+
+Dopo COLLECT (Step 4f), eseguire automaticamente `siae-documentation`
+sui cluster-*.md generati. Non proporre — eseguire.
+
+```
+REQUIRED SUB-SKILL: siae-documentation
+Input: docs/logic-catalog/cluster-*.md + clusters.yaml + system-overview.md
+Scope: documentazione tecnica del sistema (API guide per cluster, ADR, enriched overview)
+```
+
+Il sistema di documentazione riceve il catalogo L1+L2+L3 come input e produce
+documentazione formale navigabile da altri developer del team.
+
+---
+
+## Step 6 — QUERY (forge-logic-search)
 
 Riceve keyword dall'utente, cerca nel catalogo locale.
 
@@ -389,6 +417,11 @@ Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
 - {nomeMetodo}(): trigger=REST [CONFIRMED] {Service.java:riga}
 - {nomeScheduled}(): trigger=SCHEDULED [CONFIRMED] {Scheduler.java:riga}
 
+### L3 — Business Rules
+- {nomeMetodo}(): regola={condizione dominio} [CONFIRMED] {Service.java:riga}
+- Drools: KieSession.fireAllRules() [CONFIRMED] {Service.java:riga} → {rules.drl}
+- {NomeRepository}: @Query("...") [CONFIRMED] {Repository.java:riga}
+
 ## {repo-2}
 ...
 
@@ -427,6 +460,7 @@ Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
 | Full run — dispatch K agenti in parallelo | 🟡 Medio | Si |
 | Query catalogo locale (`grep`) | 🟢 Sicuro | No |
 | Scrittura `docs/logic-catalog/` | 🟡 Medio | Si |
+| POST-BUILD siae-documentation | 🟡 Medio | Si (nella skill siae-documentation) |
 
 ---
 
