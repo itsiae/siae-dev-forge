@@ -131,22 +131,16 @@ Ogni modulo ha: `_input.tf`, `_local.tf`, `_output.tf` + resource file specifici
 
 **🚨 Quando la risorsa modificata è IAM — pre-flight card CRITICO aggiuntiva:**
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-iac",
-  "context": [
-    {"emoji": "🔐", "label": "Risorsa IAM", "value": "<role/policy name>"},
-    {"emoji": "🌍", "label": "Ambiente", "value": "<ambiente>"},
-    {"emoji": "📦", "label": "Servizi impattati", "value": "<lista servizi>"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Modifica policy IAM (impatta accesso risorse)", "path": "<file .tf>"}
-  ],
-  "reason": "Modifica necessaria per <motivazione>",
-  "ifno": "STOP — policy invariata, accessi non modificati"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-iac |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🔐 Risorsa IAM: `<role/policy name>` |
+| 🌍 Ambiente: `<ambiente>` |
+| 📦 Servizi impattati: `<lista servizi>` |
+| 1. ⚠️ Azione: Modifica policy IAM (impatta accesso risorse) |
+| 📂 `<file .tf>` |
+| 💡 Perche': Modifica necessaria per `<motivazione>` |
+| 🚫 Se NO: STOP — policy invariata, accessi non modificati |
 
 ---
 
@@ -179,22 +173,16 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 
 **🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di `terraform apply`:**
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-iac",
-  "context": [
-    {"emoji": "🏗️", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
-    {"emoji": "📋", "label": "Plan output", "value": "<N> to add, <N> to change, <N> to destroy"},
-    {"emoji": "🎫", "label": "Ticket", "value": "<PROJ-NNN>"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Applicazione modifiche infrastruttura AWS", "path": "<modulo terraform>"}
-  ],
-  "reason": "Plan verificato, risorse da creare/modificare",
-  "ifno": "STOP — nessuna modifica applicata all'infrastruttura"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-iac |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🏗️ Ambiente: `<dev|collaudo|produzione>` |
+| 📋 Plan output: `<N> to add, <N> to change, <N> to destroy` |
+| 🎫 Ticket: `<PROJ-NNN>` |
+| 1. ⚠️ Azione: Applicazione modifiche infrastruttura AWS |
+| 📂 `<modulo terraform>` |
+| 💡 Perche': Plan verificato, risorse da creare/modificare |
+| 🚫 Se NO: STOP — nessuna modifica applicata all'infrastruttura |
 
 ---
 

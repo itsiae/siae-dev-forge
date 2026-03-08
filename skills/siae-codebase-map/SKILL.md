@@ -137,21 +137,14 @@ date -u +"%Y-%m-%dT%H:%M:%SZ"
 
 🟡 MEDIO — Mostra pre-flight card prima di scrivere
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-codebase-map",
-  "context": [
-    {"emoji": "📊", "label": "File analizzati", "value": "<N> file, <N> token"},
-    {"emoji": "🤖", "label": "Subagent", "value": "<N> report sintetizzati"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Scrittura mappa codebase", "path": "docs/CODEBASE_MAP.md"}
-  ],
-  "reason": "Analisi completa, mappa pronta per scrittura",
-  "ifno": "La mappa non viene scritta, analisi disponibile solo in chat"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-codebase-map |
+|:---|
+| 📊 File analizzati: `<N> file, <N> token` |
+| 🤖 Subagent: `<N> report sintetizzati` |
+| 1. ✏️ Azione: Scrittura mappa codebase |
+| 📂 `docs/CODEBASE_MAP.md` |
+| 💡 Perche': Analisi completa, mappa pronta per scrittura |
+| 🚫 Se NO: La mappa non viene scritta, analisi disponibile solo in chat |
 
 Struttura del file:
 
@@ -213,21 +206,14 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 🟡 MEDIO — Mostra pre-flight card prima di aggiornare
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-codebase-map",
-  "context": [
-    {"emoji": "📋", "label": "Sezione", "value": "Architettura Codebase"},
-    {"emoji": "🔄", "label": "Tipo", "value": "<nuovo | aggiornamento>"}
-  ],
-  "actions": [
-    {"emoji": "📝", "label": "Aggiornamento sezione architettura", "path": "CLAUDE.md"}
-  ],
-  "reason": "Mappa aggiornata, CLAUDE.md da sincronizzare",
-  "ifno": "CLAUDE.md non aggiornato, future sessioni usano info vecchie"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-codebase-map |
+|:---|
+| 📋 Sezione: Architettura Codebase |
+| 🔄 Tipo: `<nuovo | aggiornamento>` |
+| 1. 📝 Azione: Aggiornamento sezione architettura |
+| 📂 `CLAUDE.md` |
+| 💡 Perche': Mappa aggiornata, CLAUDE.md da sincronizzare |
+| 🚫 Se NO: CLAUDE.md non aggiornato, future sessioni usano info vecchie |
 
 Aggiungi o aggiorna la sezione architettura:
 

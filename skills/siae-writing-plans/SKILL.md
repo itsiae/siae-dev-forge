@@ -170,21 +170,14 @@ Committa il file piano:
 
 🟡 MEDIO — Mostra pre-flight card prima del commit
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-writing-plans",
-  "context": [
-    {"emoji": "📋", "label": "Piano", "value": "<filename>.md"},
-    {"emoji": "🔢", "label": "Task", "value": "<N> task definiti"}
-  ],
-  "actions": [
-    {"emoji": "📌", "label": "Commit piano implementativo", "path": "docs/plans/<filename>.md"}
-  ],
-  "reason": "Piano validato, pronto per commit",
-  "ifno": "Il piano resta non committato"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-plans |
+|:---|
+| 📋 Piano: `<filename>.md` |
+| 🔢 Task: `<N> task definiti` |
+| 1. 📌 Azione: Commit piano implementativo |
+| 📂 `docs/plans/<filename>.md` |
+| 💡 Perche': Piano validato, pronto per commit |
+| 🚫 Se NO: Il piano resta non committato |
 
 ```bash
 git add docs/plans/YYYY-MM-DD-<topic>-plan.md

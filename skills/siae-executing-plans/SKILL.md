@@ -84,21 +84,14 @@ Domande/problemi: [nessuno | lista]
 
 🟡 MEDIO — Pre-flight prima di ogni task con modifica file
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-executing-plans",
-  "context": [
-    {"emoji": "📋", "label": "Piano", "value": "<filename>.md"},
-    {"emoji": "🔢", "label": "Batch", "value": "Task <N>-<M> di <totale>"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Implementazione batch con TDD", "path": "<file coinvolti>"}
-  ],
-  "reason": "Batch pronto, piano validato",
-  "ifno": "Il batch non viene eseguito, attende feedback"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-executing-plans |
+|:---|
+| 📋 Piano: `<filename>.md` |
+| 🔢 Batch: Task `<N>-<M>` di `<totale>` |
+| 1. ✏️ Azione: Implementazione batch con TDD |
+| 📂 `<file coinvolti>` |
+| 💡 Perche': Batch pronto, piano validato |
+| 🚫 Se NO: Il batch non viene eseguito, attende feedback |
 
 Per ogni task nel batch:
 1. Segna come in_progress

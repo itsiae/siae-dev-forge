@@ -168,21 +168,14 @@ Devi completare ogni fase PRIMA di procedere alla successiva.
 
 🟡 MEDIO — Mostra pre-flight card prima di applicare il fix
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-debugging",
-  "context": [
-    {"emoji": "🔑", "label": "Root cause", "value": "<descrizione root cause identificata>"},
-    {"emoji": "📊", "label": "Ipotesi", "value": "Confermata in Fase 3"}
-  ],
-  "actions": [
-    {"emoji": "🧪", "label": "Scrivi test di regressione + fix minimale", "path": "<file target>"}
-  ],
-  "reason": "Root cause confermata, fix minimale pronto",
-  "ifno": "Nessun fix applicato, torna a Fase 3 per nuova ipotesi"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-debugging |
+|:---|
+| 🔑 Root cause: `<descrizione root cause identificata>` |
+| 📊 Ipotesi: Confermata in Fase 3 |
+| 1. 🧪 Azione: Scrivi test di regressione + fix minimale |
+| 📂 `<file target>` |
+| 💡 Perche': Root cause confermata, fix minimale pronto |
+| 🚫 Se NO: Nessun fix applicato, torna a Fase 3 per nuova ipotesi |
 
 1. **Test di Regressione Obbligatorio (TDD)**
    - Scrivi il test che riproduce il bug PRIMA del fix

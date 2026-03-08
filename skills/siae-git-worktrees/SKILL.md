@@ -139,21 +139,15 @@ git worktree remove .worktrees/{branch-name}
 
 **⚠️ Operazione rischiosa — mostra pre-flight card PRIMA di eseguire:**
 
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-git-worktrees",
-  "context": [
-    {"emoji": "📁", "label": "Worktree", "value": "<path worktree>"},
-    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"}
-  ],
-  "actions": [
-    {"emoji": "🗑️", "label": "Rimozione forzata worktree (file non committati persi)", "path": "<path worktree>"}
-  ],
-  "reason": "Worktree non rimovibile normalmente (file non committati presenti)",
-  "ifno": "Il worktree resta attivo, commit o stash prima di rimuovere"
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-worktrees |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 📁 Worktree: `<path worktree>` |
+| 🌿 Branch: `<branch-name>` |
+| 1. 🗑️ Azione: Rimozione forzata worktree (file non committati persi) |
+| 📂 `<path worktree>` |
+| 💡 Perche': Worktree non rimovibile normalmente (file non committati presenti) |
+| 🚫 Se NO: Il worktree resta attivo, commit o stash prima di rimuovere |
 
 ```bash
 # Forza rimozione (se ci sono file non committati)
@@ -177,22 +171,16 @@ conferma esplicita dall'utente. Questa operazione riscrive la history ed e' IRRE
 per gli altri developer che hanno gia' basato il loro lavoro su questo branch.
 </EXTREMELY-IMPORTANT>
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-git-worktrees",
-  "context": [
-    {"emoji": "🌿", "label": "Branch", "value": "<branch-name>"},
-    {"emoji": "🎯", "label": "Target rebase", "value": "<base-branch>"},
-    {"emoji": "👥", "label": "Condiviso", "value": "Si — altri developer usano questo branch"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Rebase interattivo su branch condiviso (riscrive history)", "path": "<branch-name>"}
-  ],
-  "reason": "Rebase necessario per allineare al branch base",
-  "ifno": "STOP — usa merge invece di rebase su branch condivisi"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-worktrees |
+|:---|
+| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
+| 🌿 Branch: `<branch-name>` |
+| 🎯 Target rebase: `<base-branch>` |
+| 👥 Condiviso: Si — altri developer usano questo branch |
+| 1. ⚠️ Azione: Rebase interattivo su branch condiviso (riscrive history) |
+| 📂 `<branch-name>` |
+| 💡 Perche': Rebase necessario per allineare al branch base |
+| 🚫 Se NO: STOP — usa merge invece di rebase su branch condivisi |
 
 **Regola:** Se il branch è condiviso (altri developer ci lavorano), preferisci SEMPRE `git merge` a `git rebase`. Il rebase è sicuro solo su branch personali.
 

@@ -81,21 +81,14 @@ Se il lavoro copre piu' categorie, identifica TUTTE le verifiche necessarie.
 
 🟡 MEDIO — Mostra pre-flight card prima di eseguire la suite di verifica
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-verification",
-  "context": [
-    {"emoji": "🔧", "label": "Comandi", "value": "<lista comandi identificati in Step 1>"},
-    {"emoji": "📁", "label": "Working dir", "value": "<directory>"}
-  ],
-  "actions": [
-    {"emoji": "🧪", "label": "Esecuzione suite di verifica", "path": "<comandi>"}
-  ],
-  "reason": "Verifica necessaria prima di qualsiasi claim di completamento",
-  "ifno": "Nessuna verifica eseguita — non puoi dichiarare completamento"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-verification |
+|:---|
+| 🔧 Comandi: `<lista comandi identificati in Step 1>` |
+| 📁 Working dir: `<directory>` |
+| 1. 🧪 Azione: Esecuzione suite di verifica |
+| 📂 `<comandi>` |
+| 💡 Perche': Verifica necessaria prima di qualsiasi claim di completamento |
+| 🚫 Se NO: Nessuna verifica eseguita — non puoi dichiarare completamento |
 
 Lancia i comandi di verifica identificati allo step 1. Non saltare nessun comando.
 
