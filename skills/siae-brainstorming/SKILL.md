@@ -21,6 +21,14 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+## LA LEGGE DI FERRO
+
+```
+NESSUNA IMPLEMENTAZIONE SENZA DESIGN APPROVATO DALL'UTENTE
+```
+
+> **Tipo:** Rigid | **Fase SDLC:** 2. Design
+
 ---
 
 ## HARD-GATE
@@ -76,6 +84,23 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 - Sii pronto a tornare indietro e chiarire
 
 ### 5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
+
+🟡 **Pre-flight** — prima di scrivere il file:
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-brainstorming",
+  "context": [
+    {"emoji": "📝", "label": "Topic", "value": "<topic del design>"},
+    {"emoji": "📂", "label": "Path", "value": "docs/plans/YYYY-MM-DD-<topic>-design.md"},
+    {"emoji": "✅", "label": "Design approvato", "value": "Si"}
+  ],
+  "actions": [],
+  "reason": "Scrittura design doc dopo approvazione utente",
+  "ifno": "Non scrivere il file senza approvazione esplicita del design"
+}' | python3 design-system/generate-card.py
+```
 
 - Salva il design validato nel file
 - Includi: contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione
@@ -220,6 +245,33 @@ senza aver prima offerto la scelta di esecuzione.
 ```
 
 L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-workflow`.
+
+---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "E' semplice, so gia' cosa fare" | Le cose semplici nascondono assunzioni. Il design le rivela. |
+| "Il design lo faccio nella testa" | I design mentali non vengono revisionati. Scrivili. |
+| "Non serve JIRA per questo" | Senza ticket, il lavoro e' invisibile al team. |
+| "Iniziamo a codare e vediamo" | Codare senza design e' debug prematuro. |
+| "Ho gia' fatto qualcosa di simile" | Il contesto e' diverso. Il design adatta la soluzione. |
+| "Il design blocca la velocita'" | Il refactoring da design mancato blocca di piu'. |
+| "L'utente approva dopo" | L'approvazione post-hoc non e' approvazione. |
+| "Bastano 2 domande, poi implemento" | Due domande non sostituiscono un design strutturato. |
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Esplorazione contesto e JIRA | 🟢 Sicuro | No |
+| Domande chiarificatrici | 🟢 Sicuro | No |
+| Proposta approcci con trade-off | 🟢 Sicuro | No |
+| Presentazione design per sezioni | 🟢 Sicuro | No |
+| Scrittura design doc in docs/plans/ | 🟢 Sicuro | No |
+| Git commit design doc | 🟡 Medio | Si |
+| Creazione ticket JIRA | 🔴 Alto | Si |
 
 ---
 

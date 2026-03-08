@@ -1,7 +1,7 @@
 ---
 name: siae-git-worktrees
 description: >
-  Trigger: prima di eseguire un piano implementativo, inizio feature,
+  Trigger: prima di eseguire un piano implementativo,
   setup workspace isolato, implementazione su branch separato.
 ---
 
@@ -23,11 +23,10 @@ description: >
 
 ---
 
-## La Regola
+## LA LEGGE DI FERRO
 
 ```
 NON INIZIARE MAI L'IMPLEMENTAZIONE NEL BRANCH CORRENTE
-Crea sempre un worktree isolato prima di toccare qualsiasi file.
 ```
 
 **Violare la lettera di questa regola significa violare lo spirito della regola.**

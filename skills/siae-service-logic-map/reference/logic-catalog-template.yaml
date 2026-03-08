@@ -1,0 +1,80 @@
+# Template scheda evidenza L1+L2+L3 per siae-service-logic-map
+# Compilato da ogni subagent durante forge-logic-build
+# Un file per CLUSTER (non per repo). Versione: 3.0
+
+# --- clusters.yaml (indice, generato dal parent) ---
+# generated_at: "YYYY-MM-DDTHH:MM:SSZ"
+# source: "docs/SYSTEM_MAP.md"
+# clusters:
+#   - name: "cluster-abbonamenti"
+#     services: ["sport-gestione-abbonamento", "sport-contabilita", "sport-pagamenti"]
+#     domain: "Gestione Abbonamenti MDA"
+#     confidence: CONFIRMED   # CONFIRMED se da SYSTEM_MAP.md | INFERRED se modificato dall'utente
+#   - name: "cluster-iscrizioni"
+#     ...
+
+# --- cluster-{nome}.md (documento tecnico-funzionale, scritto dall'agente) ---
+#
+# Struttura attesa per ogni docs/logic-catalog/cluster-{nome}.md:
+#
+# # Cluster: {nome}
+#
+# Servizi: {lista repo}
+# Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
+# Extracted at: YYYY-MM-DDTHH:MM:SSZ
+#
+# ## {repo-1}
+#
+# ### L1 — Domain Profile
+#
+# - **Domain:** {nome dominio — es. "Abbonamenti MDA"} [CONFIRMED] {Entity.java:riga}
+# - **Bounded context:** {1-2 frasi sulla responsabilita'} [CONFIRMED] {fonte}
+# - **Entities:**
+#   - {ClassName} [CONFIRMED] src/main/java/.../{ClassName}.java:{riga}
+#   - ...
+# - **Exposes:**
+#   - {METHOD} {/api/v1/...} — {descrizione} [CONFIRMED] openapi/{repo}.yaml:{riga}
+#   - ...
+#
+# ### L2 — Workflow Map
+#
+# - **{nomeMetodoCamelCase}():** trigger={REST|KAFKA|SCHEDULED|INTERNAL}
+#   transactional={true|false} [CONFIRMED] src/main/java/.../Service.java:{riga}
+# - ...
+#
+#
+# ### L3 — Business Rules
+#
+# - **{nomeMetodo}():** regola={condizione di dominio — es. "if statoFascicolo == DIFFIDA"}
+#   [CONFIRMED] src/main/java/.../Service.java:{riga}
+# - **Drools:** KieSession.fireAllRules() [CONFIRMED] Service.java:{riga}
+#   → src/main/resources/rules/{file}.drl [CONFIRMED] tree scan
+# - **{NomeRepository}:** @Query("SELECT ...") [CONFIRMED] Repository.java:{riga}
+# - **{NomeEntity}:** @OneToMany → {TargetEntity} [CONFIRMED] Entity.java:{riga}
+#
+# Se nessun pattern L3 trovato nel repo:
+# - [UNVERIFIED] nessun pattern L3 trovato (no Drools, no @Query, no condizioni dominio)
+#
+# ### Gap Report
+#
+# - [FILE_NOT_FOUND] {cosa non e' stato trovato}
+# - [UNVERIFIED] {cosa non e' stato possibile verificare}
+# - "Implementazione interna metodi non analizzata (L3 out of scope)"
+#
+# ## {repo-2}
+# ...
+#
+# ## Gap Report Cluster
+# (gap che riguardano il cluster nel suo insieme, non un singolo servizio)
+
+# Confidence tag validi:
+#   CONFIRMED     — evidenza letta direttamente dal file (citare file:riga)
+#   INFERRED      — dedotto da nome classe/metodo (citare file:riga)
+#   UNVERIFIED    — nessuna evidenza — nel Gap Report, MAI rimosso
+#   FILE_NOT_FOUND — file non accessibile — documenta il gap
+
+# Tipi di workflow:
+#   use-case      — metodo public su *Service.java invocato da REST
+#   scheduled     — @Scheduled o @KafkaListener su *Service.java o *Scheduler.java
+#   event-driven  — @KafkaListener
+#   batch         — job batch, tipicamente @Scheduled con logica complessa

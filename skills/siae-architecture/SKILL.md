@@ -18,6 +18,8 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 2. Design
+
 ---
 
 ## 1. Modello C4
@@ -132,11 +134,87 @@ Servizi AWS approvati e in uso nei repository SIAE.
 
 ## 4. Vincoli
 
+🔴 ALTO — Mostra pre-flight card prima di modificare un'architettura di sistema esistente
+
+```bash
+echo '{
+  "level": "ALTO",
+  "skill": "siae-architecture",
+  "context": [
+    {"emoji": "🏗️", "label": "Contesto", "value": "Modifica architettura sistema esistente in produzione SIAE"}
+  ],
+  "actions": [
+    {"emoji": "⚠️", "label": "Modifica architettura", "path": "sistema esistente"}
+  ],
+  "reason": "Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. Rischio regressione e downtime.",
+  "ifno": "La modifica non viene applicata. Documentare la decisione come ADR con stato Rejected."
+}' | python3 design-system/generate-card.py
+```
+
 1. **Solo pattern reali** — non proporre architetture non presenti nel catalogo (sezione 2).
    Ogni design deve mappare su uno o piu' dei 5 pattern documentati.
 2. **IaC obbligatoria** — ogni risorsa AWS va gestita con Terragrunt (pattern 2.4).
 3. **C4 obbligatorio** — ogni HLD deve includere almeno Livello 1 (Context) e Livello 2 (Container).
 4. **Servizi approvati** — usare solo i servizi nella AWS Service Map (sezione 3).
    Per servizi non in lista, richiedere approvazione esplicita.
+
+🟡 MEDIO — Mostra pre-flight card prima di scegliere librerie o dipendenze esterne
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-architecture",
+  "context": [
+    {"emoji": "🏗️", "label": "Contesto", "value": "Selezione libreria o dipendenza esterna per progetto SIAE"}
+  ],
+  "actions": [
+    {"emoji": "📦", "label": "Aggiunta dipendenza", "path": "pom.xml / package.json / requirements.txt"}
+  ],
+  "reason": "Librerie esterne introducono rischi di licenza, vulnerabilita' CVE e debito tecnico. Devono essere valutate rispetto ai pattern SIAE approvati.",
+  "ifno": "Non aggiungere la dipendenza. Rivalutare se esiste un servizio AWS o modulo interno equivalente."
+}' | python3 design-system/generate-card.py
+```
+
 5. **Diagrammi in Mermaid** — tutti i diagrammi architetturali devono essere in sintassi Mermaid,
    renderizzabili in GitHub e Confluence.
+
+🟡 MEDIO — Mostra pre-flight card prima di pubblicare un ADR su Confluence
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-architecture",
+  "context": [
+    {"emoji": "🏗️", "label": "Contesto", "value": "Pubblicazione ADR su Confluence per decisione architetturale SIAE"}
+  ],
+  "actions": [
+    {"emoji": "📄", "label": "Pubblicazione ADR", "path": "Confluence / docs/architecture/"}
+  ],
+  "reason": "Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. Deve essere revisionato e approvato prima della pubblicazione.",
+  "ifno": "L ADR rimane in stato Draft locale. Richiedere revisione al tech lead prima di procedere."
+}' | python3 design-system/generate-card.py
+```
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Abbiamo gia' un pattern uguale altrove" | Il contesto cambia. Il pattern va validato per questo caso. |
+| "E' solo un CRUD, non serve architettura" | I CRUD diventano complessi. L'ADR previene il debito tecnico. |
+| "Lo decidiamo durante l'implementazione" | Le decisioni architetturali in corso d'opera costano di piu'. |
+| "Il team conosce gia' il sistema" | La conoscenza tacita non scala. Documentala. |
+| "Aggiorniamo l'ADR dopo il rilascio" | Dopo il rilascio non si aggiorna mai. |
+| "Non abbiamo tempo per HLD" | Il tempo risparmiato ora viene perso nel refactoring. |
+| "L'architettura e' ovvia" | Ovvia per te. Non per chi entra nel team dopo. |
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Analisi requisiti non funzionali | 🟢 Sicuro | No |
+| Proposta pattern architetturale | 🟢 Sicuro | No |
+| Confronto trade-off tra opzioni | 🟢 Sicuro | No |
+| Scrittura ADR in docs/architecture/ | 🟢 Sicuro | No |
+| Scelta librerie/dipendenze esterne | 🟡 Medio | Si |
+| Pubblicazione ADR su Confluence | 🟡 Medio | Si |
+| Modifica architettura di sistema esistente | 🔴 Alto | Si |

@@ -299,7 +299,7 @@ Se i permessi sono negati:
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -312,7 +312,7 @@ Se i permessi sono negati:
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Note |
 |-----------|---------|------|

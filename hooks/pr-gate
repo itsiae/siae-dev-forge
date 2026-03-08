@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# pr-gate — PreToolUse hook: security scan before gh pr create/edit
+
+set -euo pipefail
+
+HOOK_INPUT=$(cat)
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+# Only activate on gh pr create or gh pr edit
+if [[ ! "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+(create|edit) ]]; then
+    echo '{}'
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${TOOL_COMMAND}\"}"
+
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+read -r -d '' PR_GATE_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true
+# DevForge PR Security Gate
+
+Stai per eseguire `gh pr create` o `gh pr edit`. PRIMA di procedere, esegui questo security scan.
+
+## Step 1: Identifica i file modificati nel branch
+
+```bash
+git diff $(git merge-base HEAD origin/sviluppo 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "HEAD~1")...HEAD --name-only
+```
+
+## Step 2: Per ogni file modificato, controlla
+
+**CRITICO — Blocca gh pr create:**
+- AWS Key: `AKIA[0-9A-Z]{16}`
+- Password hardcoded: `[pP]assword\s*[:=]\s*["'][^"']+["']`
+- Private key: `-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----`
+- Connection string con credenziali: `(mysql|postgres|mongodb)://[^:]+:[^@]+@`
+- API Key hardcoded: `[aA][pP][iI][-_]?[kK][eE][yY]\s*[:=]\s*["'][^"']+["']`
+
+**ALTO — Warn + richiedi conferma:**
+- IAM policy con `"*"` su Action o Resource
+- S3 bucket con `acl = "public-read"` o `block_public_acls = false`
+- Lambda senza VPC su handler che tratta `ISRC`, `IBAN`, `codice_fiscale`
+
+**MEDIO — Warning:**
+- `console.log` o `print()` con variabili che sembrano PII
+- Valori sensibili non gestiti da Secrets Manager
+
+## Step 3: Mostra risultati
+
+**Se CRITICO trovato:**
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  DevForge — CRITICO  ·  Security issue rilevato pre-PR            ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  File:    [file]  Issue: [descrizione]                             ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  Perche': Security issue critico blocca la PR                      ┃
+┃  Se NO:   Vulnerabilita' critica entra nel repository              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+NON procedere con gh pr create. Risolvi prima il problema CRITICO.
+```
+
+**Se ALTO trovato:** mostra pre-flight card ALTO e chiedi conferma prima di procedere.
+
+**Se nessun issue:** procedi con `gh pr create` normalmente.
+INSTRUCTIONS_EOF
+
+pr_gate_escaped=$(escape_for_json "$PR_GATE_INSTRUCTIONS")
+pr_gate_context="<EXTREMELY_IMPORTANT>\nDevForge PR Security Gate attivo.\n\n${pr_gate_escaped}\n</EXTREMELY_IMPORTANT>"
+
+cat <<EOF
+{
+  "additional_context": "${pr_gate_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${pr_gate_context}"
+  }
+}
+EOF
+
+exit 0

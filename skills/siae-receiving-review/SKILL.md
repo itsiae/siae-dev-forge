@@ -24,6 +24,14 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+OGNI COMMENTO RICHIEDE UNA REAZIONE ESPLICITA — IL SILENZIO NON E' UNA RISPOSTA
+```
+
+---
+
 ## Il Principio Fondamentale
 
 La code review richiede **valutazione tecnica**, non performance emotiva.
@@ -257,7 +265,7 @@ come commento top-level via `gh pr comment {pr_number} --body "[testo]"`.
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -317,7 +325,7 @@ Se i permessi sono negati:
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card | Note |
 |-----------|---------|------|------|

@@ -19,6 +19,8 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Rigid | **Fase SDLC:** 5. Testing
+
 ---
 
 ## LA LEGGE DI FERRO
@@ -131,6 +133,28 @@ Altri test rotti? Correggi subito.
 
 ### 3. REFACTOR — Migliora il codice mantenendo i test verdi
 
+🟡 MEDIO — Mostra pre-flight card prima di procedere
+
+<EXTREMELY-IMPORTANT>
+NON costruire card a mano. Usa SEMPRE `design-system/generate-card.py`.
+</EXTREMELY-IMPORTANT>
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-tdd",
+  "context": [
+    {"emoji": "🔬", "label": "Ciclo", "value": "RED-GREEN-REFACTOR"},
+    {"emoji": "📁", "label": "File", "value": "<file target>"}
+  ],
+  "actions": [
+    {"emoji": "🔀", "label": "Refactor codice", "path": "<path file>"}
+  ],
+  "reason": "Si sta modificando codice funzionante (test GREEN). Il rischio e' rompere il comportamento esistente.",
+  "ifno": "Il refactoring non viene eseguito. Il codice rimane funzionante ma non ottimizzato."
+}' | python3 design-system/generate-card.py
+```
+
 Solo dopo il GREEN:
 - Rimuovi duplicazioni
 - Migliora i nomi
@@ -140,6 +164,28 @@ Solo dopo il GREEN:
 I test devono restare verdi. Non aggiungere comportamento.
 
 ### 4. COMMIT — Un commit per ciclo RED-GREEN-REFACTOR
+
+🟡 MEDIO — Mostra pre-flight card prima di procedere
+
+<EXTREMELY-IMPORTANT>
+NON costruire card a mano. Usa SEMPRE `design-system/generate-card.py`.
+</EXTREMELY-IMPORTANT>
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-tdd",
+  "context": [
+    {"emoji": "🔬", "label": "Ciclo", "value": "RED-GREEN-REFACTOR"},
+    {"emoji": "📁", "label": "File", "value": "<file target>"}
+  ],
+  "actions": [
+    {"emoji": "🔀", "label": "Git commit ciclo TDD", "path": "<path file>"}
+  ],
+  "reason": "Si sta committando il ciclo completo RED-GREEN-REFACTOR. Un commit errato o incompleto registra codice non verificato nella storia del repo.",
+  "ifno": "Il commit non viene eseguito. Le modifiche rimangono staged e il ciclo non viene chiuso."
+}' | python3 design-system/generate-card.py
+```
 
 Ogni commit contiene sia il test che l'implementazione. Nessun commit senza test.
 
@@ -258,6 +304,19 @@ def test_should_reject_empty_email_when_submitting_form(form_service):
 ```
 
 > Per configurazioni CI dettagliate di ogni framework, vedi `reference/framework-configs.md`.
+
+---
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Scrittura test fallente (RED) | 🟢 Sicuro | No |
+| Esecuzione test per verifica RED | 🟢 Sicuro | No |
+| Implementazione minimale (GREEN) | 🟢 Sicuro | No |
+| Esecuzione test per verifica GREEN | 🟢 Sicuro | No |
+| Refactor del codice | 🟡 Medio | Si |
+| Git commit del ciclo RED-GREEN-REFACTOR | 🟡 Medio | Si |
 
 ---
 

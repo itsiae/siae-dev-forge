@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# stop-gate — Stop hook: siae-verification reminder before Claude stops
+
+set -euo pipefail
+
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+STOP_GATE_INSTRUCTIONS="Se il tuo ultimo output contiene un claim di completamento — parole come 'fatto', 'fixato', 'completato', 'funziona', 'done', 'fixed', 'PASS', 'completato con successo', 'implementato', 'risolto' — DEVI invocare siae-verification prima di fermarti. Segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Se il tuo output e' una risposta normale, una domanda, un'analisi o un aggiornamento di stato senza claim di completamento, ignora questo messaggio silenziosamente."
+
+stop_gate_escaped=$(escape_for_json "$STOP_GATE_INSTRUCTIONS")
+stop_gate_context="<EXTREMELY_IMPORTANT>\nDevForge Verification Gate: ${stop_gate_escaped}\n</EXTREMELY_IMPORTANT>"
+
+cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Stop",
+    "additionalContext": "${stop_gate_context}"
+  }
+}
+EOF
+
+exit 0

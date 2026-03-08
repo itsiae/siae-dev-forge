@@ -193,6 +193,21 @@ Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la re
 
 ---
 
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Ho gia' eseguito i test prima, sicuramente passano ancora" | L'ultima run non e' questa run. Qualsiasi modifica successiva puo' aver rotto qualcosa. Riesegui ora. |
+| "L'agent ha confermato che tutto funziona" | Gli agent allucinano successi nel 40% dei casi documentati. L'unica evidenza valida e' l'output reale del comando. |
+| "I test ci mettono troppo, li salto questa volta" | Il tempo per fixare un bug in produzione e' 10x il tempo per eseguire i test. Non hai alternative. |
+| "Ho letto il codice e non vedo errori" | Leggere il codice non e' eseguire il codice. I bug si nascondono nei path che non stai guardando. |
+| "E' un fix di una riga sola, non puo' rompere nulla" | I bug piu' costosi nella storia SIAE sono stati introdotti da modifiche di una riga. Zero eccezioni. |
+| "Il CI fara' i test, non devo farli in locale" | Se il CI fallisce, hai sprecato il tempo dell'intero team e bloccato la pipeline. Testa prima in locale. |
+| "Ho visto l'output scorrere e sembrava ok" | 'Sembrava ok' non e' evidenza. Devi leggere ogni riga, cercare FAILED, ERROR, WARN. |
+| "L'utente aspetta, devo dichiarare done il prima possibile" | Un false completion genera rework immediato. Tre minuti di test ora evitano ore di debug dopo. |
+
+---
+
 ## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card |

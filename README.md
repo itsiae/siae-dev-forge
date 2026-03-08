@@ -13,9 +13,9 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 25 skill, 9 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 26 skill, 11 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.2.0-mvp
+> **Versione:** 1.3.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (25)](#skill-25)
+- [Skill (26)](#skill-26)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -91,11 +91,11 @@ Riavvia Claude Code per attivare il plugin.
 Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono necessarie per ogni task, ma **l'ordine e' sacro**: non si puo' saltare da fase 2 a fase 5 senza attraversare le intermedie rilevanti.
 
 ```
-1. Init & Setup    →  2. Req & Design   →  3. Branching
-       ↓                     ↓                    ↓
-  siae-onboarding     siae-brainstorming    siae-git-workflow
-  siae-codebase-map   siae-writing-plans    siae-git-worktrees
-                      siae-architecture     siae-finishing-branch
+1. Init & Setup       →  2. Req & Design   →  3. Branching
+       ↓                        ↓                    ↓
+  siae-onboarding          siae-brainstorming    siae-git-workflow
+  siae-codebase-map        siae-writing-plans    siae-git-worktrees
+  siae-service-logic-map   siae-architecture     siae-finishing-branch
 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
@@ -107,7 +107,9 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
   siae-subagent-development
   siae-executing-plans
 
-Cross-cutting (ogni fase): siae-verification
+Cross-cutting (ogni fase): siae-verification | siae-requesting-review | siae-receiving-review
+
+Meta: siae-writing-skills
 ```
 
 ### Esempio: nuova feature end-to-end
@@ -119,6 +121,7 @@ Cross-cutting (ogni fase): siae-verification
 5. **Testing** — `siae-tdd` forza il ciclo RED → GREEN → REFACTOR prima del codice
 6. **QA Gate** — `siae-debugging` interviene se i test falliscono, genera RCA se serve
 7. **Release** — `siae-documentation` genera HLD/LLD, pubblica su Confluence via MCP
+   + `siae-requesting-review` guida la PR description e l'assegnazione del reviewer
 
 ---
 
@@ -137,6 +140,8 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality) | `siae-subagent-development` |
 | `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
 | `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
+| `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per tutti i microservizi | `siae-service-logic-map` |
+| `/forge-logic-search` | Cerca concetto o workflow nel catalogo logic (es. "preventivo", "rinnovo") | `siae-service-logic-map` |
 
 ### Uso
 
@@ -173,7 +178,62 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 ---
 
-## Skill (25)
+## Mappa del Sistema — Come Collaborano le Skill di Discovery
+
+Per sistemi a microservizi come SPORT (~42 repo), siae-devforge fornisce due skill complementari
+che insieme danno una comprensione completa del sistema:
+
+| Skill | Comando | Risponde a | Output |
+|---|---|---|---|
+| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile L1+L2+L3 per cluster |
+| `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
+
+**Workflow tipico (comando singolo):**
+
+```
+/forge-logic-build sport-fdc-*
+   → Step 0: cerca SYSTEM_MAP.md — se non esiste, esegue /forge-sysmap automaticamente
+   → Step 3: cluster detection dal grafo (evidenza-based, conferma utente)
+   → Step 4: pre-fetch dati L1+L2+L3 per cluster + dispatch agenti paralleli
+   → Step 5: siae-documentation eseguito automaticamente sui cluster-*.md
+   → Output: docs/logic-catalog/cluster-{nome}.md  (1 per cluster, sezioni L1+L2+L3)
+             docs/logic-catalog/clusters.yaml       (indice)
+             docs/logic-catalog/system-overview.md  (visione d'insieme)
+
+/forge-logic-search "diffida"
+   → Cerca nel catalogo: quali cluster/servizi implementano un concetto
+   → Incrocia con SYSTEM_MAP per le dipendenze
+```
+
+**Esempio reale — Sport FDC (Filiera del Credito, 3 repo):**
+
+```
+Cluster rilevati da SYSTEM_MAP.md:
+  fdc-core (2 servizi): fascicolo ↔ evidenza (dipendenza bidirezionale CONFIRMED)
+  fdc-documento (1 servizio): standalone
+
+Output:
+  docs/systems/sport-fdc/logic-catalog/cluster-fdc-core.md
+  docs/systems/sport-fdc/logic-catalog/cluster-fdc-documento.md
+  docs/systems/sport-fdc/logic-catalog/clusters.yaml
+```
+
+**Domande che ogni skill risponde:**
+
+| Domanda | Skill |
+|---|---|
+| "Da cosa dipende sport-gestione-abbonamento?" | siae-microservices-map |
+| "Chi pubblica sul topic `abbonamento.creato`?" | siae-microservices-map |
+| "Cosa fa sport-contabilita?" | siae-service-logic-map |
+| "Quali servizi gestiscono il workflow di rinnovo?" | siae-service-logic-map |
+| "Se modifico la logica di calcolo, chi ne risente?" | entrambe — `/forge-logic-search` + `SYSTEM_MAP.md` |
+
+**Roadmap:** `/forge-impact <concetto>` unifichera' i due cataloghi per rispondere
+all'ultima domanda in un unico comando.
+
+---
+
+## Skill (26)
 
 ### Meta-skill
 
@@ -217,6 +277,19 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Update mode:** se mappa esiste, dispatcha subagent solo per moduli modificati da git
 - **Integrazione `siae-onboarding`:** suggerisce `/forge-map` se repo > 50 file senza mappa
 - **Script:** `skills/siae-codebase-map/scripts/scan-codebase.py` — scanner Python con tiktoken, ignora `.gitignore`
+- **Tipo:** Flexible
+
+#### `siae-service-logic-map` — Domain Profile e Workflow Map L1+L2+L3 (Fase 1: Init)
+
+- **Trigger:** "cosa fa `{servizio}`", `/forge-logic-build`, "mappa la logica", "regole business di", "build catalogo", "quali servizi gestiscono X", impact analysis
+- **Anti-hallucination protocol:** ogni workflow citato DEVE avere un file sorgente. Tag obbligatori: `[CONFIRMED]` / `[INFERRED]` / `[UNVERIFIED]` / `[FILE_NOT_FOUND]`
+- **3 livelli di analisi:**
+  - **L1 Domain Profile:** dominio, entità principali, API esposte (da OpenAPI), dipendenze dichiarate
+  - **L2 Workflow Map:** metodi `public` con `@Transactional`, `@Scheduled`, `@KafkaListener` — flusso operazioni chiave
+  - **L3 Business Rules:** regole Drools (`KieSession`, `fireAllRules`), query JPA con business logic, condizioni di dominio significative
+- **Processo:** SYSTEM_MAP.md discovery (auto-genera con `siae-microservices-map` se assente) → cluster detection → pre-fetch parallelo → dispatch agenti (1 per cluster) → POST-BUILD con `siae-documentation`
+- **Output:** `docs/logic-catalog/cluster-{nome}.md` (L1+L2+L3), `clusters.yaml`, `system-overview.md`
+- **Comandi:** `/forge-logic-build` (costruisce), `/forge-logic-search` (cerca concetto nel catalogo)
 - **Tipo:** Flexible
 
 #### `siae-brainstorming` — Design validato prima del codice (Fase 2: Design)
@@ -460,7 +533,20 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per ogni task, `REQUIRED SUB-SKILL: siae-verification` a fine piano
 - **Tipo:** Rigid
 
-#### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Fase 4)
+#### `siae-requesting-review` — Richiedere una Code Review Efficace (Cross-cutting)
+
+- **Trigger:** "pronto per review", "ho aperto la PR", "chiedo il review", PR aperta senza reviewer assegnato
+- **La Legge di Ferro:** NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
+- **Processo a 4 step:**
+  1. Scrivi PR description completa (cosa / perché / come verificare) con template obbligatorio
+  2. Assegna reviewer: scegli con criterio (dominio, disponibilità, ownership), 1-2 reviewer max
+  3. Self-review obbligatoria: leggi il tuo diff come se fossi il reviewer, rimuovi debug code, verifica test
+  4. Notifica il reviewer con contesto (link PR + deadline + note specifiche se serve)
+- **Categoria PR:** feature / fix / refactor / chore — influenza il tipo di descrizione
+- **Integrazione:** se i test sono rossi → `REQUIRED SUB-SKILL: siae-finishing-branch` prima di aprire la PR
+- **Tipo:** Rigid
+
+#### `siae-receiving-review` — Elaborazione feedback code review ricevuto (Cross-cutting)
 
 - **Trigger:** Ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED
 - **Processo a 4 step:** Leggi tutto prima di agire → Categorizza → Pianifica e implementa → Rispondi a ogni commento
@@ -666,13 +752,17 @@ jq -r 'select(.branch=="feature/SPORT-456-fix-sync") | "\(.ts) [\(.sid)] \(.even
 
 Tutte le skill seguono il **DevForge Visual Design System** definito in `design-system/devforge-visual.md`:
 
-- **Banner ASCII** di apertura con nome skill
-- **Pre-flight cards** con bordi ASCII e livelli di rischio codificati a colori:
-  - `LOW` (verde) — Informativo
-  - `MEDIO` (giallo) — Richiede attenzione
-  - `ALTO` (rosso) — Richiede conferma esplicita
-  - `CRITICO` (rosso lampeggiante) — Blocca l'operazione
-- **Codifica rischio** per classificare ogni operazione
+- **Banner ASCII** di apertura con nome skill e fase SDLC
+- **Legge di Ferro** — principio non negoziabile in maiuscolo (skill Rigid)
+- **Pre-flight cards** generate dinamicamente via `design-system/generate-card.py` con bordi ASCII e livelli di rischio codificati a colori:
+  - `MEDIO` (giallo, bordo `╔╗`) — Richiede attenzione, reversibile
+  - `ALTO` (rosso, bordo `┏┓`) — Difficile da annullare, richiede conferma
+  - `CRITICO` (rosso intenso) — Blocca l'operazione
+- **Classificazione Rischio Operazioni** — tabella con colonna Card (Si/No) per ogni step
+- **Tabella Anti-Razionalizzazione** — blocca le scorciatoie cognitive tipiche del dominio
+
+> Copertura completa su tutte le 26 skill: ogni skill Rigid ha Legge di Ferro + Anti-Razi,
+> ogni skill ha Risk Table e pre-flight cards per le operazioni con rischio >= MEDIO.
 
 ---
 
@@ -707,6 +797,9 @@ siae-devforge/
 │   │   ├── SKILL.md
 │   │   └── scripts/
 │   │       └── scan-codebase.py # Scanner tiktoken (basato su Cartographer MIT)
+│   ├── siae-service-logic-map/  # Domain profile L1+L2+L3 per microservizi
+│   │   ├── SKILL.md
+│   │   └── reference/
 │   ├── siae-brainstorming/      # Brainstorming socratico
 │   │   └── SKILL.md
 │   ├── siae-writing-plans/      # Piano implementativo bite-sized
@@ -764,6 +857,11 @@ siae-devforge/
 │   │   └── code-quality-reviewer-prompt.md
 │   ├── siae-executing-plans/    # Esecuzione piano in sessione separata
 │   │   └── SKILL.md
+│   ├── siae-requesting-review/  # PR description efficace e assegnazione reviewer
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   ├── siae-receiving-review/   # Elaborazione feedback code review ricevuto
+│   │   └── SKILL.md
 │   └── siae-writing-skills/     # Guida per creare nuove skill
 │       ├── SKILL.md
 │       └── reference/
@@ -780,7 +878,9 @@ siae-devforge/
 │   ├── forge-review.md          # /forge-review → code-reviewer + spec-reviewer
 │   ├── forge-implement.md       # /forge-implement → siae-subagent-development
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
-│   └── forge-rca.md             # /forge-rca → siae-debugging
+│   ├── forge-rca.md             # /forge-rca → siae-debugging
+│   ├── forge-logic-build.md     # /forge-logic-build → siae-service-logic-map
+│   └── forge-logic-search.md    # /forge-logic-search → siae-service-logic-map
 │
 ├── agents/
 │   ├── code-reviewer.md         # Review a 6 punti con distrust pattern
@@ -895,7 +995,9 @@ Claude Code Session
 2. Crea `SKILL.md` seguendo il template in `design-system/devforge-visual.md`
 3. Frontmatter YAML obbligatorio: `name`, `description`
 4. Includi il banner ASCII DevForge
-5. Per skill rigide: aggiungi tabella anti-rationalization e HARD-GATE
+5. Per skill Rigid: aggiungi LA LEGGE DI FERRO, Tabella Anti-Razionalizzazione e HARD-GATE
+5b. Per tutte le skill: aggiungi Classificazione Rischio Operazioni con colonna Card (Si/No)
+5c. Per operazioni con Card=Si: aggiungi blocco `generate-card.py` nello step corrispondente
 6. Aggiungi la skill alla tabella in `skills/using-devforge/SKILL.md`
 7. Se serve un comando: crea il thin wrapper in `commands/`
 

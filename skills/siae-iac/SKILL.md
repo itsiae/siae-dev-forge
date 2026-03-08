@@ -20,6 +20,10 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 4. Implementation
+
+---
+
 ## Panoramica
 
 Pattern IaC da 44 repo HCL itsiae (enterpriseplatform-core-iaac, dataplatform-datalake-iaac, etc.). Guida scrittura `.tf`, `.hcl`, `terragrunt.hcl` secondo convenzioni SIAE.
@@ -193,6 +197,19 @@ echo '{
 ```
 
 ---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "E' solo un ambiente di test, non serve Terragrunt" | Gli ambienti di test diventano produzione. La struttura si porta dietro. |
+| "Il modulo e' piccolo, metto tutto in main.tf" | main.tf non strutturato e' impossibile da riusare e testare. |
+| "Il remote state lo configuro dopo" | Il remote state va configurato per primo. Migrarlo dopo e' rischioso. |
+| "Non serve il lock del provider" | Senza lock, una patch del provider rompe l'infrastruttura in silenzio. |
+| "Le variabili le hardcodo per ora" | Le variabili hardcoded finiscono in git. Le credenziali non devono. |
+| "L'IAM policy la faccio admin per semplicita'" | Least privilege non e' optional. Le policy permissive creano vulnerabilita'. |
+| "Il terraform apply lo faccio senza plan" | Senza plan non sai cosa verra' distrutto. Sempre plan prima di apply. |
+| "Encryption at rest non serve in dev" | I dati di dev spesso contengono PII reali. Cifra sempre. |
 
 ## Classificazione Rischio Operazioni
 

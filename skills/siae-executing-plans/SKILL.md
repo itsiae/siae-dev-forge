@@ -1,9 +1,10 @@
 ---
 name: siae-executing-plans
 description: >
-  Use when opening a new session with an implementation plan to execute.
-  Trigger: sessione separata con piano in docs/plans/, batch execution richiesta,
+  Use when opening a brand-new session to execute an existing plan (not the session where the plan was written).
+  Trigger: sessione nuova/separata con piano in docs/plans/, batch execution richiesta,
   piano con REQUIRED SUB-SKILL siae-executing-plans.
+  (Per la stessa sessione in cui il piano e' stato scritto usa siae-subagent-development)
 ---
 
 # SIAE Executing Plans — Esecuzione Piano in Sessione Separata

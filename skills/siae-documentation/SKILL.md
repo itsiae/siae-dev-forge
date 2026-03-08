@@ -17,6 +17,8 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Flexible | **Fase SDLC:** 7. Release
+
 ---
 
 ## 1. Tipi di Documentazione
@@ -129,6 +131,20 @@ echo '{
 ```
 
 4. Pubblica via `createConfluencePage` o `updateConfluencePage`
+
+---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Il codice e' la documentazione" | Il codice dice come. La doc dice perche'. Sono complementari. |
+| "La aggiorneremo dopo il rilascio" | Dopo il rilascio il team passa alla feature successiva. Non si aggiorna mai. |
+| "Il team sa gia' come funziona" | Il team cambia. I nuovi arrivati non sanno nulla. |
+| "L'HLD e' eccessivo per questa feature" | L'HLD e' un investimento. La mancanza di contesto e' un costo. |
+| "Confluence e' sempre stale" | Confluence stale e' meglio di nessuna doc. Aggiornala prima del rilascio. |
+| "I developer non leggono la doc" | I developer leggono la doc quando sono bloccati. Assicurati che esista. |
+| "OpenAPI si genera automaticamente" | Generata != accurata. Rivedi sempre le descrizioni generate. |
 
 ---
 

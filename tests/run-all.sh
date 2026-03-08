@@ -133,6 +133,129 @@ echo ""
 echo "  Comandi totali: ${cmd_count} | OK: ${cmd_ok}"
 TOTAL_PASS=$((TOTAL_PASS + cmd_ok))
 
+# --- Visual Design System Validation ---
+echo ""
+echo "=== Visual Design System Validation ==="
+echo ""
+
+vds_ok=0
+vds_fail=0
+
+# using-devforge is the meta-skill/OS of the plugin — excluded from VDS checks
+# (it uses a different structure: Red Flags table instead of Anti-Razi, no Tipo)
+EXCLUDED_FROM_VDS="using-devforge"
+
+for skill_dir in "${PLUGIN_ROOT}"/skills/*/; do
+  skill_name=$(basename "$skill_dir")
+  skill_file="${skill_dir}SKILL.md"
+
+  [ ! -f "$skill_file" ] && continue
+
+  if echo "$EXCLUDED_FROM_VDS" | grep -q "$skill_name"; then
+    echo "  SKIP  ${skill_name}: meta-skill, VDS check escluso"
+    continue
+  fi
+
+  fail_reasons=""
+
+  # Check 1: Skill Rigid → LA LEGGE DI FERRO obbligatoria
+  if grep -qE '\*\*Tipo:\*\*\s+Rigid' "$skill_file"; then
+    if ! grep -q 'LA LEGGE DI FERRO' "$skill_file"; then
+      fail_reasons="${fail_reasons}[MANCA: LA LEGGE DI FERRO] "
+    fi
+  fi
+
+  # Check 2: Tutte le skill → Tabella Anti-Razionalizzazione
+  if ! grep -q 'Tabella Anti-Razionalizzazione' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Tabella Anti-Razionalizzazione] "
+  fi
+
+  # Check 3: Tutte le skill → Classificazione Rischio Operazioni
+  if ! grep -q 'Classificazione Rischio' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni] "
+  fi
+
+  # Check 4: Se Card=Si nel Risk Table → almeno un generate-card.py presente
+  if grep -qE '\|\s*Si\s*\|' "$skill_file"; then
+    if ! grep -q 'generate-card.py' "$skill_file"; then
+      fail_reasons="${fail_reasons}[MANCA: generate-card.py (Risk Table ha Card=Si)] "
+    fi
+  fi
+
+  if [ -z "$fail_reasons" ]; then
+    echo "  PASS  ${skill_name}: VDS completo"
+    vds_ok=$((vds_ok + 1))
+  else
+    echo "  FAIL  ${skill_name}: ${fail_reasons}"
+    vds_fail=$((vds_fail + 1))
+  fi
+done
+
+echo ""
+echo "  Skill VDS totali: $((vds_ok + vds_fail)) | OK: ${vds_ok} | FAIL: ${vds_fail}"
+TOTAL_PASS=$((TOTAL_PASS + vds_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + vds_fail))
+
+# --- Hook Validation ---
+echo ""
+echo "=== Hook Validation ==="
+echo ""
+
+hook_ok=0
+hook_fail=0
+
+# Check 1: pr-gate esiste ed è eseguibile
+if [ -x "${PLUGIN_ROOT}/hooks/pr-gate" ]; then
+  echo "  PASS  hooks/pr-gate: esiste ed è eseguibile"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pr-gate: mancante o non eseguibile"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 2: stop-gate esiste ed è eseguibile
+if [ -x "${PLUGIN_ROOT}/hooks/stop-gate" ]; then
+  echo "  PASS  hooks/stop-gate: esiste ed è eseguibile"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/stop-gate: mancante o non eseguibile"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 3: hooks.json contiene entry per pr-gate e Stop/stop-gate
+if grep -q 'pr-gate' "${PLUGIN_ROOT}/hooks/hooks.json" && grep -q '"Stop"' "${PLUGIN_ROOT}/hooks/hooks.json"; then
+  echo "  PASS  hooks/hooks.json: contiene entry pr-gate e Stop"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/hooks.json: entry pr-gate o Stop mancanti"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 4a: pre-commit gestisce git checkout -b con JIRA ID senza crash
+checkout_output=$(echo '{"command":"git checkout -b feature/SPORT-456-test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
+if echo "$checkout_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/pre-commit: gestisce git checkout -b con JIRA ID (exit 0)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: crash su git checkout -b con JIRA ID"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 4b: pre-commit gestisce git checkout -b senza JIRA ID silenziosamente
+nojira_output=$(echo '{"command":"git checkout -b fix/no-jira-id"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
+if echo "$nojira_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/pre-commit: gestisce git checkout -b senza JIRA ID (exit 0, silenzioso)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: crash su git checkout -b senza JIRA ID"
+  hook_fail=$((hook_fail + 1))
+fi
+
+echo ""
+echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
+TOTAL_PASS=$((TOTAL_PASS + hook_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + hook_fail))
+
 # --- Report Finale ---
 echo ""
 echo "╔══════════════════════════════════════════════════════════════════╗"

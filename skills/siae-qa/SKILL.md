@@ -20,6 +20,14 @@ description: >
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+## LA LEGGE DI FERRO
+
+```
+NESSUN RILASCIO SENZA CASI DI TEST VERIFICATI E DOCUMENTATI IN XRAY
+```
+
+> **Tipo:** Rigid | **Fase SDLC:** 5. Testing / QA
+
 ---
 
 ## QUANDO SI APPLICA
@@ -271,7 +279,7 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 
 ---
 
-## TABELLA ANTI-RAZIONALIZZAZIONE
+## Tabella Anti-Razionalizzazione
 
 **Stai per razionalizzare? Leggi questa tabella. Poi torna al workflow.**
 
@@ -327,6 +335,20 @@ Prima di dichiarare la skill completata:
 6. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
 7. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
 8. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import. Ovunque altrove (documentazione, checklist, commenti) usare `Expected Result` (corretto).
+
+---
+
+## Classificazione Rischio Operazioni
+
+| Operazione | Livello | Card |
+|-----------|---------|------|
+| Analisi Acceptance Criteria | 🟢 Sicuro | No |
+| Scrittura test cases | 🟢 Sicuro | No |
+| Creazione test plan | 🟢 Sicuro | No |
+| Export test su Xray/JIRA | 🟡 Medio | Si |
+| Esecuzione test su ambiente di collaudo | 🟡 Medio | Si |
+| Apertura bug su JIRA | 🟡 Medio | Si |
+| Approvazione go/no-go al rilascio | 🔴 Alto | Si |
 
 ---
 

@@ -1,8 +1,8 @@
 ---
 name: siae-codebase-map
 description: >
-  mappa questo codebase, documenta l'architettura, /forge-map, onboarding su
-  progetto sconosciuto, codebase > 50 file senza docs/CODEBASE_MAP.md
+  mappa questo codebase, documenta l'architettura, /forge-map,
+  codebase > 50 file senza docs/CODEBASE_MAP.md, CODEBASE_MAP.md da aggiornare
 ---
 
 # SIAE Codebase Map
@@ -262,6 +262,20 @@ Quando la mappa esiste già:
 |---------|---------|--------------------------|
 | Sonnet  | 200k    | 150.000 token |
 | Haiku   | 200k    | 100.000 token (economico, meno preciso) |
+
+---
+
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Conosco gia' il codice" | La conoscenza tacita non e' documentazione. Non scala al team. |
+| "La mappa diventa subito stale" | Una mappa parzialmente stale e' meglio di nessuna mappa. |
+| "Il README e' sufficiente" | Il README descrive l'uso, non l'architettura interna. |
+| "Non ho tempo per la documentazione" | Chi prende in carico dopo di te perde il triplo del tempo. |
+| "Il team sa com'e' fatto" | Il team cambia. La mappa resta. |
+| "Mappa solo i file che modifico" | Il contesto locale senza vista globale genera regressioni. |
+| "CODEBASE_MAP.md e' troppo lungo" | Meglio lungo e completo che breve e inutile. |
 
 ---
 

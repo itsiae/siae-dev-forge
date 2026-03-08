@@ -9,6 +9,14 @@ description: >
 
 `╔══ 🔨 DevForge — SIAE GIT WORKFLOW ══╗`
 
+> **Tipo:** Rigid | **Fase SDLC:** 3. Branching
+
+## LA LEGGE DI FERRO
+
+```
+NESSUN COMMIT SU MAIN DIRETTO — SEMPRE FEATURE BRANCH + PR + REVIEW
+```
+
 ---
 
 ## 1. Branch Strategy SIAE
@@ -276,7 +284,7 @@ git push origin PRODUZIONE
 
 ---
 
-## 10. Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|

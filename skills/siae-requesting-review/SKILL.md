@@ -24,6 +24,14 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
+```
+
+---
+
 ## Il Principio Fondamentale
 
 La code review e' un dialogo tra colleghi tecnici, non un esame.
@@ -163,7 +171,7 @@ Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-re
 
 ---
 
-## Anti-Rationalization Table
+## Tabella Anti-Razionalizzazione
 
 | Pensiero | Realta' |
 |----------|---------|
@@ -176,7 +184,7 @@ Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-re
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Livello | Card | Note |
 |-----------|---------|------|------|

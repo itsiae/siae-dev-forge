@@ -1,8 +1,9 @@
 ---
 name: siae-subagent-development
 description: >
-  Use when a validated implementation plan exists with independent tasks.
+  Use when a validated implementation plan exists with independent tasks, in the same session.
   Trigger: piano implementativo presente, task indipendenti, /forge-implement.
+  (Per sessione separata/nuova usa siae-executing-plans)
 ---
 
 # SIAE Subagent Development — Orchestratore Implementazione
@@ -74,6 +75,22 @@ PIANO DI IMPLEMENTAZIONE:
 
 🟡 MEDIO — Mostra pre-flight card prima di lanciare ogni subagent
 
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-subagent-development",
+  "context": [
+    {"emoji": "🤖", "label": "Task", "value": "<nome task dal piano>"},
+    {"emoji": "📋", "label": "Piano", "value": "docs/plans/<file>.md"}
+  ],
+  "actions": [
+    {"emoji": "🚀", "label": "Dispatch subagent implementer", "path": "docs/plans/<file>.md"}
+  ],
+  "reason": "Subagent con contesto fresco modifichera file reali",
+  "ifno": "Il task non viene implementato, piano resta in attesa"
+}' | python3 design-system/generate-card.py
+```
+
 Per ogni task nel piano, lancia un subagent implementer con il prompt definito
 in [implementer-prompt.md](implementer-prompt.md).
 
@@ -140,7 +157,23 @@ prima di dichiarare il task completato.
 
 ### Step 6 — Final Review Complessiva
 
-🟢 SICURO
+🟡 MEDIO — Mostra pre-flight card prima di eseguire la test suite finale
+
+```bash
+echo '{
+  "level": "MEDIO",
+  "skill": "siae-subagent-development",
+  "context": [
+    {"emoji": "🧪", "label": "Suite", "value": "Test suite completa progetto"},
+    {"emoji": "✅", "label": "Task completati", "value": "N/N"}
+  ],
+  "actions": [
+    {"emoji": "▶️", "label": "Esecuzione test suite finale", "path": "tests/"}
+  ],
+  "reason": "Verifica integrazione post-implementazione",
+  "ifno": "Completamento dichiarato senza verifica test suite"
+}' | python3 design-system/generate-card.py
+```
 
 Dopo che tutti i task sono completati:
 
