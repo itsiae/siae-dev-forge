@@ -26,7 +26,7 @@ REQUIRED SUB-SKILL: siae-git-env
 ```
 
 Esegui `siae-git-env` prima di qualsiasi operazione git che coinvolge GitHub.
-Il `GH_MODE` determinato qui vale per tutta la sessione.
+Il `GH_MODE` determinato qui vale per tutta la sessione e determina i comandi usati nella sezione **Flusso Operativo (Step 8)** per l'apertura PR di promozione.
 
 **Non ripetere il check nella stessa sessione.** Se `siae-git-env` è già stata eseguita, usa il GH_MODE già determinato.
 
@@ -202,7 +202,22 @@ gh pr create --base <branch-target> --title "release: promozione <da> → <a>" -
 ```
 
 **Se FALLBACK_MODE:**
-Apri manualmente: `https://github.com/<owner>/<repo>/compare/<branch-target>...<branch-source>`
+
+1. Apri: `https://github.com/<owner>/<repo>/compare/<branch-target>...<branch-source>`
+   *(base: branch-target, compare: branch-source — es. `compare/collaudo...sviluppo`)*
+2. Clicca "Create pull request"
+3. Usa questo template per il body:
+
+```
+## Promozione <branch-source> → <branch-target>
+
+[Descrizione delle modifiche promosse]
+
+## Checklist
+
+- [ ] Test verdi su <branch-source>
+- [ ] Approvazione da team lead
+```
 
 ---
 
