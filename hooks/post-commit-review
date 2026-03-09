@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# PostToolUse hook: after a git commit, trigger code-reviewer + security agents
-# Fires on Bash tool completion — checks if the command was a git commit.
+# PostToolUse hook: after PR creation or push, trigger code-reviewer + security agents
+# Fires on Bash tool completion — checks if the command was gh pr create or git push.
+# Reviews only CHANGED files in the branch (diff vs base branch).
 
 set -euo pipefail
 
@@ -10,15 +11,16 @@ HOOK_INPUT=$(cat)
 # Extract the command that was executed
 TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
-# Only trigger on successful git commit
-if [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+# Only trigger on PR creation or git push (not on every commit)
+if [[ ! "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+create ]] && \
+   [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
     echo '{}'
     exit 0
 fi
 
-# Check if the commit actually succeeded (look for error indicators in output)
+# Check if push/PR actually succeeded (look for error indicators in output)
 TOOL_OUTPUT=$(echo "$HOOK_INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 || true)
-if echo "$TOOL_OUTPUT" | grep -qi "nothing to commit\|nothing added\|no changes"; then
+if echo "$TOOL_OUTPUT" | grep -qi "error\|fatal\|rejected\|failed"; then
     echo '{}'
     exit 0
 fi
@@ -30,8 +32,8 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 
-# Log post-commit review trigger
-devforge_log "post_commit_review" "triggered" "{\"command\":\"${TOOL_COMMAND}\"}" 2>/dev/null || true
+# Log PR review trigger
+devforge_log "pr_auto_review" "triggered" "{\"command\":\"${TOOL_COMMAND}\"}" 2>/dev/null || true
 
 # Escape string for JSON embedding
 escape_for_json() {
@@ -45,38 +47,40 @@ escape_for_json() {
 }
 
 read -r -d '' REVIEW_INSTRUCTIONS << 'REVIEW_EOF' || true
-# DevForge Post-Commit Auto-Review
+# DevForge PR Auto-Review
 
-Un commit e' appena stato completato. DEVI lanciare automaticamente questi due agent in parallelo:
+Una PR e' stata creata o il branch e' stato pushato. DEVI lanciare automaticamente questi due agent in parallelo
+sui file CAMBIATI nel branch (usa `git diff origin/main...HEAD --name-only` per la lista).
 
 ## 1. Code Review (siae-devforge:code-reviewer)
 
-Lancia l'agent `siae-devforge:code-reviewer` sui file appena committati.
+Lancia l'agent `siae-devforge:code-reviewer` sui file cambiati nel branch.
 L'agent eseguira' la review a 6 punti: conformita' al piano, code standards,
 security, error handling, test coverage, architettura.
 
 ## 2. Security Check (siae-devforge:siae-security)
 
 Invoca la skill `siae-devforge:siae-security` per verificare:
-- Nessun secret/credenziale nei file committati
+- Nessun secret/credenziale nei file cambiati
 - IAM least privilege se ci sono policy AWS
 - OWASP Top 10 compliance
 - PII handling per dati autori/artisti SIAE
 
 ## Istruzioni
 
-1. Lancia ENTRAMBI in parallelo usando il tool Agent:
+1. Ottieni la lista dei file cambiati: `git diff origin/main...HEAD --name-only`
+2. Lancia ENTRAMBI in parallelo usando il tool Agent:
    - Agent con subagent_type="siae-devforge:code-reviewer" in background
    - Invoca Skill("siae-devforge:siae-security") per il security check
-2. Mostra i risultati quando arrivano
-3. Se trovano problemi critici, segnalali PRIMA di qualsiasi altra azione
+3. Mostra i risultati quando arrivano
+4. Se trovano problemi critici, segnalali PRIMA di qualsiasi altra azione
 
 NON chiedere all'utente se vuole la review — e' automatica.
-NON saltare questo step — ogni commit viene revisionato.
+NON saltare questo step — ogni PR viene revisionata.
 REVIEW_EOF
 
 review_escaped=$(escape_for_json "$REVIEW_INSTRUCTIONS")
-review_context="<EXTREMELY_IMPORTANT>\nDevForge Post-Commit Auto-Review attivato.\n\n${review_escaped}\n</EXTREMELY_IMPORTANT>"
+review_context="<EXTREMELY_IMPORTANT>\nDevForge PR Auto-Review attivato.\n\n${review_escaped}\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {
