@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # stop-gate — Stop hook: siae-verification reminder before Claude stops
+# Only fires when the last assistant message contains completion claims.
 
 set -euo pipefail
 
@@ -13,6 +14,31 @@ escape_for_json() {
     printf '%s' "$s"
 }
 
+# Read stdin (JSON payload from Claude Code)
+INPUT=$(cat)
+
+# Extract last assistant message text using jq
+# Handles both 'messages' and 'transcript' keys; content can be string or array of blocks
+LAST_ASSISTANT_MSG=$(echo "$INPUT" | jq -r '
+    (.messages // .transcript // [])
+    | map(select(.role == "assistant"))
+    | last
+    | if . == null then ""
+      elif (.content | type) == "string" then .content
+      else (.content | map(select(.type == "text") | .text) | join(" "))
+      end
+' 2>/dev/null || true)
+
+# Completion claim keywords (case-insensitive check)
+COMPLETION_KEYWORDS="fatto|fixato|completato|funziona|done|fixed|pass|completato con successo|implementato|risolto|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato"
+
+# Check if last assistant message contains any completion claim
+if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
+    # No completion claim found — exit silently
+    exit 0
+fi
+
+# Completion claim detected — inject verification reminder
 STOP_GATE_INSTRUCTIONS="Se il tuo ultimo output contiene un claim di completamento — parole come 'fatto', 'fixato', 'completato', 'funziona', 'done', 'fixed', 'PASS', 'completato con successo', 'implementato', 'risolto' — DEVI invocare siae-verification prima di fermarti. Segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Se il tuo output e' una risposta normale, una domanda, un'analisi o un aggiornamento di stato senza claim di completamento, ignora questo messaggio silenziosamente."
 
 stop_gate_escaped=$(escape_for_json "$STOP_GATE_INSTRUCTIONS")
