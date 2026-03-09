@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# PostToolUse hook: after a git commit, trigger code-reviewer + security agents
+# Fires on Bash tool completion — checks if the command was a git commit.
+
+set -euo pipefail
+
+# Read tool input from stdin (JSON with tool_name, tool_input, tool_output)
+HOOK_INPUT=$(cat)
+
+# Extract the command that was executed
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+# Only trigger on successful git commit
+if [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+    echo '{}'
+    exit 0
+fi
+
+# Check if the commit actually succeeded (look for error indicators in output)
+TOOL_OUTPUT=$(echo "$HOOK_INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 || true)
+if echo "$TOOL_OUTPUT" | grep -qi "nothing to commit\|nothing added\|no changes"; then
+    echo '{}'
+    exit 0
+fi
+
+# Determine plugin root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source activity logger
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+
+# Log post-commit review trigger
+devforge_log "post_commit_review" "triggered" "{\"command\":\"${TOOL_COMMAND}\"}" 2>/dev/null || true
+
+# Escape string for JSON embedding
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+read -r -d '' REVIEW_INSTRUCTIONS << 'REVIEW_EOF' || true
+# DevForge Post-Commit Auto-Review
+
+Un commit e' appena stato completato. DEVI lanciare automaticamente questi due agent in parallelo:
+
+## 1. Code Review (siae-devforge:code-reviewer)
+
+Lancia l'agent `siae-devforge:code-reviewer` sui file appena committati.
+L'agent eseguira' la review a 6 punti: conformita' al piano, code standards,
+security, error handling, test coverage, architettura.
+
+## 2. Security Check (siae-devforge:siae-security)
+
+Invoca la skill `siae-devforge:siae-security` per verificare:
+- Nessun secret/credenziale nei file committati
+- IAM least privilege se ci sono policy AWS
+- OWASP Top 10 compliance
+- PII handling per dati autori/artisti SIAE
+
+## Istruzioni
+
+1. Lancia ENTRAMBI in parallelo usando il tool Agent:
+   - Agent con subagent_type="siae-devforge:code-reviewer" in background
+   - Invoca Skill("siae-devforge:siae-security") per il security check
+2. Mostra i risultati quando arrivano
+3. Se trovano problemi critici, segnalali PRIMA di qualsiasi altra azione
+
+NON chiedere all'utente se vuole la review — e' automatica.
+NON saltare questo step — ogni commit viene revisionato.
+REVIEW_EOF
+
+review_escaped=$(escape_for_json "$REVIEW_INSTRUCTIONS")
+review_context="<EXTREMELY_IMPORTANT>\nDevForge Post-Commit Auto-Review attivato.\n\n${review_escaped}\n</EXTREMELY_IMPORTANT>"
+
+cat <<EOF
+{
+  "additional_context": "${review_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "PostToolUse",
+    "additionalContext": "${review_context}"
+  }
+}
+EOF
+
+exit 0
