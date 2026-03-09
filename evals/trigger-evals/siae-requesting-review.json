@@ -1,0 +1,23 @@
+[
+  {"query": "Chiedo review della PR #45 su sport-contratti-service, e' pronta per essere controllata", "should_trigger": true},
+  {"query": "Ho aperto la PR per la feature SPORT-456 e serve un reviewer. Chi puo' farla?", "should_trigger": true},
+  {"query": "Chi puo' fare review della mia PR sul servizio ripartizioni? Ho aggiunto il nuovo endpoint per le quote", "should_trigger": true},
+  {"query": "Assegna un reviewer alla PR #67 di sport-catalogo-service, ho finito l'implementazione", "should_trigger": true},
+  {"query": "La PR e' pronta per review: feature/SPORT-789-export-excel su report-service", "should_trigger": true},
+  {"query": "Ho pushato tutto su feature/SPORT-123-notifiche-push, serve review prima del merge in sviluppo", "should_trigger": true},
+  {"query": "PR aperta senza reviewer su sport-auth-service, il branch e' feature/SPORT-345-oauth-refresh", "should_trigger": true},
+  {"query": "Devo chiedere review per le modifiche al modello DynamoDB nel servizio catalogo. PR #89 aperta", "should_trigger": true},
+  {"query": "La feature delle licenze sincronizzazione e' completa, chiedo review della PR prima di mergiare", "should_trigger": true},
+  {"query": "Pronto per review: ho completato tutti i task del piano e i test passano. PR #112 su sport-data-lake", "should_trigger": true},
+
+  {"query": "Ho ricevuto CHANGES REQUESTED sulla PR #45, il reviewer dice che manca la gestione degli errori", "should_trigger": false},
+  {"query": "Il reviewer ha lasciato 3 commenti sulla PR, devo applicare le modifiche richieste", "should_trigger": false},
+  {"query": "Ho finito di implementare la feature, creo il branch e pusho su origin", "should_trigger": false},
+  {"query": "Merge la PR #67 in sviluppo e tagga la release v2.4.0", "should_trigger": false},
+  {"query": "Scrivi il codice per il nuovo endpoint POST /contratti nel servizio contratti", "should_trigger": false},
+  {"query": "Il test di integrazione fallisce con errore 503 sul servizio sport-auth, debugga", "should_trigger": false},
+  {"query": "Analizza il codice nella PR #34 e dimmi se ci sono problemi di sicurezza o performance", "should_trigger": false},
+  {"query": "Ho un'idea per migliorare il flusso di approvazione contratti. Facciamo brainstorming?", "should_trigger": false},
+  {"query": "Scrivi il piano implementativo per la feature SPORT-567 del servizio notifiche", "should_trigger": false},
+  {"query": "Genera la CODEBASE_MAP.md per il repository sport-ripartizioni-engine", "should_trigger": false}
+]

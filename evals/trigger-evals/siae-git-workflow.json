@@ -1,0 +1,23 @@
+[
+  {"query": "Crea il branch feature/SPORT-456-gestione-territori a partire da sviluppo e pushalo su origin.", "should_trigger": true},
+  {"query": "Devo fare merge del branch feature/SPORT-234-calcolo-quote su sviluppo. Come procedo?", "should_trigger": true},
+  {"query": "Tagga la versione v2.3.1 per il deploy in collaudo del servizio catalogo-service.", "should_trigger": true},
+  {"query": "Pusha il branch feature/SPORT-789-export-excel su origin e imposta il tracking.", "should_trigger": true},
+  {"query": "Apri una PR da feature/SPORT-567-nuovo-report verso sviluppo con il titolo 'Aggiunta export Excel ripartizioni'.", "should_trigger": true},
+  {"query": "Prepara il branch per il deploy in esercizio: merge da sviluppo a master e tagga v3.0.0.", "should_trigger": true},
+  {"query": "Devo fare cherry-pick del commit abc123 dal branch hotfix/SPORT-999-fix-auth su sviluppo.", "should_trigger": true},
+  {"query": "Crea il branch hotfix/SPORT-emergency-fix-ripartizioni da master per il fix urgente in produzione.", "should_trigger": true},
+  {"query": "Fai squash degli ultimi 4 commit sul branch feature/SPORT-345-refactor prima di aprire la PR.", "should_trigger": true},
+  {"query": "Allinea il mio branch feature/SPORT-678-nuovi-campi con le ultime modifiche su sviluppo. Serve un rebase o merge?", "should_trigger": true},
+
+  {"query": "Implementa il metodo validateISWC nella classe ISWCValidator con i test unitari.", "should_trigger": false},
+  {"query": "Il Glue job silver-to-gold fallisce con timeout dopo 30 minuti. Puoi investigare?", "should_trigger": false},
+  {"query": "Come dovremmo strutturare il nuovo microservizio per la gestione delle licenze sincronizzazione?", "should_trigger": false},
+  {"query": "Leggi il file infrastructure/modules/vpc/main.tf e dimmi come e' configurata la VPC.", "should_trigger": false},
+  {"query": "Scrivi i test di integrazione per il repository DynamoDB del servizio contratti-service.", "should_trigger": false},
+  {"query": "Il servizio notifiche-service risponde con errore 500 quando provo a inviare una notifica push.", "should_trigger": false},
+  {"query": "Qual e' il pattern standard per l'error handling nei controller Spring Boot SIAE?", "should_trigger": false},
+  {"query": "Genera la documentazione del modulo Terraform per il bucket S3 dei report.", "should_trigger": false},
+  {"query": "Ho finito tutte le modifiche richieste dal reviewer. I test sono verdi. Task completato.", "should_trigger": false},
+  {"query": "Puoi fare review del codice su feature/SPORT-456? Controlla soprattutto la gestione dei null.", "should_trigger": false}
+]

@@ -1,0 +1,23 @@
+[
+  {"query": "Il reviewer ha chiesto CHANGES REQUESTED sulla PR #45: manca la gestione degli errori nel controller ContrattoController.", "should_trigger": true},
+  {"query": "Ho ricevuto commenti sulla PR. Il collega dice che il metodo calcolaQuoteAutore non gestisce il caso di lista titolari vuota.", "should_trigger": true},
+  {"query": "CHANGES REQUESTED: il reviewer vuole che aggiunga la validazione del campo codice_fiscale prima di salvare su DynamoDB.", "should_trigger": true},
+  {"query": "Il reviewer ha lasciato 3 commenti sulla PR feature/SPORT-456: naming non conforme, test mancante, e log level sbagliato.", "should_trigger": true},
+  {"query": "Il collega ha reviewato la mia PR e dice che devo aggiungere il correlation ID nei log del servizio catalogo-service.", "should_trigger": true},
+  {"query": "Ho feedback sulla PR: il reviewer chiede di estrarre la logica di validazione ISWC in una classe utility separata.", "should_trigger": true},
+  {"query": "La PR e' stata rifiutata: il reviewer dice che il modulo Terraform non segue la struttura standard e manca il tagging.", "should_trigger": true},
+  {"query": "Il tech lead ha commentato sulla PR che il Glue job non gestisce i record malformati e serve un dead letter queue.", "should_trigger": true},
+  {"query": "Commenti da risolvere sulla PR #67: il reviewer vuole test di integrazione oltre agli unit test per il nuovo endpoint ripartizioni.", "should_trigger": true},
+  {"query": "Il collega dice che nella mia PR manca la documentazione OpenAPI per il nuovo endpoint POST /api/v1/licenze.", "should_trigger": true},
+
+  {"query": "Puoi fare review del mio codice su feature/SPORT-456? Voglio un parere sulla struttura.", "should_trigger": false},
+  {"query": "Sono pronto per aprire la PR su feature/SPORT-789. Prepara la descrizione.", "should_trigger": false},
+  {"query": "Implementa il metodo exportToExcel nel ReportService con i test unitari.", "should_trigger": false},
+  {"query": "Il servizio notifiche-service risponde con timeout quando invio notifiche a piu' di 100 destinatari.", "should_trigger": false},
+  {"query": "Crea il branch feature/SPORT-123-fix-validazione e pusha su origin.", "should_trigger": false},
+  {"query": "Ho finito tutte le modifiche. I test passano tutti, il deploy e' andato bene.", "should_trigger": false},
+  {"query": "Come dovremmo strutturare il nuovo microservizio per la gestione dei diritti digitali?", "should_trigger": false},
+  {"query": "Qual e' il pattern standard per i DTO nei servizi Java SIAE?", "should_trigger": false},
+  {"query": "Scrivi i test di integrazione per il consumer SQS del servizio contratti-service.", "should_trigger": false},
+  {"query": "Il Glue job bronze-to-silver fallisce con errore di parsing su file CSV con encoding Windows-1252.", "should_trigger": false}
+]

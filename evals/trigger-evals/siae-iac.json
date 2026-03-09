@@ -1,0 +1,23 @@
+[
+  {"query": "Scrivi il modulo Terraform per il VPC del servizio ripartizioni SIAE. Serve un VPC con 3 AZ, subnet private per ECS, subnet pubbliche per ALB e NAT Gateway.", "should_trigger": true},
+  {"query": "Configura il terragrunt.hcl per gestire i 4 ambienti SIAE (dev, test, staging, prod) con backend S3 e lock DynamoDB.", "should_trigger": true},
+  {"query": "Devo creare l'infrastruttura AWS per il nuovo servizio catalogo-opere. Serve ECS Fargate, ALB, DynamoDB table e i security group nel file .tf.", "should_trigger": true},
+  {"query": "Modifica il security group del servizio notifiche-service nel file main.tf per aprire la porta 443 solo dal VPC del portale associati.", "should_trigger": true},
+  {"query": "Aggiungi la Lambda function nel file lambda.tf per il trigger di notifica quando un nuovo contratto viene inserito nella tabella DynamoDB contratti.", "should_trigger": true},
+  {"query": "Scrivi il modulo Terraform per la tabella DynamoDB delle opere musicali SIAE con partition key ISWC, sort key anno_pubblicazione e GSI per titolo.", "should_trigger": true},
+  {"query": "Devo aggiungere il bucket S3 per il data lake delle ripartizioni nel modulo storage.tf con lifecycle policy e encryption KMS.", "should_trigger": true},
+  {"query": "Configura il file .tf per API Gateway REST con stage dev e prod, custom domain api.siae.it e certificato ACM.", "should_trigger": true},
+  {"query": "Il modulo Terraform del servizio contratti deve includere ECS service, task definition con 2 container (app + sidecar), e CloudWatch log group.", "should_trigger": true},
+  {"query": "Scrivi la configurazione terragrunt per il modulo networking condiviso tra tutti i servizi SIAE con dependency su vpc e route53.", "should_trigger": true},
+
+  {"query": "Scrivi il codice Java del controller Spring Boot per l'endpoint di ricerca opere per ISWC nel servizio catalogo.", "should_trigger": false},
+  {"query": "Crea il componente Vue.js per la dashboard di monitoraggio dei Glue job nel portale operatori SIAE.", "should_trigger": false},
+  {"query": "La query DynamoDB per le ripartizioni e' troppo lenta. Come ottimizzo l'accesso con GSI o query pattern diversi?", "should_trigger": false},
+  {"query": "Il Glue job per il data lake delle opere musicali ha un bug nel parsing CSV. Come lo correggo nel codice PySpark?", "should_trigger": false},
+  {"query": "Fai code review della PR #89 sul servizio ripartizioni. Verifica la gestione degli errori e i test unitari.", "should_trigger": false},
+  {"query": "Genera la documentazione del servizio notifiche-service con diagramma di sequenza e esempi API.", "should_trigger": false},
+  {"query": "Devo progettare l'architettura del nuovo sistema di ingestion. Valutiamo event-driven vs batch processing.", "should_trigger": false},
+  {"query": "Scrivi i test unitari JUnit per il servizio di calcolo delle quote di ripartizione SIAE.", "should_trigger": false},
+  {"query": "Il deploy su ECS Fargate fallisce con error 'container health check failed'. Come debuggo il problema applicativo?", "should_trigger": false},
+  {"query": "Prepara i test case per Xray per la funzionalita' di registrazione nuovi associati nel portale SIAE.", "should_trigger": false}
+]

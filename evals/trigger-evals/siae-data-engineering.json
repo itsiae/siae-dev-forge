@@ -1,0 +1,23 @@
+[
+  {"query": "Scrivi il Glue job PySpark per la trasformazione bronze-to-silver delle opere musicali. Deve leggere i CSV raw da S3, pulire i campi ISWC e titolo, e scrivere in formato Parquet.", "should_trigger": true},
+  {"query": "Configura la Step Function per la pipeline di ingestion delle ripartizioni trimestrali SIAE. I passi sono: validazione file, Glue job ETL, quality check, notifica completamento.", "should_trigger": true},
+  {"query": "Devo creare l'ETL per migrare i dati dal sistema legacy SIAE (Oracle) al data lake S3. Le tabelle principali sono opere, titolari, contratti e ripartizioni.", "should_trigger": true},
+  {"query": "Scrivi la trasformazione PySpark per il Glue job che calcola le aggregazioni silver-to-gold delle ripartizioni per titolare, trimestre e territorio.", "should_trigger": true},
+  {"query": "Implementa la Medallion architecture per il dominio ripartizioni SIAE. Serve lo schema dei layer bronze (raw CSV), silver (cleaned Parquet) e gold (aggregated per report).", "should_trigger": true},
+  {"query": "Il data quality check per la pipeline opere musicali deve verificare: ISWC formato valido, nessun duplicato, campi obbligatori presenti. Scrivi il job Glue di validazione.", "should_trigger": true},
+  {"query": "Crea il Glue crawler per catalogare automaticamente le nuove partizioni nel data lake S3 delle ripartizioni SIAE organizzate per anno/trimestre/territorio.", "should_trigger": true},
+  {"query": "Devo costruire la pipeline di ingestion per i file delle societa' estere (ASCAP, BMI, GEMA). Ogni societa' ha un formato CSV diverso. Serve un Glue job parametrico.", "should_trigger": true},
+  {"query": "Scrivi la Step Function per l'orchestrazione del batch notturno SIAE: estrazione da DynamoDB, trasformazione con Glue, caricamento nel data warehouse Redshift.", "should_trigger": true},
+  {"query": "Il job ETL per i contratti deve fare join tra la tabella contratti e titolari, calcolare le quote percentuali e scrivere il risultato nella tabella gold per le ripartizioni.", "should_trigger": true},
+
+  {"query": "Scrivi l'endpoint REST per la ricerca opere musicali per ISWC nel servizio catalogo Spring Boot con DynamoDB.", "should_trigger": false},
+  {"query": "Crea il componente Vue.js per la visualizzazione dei report ripartizioni con grafici Chart.js e filtri per trimestre.", "should_trigger": false},
+  {"query": "Scrivi il modulo Terraform per il Glue job con IAM role, S3 bucket per gli script e CloudWatch log group.", "should_trigger": false},
+  {"query": "Quale pattern architetturale usiamo per il sistema di notifiche real-time agli associati SIAE?", "should_trigger": false},
+  {"query": "Fai code review della PR #34 sul servizio ripartizioni-service. Il reviewer ha chiesto di migliorare la gestione delle eccezioni.", "should_trigger": false},
+  {"query": "Genera la documentazione API per il servizio di consultazione delle ripartizioni con esempi di response JSON.", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-567-etl-fix e committa le modifiche al Glue job.", "should_trigger": false},
+  {"query": "La IAM policy del ruolo Glue e' troppo permissiva. Restringi l'accesso S3 solo ai bucket del data lake SIAE.", "should_trigger": false},
+  {"query": "Scrivi i test unitari per il metodo calcolaQuoteRipartizione nel servizio Java ripartizioni-service.", "should_trigger": false},
+  {"query": "Prepara la checklist QA per il rilascio della nuova pipeline di ingestion in produzione.", "should_trigger": false}
+]

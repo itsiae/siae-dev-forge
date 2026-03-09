@@ -1,0 +1,23 @@
+[
+  {"query": "Scrivi un test unitario per il metodo calcolaQuoteAutore nel RipartizioneService. Deve verificare che la somma delle quote sia sempre 100%.", "should_trigger": true},
+  {"query": "Implementa l'endpoint POST /api/v1/contratti che accetta un ContrattoRequest e salva il contratto su DynamoDB.", "should_trigger": true},
+  {"query": "Aggiungi un nuovo campo 'codice_territorio' al DTO OperaResponse e aggiorna il mapper corrispondente nel catalogo-service.", "should_trigger": true},
+  {"query": "Refactora la classe RipartizioneCalculator: estrai la logica di arrotondamento in un metodo privato e aggiungi i test.", "should_trigger": true},
+  {"query": "Fix il bug nel metodo validateISWC: non gestisce correttamente i codici ISWC con prefisso 'T-' invece di 'T'.", "should_trigger": true},
+  {"query": "Implementa il consumer SQS che riceve eventi di nuovo contratto e aggiorna la tabella ripartizioni in DynamoDB.", "should_trigger": true},
+  {"query": "Aggiungi la validazione Bean Validation sul DTO ContrattoRequest: campo codice_fiscale obbligatorio, importo positivo, data_inizio non nel futuro.", "should_trigger": true},
+  {"query": "Scrivi i test di integrazione per il repository DynamoDB del servizio opere-service usando Testcontainers e LocalStack.", "should_trigger": true},
+  {"query": "Crea il modulo Terraform per il nuovo bucket S3 che ospita i report delle ripartizioni esportati in Excel.", "should_trigger": true},
+  {"query": "Implementa il filtro per codice_territorio nell'endpoint GET /api/v1/opere. Deve supportare ricerca multipla con virgola come separatore.", "should_trigger": true},
+
+  {"query": "Leggi il file src/main/java/it/siae/catalogo/CatalogoService.java e dimmi come funziona il metodo cercaOpera.", "should_trigger": false},
+  {"query": "Puoi fare review del codice su feature/SPORT-456? Voglio capire se l'approccio e' corretto prima di continuare.", "should_trigger": false},
+  {"query": "Come dovremmo progettare il sistema di notifiche real-time per il portale associati? SQS o EventBridge?", "should_trigger": false},
+  {"query": "Il Glue job bronze-to-silver fallisce con OutOfMemoryError. Puoi investigare cosa sta succedendo?", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-789-nuovo-endpoint e pusha il branch su origin.", "should_trigger": false},
+  {"query": "Ho finito l'implementazione, i test passano tutti. Possiamo committare e aprire la PR.", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI aggiornata per il servizio catalogo-service.", "should_trigger": false},
+  {"query": "Il servizio report-service risponde con errore 500 in collaudo. Puoi guardare i log CloudWatch?", "should_trigger": false},
+  {"query": "Qual e' la struttura standard dei progetti Spring Boot in SIAE? Package naming e layer.", "should_trigger": false},
+  {"query": "Il reviewer ha chiesto di aggiungere la gestione degli errori nel controller. Come rispondo ai commenti sulla PR?", "should_trigger": false}
+]

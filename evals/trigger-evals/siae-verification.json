@@ -1,0 +1,23 @@
+[
+  {"query": "Ho finito di implementare l'endpoint per la ricerca opere per ISWC. I test passano tutti, puoi fare il commit?", "should_trigger": true},
+  {"query": "Fatto! Ho fixato il bug nel calcolo delle ripartizioni. Ora il totale delle quote torna a 100%. Committiamo.", "should_trigger": true},
+  {"query": "Il deploy su collaudo e' andato a buon fine, il servizio catalogo-service risponde correttamente su tutti gli endpoint.", "should_trigger": true},
+  {"query": "Ho completato il task SPORT-234. La migrazione DynamoDB e' finita e i dati sono tutti allineati.", "should_trigger": true},
+  {"query": "Funziona tutto, ho testato manualmente l'integrazione con il sistema SPORT e le risposte sono corrette. Possiamo chiudere la story.", "should_trigger": true},
+  {"query": "E' tutto ok, il Glue job bronze-to-silver processa correttamente i nuovi campi codice_territorio e tipo_utilizzo.", "should_trigger": true},
+  {"query": "I test di integrazione passano tutti. Il servizio notifiche invia correttamente le email quando un contratto viene registrato.", "should_trigger": true},
+  {"query": "Fixato il NullPointerException nel RipartizioneService. Era un problema di null check sulla lista titolari. Ora funziona.", "should_trigger": true},
+  {"query": "La PR e' pronta, ho risolto tutti i commenti del reviewer e i test sono verdi. Possiamo mergeare.", "should_trigger": true},
+  {"query": "Ho verificato in locale, il calcolo delle quote d'autore restituisce i valori corretti anche per le opere con piu' di 5 titolari. Task completato.", "should_trigger": true},
+
+  {"query": "Il test TestRipartizioneService::testCalcoloQuote fallisce con NullPointerException alla riga 234. Puoi debuggare?", "should_trigger": false},
+  {"query": "Scrivi il metodo validateISWC nella classe ISWCValidator seguendo i nostri standard di validazione.", "should_trigger": false},
+  {"query": "Puoi fare review del codice che ho pushato su feature/SPORT-456-fix-auth? Voglio un parere prima di aprire la PR.", "should_trigger": false},
+  {"query": "Come dovremmo progettare il nuovo servizio di riconciliazione tra SPORT e il data lake? Servono Step Functions?", "should_trigger": false},
+  {"query": "Leggi il file src/main/java/it/siae/catalogo/CatalogoService.java e spiegami il flusso di ricerca opere.", "should_trigger": false},
+  {"query": "Aggiungi un endpoint POST /api/v1/contratti per la registrazione di nuovi contratti nel servizio contratti-service.", "should_trigger": false},
+  {"query": "Qual e' il naming convention per i DTO nei servizi Spring Boot SIAE?", "should_trigger": false},
+  {"query": "Devo creare il branch feature/SPORT-567-nuovo-report e pusharlo su origin.", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI per gli endpoint del servizio ripartizioni-service.", "should_trigger": false},
+  {"query": "Implementa il test unitario per il metodo calcolaQuoteAutore nel RipartizioneService.", "should_trigger": false}
+]
