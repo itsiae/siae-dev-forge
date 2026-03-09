@@ -19,6 +19,7 @@ When --eval-file: prints JSON with results for each query.
 """
 
 import argparse
+import base64
 import json
 import os
 import subprocess
@@ -79,31 +80,68 @@ def build_skill_tool():
     }
 
 
+def get_bedrock_client(region):
+    """Create Bedrock runtime client with proper auth.
+
+    Supports two auth methods:
+    1. AWS_BEARER_TOKEN_BEDROCK (Bedrock API key) — uses HTTP bearer token via requests
+    2. Standard AWS credentials (IAM/SSO) — uses boto3 SigV4
+    """
+    bearer_token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+    if bearer_token:
+        return ("bearer", bearer_token, region)
+
+    import boto3
+    return ("boto3", boto3.client("bedrock-runtime", region_name=region), region)
+
+
+def call_bedrock_converse(client_info, model_id, system_prompt, messages, tools):
+    """Call Bedrock Converse API with either bearer or boto3 auth."""
+    auth_type, client, region = client_info
+
+    if auth_type == "bearer":
+        import requests as req
+
+        url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/converse"
+        headers = {
+            "Authorization": f"Bearer {client}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        body = {
+            "system": [{"text": system_prompt}],
+            "messages": messages,
+            "toolConfig": {"tools": [{"toolSpec": t} for t in tools]},
+            "inferenceConfig": {"maxTokens": 1024, "temperature": 0.0}
+        }
+        resp = req.post(url, headers=headers, json=body, timeout=60)
+        if resp.status_code != 200:
+            raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.json()
+
+    else:
+        # boto3 client
+        response = client.converse(
+            modelId=model_id,
+            messages=messages,
+            system=[{"text": system_prompt}],
+            toolConfig={"tools": [{"toolSpec": t} for t in tools]},
+            inferenceConfig={"maxTokens": 1024, "temperature": 0.0}
+        )
+        return response
+
+
 def test_trigger_bedrock(query, skill_catalog, model_id, region):
     """Test if a query triggers any skill via Bedrock Converse API"""
-    import boto3
-
-    client = boto3.client("bedrock-runtime", region_name=region)
+    client_info = get_bedrock_client(region)
 
     system_prompt = build_system_prompt(skill_catalog)
     skill_tool = build_skill_tool()
 
     try:
-        response = client.converse(
-            modelId=model_id,
-            messages=[
-                {"role": "user", "content": [{"text": query}]}
-            ],
-            system=[{"text": system_prompt}],
-            toolConfig={
-                "tools": [
-                    {"toolSpec": skill_tool}
-                ]
-            },
-            inferenceConfig={
-                "maxTokens": 1024,
-                "temperature": 0.0
-            }
+        messages = [{"role": "user", "content": [{"text": query}]}]
+        response = call_bedrock_converse(
+            client_info, model_id, system_prompt, messages, [skill_tool]
         )
     except Exception as e:
         print(f"ERROR: Bedrock API call failed: {e}", file=sys.stderr)
