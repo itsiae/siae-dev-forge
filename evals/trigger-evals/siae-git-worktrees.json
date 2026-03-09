@@ -1,0 +1,23 @@
+[
+  {"query": "Crea un worktree isolato per implementare il task SPORT-456 senza toccare il branch principale", "should_trigger": true},
+  {"query": "Setup workspace separato per la feature delle licenze sincronizzazione, non voglio sporcare main", "should_trigger": true},
+  {"query": "Implementazione in worktree: devo lavorare su SPORT-789 in parallelo senza conflitti col lavoro corrente", "should_trigger": true},
+  {"query": "Isola il branch di lavoro per la modifica al modello DynamoDB del servizio catalogo", "should_trigger": true},
+  {"query": "Prepara un worktree per eseguire il piano implementativo della feature codice_territorio", "should_trigger": true},
+  {"query": "Ho un piano con 8 step da implementare su sport-contratti-service, serve un worktree isolato per non rischiare", "should_trigger": true},
+  {"query": "Devo lavorare su due feature in parallelo: SPORT-123 e SPORT-456. Crea worktree separati", "should_trigger": true},
+  {"query": "Prima di iniziare l'implementazione del nuovo endpoint, prepara un workspace isolato con git worktree", "should_trigger": true},
+  {"query": "Voglio un ambiente di lavoro pulito e isolato per la refactoring del layer di persistenza", "should_trigger": true},
+  {"query": "Setup worktree per il task di migrazione da SQS a EventBridge nel servizio notifiche", "should_trigger": true},
+
+  {"query": "Fai git checkout -b feature/SPORT-456-nuovo-endpoint e pusha il branch su origin", "should_trigger": false},
+  {"query": "Merge il branch feature/SPORT-789 in sviluppo e tagga la release v2.3.0", "should_trigger": false},
+  {"query": "Ho finito la feature, come chiudo il branch e creo la PR?", "should_trigger": false},
+  {"query": "Il test TestContrattoService fallisce con NullPointerException, puoi debuggare?", "should_trigger": false},
+  {"query": "Fai review del codice nella PR #45 di sport-catalogo-service", "should_trigger": false},
+  {"query": "Scrivi il piano implementativo per aggiungere il supporto multi-lingua al portale", "should_trigger": false},
+  {"query": "Ho un'idea per un nuovo microservizio di gestione licenze. Come lo progettiamo?", "should_trigger": false},
+  {"query": "Genera la documentazione tecnica del servizio ripartizioni con diagrammi di sequenza", "should_trigger": false},
+  {"query": "Apro un nuovo progetto su sport-auth-service, e' la prima volta che ci lavoro", "should_trigger": false},
+  {"query": "Esegui terraform apply per il modulo ECS del cluster SPORT in ambiente staging", "should_trigger": false}
+]

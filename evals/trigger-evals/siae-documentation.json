@@ -1,0 +1,23 @@
+[
+  {"query": "Genera la documentazione API completa per il servizio catalogo-service con tutti gli endpoint, request/response e codici di errore.", "should_trigger": true},
+  {"query": "Scrivi il README per il servizio ripartizioni-service. Deve includere setup locale, variabili d'ambiente, come eseguire i test e come fare il deploy.", "should_trigger": true},
+  {"query": "Documenta l'architettura del sistema di ingestion SIAE con diagramma dei componenti, flussi dati e dipendenze tra servizi.", "should_trigger": true},
+  {"query": "Genera la specifica OpenAPI 3.0 per il servizio catalogo-service partendo dai controller Spring Boot. Includi esempi e schema dei modelli.", "should_trigger": true},
+  {"query": "Aggiorna la documentazione del servizio contratti prima del release v2.0. Serve aggiornamento changelog, API doc e runbook operativo.", "should_trigger": true},
+  {"query": "Documenta il flusso di ripartizione trimestrale end-to-end: dall'ingestion dei dati alla generazione dei report per gli associati SIAE.", "should_trigger": true},
+  {"query": "Scrivi la documentazione tecnica del modulo Terraform per il networking SIAE. Deve descrivere input, output, dipendenze e come usarlo.", "should_trigger": true},
+  {"query": "Genera il documento di design review per il nuovo servizio licenze-sync. Serve per la presentazione all'architettura review board SIAE.", "should_trigger": true},
+  {"query": "Documenta le convenzioni di naming e gli standard di codifica adottati dal team per i servizi Spring Boot SIAE.", "should_trigger": true},
+  {"query": "Prepara la documentazione di onboarding per un nuovo sviluppatore nel team. Deve coprire setup ambiente, accessi, flusso git e pipeline CI/CD.", "should_trigger": true},
+
+  {"query": "Scrivi il codice dell'endpoint REST per la ricerca opere per ISWC nel servizio catalogo Spring Boot.", "should_trigger": false},
+  {"query": "Il test TestRipartizioneService fallisce con NullPointerException. Puoi debuggare e fixare il problema?", "should_trigger": false},
+  {"query": "Scrivi i test Vitest per il componente Vue.js della tabella ripartizioni con mock delle API.", "should_trigger": false},
+  {"query": "Fai git merge della feature branch nel branch sviluppo dopo aver risolto i conflitti.", "should_trigger": false},
+  {"query": "Ho un'idea per ripensare il flusso di approvazione contratti. Possiamo discuterne e valutare le opzioni?", "should_trigger": false},
+  {"query": "Scrivi il modulo Terraform per la tabella DynamoDB delle opere con GSI per ricerca per titolo.", "should_trigger": false},
+  {"query": "Il Glue job di trasformazione silver-to-gold ha un bug. Il join tra opere e titolari produce duplicati.", "should_trigger": false},
+  {"query": "Verifica che la IAM policy del servizio notifiche segua il principio di least privilege per l'accesso a SES e SNS.", "should_trigger": false},
+  {"query": "Prepara la checklist QA per il rilascio del servizio catalogo in produzione con test case e criteri di accettazione.", "should_trigger": false},
+  {"query": "Quale pattern architetturale e' meglio per il servizio di notifiche real-time? Event sourcing o pub/sub semplice?", "should_trigger": false}
+]

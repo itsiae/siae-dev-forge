@@ -1,0 +1,23 @@
+[
+  {"query": "Apro un nuovo progetto su sport-catalogo-service, non ci ho mai lavorato. Da dove comincio?", "should_trigger": true},
+  {"query": "Primo accesso al repo sport-ripartizioni-engine, ho bisogno di orientarmi", "should_trigger": true},
+  {"query": "Cambio contesto: passo dal servizio notifiche al servizio catalogo opere. Aggiornami sul nuovo repo", "should_trigger": true},
+  {"query": "Non conosco questo codebase, e' un progetto HCL Terraform per l'infrastruttura ECS. Aiutami a capire dove sono", "should_trigger": true},
+  {"query": "Dove mi trovo? Ho appena clonato questo repo e non so nulla del progetto", "should_trigger": true},
+  {"query": "Start sessione su sport-auth-service, e' il mio primo giorno su questo servizio", "should_trigger": true},
+  {"query": "Mi hanno assegnato un task su un repo che non conosco: sport-licenze-sync. Facciamo onboarding", "should_trigger": true},
+  {"query": "Inizio a lavorare su un nuovo microservizio SIAE, devo capire stack, convenzioni e struttura", "should_trigger": true},
+  {"query": "Ho switchato progetto, ora lavoro su sport-data-lake. Contestualizzami", "should_trigger": true},
+  {"query": "E' la prima volta che apro questo repository Python per i Glue job. Orientami sul progetto", "should_trigger": true},
+
+  {"query": "Continuo a lavorare sulla feature SPORT-456 che stavo implementando ieri nel servizio catalogo", "should_trigger": false},
+  {"query": "Scrivi il codice per il nuovo endpoint GET /opere/{iswc} nel catalogo-service", "should_trigger": false},
+  {"query": "Il test di integrazione del servizio auth fallisce con 401 Unauthorized, debugga il problema", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-789-nuovo-campo e committa le modifiche", "should_trigger": false},
+  {"query": "Ho un'idea per ripensare il flusso di approvazione contratti con Step Functions. Brainstorming?", "should_trigger": false},
+  {"query": "Scrivi il piano implementativo per aggiungere il campo codice_territorio all'entita' Opera", "should_trigger": false},
+  {"query": "Mappa tutti i microservizi del sistema SPORT e le dipendenze tra di loro", "should_trigger": false},
+  {"query": "Genera la CODEBASE_MAP.md per questo repository con piu' di 100 file", "should_trigger": false},
+  {"query": "Fai review della PR #34 su sport-contratti-service, il reviewer sono io", "should_trigger": false},
+  {"query": "Esegui i test unitari del package it.siae.catalogo.service e verifica che passino tutti", "should_trigger": false}
+]

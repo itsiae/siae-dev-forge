@@ -1,0 +1,23 @@
+[
+  {"query": "Qual e' il naming convention per i service class nei progetti Spring Boot SIAE? Usiamo il suffisso Service o Manager?", "should_trigger": true},
+  {"query": "Come strutturiamo i package Java nel servizio catalogo-service? Seguiamo il pattern layer-first o feature-first?", "should_trigger": true},
+  {"query": "Qual e' il pattern standard di logging nei servizi SIAE? Usiamo SLF4J con MDC per il correlation ID?", "should_trigger": true},
+  {"query": "Come si fa error handling nei controller Spring Boot SIAE? ControllerAdvice globale o gestione per controller?", "should_trigger": true},
+  {"query": "Qual e' la struttura standard per i progetti TypeScript del frontend portale associati? Folder structure e naming.", "should_trigger": true},
+  {"query": "Come gestiamo le variabili d'ambiente nei moduli Terraform SIAE? Naming convention per le variables.tf.", "should_trigger": true},
+  {"query": "Qual e' il pattern per i DTO nei servizi Java SIAE? Record, Lombok @Data, o POJO tradizionali?", "should_trigger": true},
+  {"query": "Come strutturiamo i Glue job Python nel data lake SIAE? C'e' un template standard per bronze-to-silver?", "should_trigger": true},
+  {"query": "Qual e' la convenzione per i nomi delle tabelle DynamoDB nei servizi SIAE? Prefisso ambiente e naming.", "should_trigger": true},
+  {"query": "Come gestiamo il versioning delle API REST nei servizi SIAE? Path versioning /v1/ o header?", "should_trigger": true},
+
+  {"query": "Vorrei ripensare l'architettura del sistema di notifiche. Passiamo da sincrono ad asincrono con EventBridge?", "should_trigger": false},
+  {"query": "Il test TestCatalogoService::testCercaOpera fallisce con NullPointerException. Puoi debuggare?", "should_trigger": false},
+  {"query": "Crea il branch feature/SPORT-456-nuovo-endpoint e pusha su origin.", "should_trigger": false},
+  {"query": "Ho finito l'implementazione del filtro per territorio. I test passano, committiamo.", "should_trigger": false},
+  {"query": "Scrivi il test unitario per il metodo calcolaRipartizione nel RipartizioneService.", "should_trigger": false},
+  {"query": "Il servizio report-service e' down in collaudo, i pod vanno in CrashLoopBackOff.", "should_trigger": false},
+  {"query": "Apri la PR da feature/SPORT-789 verso sviluppo con la descrizione delle modifiche.", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI per tutti gli endpoint del servizio contratti-service.", "should_trigger": false},
+  {"query": "Il reviewer ha chiesto di aggiungere validazione sull'input del campo codice_fiscale. Come rispondo?", "should_trigger": false},
+  {"query": "Sono pronto per il merge su sviluppo. Il branch e' allineato e i test sono verdi.", "should_trigger": false}
+]

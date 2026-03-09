@@ -2,3 +2,7 @@
 *.swp
 *.swo
 *~
+
+# Eval workspace (risultati temporanei skill-creator)
+evals/workspace/*
+!evals/workspace/.gitkeep

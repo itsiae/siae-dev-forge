@@ -7,6 +7,14 @@
 
 set -euo pipefail
 
+# Parse arguments
+WITH_TRIGGER_REGRESSION=false
+for arg in "$@"; do
+  case "$arg" in
+    --with-trigger-regression) WITH_TRIGGER_REGRESSION=true ;;
+  esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -256,6 +264,20 @@ echo ""
 echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
 TOTAL_PASS=$((TOTAL_PASS + hook_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + hook_fail))
+
+# --- Trigger Regression Tests (opzionale, richiede claude CLI + token) ---
+if [ "$WITH_TRIGGER_REGRESSION" = true ]; then
+  echo ""
+  echo "=== Trigger Regression Tests ==="
+  echo ""
+
+  if [ -x "${SCRIPT_DIR}/run-trigger-regression.sh" ]; then
+    "${SCRIPT_DIR}/run-trigger-regression.sh" || true
+  else
+    echo "  SKIP  run-trigger-regression.sh non trovato o non eseguibile"
+    TOTAL_SKIP=$((TOTAL_SKIP + 1))
+  fi
+fi
 
 # --- Report Finale ---
 echo ""

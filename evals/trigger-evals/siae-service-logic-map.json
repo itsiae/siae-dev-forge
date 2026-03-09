@@ -1,0 +1,23 @@
+[
+  {"query": "Cosa fa sport-contratti-service? Quali sono le regole business principali e i flussi di dominio?", "should_trigger": true},
+  {"query": "Quali sono le regole business del servizio ripartizioni? Voglio un catalogo L1/L2/L3 delle logiche implementate", "should_trigger": true},
+  {"query": "Analizza la logica di dominio del servizio catalogo-opere: entita', invarianti, regole di validazione ISWC", "should_trigger": true},
+  {"query": "Build catalogo L1 L2 L3 per sport-auth-service: macro-funzionalita', sotto-funzioni, dettaglio regole", "should_trigger": true},
+  {"query": "Ci sono regole Drools nel servizio ripartizioni-engine, mappale tutte con condizioni e azioni", "should_trigger": true},
+  {"query": "Impact analysis: se modifico l'entita' Contratto nel servizio contratti, quali regole business sono impattate?", "should_trigger": true},
+  {"query": "Lanciamo su sport-licenze-service: cosa fa questo servizio? Quali pattern di dominio usa?", "should_trigger": true},
+  {"query": "Analizziamo il sistema di calcolo quote nel servizio ripartizioni: regole, eccezioni, edge case", "should_trigger": true},
+  {"query": "Mappa la logica di validazione dei diritti d'autore nel servizio opere-service: tutti i check e le condizioni", "should_trigger": true},
+  {"query": "Voglio capire tutte le business rule del flusso di approvazione contratti: stati, transizioni, guard condition", "should_trigger": true},
+
+  {"query": "Mappa tutti i microservizi del sistema SPORT e le loro dipendenze, chi chiama chi", "should_trigger": false},
+  {"query": "Mappa la struttura del codebase di sport-catalogo, genera la CODEBASE_MAP.md", "should_trigger": false},
+  {"query": "Ho un'idea per aggiungere un nuovo flusso di notifiche push via Firebase. Come lo progettiamo?", "should_trigger": false},
+  {"query": "Scrivi un unit test per il metodo validateContratto nella classe ContrattoValidator", "should_trigger": false},
+  {"query": "Il job Glue bronze-to-silver fallisce con errore di parsing sulla colonna codice_opera", "should_trigger": false},
+  {"query": "Scrivi il piano implementativo per aggiungere il supporto multi-lingua al portale associati", "should_trigger": false},
+  {"query": "Fai review del codice nel ContrattoController, controlla gestione errori e validazione input", "should_trigger": false},
+  {"query": "Apro un nuovo progetto su sport-notifiche-service, non l'ho mai visto prima", "should_trigger": false},
+  {"query": "Crea un worktree isolato per implementare la feature SPORT-456 sul servizio catalogo", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI per gli endpoint del servizio ripartizioni", "should_trigger": false}
+]

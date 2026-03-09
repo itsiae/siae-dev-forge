@@ -1,0 +1,23 @@
+[
+  {"query": "Sono pronto per aprire la PR su feature/SPORT-456-gestione-territori. Cosa devo controllare prima?", "should_trigger": true},
+  {"query": "Il branch feature/SPORT-234-calcolo-quote e' pronto. Prepara tutto per il merge su sviluppo.", "should_trigger": true},
+  {"query": "Finisco il branch: devo fare squash dei commit, aggiornare il CHANGELOG e aprire la PR.", "should_trigger": true},
+  {"query": "Preparo per il merge: verifica che il branch feature/SPORT-789 sia allineato con sviluppo e i test passino.", "should_trigger": true},
+  {"query": "Devo fare squash degli ultimi 6 commit in uno solo prima di aprire la PR per il servizio catalogo-service.", "should_trigger": true},
+  {"query": "Il branch e' pronto per la review. Genera il summary delle modifiche per la descrizione della PR.", "should_trigger": true},
+  {"query": "Ho completato tutte le modifiche su feature/SPORT-567-export-excel. Come finalizzo il branch per la PR?", "should_trigger": true},
+  {"query": "Ready to merge: controlla che non ci siano file temporanei, che il .gitignore sia ok, e prepara la PR.", "should_trigger": true},
+  {"query": "Devo chiudere il branch feature/SPORT-345-refactor. Manca solo il cleanup e la PR.", "should_trigger": true},
+  {"query": "Prepara il branch per la PR: assicurati che ci sia il ticket SPORT-890 nel commit message e che i test siano verdi.", "should_trigger": true},
+
+  {"query": "Crea il branch feature/SPORT-999-nuova-feature a partire da sviluppo per iniziare l'implementazione.", "should_trigger": false},
+  {"query": "Implementa l'endpoint GET /api/v1/ripartizioni con filtro per anno e trimestre.", "should_trigger": false},
+  {"query": "Il servizio catalogo-service restituisce errore 500 quando cerco opere con ISWC non valido.", "should_trigger": false},
+  {"query": "Scrivi i test unitari per il nuovo metodo exportToExcel nel ReportService.", "should_trigger": false},
+  {"query": "Puoi fare review del codice su feature/SPORT-456? Controlla la gestione degli errori.", "should_trigger": false},
+  {"query": "Il reviewer ha chiesto CHANGES REQUESTED: manca la validazione del campo importo nel DTO.", "should_trigger": false},
+  {"query": "Come dovremmo progettare il nuovo sistema di cache per le query frequenti sulle opere?", "should_trigger": false},
+  {"query": "Qual e' il naming convention standard per i repository DynamoDB nei servizi SIAE?", "should_trigger": false},
+  {"query": "Ho fixato il bug nel calcolo delle ripartizioni. Funziona tutto, i test passano.", "should_trigger": false},
+  {"query": "Genera la documentazione tecnica per il modulo Terraform del servizio notifiche.", "should_trigger": false}
+]
