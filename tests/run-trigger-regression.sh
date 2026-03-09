@@ -15,6 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 EVALS_DIR="${PLUGIN_ROOT}/evals/trigger-evals"
 EVAL_SCRIPT="${SCRIPT_DIR}/run-trigger-eval.py"
+RESULTS_DIR="${PLUGIN_ROOT}/evals/results"
 
 # Defaults
 SINGLE_SKILL=""
@@ -75,6 +76,7 @@ for eval_file in "${EVALS_DIR}"/*.json; do
     --runs-per-query "$RUNS_PER_QUERY"
     --num-workers "$NUM_WORKERS"
     --timeout "$TIMEOUT"
+    --results-dir "$RESULTS_DIR"
     --verbose)
 
   [ -n "$MODEL" ] && CMD+=(--model "$MODEL")

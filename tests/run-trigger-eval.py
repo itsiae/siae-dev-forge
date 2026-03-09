@@ -334,6 +334,7 @@ def main():
     parser.add_argument("--runs-per-query", type=int, default=3, help="Runs per query")
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
     parser.add_argument("--model", default=None, help="Model for claude -p")
+    parser.add_argument("--results-dir", default=None, help="Save JSON results to this directory")
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     args = parser.parse_args()
 
@@ -358,6 +359,7 @@ def main():
               f"{args.runs_per_query} runs each, {args.num_workers} workers)",
               file=sys.stderr)
 
+    t0 = time.time()
     output = run_eval(
         eval_set=eval_set,
         skill_name=args.skill,
@@ -369,6 +371,18 @@ def main():
         trigger_threshold=args.trigger_threshold,
         model=args.model,
     )
+    elapsed = time.time() - t0
+
+    # Add metadata for logging
+    output["metadata"] = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "model": args.model or "default",
+        "runs_per_query": args.runs_per_query,
+        "trigger_threshold": args.trigger_threshold,
+        "num_workers": args.num_workers,
+        "timeout": args.timeout,
+        "elapsed_seconds": round(elapsed, 1),
+    }
 
     if args.verbose:
         for r in output["results"]:
@@ -378,8 +392,19 @@ def main():
                   f"{r['query'][:70]}", file=sys.stderr)
         s = output["summary"]
         print(f"Results: {s['passed']}/{s['total']} passed "
-              f"(P:{s['precision']:.2f} R:{s['recall']:.2f} A:{s['accuracy']:.2f})",
+              f"(P:{s['precision']:.2f} R:{s['recall']:.2f} A:{s['accuracy']:.2f}) "
+              f"in {elapsed:.1f}s",
               file=sys.stderr)
+
+    # Save results to file if --results-dir specified
+    if args.results_dir:
+        results_dir = Path(args.results_dir)
+        results_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%d_%H%M%S")
+        result_file = results_dir / f"{timestamp}_{args.skill}.json"
+        result_file.write_text(json.dumps(output, indent=2))
+        if args.verbose:
+            print(f"Results saved to: {result_file}", file=sys.stderr)
 
     print(json.dumps(output, indent=2))
     sys.exit(0 if output["summary"]["failed"] == 0 else 1)
