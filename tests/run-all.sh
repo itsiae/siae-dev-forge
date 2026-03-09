@@ -175,10 +175,11 @@ for skill_dir in "${PLUGIN_ROOT}"/skills/*/; do
     fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni] "
   fi
 
-  # Check 4: Se Card=Si nel Risk Table → almeno un generate-card.py presente
+  # Check 4: Se Card=Si nel Risk Table → almeno una pre-flight card presente
+  # Supporta sia il formato legacy (generate-card.py) che il nuovo formato inline (tabella markdown)
   if grep -qE '\|\s*Si\s*\|' "$skill_file"; then
-    if ! grep -q 'generate-card.py' "$skill_file"; then
-      fail_reasons="${fail_reasons}[MANCA: generate-card.py (Risk Table ha Card=Si)] "
+    if ! grep -qE 'generate-card\.py|🟡 MEDIO|🔴 ALTO|🚨 CRITICO' "$skill_file"; then
+      fail_reasons="${fail_reasons}[MANCA: pre-flight card (Risk Table ha Card=Si)] "
     fi
   fi
 
