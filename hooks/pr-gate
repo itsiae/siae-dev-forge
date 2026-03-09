@@ -39,7 +39,35 @@ Stai per eseguire `gh pr create` o `gh pr edit`. PRIMA di procedere, esegui ques
 git diff $(git merge-base HEAD origin/sviluppo 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "HEAD~1")...HEAD --name-only
 ```
 
-## Step 2: Per ogni file modificato, controlla
+## Step 2: Verifica versione plugin.json
+
+```bash
+LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+CURRENT_VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])" 2>/dev/null || echo "")
+echo "Ultimo release: $LATEST_TAG"
+echo "plugin.json:    v$CURRENT_VERSION"
+```
+
+Se `v$CURRENT_VERSION == $LATEST_TAG` (versione NON aggiornata):
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  DevForge — MEDIO  ·  plugin.json non aggiornato                  ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  plugin.json version: [CURRENT]  ==  ultimo release: [LATEST_TAG] ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  Perche': il workflow auto-release usa plugin.json per calcolare   ┃
+┃           la nuova versione. Se e' uguale all'ultimo tag, crea     ┃
+┃           un bump PR separato invece di rilasciare subito.         ┃
+┃  Fix:     Aggiorna "version" in .claude-plugin/plugin.json         ┃
+┃           e .claude-plugin/marketplace.json prima di aprire la PR  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+Chiedi conferma all'utente se vuole procedere comunque senza aggiornare la versione.
+Se `v$CURRENT_VERSION != $LATEST_TAG` (versione aggiornata): procedi senza warning.
+
+## Step 3: Per ogni file modificato, controlla
 
 **CRITICO — Blocca gh pr create:**
 - AWS Key: `AKIA[0-9A-Z]{16}`
