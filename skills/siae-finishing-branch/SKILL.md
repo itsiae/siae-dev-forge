@@ -48,6 +48,17 @@ Usa questa skill quando:
 
 ---
 
+## 0. Environment Check — GitHub CLI
+
+```
+REQUIRED SUB-SKILL: siae-git-env
+```
+
+Esegui `siae-git-env` prima di procedere. Il `GH_MODE` determina i comandi usati in Step 5 (apertura PR).
+Se già eseguita nella sessione, usa il contesto esistente senza ripetere il check.
+
+---
+
 ## Processo in 5 Step
 
 ### Step 1 — Verifica Stato del Branch
@@ -198,6 +209,8 @@ git rebase -i origin/sviluppo
 
 **Dopo la conferma:**
 
+**Se GH_MODE:**
+
 ```bash
 # Push del branch
 git push origin feature/{JIRA-ID}-descrizione
@@ -227,6 +240,39 @@ gh pr create \
 - [ ] Documentazione aggiornata (se necessario)
 EOF
 )"
+```
+
+**Se FALLBACK_MODE:**
+
+```bash
+# Push del branch
+git push origin feature/{JIRA-ID}-descrizione
+```
+
+Poi apri la PR manualmente:
+1. Vai su: `https://github.com/<owner>/<repo>/compare/sviluppo...feature/{JIRA-ID}-descrizione`
+2. Clicca "Create pull request"
+3. Usa il template seguente per il body:
+
+```
+## Cosa fa questa PR
+
+[Descrizione della modifica]
+
+## Come testare
+
+1. ...
+2. ...
+
+## JIRA
+
+[JIRA-ID](https://jira.siae.it/browse/JIRA-ID)
+
+## Checklist
+
+- [ ] Test passano
+- [ ] Self-review completata
+- [ ] Documentazione aggiornata (se necessario)
 ```
 
 ---
