@@ -1,7 +1,7 @@
 {
   "name": "siae-devforge",
   "description": "SIAE Development Forge - AI SDLC Chain per sviluppo software conforme a standard SIAE. 27 skill, 12 comandi, 3 agent, 3 hook.",
-  "version": "1.3.0-mvp",
+  "version": "1.4.0-mvp",
   "author": {
     "name": "SIAE AI Competence Center",
     "email": "ai-cc@siae.it"
@@ -9,5 +9,12 @@
   "homepage": "https://github.com/itsiae/siae-devforge",
   "repository": "https://github.com/itsiae/siae-devforge",
   "license": "PROPRIETARY",
-  "keywords": ["siae", "sdlc", "tdd", "code-review", "architecture", "devforge"]
+  "keywords": [
+    "siae",
+    "sdlc",
+    "tdd",
+    "code-review",
+    "architecture",
+    "devforge"
+  ]
 }
