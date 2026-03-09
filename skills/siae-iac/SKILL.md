@@ -1,9 +1,8 @@
 ---
 name: siae-iac
 description: >
-  Use when writing or modifying Terraform/Terragrunt infrastructure code for AWS.
-  Trigger: scrivi modulo Terraform, configura terragrunt.hcl, file .tf, infrastruttura AWS,
-  VPC, ECS, Lambda, DynamoDB table, S3 bucket, security group, API Gateway.
+  ALWAYS use when writing or modifying Terraform modules, terragrunt.hcl files, or AWS infrastructure code.
+  Trigger: modulo Terraform, terragrunt, file .tf, .hcl, VPC, ECS, Lambda, DynamoDB table, S3 bucket, security group, API Gateway, infrastruttura AWS.
 ---
 
 # SIAE Infrastructure as Code

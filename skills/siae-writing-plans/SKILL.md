@@ -1,9 +1,8 @@
 ---
 name: siae-writing-plans
 description: >
-  Use when transforming an approved design into a concrete implementation plan with bite-sized tasks.
-  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized,
-  aggiorna piano, docs/plans/.
+  ALWAYS use when transforming an approved design into a concrete step-by-step implementation plan.
+  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo

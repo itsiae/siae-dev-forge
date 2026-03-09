@@ -1,9 +1,8 @@
 ---
 name: siae-git-env
 description: >
-  Use when configuring git environment, hooks, .gitignore, or git-related setup for a project.
-  Trigger: configura git, setup git hooks, .gitignore, git config, pre-commit hooks, GPG commit,
-  .gitattributes, git-lfs, template commit message.
+  ALWAYS use when configuring git environment, setting up hooks, .gitignore, GPG signing, or git-lfs for a project.
+  Trigger: configura git, git hooks, .gitignore, git config, pre-commit hooks, GPG commit, .gitattributes, git-lfs, template commit message, credenziali git.
 ---
 
 # siae-git-env — GitHub CLI Environment Check

@@ -1,9 +1,8 @@
 ---
 name: siae-subagent-development
 description: >
-  Use when dispatching implementation tasks to parallel subagents from a validated plan.
-  Trigger: /forge-implement, implementa il piano, dispatcha task, lancia implementer,
-  orchestrazione implementazione, subagent, controller-subagent.
+  ALWAYS use when dispatching implementation tasks to parallel subagents from a validated plan in the current session.
+  Trigger: /forge-implement, implementa il piano, dispatcha task, lancia implementer, subagent, controller-subagent, orchestrazione implementazione.
 ---
 
 # SIAE Subagent Development — Orchestratore Implementazione

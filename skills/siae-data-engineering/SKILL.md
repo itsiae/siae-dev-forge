@@ -1,9 +1,8 @@
 ---
 name: siae-data-engineering
 description: >
-  Use when building data pipelines, ETL jobs, or data lake transformations with AWS Glue/PySpark.
-  Trigger: ETL, data pipeline, Glue job, PySpark, Step Functions, data lake, Medallion architecture,
-  bronze-to-silver, data quality check, crawler.
+  ALWAYS use when writing Glue jobs, PySpark transformations, ETL pipelines, or data lake operations.
+  Trigger: Glue job, PySpark, ETL, data pipeline, Step Functions, data lake, Medallion architecture, bronze-to-silver, data quality, crawler, batch notturno.
 ---
 
 # SIAE Data Engineering

@@ -1,9 +1,8 @@
 ---
 name: siae-parallel-agents
 description: >
-  Use when debugging multiple independent failures simultaneously or running parallel independent tasks.
-  Trigger: 2 o piu' failure indipendenti, task paralleli, investigazione multi-dominio, fix paralleli,
-  agenti paralleli, bug indipendenti.
+  ALWAYS use when debugging 2+ independent failures simultaneously or dispatching parallel independent tasks.
+  Trigger: failure indipendenti, task paralleli, fix paralleli, investigazione multi-dominio, agenti paralleli, bug indipendenti, moduli rotti contemporaneamente.
 ---
 
 # SIAE Parallel Agents

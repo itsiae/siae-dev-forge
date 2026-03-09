@@ -1,9 +1,8 @@
 ---
 name: siae-frontend
 description: >
-  Use when developing frontend components, writing frontend tests, or deploying to S3+CloudFront.
-  Trigger: componente Vue.js, test Vitest, deploy S3+CloudFront, Firebase, Pinia, Vue Router,
-  responsive design, frontend, brand SIAE.
+  ALWAYS use when writing Vue.js/Angular/React components, Vitest tests, or deploying to S3+CloudFront.
+  Trigger: componente Vue.js, Vitest, test frontend, deploy S3 CloudFront, Firebase, Pinia, Vue Router, responsive design, drag drop, upload file.
 ---
 
 # SIAE Frontend

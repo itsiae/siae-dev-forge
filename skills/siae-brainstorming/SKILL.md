@@ -1,9 +1,9 @@
 ---
 name: siae-brainstorming
 description: >
-  Use before any creative work — creating features, components, or modifying behavior.
-  Trigger: feature nuova, design, componente, funzionalita', modifiche comportamentali,
-  qualsiasi lavoro creativo prima dell'implementazione.
+  Use when planning a new feature or making design decisions — NOT for direct implementation tasks.
+  Trigger: feature nuova, design, come procediamo, come progettiamo, quale approccio,
+  valutare opzioni, trade-off, prima dell'implementazione.
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato

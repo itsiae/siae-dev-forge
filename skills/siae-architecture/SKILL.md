@@ -1,9 +1,8 @@
 ---
 name: siae-architecture
 description: >
-  Use when designing system architecture, choosing patterns, or creating HLD/C4 diagrams.
-  Trigger: design sistema/componente, scelta architetturale, HLD, C4 model, valutazione pattern,
-  microservizi vs monolite, bounded context, CQRS.
+  ALWAYS use when evaluating architectural patterns, creating C4 diagrams, or choosing between design approaches (microservizi vs monolite, CQRS, event-driven).
+  Trigger: pattern architetturale, C4 model, HLD, bounded context, CQRS, microservizi vs monolite, scelta architetturale, resilienza.
 ---
 
 ```
