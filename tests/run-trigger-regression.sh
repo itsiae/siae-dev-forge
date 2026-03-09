@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # run-trigger-regression.sh — Trigger regression tests usando eval queries
 #
-# Uso: ./tests/run-trigger-regression.sh [--skill <nome-skill>]
+# Uso: ./tests/run-trigger-regression.sh [--skill <nome-skill>] [--use-bedrock]
 #
 # Legge i file JSON in evals/trigger-evals/ e verifica che ogni query
-# triggeri (o non triggeri) la skill corrispondente usando claude -p.
+# triggeri (o non triggeri) la skill corrispondente.
+#
+# Modalita':
+#   default:        usa claude -p (richiede Claude CLI, non funziona dentro Claude Code)
+#   --use-bedrock:  usa Bedrock Converse API via Python (funziona ovunque, anche in CI)
 #
 # Exit code: 0 = tutti sopra soglia, 1 = almeno uno sotto soglia
 
@@ -14,24 +18,36 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 EVALS_DIR="${PLUGIN_ROOT}/evals/trigger-evals"
 SINGLE_SKILL=""
+USE_BEDROCK=false
 
 # Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skill) SINGLE_SKILL="$2"; shift 2 ;;
-    *) echo "Uso: $0 [--skill <nome-skill>]"; exit 1 ;;
+    --use-bedrock) USE_BEDROCK=true; shift ;;
+    *) echo "Uso: $0 [--skill <nome-skill>] [--use-bedrock]"; exit 1 ;;
   esac
 done
 
 # Check prerequisites
-if ! command -v claude >/dev/null 2>&1; then
-  echo "  SKIP  claude CLI non disponibile"
-  exit 0
-fi
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "  FAIL  jq non disponibile (richiesto per parsing JSON)"
-  exit 1
+if [ "$USE_BEDROCK" = true ]; then
+  if ! python3 -c "import boto3" 2>/dev/null; then
+    echo "  FAIL  boto3 non disponibile (richiesto per --use-bedrock)"
+    exit 1
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "  FAIL  jq non disponibile (richiesto per parsing JSON)"
+    exit 1
+  fi
+else
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "  SKIP  claude CLI non disponibile (usa --use-bedrock per modalita' API)"
+    exit 0
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "  FAIL  jq non disponibile (richiesto per parsing JSON)"
+    exit 1
+  fi
 fi
 
 # Carica credenziali Bedrock se disponibili
@@ -59,10 +75,52 @@ TOTAL_PASS=0
 TOTAL_WARN=0
 TOTAL_SKIP=0
 
-echo "Trigger Regression Tests"
-echo "========================"
+MODE_LABEL="claude -p"
+[ "$USE_BEDROCK" = true ] && MODE_LABEL="Bedrock API"
+
+echo "Trigger Regression Tests (${MODE_LABEL})"
+echo "=========================================="
 echo ""
 
+# --- Bedrock mode: delegate to Python script ---
+if [ "$USE_BEDROCK" = true ]; then
+  BEDROCK_SCRIPT="${SCRIPT_DIR}/bedrock-trigger-test.py"
+  if [ ! -f "$BEDROCK_SCRIPT" ]; then
+    echo "  FAIL  bedrock-trigger-test.py non trovato"
+    exit 1
+  fi
+
+  for eval_file in "${EVALS_DIR}"/*.json; do
+    [ ! -f "$eval_file" ] && continue
+    [ "$(basename "$eval_file")" = ".gitkeep" ] && continue
+
+    skill_name=$(basename "$eval_file" .json)
+
+    if [ -n "$SINGLE_SKILL" ] && [ "$skill_name" != "$SINGLE_SKILL" ]; then
+      continue
+    fi
+
+    python3 "$BEDROCK_SCRIPT" \
+      --eval-file "$eval_file" \
+      --skill "$skill_name" \
+      --plugin-root "$PLUGIN_ROOT"
+
+    exit_code=$?
+    if [ "$exit_code" -eq 0 ]; then
+      TOTAL_PASS=$((TOTAL_PASS + 1))
+    elif [ "$exit_code" -eq 1 ]; then
+      TOTAL_WARN=$((TOTAL_WARN + 1))
+    else
+      TOTAL_SKIP=$((TOTAL_SKIP + 1))
+    fi
+  done
+
+  echo ""
+  echo "Trigger Regression: PASS=${TOTAL_PASS} WARN=${TOTAL_WARN} SKIP=${TOTAL_SKIP}"
+  exit 0
+fi
+
+# --- Claude CLI mode ---
 # Per ogni file trigger-eval
 for eval_file in "${EVALS_DIR}"/*.json; do
   [ ! -f "$eval_file" ] && continue
