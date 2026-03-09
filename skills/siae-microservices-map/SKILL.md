@@ -455,6 +455,19 @@ Sezioni obbligatorie:
 
 ---
 
+## Step Successivo — Profilazione Logica (opzionale)
+
+Dopo aver generato `SYSTEM_MAP.md`, puoi approfondire cosa fa ogni servizio:
+
+```
+REQUIRED SUB-SKILL: siae-service-logic-map
+```
+
+`siae-service-logic-map` profila domain, entity, workflow e business rule per ogni servizio
+mappato, costruendo il catalogo L1+L2+L3 a partire dal `SYSTEM_MAP.md` prodotto da questa skill.
+
+---
+
 ## Risorse Aggiuntive
 
 - [reference/system-map-template.md](reference/system-map-template.md) — Template completo SYSTEM_MAP.md

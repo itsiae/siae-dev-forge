@@ -210,8 +210,12 @@ Rimani nella sessione corrente. siae-subagent-development gestisce l'orchestrazi
 
 **Se Sessione separata (opzione 2):**
 
+```
+REQUIRED SUB-SKILL: siae-executing-plans
+```
+
 1. Guida l'utente ad aprire una nuova sessione Claude Code nella directory del progetto
-2. Istruisci: "Carica il piano con: `cat docs/plans/<filename>.md` e inizia l'implementazione seguendo la skill siae-subagent-development"
+2. Istruisci: "Carica il piano con: `cat docs/plans/<filename>.md` e inizia l'implementazione seguendo la skill siae-executing-plans"
 3. Il piano ha l'header `REQUIRED SUB-SKILL` embedded — il nuovo Claude lo trovera' automaticamente
 
 **NON invocare siae-subagent-development senza la scelta esplicita dell'utente.**
@@ -317,10 +321,11 @@ siae-brainstorming (Step 6: design approvato)
         └── piano bite-sized salvato in docs/plans/
             └── execution handoff:
                 ├── subagent → REQUIRED SUB-SKILL: siae-subagent-development
-                └── sessione separata → nuova sessione con piano
+                └── sessione separata → REQUIRED SUB-SKILL: siae-executing-plans
 ```
 
 **Skill correlate:**
 - `siae-brainstorming` — produce il design doc che questa skill consuma
-- `siae-subagent-development` — esegue il piano prodotto da questa skill
+- `siae-subagent-development` — esegue il piano nella stessa sessione
+- `siae-executing-plans` — esegue il piano in sessione separata
 - `siae-tdd` — ogni subagent implementer usa TDD per ogni task del piano

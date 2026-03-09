@@ -63,6 +63,17 @@ ESEGUI PER BATCH. RIPORTA. ATTENDI FEEDBACK.
 
 ## Processo
 
+### Step 0 — Setup Workspace Isolato (opzionale)
+
+🟢 SICURO
+
+Se il progetto richiede un branch dedicato o workspace isolato, invoca `siae-git-worktrees`
+prima di iniziare l'implementazione. Previene conflitti con lavoro in corso su altri branch.
+
+```
+REQUIRED SUB-SKILL: siae-git-worktrees (opzionale)
+```
+
 ### Step 1 — Carica e Rivedi il Piano
 
 🟢 SICURO
@@ -239,6 +250,7 @@ siae-writing-plans (Step 5: utente sceglie "sessione separata")
 **Skill correlate:**
 - `siae-writing-plans` — produce il piano che questa skill esegue
 - `siae-subagent-development` — alternativa per sessione unica con subagent
+- `siae-git-worktrees` — setup workspace isolato pre-implementazione (opzionale)
 - `siae-tdd` — usata per ogni task implementativo
 - `siae-verification` — verifica finale pre-completamento
 - `siae-finishing-branch` — chiusura branch post-implementazione
