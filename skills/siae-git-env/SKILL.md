@@ -25,6 +25,14 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+GH_ENV CHECK OBBLIGATORIO PRIMA DI OGNI OPERAZIONE GITHUB-NATIVE
+```
+
+---
+
 ## Quando si Applica
 
 Invoca questa skill come sub-skill prerequisito prima di:
@@ -142,6 +150,9 @@ senza ri-eseguire il check.
 | "E' un'operazione veloce, salto il check" | Senza GIT_ENV CONTEXT le skill downstream non sanno quale modalita' usare. |
 | "gh auth status e' lento" | Il comando ritorna in meno di 1 secondo. Il costo e' trascurabile. |
 | "Basta sapere se gh c'e', l'auth non serve" | gh non autenticata equivale a gh assente per le operazioni GitHub-native. |
+| "Uso sempre lo stesso ambiente, non cambia mai" | L'ambiente di sviluppo e CI/CD cambiano senza preavviso. Il check e' rapido — 2 secondi. |
+| "gh funzionava ieri, funziona ancora" | L'autenticazione scade. Un token revocato non e' rilevabile senza check. |
+| "Sono in FALLBACK_MODE, non cambiera'" | Se gh viene installata o autenticata dopo, solo il check aggiorna il contesto. |
 
 ---
 
@@ -150,10 +161,11 @@ senza ri-eseguire il check.
 1. Esegui il check **UNA SOLA VOLTA** per sessione — non ripetere se GH_MODE è già determinato.
 2. Il GH_MODE determinato è immutabile per la durata della sessione.
 3. Non esporre credenziali o token nell'output del blocco GIT_ENV CONTEXT.
+4. In FALLBACK_MODE, **NON omettere** nessuna operazione — ogni operazione GitHub-native ha un'alternativa documentata.
 
 ---
 
-## Classificazione Rischio
+## Classificazione Rischio Operazioni
 
 | Operazione | Rischio | Card |
 |---|---|---|
