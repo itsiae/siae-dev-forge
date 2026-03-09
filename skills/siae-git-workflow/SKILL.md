@@ -19,6 +19,19 @@ NESSUN COMMIT SU MAIN DIRETTO — SEMPRE FEATURE BRANCH + PR + REVIEW
 
 ---
 
+## 0. Environment Check — GitHub CLI
+
+```
+REQUIRED SUB-SKILL: siae-git-env
+```
+
+Esegui `siae-git-env` prima di qualsiasi operazione git che coinvolge GitHub.
+Il `GH_MODE` determinato qui vale per tutta la sessione.
+
+**Non ripetere il check nella stessa sessione.** Se `siae-git-env` è già stata eseguita, usa il GH_MODE già determinato.
+
+---
+
 ## 1. Branch Strategy SIAE
 
 ```
@@ -180,6 +193,16 @@ git tag CERTIFICAZIONE && git push origin CERTIFICAZIONE
 git checkout produzione && git merge certificazione
 git tag PRODUZIONE && git push origin PRODUZIONE
 ```
+
+**Apertura PR per promozione (se necessaria):**
+
+**Se GH_MODE:**
+```bash
+gh pr create --base <branch-target> --title "release: promozione <da> → <a>" --body "Promozione ambiente"
+```
+
+**Se FALLBACK_MODE:**
+Apri manualmente: `https://github.com/<owner>/<repo>/compare/<branch-target>...<branch-source>`
 
 ---
 
