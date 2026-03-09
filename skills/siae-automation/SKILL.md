@@ -1,8 +1,9 @@
 ---
 name: siae-automation
 description: >
-  Use after QA phase to set up and run E2E automated tests.
-  Trigger: dopo siae-qa, /forge-automate.
+  Use when setting up or running E2E automated tests, CI/CD test pipelines, or test automation frameworks.
+  Trigger: automatizza test, setup Playwright, setup Cypress, test E2E, test di regressione automatici,
+  CI/CD test pipeline, /forge-automate.
 ---
 
 # SIAE Automation — E2E Test Generation & Xray Sync

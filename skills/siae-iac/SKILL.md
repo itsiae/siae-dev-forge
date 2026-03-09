@@ -1,9 +1,9 @@
 ---
 name: siae-iac
 description: >
-  Pattern Infrastructure as Code SIAE: Terraform + Terragrunt. Trigger:
-  scrittura file .tf, .hcl, terragrunt.hcl, modifica infrastruttura AWS.
-  Basato su pattern reali da 44 repo HCL itsiae.
+  Use when writing or modifying Terraform/Terragrunt infrastructure code for AWS.
+  Trigger: scrivi modulo Terraform, configura terragrunt.hcl, file .tf, infrastruttura AWS,
+  VPC, ECS, Lambda, DynamoDB table, S3 bucket, security group, API Gateway.
 ---
 
 # SIAE Infrastructure as Code

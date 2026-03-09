@@ -1,9 +1,9 @@
 ---
 name: siae-architecture
 description: >
-  Pattern architetturali SIAE e modello C4 per design di sistema. Trigger:
-  design sistema/componente, scelta architetturale, HLD, valutazione pattern.
-  Basato su pattern reali estratti da 816 repo itsiae.
+  Use when designing system architecture, choosing patterns, or creating HLD/C4 diagrams.
+  Trigger: design sistema/componente, scelta architetturale, HLD, C4 model, valutazione pattern,
+  microservizi vs monolite, bounded context, CQRS.
 ---
 
 ```

@@ -1,8 +1,9 @@
 ---
 name: siae-parallel-agents
 description: >
-  Trigger: 2 o piu' failure indipendenti da debuggare, task paralleli senza
-  dipendenze, investigazione multi-dominio, /forge-implement con subtask isolati.
+  Use when debugging multiple independent failures simultaneously or running parallel independent tasks.
+  Trigger: 2 o piu' failure indipendenti, task paralleli, investigazione multi-dominio, fix paralleli,
+  agenti paralleli, bug indipendenti.
 ---
 
 # SIAE Parallel Agents
