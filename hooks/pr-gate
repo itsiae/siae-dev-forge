@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pr-gate — PreToolUse hook: security scan before gh pr create/edit
+# pr-gate — PreToolUse hook: blocking security scan + review gate before gh pr create/edit
 
 set -euo pipefail
 
@@ -28,18 +28,86 @@ escape_for_json() {
     printf '%s' "$s"
 }
 
+# ─────────────────────────────────────────────────────────────────
+# SECURITY SCAN — automated, blocking
+# ─────────────────────────────────────────────────────────────────
+
+MERGE_BASE=$(git merge-base HEAD origin/sviluppo 2>/dev/null \
+          || git merge-base HEAD origin/main 2>/dev/null \
+          || echo "HEAD~1")
+
+DIFF_CONTENT=$(git diff "${MERGE_BASE}...HEAD" 2>/dev/null || git diff HEAD~1 2>/dev/null || true)
+
+CRITICAL_FINDINGS=""
+
+# AWS Access Key
+if echo "$DIFF_CONTENT" | grep -qE 'AKIA[0-9A-Z]{16}'; then
+    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}AWS Access Key (AKIA...) trovata nel diff\n"
+fi
+
+# Private Key (-- protetto con grep -e)
+if echo "$DIFF_CONTENT" | grep -qE -e '-----BEGIN .* PRIVATE KEY-----' -e '-----BEGIN PRIVATE KEY-----'; then
+    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Private key trovata nel diff\n"
+fi
+
+# Password hardcoded
+if echo "$DIFF_CONTENT" | grep -qE '[pP]assword[[:space:]]*[:=][[:space:]]*"[^"]{4,}"'; then
+    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Password hardcoded trovata nel diff\n"
+fi
+
+# Connection string with credentials
+if echo "$DIFF_CONTENT" | grep -qE '(mysql|postgres|mongodb)://[^:]+:[^@]+@'; then
+    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Connection string con credenziali trovata nel diff\n"
+fi
+
+# API Key hardcoded
+if echo "$DIFF_CONTENT" | grep -qE '[aA][pP][iI][-_]?[kK][eE][yY][[:space:]]*[:=][[:space:]]*"[^"]{8,}"'; then
+    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}API key hardcoded trovata nel diff\n"
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# BLOCK if critical findings
+# ─────────────────────────────────────────────────────────────────
+
+if [[ -n "$CRITICAL_FINDINGS" ]]; then
+    BLOCK_REASON="DevForge PR Security Gate — BLOCCATO\n\nIssue CRITICI trovati nel diff:\n${CRITICAL_FINDINGS}\nRisolvi questi problemi prima di creare la PR. NON procedere."
+    BLOCK_ESCAPED=$(escape_for_json "$BLOCK_REASON")
+    devforge_log "pr_gate" "blocked" "{\"reason\":\"critical_secrets_found\"}"
+    cat <<EOF
+{
+  "decision": "block",
+  "reason": "${BLOCK_ESCAPED}"
+}
+EOF
+    exit 0
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# PASS — security scan clean, inject review + security instructions
+# ─────────────────────────────────────────────────────────────────
+
+devforge_log "pr_gate" "success" "{\"check\":\"security_scan_clean\"}"
+
 read -r -d '' PR_GATE_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true
-# DevForge PR Security Gate
+# DevForge PR Gate — Security scan PASSED, review gate attivo
 
-Stai per eseguire `gh pr create` o `gh pr edit`. PRIMA di procedere, esegui questo security scan.
+Il security scan automatico e' passato (nessun secret nel diff).
 
-## Step 1: Identifica i file modificati nel branch
+## OBBLIGATORIO — Prima di eseguire `gh pr create`:
 
-```bash
-git diff $(git merge-base HEAD origin/sviluppo 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "HEAD~1")...HEAD --name-only
-```
+### 1. Code Review
+Invoca l'agent `siae-devforge:code-reviewer` sui file modificati in questo branch.
+Se il code-reviewer restituisce BLOCKED o CHANGES REQUESTED con severity CRITICAL:
+**NON procedere con gh pr create. Risolvi prima.**
 
-## Step 2: Verifica versione plugin.json
+### 2. Security Review
+Invoca l'agent `siae-devforge:siae-security` per verificare:
+- Nessuna IAM policy con `"*"` su Action o Resource
+- Nessun S3 bucket pubblico
+- Nessun dato PII (ISRC, IBAN, codice_fiscale) in log o console.log
+Se trovati issue ALTO o CRITICO: **NON procedere. Risolvi prima.**
+
+### 3. Verifica versione plugin.json
 
 ```bash
 LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
@@ -48,65 +116,15 @@ echo "Ultimo release: $LATEST_TAG"
 echo "plugin.json:    v$CURRENT_VERSION"
 ```
 
-Se `v$CURRENT_VERSION == $LATEST_TAG` (versione NON aggiornata):
+Se versioni uguali: avvisa l'utente che la versione non e' stata aggiornata.
 
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  DevForge — MEDIO  ·  plugin.json non aggiornato                  ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  plugin.json version: [CURRENT]  ==  ultimo release: [LATEST_TAG] ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche': il workflow auto-release usa plugin.json per calcolare   ┃
-┃           la nuova versione. Se e' uguale all'ultimo tag, crea     ┃
-┃           un bump PR separato invece di rilasciare subito.         ┃
-┃  Fix:     Aggiorna "version" in .claude-plugin/plugin.json         ┃
-┃           e .claude-plugin/marketplace.json prima di aprire la PR  ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-```
+### 4. Solo dopo aver completato 1-3, procedi con `gh pr create`
 
-Chiedi conferma all'utente se vuole procedere comunque senza aggiornare la versione.
-Se `v$CURRENT_VERSION != $LATEST_TAG` (versione aggiornata): procedi senza warning.
-
-## Step 3: Per ogni file modificato, controlla
-
-**CRITICO — Blocca gh pr create:**
-- AWS Key: `AKIA[0-9A-Z]{16}`
-- Password hardcoded: `[pP]assword\s*[:=]\s*["'][^"']+["']`
-- Private key: `-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----`
-- Connection string con credenziali: `(mysql|postgres|mongodb)://[^:]+:[^@]+@`
-- API Key hardcoded: `[aA][pP][iI][-_]?[kK][eE][yY]\s*[:=]\s*["'][^"']+["']`
-
-**ALTO — Warn + richiedi conferma:**
-- IAM policy con `"*"` su Action o Resource
-- S3 bucket con `acl = "public-read"` o `block_public_acls = false`
-- Lambda senza VPC su handler che tratta `ISRC`, `IBAN`, `codice_fiscale`
-
-**MEDIO — Warning:**
-- `console.log` o `print()` con variabili che sembrano PII
-- Valori sensibili non gestiti da Secrets Manager
-
-## Step 3: Mostra risultati
-
-**Se CRITICO trovato:**
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  DevForge — CRITICO  ·  Security issue rilevato pre-PR            ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  File:    [file]  Issue: [descrizione]                             ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Perche': Security issue critico blocca la PR                      ┃
-┃  Se NO:   Vulnerabilita' critica entra nel repository              ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-NON procedere con gh pr create. Risolvi prima il problema CRITICO.
-```
-
-**Se ALTO trovato:** mostra pre-flight card ALTO e chiedi conferma prima di procedere.
-
-**Se nessun issue:** procedi con `gh pr create` normalmente.
+NON saltare questi step. NON razionalizzare. Il gate esiste per proteggere il repository.
 INSTRUCTIONS_EOF
 
 pr_gate_escaped=$(escape_for_json "$PR_GATE_INSTRUCTIONS")
-pr_gate_context="<EXTREMELY_IMPORTANT>\nDevForge PR Security Gate attivo.\n\n${pr_gate_escaped}\n</EXTREMELY_IMPORTANT>"
+pr_gate_context="<EXTREMELY_IMPORTANT>\nDevForge PR Gate attivo — security scan PASSED.\n\n${pr_gate_escaped}\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {
