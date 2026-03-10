@@ -1,8 +1,8 @@
 ---
 name: siae-codebase-map
 description: >
-  mappa questo codebase, documenta l'architettura, /forge-map,
-  codebase > 50 file senza docs/CODEBASE_MAP.md, CODEBASE_MAP.md da aggiornare
+  ALWAYS use when mapping a codebase, generating CODEBASE_MAP.md, or documenting project structure for onboarding.
+  Trigger: mappa codebase, struttura progetto, CODEBASE_MAP.md, /forge-map, analizza architettura repo, onboarding su repo, come e organizzato il codice.
 ---
 
 # SIAE Codebase Map

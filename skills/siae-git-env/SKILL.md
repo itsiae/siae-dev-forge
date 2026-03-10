@@ -1,9 +1,8 @@
 ---
 name: siae-git-env
 description: >
-  REQUIRED SUB-SKILL — invocata da siae-git-workflow e siae-finishing-branch
-  prima di operazioni GitHub-native. Trigger: qualsiasi operazione che richiede
-  gh CLI o alternative GitHub (PR, review, merge).
+  ALWAYS use when configuring git environment, setting up hooks, .gitignore, GPG signing, or git-lfs for a project.
+  Trigger: configura git, git hooks, .gitignore, git config, pre-commit hooks, GPG commit, .gitattributes, git-lfs, template commit message, credenziali git.
 ---
 
 # siae-git-env — GitHub CLI Environment Check

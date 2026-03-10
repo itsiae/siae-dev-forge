@@ -1,8 +1,8 @@
 ---
 name: siae-writing-plans
 description: >
-  Use when a design has been approved and needs to become an implementation plan.
-  Trigger: design approvato da siae-brainstorming, spec/requisiti esistenti, piano da aggiornare.
+  ALWAYS use when transforming an approved design into a concrete step-by-step implementation plan.
+  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo

@@ -6,3 +6,6 @@
 # Eval workspace (risultati temporanei skill-creator)
 evals/workspace/*
 !evals/workspace/.gitkeep
+
+# Eval results (log trigger regression, generati da run-trigger-eval.py)
+evals/results/

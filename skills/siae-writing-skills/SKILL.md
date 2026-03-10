@@ -1,9 +1,8 @@
 ---
 name: siae-writing-skills
 description: >
-  Use when creating new DevForge skills — covers persuasion principles, TDD
-  methodology for documentation, and SIAE-specific patterns. Trigger: creare
-  una nuova skill, migliorare skill esistenti, progettare behaviour change.
+  ALWAYS use when creating new DevForge skills or improving existing ones.
+  Trigger: nuova skill DevForge, migliora skill, scrivi skill, behaviour change, template skill, progetta skill.
 ---
 
 # Scrivere Skill DevForge Efficaci — Guida per Autori

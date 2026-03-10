@@ -1,9 +1,8 @@
 ---
 name: siae-data-engineering
 description: >
-  Pattern data engineering SIAE: Medallion Architecture, AWS Glue, PySpark.
-  Trigger: ETL, data pipeline, Glue job, Step Functions, data lake.
-  Basato su pattern reali da 23 repo Python itsiae.
+  ALWAYS use when writing Glue jobs, PySpark transformations, ETL pipelines, or data lake operations.
+  Trigger: Glue job, PySpark, ETL, data pipeline, Step Functions, data lake, Medallion architecture, bronze-to-silver, data quality, crawler, batch notturno.
 ---
 
 # SIAE Data Engineering
