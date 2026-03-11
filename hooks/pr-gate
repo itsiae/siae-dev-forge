@@ -89,25 +89,35 @@ fi
 devforge_log "pr_gate" "success" "{\"check\":\"security_scan_clean\"}"
 
 read -r -d '' PR_GATE_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true
-# DevForge PR Gate — Security scan PASSED, review gate attivo
+# DevForge PR Gate — Security scan PASSED
 
 Il security scan automatico e' passato (nessun secret nel diff).
 
-## OBBLIGATORIO — Prima di eseguire `gh pr create`:
+## AZIONE OBBLIGATORIA — Dispatch Agent Review
 
-### 1. Code Review
-Invoca l'agent `siae-devforge:code-reviewer` sui file modificati in questo branch.
-Se il code-reviewer restituisce BLOCKED o CHANGES REQUESTED con severity CRITICAL:
-**NON procedere con gh pr create. Risolvi prima.**
+DEVI dispatchare ENTRAMBI gli agent ADESSO, PRIMA di eseguire gh pr create.
+Questo NON e' opzionale. NON e' un suggerimento. E' un gate bloccante.
 
-### 2. Security Review
-Invoca l'agent `siae-devforge:siae-security` per verificare:
-- Nessuna IAM policy con `"*"` su Action o Resource
-- Nessun S3 bucket pubblico
-- Nessun dato PII (ISRC, IBAN, codice_fiscale) in log o console.log
-Se trovati issue ALTO o CRITICO: **NON procedere. Risolvi prima.**
+### Step 1: Dispatch code-reviewer agent
 
-### 3. Verifica versione plugin.json
+Usa il tool Agent con subagent_type siae-devforge:code-reviewer.
+Il prompt deve includere: branch corrente, file modificati, design doc se presente.
+ATTENDI il risultato.
+
+Se il verdetto e' BLOCKED (>= 1 CRITICAL): BLOCCA la PR. NON procedere.
+Se il verdetto e' CHANGES REQUESTED (>= 1 MAJOR): mostra all'utente e chiedi conferma.
+Se il verdetto e' APPROVED: procedi.
+
+### Step 2: Dispatch spec-reviewer agent
+
+Usa il tool Agent con subagent_type siae-devforge:spec-reviewer.
+Il prompt deve includere: design doc da docs/plans/, file modificati.
+ATTENDI il risultato.
+
+Se il verdetto e' FAIL: mostra discrepanze e chiedi conferma all'utente.
+Se il verdetto e' PASS: procedi.
+
+### Step 3: Verifica versione plugin.json
 
 ```bash
 LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
@@ -118,9 +128,16 @@ echo "plugin.json:    v$CURRENT_VERSION"
 
 Se versioni uguali: avvisa l'utente che la versione non e' stata aggiornata.
 
-### 4. Solo dopo aver completato 1-3, procedi con `gh pr create`
+### Step 4: Solo dopo aver completato 1-3, procedi con `gh pr create`
 
-NON saltare questi step. NON razionalizzare. Il gate esiste per proteggere il repository.
+Se hai saltato Step 1 o Step 2, stai violando il gate. FERMATI e torna indietro.
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Sono solo file markdown, non serve review" | Ogni PR merita review. I bug nascono dalle assunzioni. |
+| "Ho gia' verificato io" | Il self-review ha bias. Gli agent sono indipendenti. |
+| "L'utente ha fretta" | I bug in produzione rallentano piu' di una review. |
+| "Gli agent sono lenti" | Lancia entrambi in parallelo. |
 INSTRUCTIONS_EOF
 
 pr_gate_escaped=$(escape_for_json "$PR_GATE_INSTRUCTIONS")
