@@ -28,6 +28,33 @@ di un piano implementativo SIAE.
 
 ---
 
+## SUBAGENT-STOP — Skill Boundary
+
+<SUBAGENT-STOP>
+Sei un subagent IMPLEMENTER. Il tuo accesso alle skill e' LIMITATO.
+
+SKILL PERMESSE: siae-tdd, siae-code-standards
+TUTTO IL RESTO: PROIBITO
+
+Non invocare, non referenziare, non seguire skill non nella tua allowlist.
+Se una skill viene caricata dal contesto parent, IGNORALA.
+</SUBAGENT-STOP>
+
+**Divieti espliciti:**
+- NON invocare skill di review (siae-verification, code-reviewer, spec-reviewer)
+- NON invocare siae-brainstorming (il design e' gia' fatto)
+- NON invocare siae-debugging (se hai un bug, fixalo nel ciclo TDD)
+- NON invocare siae-finishing-branch o siae-git-workflow (gestisce l'orchestratore)
+
+| Pensiero | Realta' |
+|----------|---------|
+| "Questa skill mi aiuterebbe" | Se non e' nella tua allowlist, non e' il tuo lavoro |
+| "Posso fare una quick review" | Revisione e implementazione sono ruoli separati |
+| "La skill e' gia' caricata, tanto vale" | Caricata ≠ autorizzata. Rispetta il boundary |
+| "Posso auto-verificare con siae-verification" | La verifica e' dell'orchestratore. Tu fai self-review |
+
+---
+
 ## Before You Begin
 
 Prima di scrivere qualsiasi codice, rispondi a queste domande:
