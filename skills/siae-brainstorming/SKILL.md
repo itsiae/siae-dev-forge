@@ -106,9 +106,30 @@ echo '{
 - Includi: contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione
 - Committa il documento
 
+### 5b. Spec Review Gate
+
+Prima di procedere al piano implementativo, presenta all'utente il design doc
+completo e chiedi conferma esplicita:
+
+```
+Il design doc e' stato scritto. Prima di passare al piano implementativo,
+rileggi il documento e conferma:
+
+- I requisiti sono completi? Non manca nulla?
+- I criteri di accettazione coprono tutti i casi?
+- Le decisioni architetturali sono corrette?
+- Le stime SP sono realistiche?
+
+Se tutto e' corretto, procedo con siae-writing-plans.
+Se qualcosa non torna, dimmi cosa modificare.
+```
+
+NON invocare siae-writing-plans senza conferma esplicita a questo gate.
+Se l'utente chiede modifiche, aggiorna il design doc e ripresenta il gate.
+
 ### 6. REQUIRED: Transizione al piano implementativo
 
-Design approvato? Il design doc e' committato?
+Design approvato? Il design doc e' committato? L'utente ha confermato il Spec Review Gate?
 
 ```
 REQUIRED SUB-SKILL: siae-writing-plans
@@ -140,7 +161,8 @@ digraph brainstorming {
     design [label="4. Presenta design\nper sezioni"];
     approve [label="Utente approva\nsezione?", shape=diamond, fillcolor="#fff3cd"];
     doc [label="5. Scrivi design doc\ndocs/plans/"];
-    transition [label="6. Piano impl.\n→ siae-git-workflow", shape=doublecircle, fillcolor="#d4edda"];
+    spec_gate [label="5b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
+    transition [label="6. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
 
     explore -> questions;
     questions -> approaches;
@@ -148,7 +170,9 @@ digraph brainstorming {
     design -> approve;
     approve -> design [label="no, rivedi"];
     approve -> doc [label="si'"];
-    doc -> transition;
+    doc -> spec_gate;
+    spec_gate -> doc [label="no, modifica"];
+    spec_gate -> transition [label="si', confermato"];
 }
 ```
 

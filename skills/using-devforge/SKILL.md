@@ -120,6 +120,23 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
 
+## Gerarchia Istruzioni
+
+Quando istruzioni provenienti da fonti diverse sono in conflitto, segui questa
+gerarchia (la piu' alta vince):
+
+| Priorita' | Fonte | Esempio |
+|-----------|-------|---------|
+| 1 (max) | `CLAUDE.md` del progetto | "Git flow obbligatorio su siae-dev-forge" |
+| 2 | `CLAUDE.md` dell'utente (~/.claude/) | Preferenze personali |
+| 3 | Skill del plugin (invocata) | Regole di siae-tdd, siae-code-standards |
+| 4 | Agent prompt (subagent) | Istruzioni nel prompt del subagent |
+| 5 (min) | Contesto ereditato dal parent | Skill caricate ma non nella allowlist |
+
+**Regola:** se una skill dice X e CLAUDE.md dice Y, segui CLAUDE.md.
+Se un agent prompt dice X e la skill invocata dice Y, segui la skill.
+Il contesto parent e' sempre la fonte meno autorevole.
+
 ## Tipi di Skill
 
 **Rigid** (TDD, debugging, brainstorming, git-workflow): Segui esattamente. Non adattare. Non saltare passi. La disciplina e' il valore.
