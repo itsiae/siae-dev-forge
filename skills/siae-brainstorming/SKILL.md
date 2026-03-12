@@ -205,8 +205,10 @@ digraph brainstorming {
     node [shape=box, style="rounded,filled", fillcolor="#f0f0f0", fontname="Helvetica"];
     edge [fontname="Helvetica", fontsize=10];
 
-    explore [label="1. Esplora contesto\nprogetto + JIRA"];
-    questions [label="2. Domande\nchiarificatrici"];
+    intake [label="1. Smart Intake\nleggi codebase, inferisci"];
+    confirm [label="2. Presenta inferenze\nconferma rapida"];
+    need_questions [label="Campi LOW\no mancanti?", shape=diamond, fillcolor="#fff3cd"];
+    ask [label="Domande mirate\n(solo cio' che manca)"];
     approaches [label="3. Proponi 2-3\napprocci + SP"];
     design [label="4. Presenta design\nper sezioni"];
     approve [label="Utente approva\nsezione?", shape=diamond, fillcolor="#fff3cd"];
@@ -214,8 +216,11 @@ digraph brainstorming {
     spec_gate [label="5b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
     transition [label="6. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
 
-    explore -> questions;
-    questions -> approaches;
+    intake -> confirm;
+    confirm -> need_questions;
+    need_questions -> ask [label="si"];
+    need_questions -> approaches [label="no, tutto HIGH"];
+    ask -> approaches;
     approaches -> design;
     design -> approve;
     approve -> design [label="no, rivedi"];
