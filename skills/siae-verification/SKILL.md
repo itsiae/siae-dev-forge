@@ -284,6 +284,8 @@ Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la re
 VERIFICA COMPLETATA (manuale):
   Comandi:   [lista — eseguiti dall'utente]
   Risultato: [basato su output fornito dall'utente]
+  Evidenza:
+    - path/to/file.ext:NN — descrizione breve
   Claim:     [dichiarazione]
 ```
 

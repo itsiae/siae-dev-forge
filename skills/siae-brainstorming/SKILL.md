@@ -281,11 +281,15 @@ Se l'utente conferma, crea il ticket con `createJiraIssue`.
 
 ## Il Processo nel Dettaglio
 
-**Comprendere l'idea:**
-- Controlla lo stato attuale del progetto (file, doc, commit recenti)
-- Fai domande una alla volta per raffinare l'idea
-- Preferisci domande a scelta multipla, ma le domande aperte vanno bene
-- Focus: scopo, vincoli, criteri di successo
+**Smart Intake — Inferisci prima:**
+- Leggi CLAUDE.md, manifest, struttura directory, git log, docs/plans/
+- Inferisci stack, pattern, test framework, build tool, naming, dipendenze
+- Ogni inferenza con confidence level (HIGH/MEDIUM/LOW) e citazione file:riga
+
+**Conferma e domande mirate:**
+- Presenta le inferenze in tabella compatta per conferma rapida
+- Domande solo per: confidence LOW, campi non inferiti, scopo del task
+- Se tutto HIGH e l'utente conferma, procedi direttamente agli approcci
 
 **Esplorare gli approcci:**
 - Proponi 2-3 approcci diversi con trade-off
@@ -338,7 +342,7 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | "Ho gia' fatto qualcosa di simile" | Il contesto e' diverso. Il design adatta la soluzione. |
 | "Il design blocca la velocita'" | Il refactoring da design mancato blocca di piu'. |
 | "L'utente approva dopo" | L'approvazione post-hoc non e' approvazione. |
-| "Bastano 2 domande, poi implemento" | Due domande non sostituiscono un design strutturato. |
+| "Ho letto il pom.xml, basta cosi'" | Un file non basta. Smart Intake legge manifest, struttura, log, e docs/plans/ prima di procedere. |
 
 ## Classificazione Rischio Operazioni
 
