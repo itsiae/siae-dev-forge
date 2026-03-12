@@ -192,6 +192,39 @@ git rebase -i origin/sviluppo
 
 ---
 
+### Step 4b — Plan Completion Gate (pre-PR)
+
+Prima di aprire la PR, verifica se esiste un piano associato al lavoro corrente:
+
+```bash
+grep -l "\[PENDING\]\|\[BLOCKED\]" docs/plans/*-plan.md 2>/dev/null
+```
+
+**Se esiste un piano con task non-[DONE]:**
+
+```
+🔴 BLOCCO — Piano incompleto associato a questo branch.
+
+Piano: docs/plans/<file>.md
+Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Non puoi aprire la PR finché il piano non è completato al 100%.
+
+Opzioni:
+1. Completa i task [PENDING]
+2. Rimuovi i task [BLOCKED] dal piano (con conferma utente)
+3. L'utente autorizza esplicitamente la PR parziale
+```
+
+**L'opzione 3 richiede che l'utente scriva esplicitamente:**
+`"procedi con PR parziale — motivo: ..."`
+
+Senza questa autorizzazione esplicita, NON procedere con Step 5.
+
+**Se non ci sono piani o tutti i task sono [DONE]:** procedi con Step 5.
+
+---
+
 ### Step 5 — Apri la Pull Request
 
 🔴 ALTO — Pre-flight card obbligatoria
@@ -347,6 +380,7 @@ Se i permessi sono negati:
 | "I console.log li tolgo dopo il merge" | Dopo il merge non li togli. Fallo ora. |
 | "La history caotica va bene, lo squasha GitHub" | Squash in PR perde contesto. Fallo tu con intenzione. |
 | "Il JIRA ID non serve nel commit" | Tracciabilita' obbligatoria. Sempre. |
+| "Il piano è quasi completo, apro la PR lo stesso" | Quasi completo = incompleto. Finisci i task o chiedi eccezione esplicita. |
 
 ---
 
@@ -358,4 +392,5 @@ Se i permessi sono negati:
 | Esecuzione test suite | 🟡 Medio | Pre-flight consigliata |
 | `git push` | 🔴 Alto | Pre-flight obbligatoria |
 | Apertura PR | 🔴 Alto | Pre-flight obbligatoria |
+| Apertura PR con piano incompleto | 🚨 Critico | Hard block (richiede eccezione esplicita) |
 | `git rebase -i` | 🔴 Alto | Solo su branch non condivisi |

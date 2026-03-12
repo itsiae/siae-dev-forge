@@ -109,6 +109,14 @@ Per ogni task nel batch:
 2. Segui ogni step esattamente come scritto nel piano
 3. Esegui le verifiche specificate nel piano
 4. Segna come completato
+5. Aggiorna il marker nel piano: `[PENDING]` → `[DONE]`
+6. Se bloccato: `[PENDING]` → `[BLOCKED]` — motivo
+7. Committa il piano aggiornato:
+
+```bash
+git add docs/plans/<filename>.md
+git commit -m "docs(plans): mark task N as DONE in <piano>"
+```
 
 **Per ogni task, usa:**
 
@@ -136,6 +144,8 @@ Implementato:
   - [descrizione task 2]
   - [descrizione task 3]
 
+Stato piano: X/Y [DONE], Z [BLOCKED], W [PENDING]
+
 Verifica:
   [output sintetico dei comandi eseguiti]
 
@@ -152,6 +162,34 @@ In base al feedback:
 - **Applica le correzioni** se richiesto
 - **Esegui il batch successivo** se OK
 - **Ripeti** fino al completamento di tutti i task
+
+### Step 4b — Plan Completion Gate
+
+Prima di dichiarare il piano completato, verifica:
+
+```bash
+grep -c "\[PENDING\]" docs/plans/<filename>.md
+grep -c "\[BLOCKED\]" docs/plans/<filename>.md
+grep -c "\[DONE\]" docs/plans/<filename>.md
+```
+
+**Se PENDING > 0 o BLOCKED > 0:** STOP. Il piano non è completo.
+
+```
+🔴 PIANO INCOMPLETO — non puoi procedere con siae-verification.
+
+Piano: docs/plans/<filename>.md
+Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Opzioni:
+1. Completa i task [PENDING]
+2. Chiedi all'utente se i [BLOCKED] vanno risolti o rimossi dal piano
+3. Solo quando tutti sono [DONE] → procedi con Step 5
+```
+
+**Se tutti [DONE]:** procedi con Step 5 (Completamento).
+
+---
 
 ### Step 5 — Completamento
 

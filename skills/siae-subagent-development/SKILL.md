@@ -147,12 +147,50 @@ con il prompt definito in [code-quality-reviewer-prompt.md](code-quality-reviewe
 
 Dopo il PASS di entrambi i reviewer:
 
+**Aggiorna il piano:**
+1. Apri `docs/plans/<filename>.md`
+2. Aggiorna il marker del task: `[PENDING]` → `[DONE]`
+3. Se il subagent ha fallito dopo 2 retry: `[PENDING]` → `[BLOCKED]` — motivo del fallimento
+4. Committa:
+
+```bash
+git add docs/plans/<filename>.md
+git commit -m "docs(plans): mark task N as DONE in <piano>"
+```
+
 ```
 REQUIRED SUB-SKILL: siae-verification
 ```
 
 Esegui il protocollo di verifica completo (IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA)
 prima di dichiarare il task completato.
+
+### Step 5b — Plan Completion Gate
+
+Prima della final review, verifica lo stato completo del piano:
+
+```bash
+grep -c "\[PENDING\]" docs/plans/<filename>.md
+grep -c "\[BLOCKED\]" docs/plans/<filename>.md
+grep -c "\[DONE\]" docs/plans/<filename>.md
+```
+
+**Se PENDING > 0 o BLOCKED > 0:** STOP. Non procedere alla final review.
+
+```
+🔴 PIANO INCOMPLETO
+
+Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Opzioni:
+1. Dispatcha subagent per i task [PENDING] rimanenti
+2. Chiedi all'utente se i [BLOCKED] vanno risolti o rimossi
+3. Solo quando tutti [DONE] → procedi con Step 6
+```
+
+**Se tutti [DONE]:** procedi con Step 6.
+
+---
 
 ### Step 6 — Final Review Complessiva
 
@@ -184,12 +222,14 @@ Dopo che tutti i task sono completati:
 **Output:**
 ```
 IMPLEMENTAZIONE COMPLETATA:
-  Piano:       docs/plans/YYYY-MM-DD-<topic>-design.md
+  Piano:       docs/plans/YYYY-MM-DD-<topic>-plan.md
   Task totali: N
-  Task completati: N
+  Task [DONE]:    N/N
+  Task [BLOCKED]: 0
+  Task [PENDING]: 0
   Review PASS: N/N spec + N/N quality
   Test suite:  [risultato]
-  Verdetto:    [COMPLETO | PARZIALE]
+  Verdetto:    COMPLETO (tutti [DONE])
 ```
 
 ---
