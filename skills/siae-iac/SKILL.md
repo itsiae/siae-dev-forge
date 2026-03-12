@@ -209,3 +209,62 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | `terraform apply`             | 🚨 Critico| Si         |
 | Modifica IAM policy / security group | 🚨 Critico | Si |
 | Tag deploy (rc-*)             | 🚨 Critico| No         |
+
+---
+
+## 7. Template Repo — project-template-aws-iac
+
+Reference: `itsiae/project-template-aws-iac`
+
+Template infrastrutturale SIAE con moduli predefiniti per i casi d'uso piu' comuni.
+I progetti che adottano il template eseguono merge via `npm run update:template`.
+
+### Struttura
+
+```text
+live/                              modules/
+├── terragrunt.hcl (root)          ├── vpc/
+├── _envs/                         ├── api-private/
+│   └── prod.tmpl                  ├── api-public/
+├── vpc/                           ├── rds-postgres/
+├── api-private/                   ├── dynamodb/
+├── api-public/                    └── cognito/
+├── rds-postgres/
+├── dynamodb/
+└── cognito/
+    └── terragrunt.hcl.disabled
+```
+
+### Convenzioni template
+
+| Regola             | Dettaglio                                                            |
+|--------------------|----------------------------------------------------------------------|
+| Stato default      | `.disabled` — rinomina senza suffisso per attivare                   |
+| Variabili standard | `account_id`, `region`, `project`, `env`, `module`, `config`         |
+| Naming locals      | `prefix = "${var.env}-${var.project}-${var.module}"`                 |
+| Dipendenze         | `dependency` block Terragrunt con `mock_outputs` per plan/validate   |
+| Config globale     | `config.yaml` alla root, env in `live/_envs/prod.tmpl` (template con `$VAR` placeholder, diverso dal pattern `_envs/*.hcl` dei repo classici in sezione 1) |
+| Remote state       | S3 `${env}-${repo_name}-terraform-state` + DynamoDB lock             |
+| CI/CD              | GitHub Actions: plan per env, deploy manuale, release-please         |
+
+### Moduli disponibili
+
+| Modulo       | Responsabilita'                                        | Dipendenze     | Reference                                                      |
+|--------------|--------------------------------------------------------|----------------|----------------------------------------------------------------|
+| vpc          | Data lookup VPC enterprise, subnets, endpoints, SG     | Nessuna (root) | [template-vpc.md](reference/template-vpc.md)                   |
+| api-private  | API Gateway REST PRIVATE (VPC Endpoint only)           | vpc            | [template-api-private.md](reference/template-api-private.md)   |
+| api-public   | API Gateway REST EDGE (CloudFront)                     | vpc (opz.)     | [template-api-public.md](reference/template-api-public.md)     |
+| rds-postgres | RDS PostgreSQL + Flyway migrations                     | vpc            | [template-rds-postgres.md](reference/template-rds-postgres.md) |
+| dynamodb     | DynamoDB completo (GSI, streams, replica, autoscaling) | Nessuna        | [template-dynamodb.md](reference/template-dynamodb.md)         |
+| cognito      | Cognito User Pool / Identity Pool / Federation         | Nessuna        | [template-cognito.md](reference/template-cognito.md)           |
+
+### Checklist — Creare un nuovo modulo nel template
+
+1. Crea `modules/{nome-modulo}/` con: `_input.tf`, `_local.tf`, `_output.tf`, `{risorsa}.tf`
+2. Variabili standard obbligatorie: `account_id`, `region`, `project`, `env`, `module`, `config`
+3. Locals obbligatori: `prefix = "${var.env}-${var.project}-${var.module}"`
+4. Crea `live/{nome-modulo}/terragrunt.hcl.disabled` con inputs e dependency
+5. Se dipende da vpc: `dependency "vpc"` con `mock_outputs` per init/validate/plan
+6. Aggiungi variabili environment-specific in `prod.tmpl`
+7. Aggiorna README con descrizione modulo
+8. Crea reference file in `skills/siae-iac/reference/template-{nome-modulo}.md`

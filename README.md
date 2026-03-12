@@ -13,9 +13,9 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 27 skill, 12 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 29 skill, 5 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.6.0-mvp
+> **Versione:** 1.7.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (27)](#skill-27)
+- [Skill (29)](#skill-29)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -130,52 +130,35 @@ Meta: siae-writing-skills
 
 I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin. Si usano nella chat di Claude Code.
 
-| Comando | Descrizione | Skill/Agent invocato |
-|---------|-------------|---------------------|
-| `/forge-map` | Mappa e documenta il codebase con subagent Sonnet in parallelo. Genera `docs/CODEBASE_MAP.md` | `siae-codebase-map` |
-| `/forge-sysmap` | Mappa un sistema a microservizi multi-repo senza allucinare. Enumera repo con pattern, subagent paralleli, genera `docs/SYSTEM_MAP.md` con C4 diagrams, dependency graph, Kafka map, Gap Report | `siae-microservices-map` |
-| `/forge-plan` | Brainstorming socratico + piano implementativo con stima SP e task JIRA | `siae-brainstorming` |
-| `/forge-test` | Genera suite test TDD seguendo RED-GREEN-REFACTOR | `siae-tdd` |
-| `/forge-qa` | Export QA Xray: legge AC da Jira, genera Test Plan e Test Case step-based (Xray API o CSV) | `siae-qa` |
-| `/forge-automate` | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web), sincronizza risultati | `siae-automation` |
-| `/forge-review` | Code review contro standard SIAE (Qodana, security, naming, architettura) | `code-reviewer` + `spec-reviewer` |
-| `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality) | `siae-subagent-development` |
-| `/forge-doc` | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid | `siae-documentation` |
-| `/forge-rca` | Root Cause Analysis per incident e bug, genera report RCA | `siae-debugging` |
-| `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per tutti i microservizi | `siae-service-logic-map` |
-| `/forge-logic-search` | Cerca concetto o workflow nel catalogo logic (es. "preventivo", "rinnovo") | `siae-service-logic-map` |
+| Comando            | Descrizione                                                                                     | Skill/Agent invocato       |
+|--------------------|-------------------------------------------------------------------------------------------------|----------------------------|
+| `/forge-test`      | Genera suite test TDD seguendo RED-GREEN-REFACTOR                                               | `siae-tdd`                 |
+| `/forge-automate`  | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web)              | `siae-automation`          |
+| `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality)                       | `siae-subagent-development` |
+| `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid                        | `siae-documentation`       |
+| `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per microservizi | `siae-service-logic-map`   |
+
+> **Nota:** Le funzionalita' precedentemente disponibili come comandi dedicati (`/forge-map`, `/forge-sysmap`, `/forge-plan`, `/forge-qa`, `/forge-review`, `/forge-rca`, `/forge-logic-search`) sono ora invocabili direttamente come skill via `using-devforge` (auto-discovery).
 
 ### Uso
 
-```
-> /forge-map
-# Claude scansiona il codebase con tiktoken, raggruppa i file per modulo/layer,
-# dispatcha subagent Sonnet in parallelo, sintetizza in docs/CODEBASE_MAP.md
-
-> /forge-plan
-# Claude avvia il brainstorming socratico: esplora contesto, fa domande,
-# propone 2-3 approcci con trade-off, produce design doc e piano implementativo
-
+```text
 > /forge-test
 # Claude analizza il codice e genera test TDD per ogni file modificato
-
-> /forge-qa
-# Claude legge gli AC da Jira (o li chiede al developer), legge la Test Strategy
-# da Confluence, genera Test Plan e Test Case step-based, esporta in Xray o CSV
 
 > /forge-automate
 # Claude rileva il canale (mobile/web), matcha i TC Xray con Automazione=Y,
 # genera i test (appium-mcp per mobile su BrowserStack, Cypress per web),
 # esegue i test e sincronizza i risultati nella Test Execution Xray
 
-> /forge-review
-# Il code-reviewer esegue una review a 6 punti sui file modificati
+> /forge-implement
+# Dispatcha subagent freschi per ogni task del piano, con review spec + quality
 
 > /forge-doc HLD
 # Claude genera un High Level Design doc con diagrammi C4 in Mermaid
 
-> /forge-rca
-# Claude avvia un'investigazione sistematica del bug con template RCA
+> /forge-logic-build sport-fdc-*
+# Costruisce catalogo L1+L2+L3 per cluster di microservizi
 ```
 
 ---
@@ -235,7 +218,7 @@ all'ultima domanda in un unico comando.
 
 ---
 
-## Skill (27)
+## Skill (29)
 
 ### Meta-skill
 
@@ -248,6 +231,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Mappa skill**: quale skill usare per ogni tipo di task, con priorita' (processo prima, implementazione dopo)
 - **Catena SDLC**: l'ordine delle 7 fasi con vincoli di sequenza
 - **Classificazione skill**: Rigid (segui esattamente) vs Flexible (adatta al contesto)
+- **Gerarchia Istruzioni**: 5 livelli di priorita' per risolvere conflitti tra fonti (CLAUDE.md progetto > CLAUDE.md utente > skill invocata > agent prompt > contesto ereditato)
 - **Verifica prima del completamento**: 5 passi obbligatori (IDENTIFICA → ESEGUI → LEGGI → VERIFICA → AFFERMA) prima di dichiarare "fatto"
 
 ### Skill di Processo
@@ -316,6 +300,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   3. Proponi 2-3 approcci con trade-off e stima Story Points (scala Fibonacci 1-13)
   4. Presenta design per sezioni con approvazione incrementale
   5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
+  5b. **Spec Review Gate** — conferma esplicita utente prima di procedere al piano (requisiti completi? AC coprono tutti i casi? Stime SP realistiche?)
   6. `REQUIRED SUB-SKILL: siae-writing-plans` — produce il piano implementativo bite-sized
 - **Integrazione JIRA:** Cerca ticket correlati, produce output strutturato per creazione ticket
 - **Tipo:** Rigid (segui esattamente)
@@ -493,6 +478,8 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Remote state:** S3 + DynamoDB lock, key = `{env}-{repo-name}-terraform-state`
 - **CI/CD:** Makefile tag-based deploy, GH Actions reusable workflows
 - **Vincoli:** No inline policy, no hardcoded AMI/region, `for_each` invece di `count`
+- **Template repo:** Sezione dedicata a `itsiae/project-template-aws-iac` con blueprint per 6 moduli (vpc, api-private, api-public, rds-postgres, dynamodb, cognito), convenzioni template e checklist per nuovi moduli
+- **Reference files:** `reference/template-vpc.md`, `reference/template-api-private.md`, `reference/template-api-public.md`, `reference/template-rds-postgres.md`, `reference/template-dynamodb.md`, `reference/template-cognito.md`
 - **Tipo:** Flexible
 
 #### `siae-data-engineering` — Data Pipeline (Fase 4)
@@ -519,6 +506,14 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 
 ### Skill Cross-cutting e Meta
 
+#### `siae-git-env` — GitHub CLI Environment Check (Cross-cutting)
+
+- **Trigger:** Configurazione git, git hooks, .gitignore, GPG signing, git-lfs, credenziali git
+- **Prerequisito obbligatorio** di `siae-git-workflow`: eseguito una volta per sessione
+- **Determina GH_MODE:** `GH_MODE` (gh CLI disponibile) o `FALLBACK_MODE` (guida manuale)
+- **Verifica:** `gh auth status`, git config (user.name, user.email), remote URL
+- **Tipo:** Rigid
+
 #### `siae-verification` — Protocollo di Verifica Pre-Completamento (Cross-cutting)
 
 - **Trigger:** Prima di qualsiasi claim di completamento: commit, PR, task complete, "fatto", "fixato"
@@ -533,6 +528,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Trigger:** Piano implementativo presente con task indipendenti, `/forge-implement`
 - **Processo:** Per ogni task del piano → implementer subagent → spec-reviewer → code-quality-reviewer
 - **Distrust pattern:** reviewer indipendenti con "L'implementer ha finito sospettosamente in fretta"
+- **SUBAGENT-STOP boundary:** ogni subagent ha una allowlist di skill consentite — implementer: solo `siae-tdd` + `siae-code-standards`; reviewer: nessuna skill (read-only). Previene skill leakage tra ruoli (ispirato a Superpowers v5.0)
 - **Self-review checklist a 4 aree:** completezza, qualità, disciplina (YAGNI), testing — obbligatoria prima del report
 - **Max 2 iterazioni** fix-review per stadio, poi escalation all'utente
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per implementer, `REQUIRED SUB-SKILL: siae-verification` per tutti
@@ -664,10 +660,11 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 - **Effetto:** Claude "impara" il sistema di skill al boot, senza che l'utente debba fare nulla
 - **Pattern:** Lazy loading — solo la meta-skill viene caricata. Le skill specifiche vengono invocate on-demand
 
-### `PreToolUse` (Bash) — Quality Gate
+### `PreToolUse` (Bash) — Quality Gate + PR Gate
 
-- **Evento:** Prima di ogni `git commit` (intercettato via PreToolUse sul tool Bash)
-- **5 verifiche:**
+- **Evento:** Prima di ogni `git commit` e `gh pr create` (intercettato via PreToolUse sul tool Bash)
+- **PR Gate:** Prima di creare una PR, forza il dispatch automatico di `code-reviewer` + `spec-reviewer` agent. Se il verdetto e' BLOCKED (>= 1 CRITICAL), la PR viene bloccata. Se CHANGES REQUESTED, chiede conferma all'utente.
+- **5 verifiche pre-commit:**
 
 | # | Check | Livello | Blocca? |
 |---|-------|---------|---------|
