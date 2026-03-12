@@ -231,6 +231,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Mappa skill**: quale skill usare per ogni tipo di task, con priorita' (processo prima, implementazione dopo)
 - **Catena SDLC**: l'ordine delle 7 fasi con vincoli di sequenza
 - **Classificazione skill**: Rigid (segui esattamente) vs Flexible (adatta al contesto)
+- **Gerarchia Istruzioni**: 5 livelli di priorita' per risolvere conflitti tra fonti (CLAUDE.md progetto > CLAUDE.md utente > skill invocata > agent prompt > contesto ereditato)
 - **Verifica prima del completamento**: 5 passi obbligatori (IDENTIFICA → ESEGUI → LEGGI → VERIFICA → AFFERMA) prima di dichiarare "fatto"
 
 ### Skill di Processo
@@ -299,6 +300,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   3. Proponi 2-3 approcci con trade-off e stima Story Points (scala Fibonacci 1-13)
   4. Presenta design per sezioni con approvazione incrementale
   5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
+  5b. **Spec Review Gate** — conferma esplicita utente prima di procedere al piano (requisiti completi? AC coprono tutti i casi? Stime SP realistiche?)
   6. `REQUIRED SUB-SKILL: siae-writing-plans` — produce il piano implementativo bite-sized
 - **Integrazione JIRA:** Cerca ticket correlati, produce output strutturato per creazione ticket
 - **Tipo:** Rigid (segui esattamente)
@@ -526,6 +528,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Trigger:** Piano implementativo presente con task indipendenti, `/forge-implement`
 - **Processo:** Per ogni task del piano → implementer subagent → spec-reviewer → code-quality-reviewer
 - **Distrust pattern:** reviewer indipendenti con "L'implementer ha finito sospettosamente in fretta"
+- **SUBAGENT-STOP boundary:** ogni subagent ha una allowlist di skill consentite — implementer: solo `siae-tdd` + `siae-code-standards`; reviewer: nessuna skill (read-only). Previene skill leakage tra ruoli (ispirato a Superpowers v5.0)
 - **Self-review checklist a 4 aree:** completezza, qualità, disciplina (YAGNI), testing — obbligatoria prima del report
 - **Max 2 iterazioni** fix-review per stadio, poi escalation all'utente
 - **Integration:** `REQUIRED SUB-SKILL: siae-tdd` per implementer, `REQUIRED SUB-SKILL: siae-verification` per tutti
@@ -657,10 +660,11 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 - **Effetto:** Claude "impara" il sistema di skill al boot, senza che l'utente debba fare nulla
 - **Pattern:** Lazy loading — solo la meta-skill viene caricata. Le skill specifiche vengono invocate on-demand
 
-### `PreToolUse` (Bash) — Quality Gate
+### `PreToolUse` (Bash) — Quality Gate + PR Gate
 
-- **Evento:** Prima di ogni `git commit` (intercettato via PreToolUse sul tool Bash)
-- **5 verifiche:**
+- **Evento:** Prima di ogni `git commit` e `gh pr create` (intercettato via PreToolUse sul tool Bash)
+- **PR Gate:** Prima di creare una PR, forza il dispatch automatico di `code-reviewer` + `spec-reviewer` agent. Se il verdetto e' BLOCKED (>= 1 CRITICAL), la PR viene bloccata. Se CHANGES REQUESTED, chiede conferma all'utente.
+- **5 verifiche pre-commit:**
 
 | # | Check | Livello | Blocca? |
 |---|-------|---------|---------|
