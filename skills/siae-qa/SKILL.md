@@ -354,6 +354,9 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 | "Non ci sono ruoli diversi in questa Story" | Hai chiesto? Se non hai fatto la domanda, non puoi saperlo. Chiedi e poi registra "N/A — confermato". |
 | "Genero i TC negativi dopo, ora faccio quelli positivi" | I TC negativi vengono dimenticati. La matrice 4a si compila PRIMA di scrivere qualsiasi TC. |
 | "Ho troppi scenari, semplificoo" | La semplificazione e' un rischio QA, non un'efficienza. Se gli scenari sono troppi, discutili col developer e prioritizza — ma non eliminare senza discussione. |
+| "Ho letto gli AC, so gia' il tipo — salto Phase 0" | Phase 0 non e' solo typing: e' la raccolta degli scenari contestuali che gli AC non esplicitano. Senza queste domande, i TC coprono solo cio' che e' scritto, non cio' che puo' rompersi. |
+| "Le domande del tree rallentano il workflow" | 4-6 domande mirate producono 2-3x piu' scenari edge rispetto alla matrice generica. Il piano di test finale e' piu' completo in meno iterazioni. |
+| "Il tipo e' ovvio, non serve inferire" | Ovvio per te. La Req Profile Card documenta il tipo e i segnali: e' evidenza, non burocrazia. Se sbagli il tipo, i TC coprono il dominio sbagliato. |
 
 ---
 
@@ -361,6 +364,10 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 
 Prima di dichiarare la skill completata:
 
+- [ ] Phase 0 eseguita: tipo requisito inferito e Req Profile Card mostrata
+- [ ] Confidence HIGH → tree lanciato senza conferma tipo | MEDIUM/LOW → conferma ricevuta
+- [ ] Domande del tree skippate se risposta gia' presente in AC/description
+- [ ] Req Profile Card aggiornata con scenari L1/L2/L3 prima di procedere a Phase 4a
 - [ ] AC letti da Jira (o forniti esplicitamente dal developer)
 - [ ] Test Strategy Confluence cercata (trovata o WARNING registrato)
 - [ ] Test Plan generato/creato con campi obbligatori
@@ -383,6 +390,7 @@ Prima di dichiarare la skill completata:
 
 ## VINCOLI NON NEGOZIABILI
 
+0. **Phase 0 e' sempre la prima fase** — nessun AC viene letto senza aver prima inferito il tipo e lanciato le domande del tree contestuale; la Req Profile Card deve essere prodotta prima di Phase 1
 1. **Nessun Test Case senza AC corrispondente** — ogni TC e' tracciabile a un comportamento specifico
 2. **La matrice 4a va compilata prima di scrivere qualsiasi TC** — non si genera senza aver valutato tutte e 4 le categorie
 3. **Le domande su edge case, negativi e profilazioni sono obbligatorie** — se non emergono dagli AC, si chiedono; non si assumono
