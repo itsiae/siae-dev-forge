@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Scaffold directory evals/ e aggiornamento .gitignore
+### Task 1: Scaffold directory evals/ e aggiornamento .gitignore [DONE]
 
 **File coinvolti:**
 - Crea: `siae-dev-forge/evals/trigger-evals/.gitkeep`
@@ -56,7 +56,7 @@ git commit -m "chore: scaffold evals/ directory per skill trigger regression"
 
 ---
 
-### Task 2: Script run-trigger-regression.sh
+### Task 2: Script run-trigger-regression.sh [DONE]
 
 **File coinvolti:**
 - Crea: `siae-dev-forge/tests/run-trigger-regression.sh`
@@ -270,7 +270,7 @@ git commit -m "feat(tests): aggiungi run-trigger-regression.sh per eval descript
 
 ---
 
-### Task 3: Integrazione flag --with-trigger-regression in run-all.sh
+### Task 3: Integrazione flag --with-trigger-regression in run-all.sh [DONE]
 
 **File coinvolti:**
 - Modifica: `siae-dev-forge/tests/run-all.sh`
@@ -332,7 +332,7 @@ git commit -m "feat(tests): aggiungi flag --with-trigger-regression a run-all.sh
 
 ---
 
-### Task 4: Crea primo trigger eval di esempio (siae-brainstorming)
+### Task 4: Crea primo trigger eval di esempio (siae-brainstorming) [DONE]
 
 **File coinvolti:**
 - Crea: `siae-dev-forge/evals/trigger-evals/siae-brainstorming.json`
@@ -384,7 +384,7 @@ git commit -m "feat(evals): aggiungi trigger eval queries per siae-brainstorming
 
 ---
 
-### Task 5: Description optimization top 5 skill con skill-creator
+### Task 5: Description optimization top 5 skill con skill-creator [BLOCKED] — richiede sessione interattiva con skill-creator
 
 **Prerequisito:** skill-creator installato (Task 0 manuale)
 
