@@ -246,6 +246,14 @@ Usa il template in `reference/flow-map-template.yaml` per costruire la flow map.
 - Azione principale (submit form, upload file, pagamento)
 - Navigazione inter-sezione (da A a B con contesto)
 
+**Formato ID deterministico per ogni flusso:**
+```
+{route-slug}--{ComponentName}--{HTTP_METHOD}-{api-path-segment}
+```
+- Se solo navigazione (nessuna API): `{route-slug}--{ComponentName}--nav-only`
+- Se solo GET: `{route-slug}--{ComponentName}--GET-{api-path-segment}`
+- Esempio: `auth--LoginView--POST-auth-login`
+
 **Regole anti-hallucination per il mapping:**
 
 ```
