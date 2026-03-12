@@ -127,10 +127,10 @@ Segui le convenzioni per lo stack rilevato:
 Dopo OGNI ciclo RED-GREEN-REFACTOR completato, logga l'evento:
 
 ```bash
-LOGGER_SH=$(find ~/.claude/plugins -name 'logger.sh' -path '*/siae-devforge/*' 2>/dev/null | head -1)
-if [ -n "$LOGGER_SH" ]; then
+LOGGER_SH=$(find ~/.claude/plugins -name 'logger.sh' -path '*/siae-dev-forge/lib/*' 2>/dev/null | head -1)
+if [ -n "$LOGGER_SH" ] && head -1 "$LOGGER_SH" | grep -q 'DevForge Activity Logger'; then
   source "$LOGGER_SH"
-  devforge_log "tdd_cycle" "success" "{\"phase\":\"complete\",\"task\":\"{task_id}\",\"test_file\":\"{test_file}\"}"
+  devforge_log "tdd_cycle" "success" '{"phase":"complete","task":"{task_id}","test_file":"{test_file}"}'
 fi
 ```
 
