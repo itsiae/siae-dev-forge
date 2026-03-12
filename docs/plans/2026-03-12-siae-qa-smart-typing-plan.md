@@ -212,7 +212,7 @@ git commit -m "feat(siae-qa): add contextual question trees for smart req typing
 
 ---
 
-### Task 2: Aggiungi Phase 0 a `skills/siae-qa/SKILL.md` [PENDING]
+### Task 2: Aggiungi Phase 0 a `skills/siae-qa/SKILL.md` [DONE]
 
 **Dipende da:** Task 1 (question-trees.md deve esistere prima)
 
