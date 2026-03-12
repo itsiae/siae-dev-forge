@@ -212,9 +212,13 @@ Test Plan: {Story summary}
 
 #### 4a — Elicitazione scenari [OBBLIGATORIA prima di scrivere qualsiasi TC]
 
-Prima di generare i Test Case, devi coprire tutte e quattro le categorie di scenario.
-Per ogni categoria dove il contesto non e' gia' chiaro dagli AC, fai domande esplicite al developer.
-Fai UNA domanda alla volta. Non procedere alla generazione finche' non hai risposta su ogni categoria.
+**Input:** Req Profile Card (Phase 0) + AC (Phase 1).
+Gli scenari raccolti nella Phase 0 (L1/L2/L3) vanno classificati nelle 4 categorie qui sotto
+PRIMA di generare i TC. Non ripetere domande gia' poste in Phase 0.
+
+Per ogni categoria ancora scoperta dopo aver assorbito il Req Profile e gli AC,
+fai domande esplicite al developer. UNA alla volta.
+Non procedere alla generazione finche' tutte e 4 le categorie non sono valutate.
 
 **Categoria 1 — Scenari positivi (happy path)**
 Hai gia' questo dagli AC. Verifica solo che siano completi.
