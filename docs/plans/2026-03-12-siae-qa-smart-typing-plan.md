@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Crea `skills/siae-qa/reference/question-trees.md` [PENDING]
+### Task 1: Crea `skills/siae-qa/reference/question-trees.md` [DONE]
 
 **File coinvolti:**
 - Crea: `skills/siae-qa/reference/question-trees.md`
