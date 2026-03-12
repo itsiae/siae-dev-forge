@@ -13,7 +13,7 @@ Se un component non ha nessun pattern → LOW/SKIP, non genera flusso NRT.
 
 | Pattern | Grep | Produce |
 |---------|------|---------|
-| **P1 — Mutating API call** | `axios\.post\|axios\.put\|axios\.delete\|axios\.patch\|fetch.*POST\|fetch.*PUT` | 1 flusso per call + component che la ospita |
+| **P1 — API call** | `axios\.post\|axios\.put\|axios\.delete\|axios\.patch\|fetch.*POST\|fetch.*PUT\|httpClient\.(post\|put\|delete\|patch)` | 1 flusso per call + component che la ospita — **INCLUDI anche POST usati come query (filtri, ricerche con body). Il criterio è il verbo HTTP, non l'intenzione del chiamante.** |
 | **P2 — Router navigation in handler** | `router\.push\|navigate\(\|\$router\.push\|this\.router\.navigate` | 1 flusso per navigazione programmatica in @click/@submit |
 | **P3 — Store action con state transition** | (in store file) funzioni che modificano stato nominato | 1 flusso per transizione nominata |
 | **P4 — Form submit handler** | `@submit\|handleSubmit\|onSubmit\|v-on:submit` | 1 flusso per submit handler |
@@ -49,6 +49,8 @@ HIGH se almeno uno di:
     rule: "role-based-rendering"
 
 MEDIUM se:
+  → P1 POST/GET usato come query (ricerca, filtri, caricamento dati principali — nessun side effect)
+    rule: "p1-query"
   → solo P4 (submit) senza API call
     rule: "submit-no-api"
   → solo P2 (router navigation) senza API
@@ -57,6 +59,11 @@ MEDIUM se:
 LOW/SKIP se:
   → nessuno dei 5 pattern → component presentazionale, non genera flusso NRT
     Non aggiungere alla flow map.
+
+ATTENZIONE — regola assoluta:
+  MAI assegnare LOW/SKIP a un flusso che ha P1 (qualsiasi verbo HTTP incluso POST-query).
+  Un flusso di consultazione dati è NRT-rilevante: una regressione rompe la visualizzazione.
+  Il happy path di una sezione con POST-query va sempre nel test list come MEDIUM.
 ```
 
 ---

@@ -343,6 +343,13 @@ Compila sempre `priority_evidence.rule` con il valore della colonna destra.
 Se non riesci a identificare la regola → assegna MEDIUM di default.
 Nessun giudizio di dominio: "operazione importante per il business" non è una regola.
 
+**Anti-razionalizzazione P1-query:**
+MAI escludere flussi con P1 perché "è solo una query, non è mutante".
+Un POST/GET che carica dati principali (accounting, performance, allotment, ranking…)
+è MEDIUM e genera almeno 1 TC happy path.
+Regola: se il grep trova POST/PUT/DELETE/PATCH nel component → P1 → entra nella flow map.
+Applicare `rule: "p1-query"` e `priority: MEDIUM` — mai SKIP.
+
 **Applica anche i tag di accesso:**
 - `pubblico` — sezione accessibile senza autenticazione
 - `autenticato` — richiede login (guard rilevato)
