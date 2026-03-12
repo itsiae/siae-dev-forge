@@ -197,21 +197,34 @@ salta silenziosamente con SKIP — non bloccare mai il commit per tool assenti.
 
 ## Riepilogo Quality Gate
 
-Dopo aver completato tutte le verifiche, mostra un riepilogo compatto come markdown table:
+Dopo aver completato tutte le verifiche, mostra un riepilogo compatto come markdown table.
+
+Usa queste emoji per ogni esito:
+- PASS  → ✅
+- FAIL  → ❌
+- WARN  → ⚠️
+- SKIP  → ⏭️
+
+Per l'esito complessivo:
+- Tutti i check bloccanti PASS → 🟢 COMMIT CONSENTITO
+- Almeno un check bloccante FAIL → 🔴 COMMIT BLOCCATO
+- Solo check non-bloccanti in WARN/FAIL → 🟡 COMMIT CONSENTITO CON AVVISI
+
+Esempio di formato:
 
 | 🔨 DevForge · Pre-Commit Quality Gate — Riepilogo |
 |:---|
-| 1. Secret Scan:       [PASS / FAIL] |
-| 2. Naming Convention: [PASS / FAIL] |
-| 3. Test Coverage:     [PASS / FAIL / SKIP] |
-| 4. File Size:         [PASS / FAIL] |
-| 5. Lint Check:        [PASS / FAIL / SKIP] |
-| **Esito: COMMIT CONSENTITO** oppure **Esito: COMMIT BLOCCATO** |
+| 1. 🔍 Secret Scan:       ✅ PASS |
+| 2. 📝 Naming Convention: ✅ PASS |
+| 3. 🧪 Test Coverage:     ⏭️ SKIP (file .md) |
+| 4. 📦 File Size:         ✅ PASS |
+| 5. 🔎 Lint Check:        ⏭️ SKIP |
+| **🟢 Esito: COMMIT CONSENTITO** |
 
 **Regole di blocco:**
-- Secret Scan FAIL → COMMIT BLOCCATO (non negoziabile)
-- File Size FAIL → COMMIT BLOCCATO (richiede conferma esplicita per override)
-- Naming / Test / Lint FAIL → Mostra warning, consenti commit con conferma utente
+- Secret Scan ❌ → 🔴 COMMIT BLOCCATO (non negoziabile)
+- File Size ❌ → 🔴 COMMIT BLOCCATO (richiede conferma esplicita per override)
+- Naming / Test / Lint ❌ → 🟡 Mostra warning, consenti commit con conferma utente
 
 Procedi con il commit SOLO se tutte le verifiche bloccanti passano.
 INSTRUCTIONS_EOF
