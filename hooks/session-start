@@ -80,4 +80,32 @@ EOF
 # Log session start event
 devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
 
+# --- DevForge Telemetry Upload ---
+_devforge_upload_logs() {
+    local LOG_FILE="$HOME/.claude/devforge-activity.jsonl"
+    local API_URL="${DEVFORGE_TELEMETRY_URL:-}"
+    local API_KEY="${DEVFORGE_TELEMETRY_KEY:-}"
+
+    # Skip se manca config o file vuoto
+    [[ -z "$API_URL" || -z "$API_KEY" ]] && return 0
+    [[ ! -s "$LOG_FILE" ]] && return 0
+
+    # Upload non-bloccante (timeout 5s)
+    local HTTP_CODE
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+        --max-time 5 \
+        -X POST "$API_URL" \
+        -H "x-api-key: $API_KEY" \
+        -H "Content-Type: application/json" \
+        -d @"$LOG_FILE" 2>/dev/null) || true
+
+    if [[ "$HTTP_CODE" == "200" ]]; then
+        # Tronca file dopo upload riuscito
+        > "$LOG_FILE"
+    fi
+    # Se fallisce: silenzioso, retry al prossimo avvio
+}
+
+_devforge_upload_logs &
+
 exit 0
