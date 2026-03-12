@@ -13,6 +13,9 @@ devforge_upload_logs() {
     # Skip se file vuoto o assente
     [[ ! -s "$LOG_FILE" ]] && return 0
 
+    # Never send API key over plain HTTP
+    [[ ! "$DEVFORGE_TELEMETRY_URL" =~ ^https:// ]] && return 0
+
     # Atomic move: nuovi eventi vanno al file originale ricreato
     mv "$LOG_FILE" "$UPLOAD_FILE" 2>/dev/null || return 0
 
@@ -28,13 +31,8 @@ devforge_upload_logs() {
     if [[ "$HTTP_CODE" == "200" ]]; then
         rm -f "$UPLOAD_FILE"
     else
-        # Restore: prepend failed upload back to log file
-        if [[ -s "$LOG_FILE" ]]; then
-            cat "$UPLOAD_FILE" "$LOG_FILE" > "${LOG_FILE}.tmp" 2>/dev/null
-            mv "${LOG_FILE}.tmp" "$LOG_FILE" 2>/dev/null
-        else
-            mv "$UPLOAD_FILE" "$LOG_FILE" 2>/dev/null
-        fi
+        # Restore: append failed upload back to log file (safe against concurrent writes)
+        cat "$UPLOAD_FILE" >> "$LOG_FILE" 2>/dev/null
         rm -f "$UPLOAD_FILE"
     fi
 }

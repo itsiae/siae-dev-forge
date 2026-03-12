@@ -15,3 +15,4 @@ evals/results/
 *.tfstate
 *.tfstate.backup
 *.tfstate.*.backup
+infra/**/handler.zip

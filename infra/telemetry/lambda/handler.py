@@ -1,4 +1,5 @@
 import json
+import re
 import boto3
 import time
 import os
@@ -6,6 +7,9 @@ from datetime import datetime, timezone
 
 s3 = boto3.client("s3")
 BUCKET = os.environ["BUCKET_NAME"]
+
+# Allow-list: only safe chars for S3 keys, truncate to 64 chars
+_SAFE_ID = re.compile(r"[^a-zA-Z0-9@._-]")
 
 
 def handler(event, context):
@@ -21,6 +25,9 @@ def handler(event, context):
     except (json.JSONDecodeError, IndexError):
         dev_id = "unknown"
 
+    # Sanitize dev_id — prevent path traversal and invalid S3 key chars
+    dev_id = _SAFE_ID.sub("_", dev_id)[:64] or "unknown"
+
     # Hive-style partitioned path
     now = datetime.now(timezone.utc)
     key = (
@@ -28,11 +35,15 @@ def handler(event, context):
         f"{dev_id}-{int(time.time())}.jsonl"
     )
 
-    s3.put_object(
-        Bucket=BUCKET,
-        Key=key,
-        Body=body,
-        ContentType="application/jsonl",
-    )
+    try:
+        s3.put_object(
+            Bucket=BUCKET,
+            Key=key,
+            Body=body,
+            ContentType="application/jsonl",
+        )
+    except Exception as e:
+        print(json.dumps({"error": str(e), "key": key}))
+        return {"statusCode": 502, "body": json.dumps({"error": "Storage failure"})}
 
     return {"statusCode": 200, "body": json.dumps({"key": key})}
