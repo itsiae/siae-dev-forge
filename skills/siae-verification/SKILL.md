@@ -160,10 +160,17 @@ Solo ora puoi dichiarare il completamento. La tua affermazione DEVE includere:
 
 ```
 VERIFICA COMPLETATA:
-  Comandi:  [lista comandi eseguiti]
+  Comandi:   [lista comandi eseguiti]
   Risultato: [output sintetico]
-  Claim:    [la tua dichiarazione]
+  Evidenza:
+    - path/to/file.java:45 — metodo process() implementato
+    - tests/test_file.py:12 — test should_validate_isrc passa
+  Claim:     [la tua dichiarazione]
 ```
+
+**Regola citazione:** minimo 1 citazione `file:riga` per ogni requisito verificato.
+Se non puoi citare `file:riga`, non puoi dichiarare quel requisito completato.
+Formato standard: `path/to/file.ext:NN — descrizione breve`
 
 ---
 
@@ -177,6 +184,7 @@ VERIFICA COMPLETATA:
 | "Ho fatto la stessa cosa su un altro progetto" | Ogni contesto e' diverso. |
 | "Il compilatore non ha dato errori" | La compilazione non testa il comportamento. |
 | "Ho copiato da codice che funziona" | Il contesto e' diverso. Verifica nel nuovo contesto. |
+| "Ho verificato che funziona" (senza citare file:riga) | Prose senza citazione non sono evidenza. Cita file:riga o non e' verifica. |
 
 ---
 
