@@ -1,9 +1,12 @@
 ---
 name: siae-data-engineering
 description: >
-  ALWAYS use when writing Glue jobs, PySpark transformations, ETL pipelines, or data lake operations.
-  Trigger: Glue job, PySpark, ETL, data pipeline, Step Functions, data lake, Medallion architecture,
-  bronze-to-silver, data quality, crawler, batch notturno, Iceberg, CDC, delta window.
+  Use when building, migrating, orchestrating, or debugging data pipelines and ETL jobs —
+  NOT for Terraform modules (use siae-iac), REST endpoints, or frontend components.
+  Trigger: Glue job, PySpark, ETL, pipeline di ingestion, trasformazione dati, Step Functions,
+  data lake, Medallion architecture, bronze-to-silver, silver-to-gold, data quality, crawler,
+  batch notturno, Iceberg, CDC, delta window, migrare dati da legacy, costruire pipeline,
+  orchestrazione batch, implementa Medallion, ingestion file CSV.
 ---
 
 # SIAE Data Engineering
