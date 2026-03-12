@@ -197,6 +197,10 @@ La skill stessa ti dice quale tipo e'. In caso di dubbio, trattala come Rigid.
 7 fasi: Init → Design → Branching → Implementation → Testing → QA Gate → Release.
 L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si applica a ogni fase.
 
+| Skill | Trigger / quando usarla | Tipo | Fase SDLC |
+|-------|------------------------|------|-----------|
+| nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
+
 ## DevForge Visual Design System
 
 Tutte le skill seguono il DevForge Visual Design System. Vedi `design-system/devforge-visual.md` per banner, pre-flight cards, e codifica rischio.

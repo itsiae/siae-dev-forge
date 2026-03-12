@@ -1,0 +1,177 @@
+# Flow Map Template — nr-test-flows
+#
+# Template YAML per mappare la struttura navigazionale di un'applicazione frontend.
+# Ogni sezione corrisponde a un'area navigazionale distinta vista dall'utente finale.
+# Ogni flusso corrisponde a un'operazione che l'utente può eseguire in quella sezione.
+#
+# OBBLIGATORIO: ogni sezione e flusso DEVONO citare il file sorgente che li prova.
+# Se non hai evidenza → confidence: UNVERIFIED (non omettere, non inventare).
+
+flow_map:
+  metadata:
+    repository: "{nome-repo}"
+    framework: "{Vue.js 3 | Nuxt | Angular | React | Ionic+Angular | Flutter | ...}"
+    framework_confidence: "CONFIRMED | INFERRED"
+    framework_evidence: "{file:riga}"
+    generated_at: "{YYYY-MM-DD}"
+    analyst: "nr-test-flows"
+
+  # Lista delle sezioni navigazionali dell'applicazione.
+  # Una "sezione" è un'area dell'app accessibile tramite navigazione principale
+  # (menu, tab bar, routing top-level, drawer).
+  sections:
+
+    - id: "section-auth"
+      name: "Autenticazione"
+      access: "pubblico"           # pubblico | autenticato | ruolo:{nome-ruolo}
+      route_prefix: "/auth"        # prefisso route (se applicabile)
+      source: "{file:riga}"        # es. src/router/index.ts:12
+      confidence: "CONFIRMED"      # CONFIRMED | INFERRED | UNVERIFIED
+
+      # Lista dei flussi utente in questa sezione.
+      flows:
+
+        - id: "flow-auth-login"
+          name: "Login con credenziali"
+          priority: "CRITICAL"     # CRITICAL | HIGH | MEDIUM
+          trigger: "Apertura app / navigazione a /login"
+          entry_point: "{file:riga}"  # es. src/views/LoginView.vue:1
+          confidence: "CONFIRMED"
+
+          # Passi del flusso (navigazione e azioni principali)
+          steps:
+            - step: 1
+              action: "Utente visualizza il form di login"
+              component: "{file:riga}"
+            - step: 2
+              action: "Utente inserisce username e password"
+              component: "{file:riga}"
+            - step: 3
+              action: "Utente clicca 'Accedi'"
+              component: "{file:riga}"
+            - step: 4
+              action: "Sistema autentica → redirect alla home"
+              component: "{file:riga}"
+
+          # API calls rilevate in questo flusso
+          api_calls:
+            - endpoint: "POST /api/auth/login"
+              source: "{file:riga}"
+              confidence: "CONFIRMED"
+
+          # Navigation guard che protegge o redirige questo flusso
+          guards: []  # es. [{name: "guestGuard", source: "src/router/guards.ts:5"}]
+
+          # Ruoli/profili che possono eseguire questo flusso
+          roles:
+            - "tutti gli utenti (non autenticati)"
+
+        - id: "flow-auth-logout"
+          name: "Logout"
+          priority: "HIGH"
+          trigger: "Click su 'Esci' in header/menu"
+          entry_point: "{file:riga}"
+          confidence: "CONFIRMED"
+          steps:
+            - step: 1
+              action: "Utente clicca 'Esci'"
+              component: "{file:riga}"
+            - step: 2
+              action: "Sistema invalida sessione → redirect a /login"
+              component: "{file:riga}"
+          api_calls:
+            - endpoint: "POST /api/auth/logout"
+              source: "{file:riga}"
+              confidence: "CONFIRMED"
+          guards: []
+          roles:
+            - "utenti autenticati"
+
+    - id: "section-dashboard"
+      name: "Dashboard"
+      access: "autenticato"
+      route_prefix: "/dashboard"
+      source: "{file:riga}"
+      confidence: "CONFIRMED"
+
+      flows:
+
+        - id: "flow-dashboard-overview"
+          name: "Visualizzazione overview"
+          priority: "HIGH"
+          trigger: "Navigazione a /dashboard dopo login"
+          entry_point: "{file:riga}"
+          confidence: "CONFIRMED"
+          steps:
+            - step: 1
+              action: "Sistema carica i dati del dashboard"
+              component: "{file:riga}"
+            - step: 2
+              action: "Utente visualizza widget/statistiche principali"
+              component: "{file:riga}"
+          api_calls:
+            - endpoint: "GET /api/dashboard/stats"
+              source: "{file:riga}"
+              confidence: "CONFIRMED"
+          guards:
+            - name: "authGuard"
+              source: "{file:riga}"
+          roles:
+            - "utente standard"
+            - "amministratore"
+
+    # Template sezione generica — duplica e adatta per ogni sezione aggiuntiva
+    - id: "section-{nome}"
+      name: "{Nome Sezione}"
+      access: "autenticato"        # cambia se sezione pubblica
+      route_prefix: "/{path}"
+      source: "{file:riga}"
+      confidence: "CONFIRMED | INFERRED | UNVERIFIED"
+
+      flows:
+
+        - id: "flow-{sezione}-{operazione}"
+          name: "{Descrizione operazione}"
+          priority: "HIGH"         # valuta: CRITICAL se blocca accesso, HIGH se core, MEDIUM se secondario
+          trigger: "{cosa scatena questo flusso}"
+          entry_point: "{file:riga}"
+          confidence: "CONFIRMED"
+          steps:
+            - step: 1
+              action: "{azione}"
+              component: "{file:riga}"
+          api_calls: []
+          guards: []
+          roles:
+            - "{ruolo o profilo}"
+
+  # Gap Report — OBBLIGATORIO anche se vuoto
+  # Lista sezioni/flussi per cui non si è trovata evidenza sufficiente.
+  gap_report:
+    - type: "UNVERIFIED_SECTION"
+      description: "{nome sezione} — route rilevata in router ma nessun component corrispondente trovato"
+      evidence_searched: "{lista file cercati}"
+    - type: "MISSING_GUARD_EVIDENCE"
+      description: "{nome flusso} — guard dichiarato nel router ma file guard non trovato"
+      evidence_searched: "{lista file cercati}"
+    - type: "API_CALL_UNRESOLVED"
+      description: "{endpoint} chiamato in {file:riga} ma non mappato a una sezione specifica"
+      evidence_searched: "{lista file cercati}"
+    # Se nessun gap: lascia lista vuota []
+
+  # Statistiche riassuntive
+  summary:
+    total_sections: 0
+    total_flows: 0
+    by_priority:
+      CRITICAL: 0
+      HIGH: 0
+      MEDIUM: 0
+    by_access:
+      pubblico: 0
+      autenticato: 0
+    by_confidence:
+      CONFIRMED: 0
+      INFERRED: 0
+      UNVERIFIED: 0
+    gaps_found: 0
