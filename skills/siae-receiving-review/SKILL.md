@@ -107,7 +107,16 @@ Commento 4 [file:riga]: [NITPICK] — "preferisci camelCase per questa variabile
 
 ### Step 3 — Pianifica e Implementa i Fix
 
-🟡 MEDIO
+🟡 MEDIO — Mostra pre-flight card prima di applicare i fix
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-receiving-review |
+|:---|
+| 🌿 Branch: `<branch-name>` |
+| 📝 Fix da implementare: `<N> REQUIRED, <M> SUGGESTION` |
+| 1. 📝 Azione: Modifica file per fix review |
+| 📂 `<file/i coinvolti>` |
+| 💡 Perche': Si stanno applicando modifiche al codice in risposta a feedback di review |
+| 🚫 Se NO: I fix non vengono applicati — i commenti REQUIRED restano aperti |
 
 **Ordine di implementazione:**
 

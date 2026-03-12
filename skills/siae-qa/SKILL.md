@@ -88,6 +88,69 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
 ---
 
+## Phase 0 — Smart Req Typing [SEMPRE OBBLIGATORIA — prima di tutto]
+
+Prima di leggere AC o interrogare Jira, inferisci il tipo di requisito.
+**Non chiedere ciò che la story dice già.** Leggi prima, chiedi solo il delta.
+
+### 0a — Inferisci il tipo
+
+Leggi in ordine: summary della story, AC/description, commenti, label Jira, stack del progetto.
+Cerca i segnali della tabella seguente:
+
+| Tipo | Segnali (summary, AC, description, label, stack) |
+|------|--------------------------------------------------|
+| **Frontend (FE)** | "componente", "pagina", "form", "UI", "Vue", "Angular", "React", "click", "visualizza", "render", "responsive" |
+| **Backend Microservice (BE)** | "API", "endpoint", "service", "REST", "controller", "Spring", "Lambda", "validazione", "business rule" |
+| **ETL / Data Pipeline** | "Glue", "PySpark", "pipeline", "trasformazione", "bronze", "silver", "gold", "job", "ETL", "medallion" |
+| **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase" |
+| **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
+| **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
+
+**Confidence:**
+- **HIGH (≥ 90%):** 2+ segnali forti convergenti
+- **MEDIUM (60-89%):** 1 segnale forte o 2+ deboli
+- **LOW (< 60%):** segnali ambigui o assenti
+
+### 0b — Mostra Req Typing Card
+
+Mostra sempre la card con il tipo inferito:
+
+```
+REQ PROFILE:
+  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration]
+  Confidence: [HIGH / MEDIUM / LOW]
+  Segnali:    [elenco segnali usati dall'inferenza]
+  Stack:      [tecnologie rilevate]
+```
+
+- **Se HIGH:** mostra la card e procedi con le domande del tree (0c).
+  L'utente può correggere il tipo prima che il tree parta rispondendo con il tipo corretto
+  (es. "in realtà è Auth"). In assenza di correzione, il tree parte immediatamente.
+- **Se MEDIUM/LOW:** chiedi conferma con scelta multipla:
+  "Il requisito mi sembra [tipo inferito]. Confermi? (si / altro tipo: FE / BE / ETL / DB / Auth / Integration)"
+
+### 0c — Lancia le domande del tree contestuale
+
+Usa le domande in `reference/question-trees.md` per il tipo confermato.
+
+**Regola fondamentale:** salta ogni domanda già rispondibile dagli AC/description esistenti.
+Fai UNA domanda alla volta. Aspetta la risposta prima di procedere alla successiva.
+
+Al termine delle domande, aggiorna la Req Profile Card con gli scenari raccolti:
+
+```
+REQ PROFILE (aggiornato):
+  Tipo:       [tipo]
+  Scenari L1: [lista scenari flusso principale]
+  Scenari L2: [lista edge case contestuali]
+  Scenari L3: [lista scenari integrazione/dipendenze]
+```
+
+Questa card è l'input aggiuntivo per Phase 4a (matrice scenari).
+
+---
+
 ## WORKFLOW A 5 FASI
 
 ### Fase 1 — Lettura AC da Jira [HARD-GATE]
@@ -151,9 +214,13 @@ Test Plan: {Story summary}
 
 #### 4a — Elicitazione scenari [OBBLIGATORIA prima di scrivere qualsiasi TC]
 
-Prima di generare i Test Case, devi coprire tutte e quattro le categorie di scenario.
-Per ogni categoria dove il contesto non e' gia' chiaro dagli AC, fai domande esplicite al developer.
-Fai UNA domanda alla volta. Non procedere alla generazione finche' non hai risposta su ogni categoria.
+**Input:** Req Profile Card (Phase 0) + AC (Phase 1).
+Gli scenari raccolti nella Phase 0 (L1/L2/L3) vanno classificati nelle 4 categorie qui sotto
+PRIMA di generare i TC. Non ripetere domande gia' poste in Phase 0.
+
+Per ogni categoria ancora scoperta dopo aver assorbito il Req Profile e gli AC,
+fai domande esplicite al developer. UNA alla volta.
+Non procedere alla generazione finche' tutte e 4 le categorie non sono valutate.
 
 **Categoria 1 — Scenari positivi (happy path)**
 Hai gia' questo dagli AC. Verifica solo che siano completi.
@@ -289,6 +356,9 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 | "Non ci sono ruoli diversi in questa Story" | Hai chiesto? Se non hai fatto la domanda, non puoi saperlo. Chiedi e poi registra "N/A — confermato". |
 | "Genero i TC negativi dopo, ora faccio quelli positivi" | I TC negativi vengono dimenticati. La matrice 4a si compila PRIMA di scrivere qualsiasi TC. |
 | "Ho troppi scenari, semplificoo" | La semplificazione e' un rischio QA, non un'efficienza. Se gli scenari sono troppi, discutili col developer e prioritizza — ma non eliminare senza discussione. |
+| "Ho letto gli AC, so gia' il tipo — salto Phase 0" | Phase 0 non e' solo typing: e' la raccolta degli scenari contestuali che gli AC non esplicitano. Senza queste domande, i TC coprono solo cio' che e' scritto, non cio' che puo' rompersi. |
+| "Le domande del tree rallentano il workflow" | 4-6 domande mirate producono 2-3x piu' scenari edge rispetto alla matrice generica. Il piano di test finale e' piu' completo in meno iterazioni. |
+| "Il tipo e' ovvio, non serve inferire" | Ovvio per te. La Req Profile Card documenta il tipo e i segnali: e' evidenza, non burocrazia. Se sbagli il tipo, i TC coprono il dominio sbagliato. |
 
 ---
 
@@ -296,6 +366,10 @@ Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-auto
 
 Prima di dichiarare la skill completata:
 
+- [ ] Phase 0 eseguita: tipo requisito inferito e Req Profile Card mostrata
+- [ ] Confidence HIGH → tree lanciato senza conferma tipo | MEDIUM/LOW → conferma ricevuta
+- [ ] Domande del tree skippate se risposta gia' presente in AC/description
+- [ ] Req Profile Card aggiornata con scenari L1/L2/L3 prima di procedere a Phase 4a
 - [ ] AC letti da Jira (o forniti esplicitamente dal developer)
 - [ ] Test Strategy Confluence cercata (trovata o WARNING registrato)
 - [ ] Test Plan generato/creato con campi obbligatori
@@ -318,6 +392,7 @@ Prima di dichiarare la skill completata:
 
 ## VINCOLI NON NEGOZIABILI
 
+0. **Phase 0 e' sempre la prima fase** — nessun AC viene letto senza aver prima inferito il tipo e lanciato le domande del tree contestuale; la Req Profile Card deve essere prodotta prima di Phase 1
 1. **Nessun Test Case senza AC corrispondente** — ogni TC e' tracciabile a un comportamento specifico
 2. **La matrice 4a va compilata prima di scrivere qualsiasi TC** — non si genera senza aver valutato tutte e 4 le categorie
 3. **Le domande su edge case, negativi e profilazioni sono obbligatorie** — se non emergono dagli AC, si chiedono; non si assumono

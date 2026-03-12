@@ -94,7 +94,15 @@ Esegui un rebase o merge da sviluppo prima di procedere.
 
 ### Step 2 — Verifica Test e Build
 
-🟡 MEDIO
+🟡 MEDIO — Mostra pre-flight card prima di eseguire la suite
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finishing-branch |
+|:---|
+| 🌿 Branch: `<branch-name>` |
+| 1. 🧪 Azione: Esecuzione suite di test completa |
+| 📂 `<directory test>` |
+| 💡 Perche': Verifica che il branch non abbia regressions prima di aprire la PR |
+| 🚫 Se NO: La suite non viene eseguita — rischio di aprire PR con test rossi |
 
 Esegui la suite di test completa — non solo i test che hai modificato.
 
@@ -389,7 +397,7 @@ Se i permessi sono negati:
 | Operazione | Livello | Note |
 |-----------|---------|------|
 | `git diff`, `git log`, `git status` | 🟢 Sicuro | Solo lettura |
-| Esecuzione test suite | 🟡 Medio | Pre-flight consigliata |
+| Esecuzione test suite | 🟡 Medio | Pre-flight obbligatoria |
 | `git push` | 🔴 Alto | Pre-flight obbligatoria |
 | Apertura PR | 🔴 Alto | Pre-flight obbligatoria |
 | Apertura PR con piano incompleto | 🚨 Critico | Hard block (richiede eccezione esplicita) |

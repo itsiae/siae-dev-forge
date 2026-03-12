@@ -7,7 +7,18 @@ description: >
 
 # SIAE Git Workflow
 
-`╔══ 🔨 DevForge — SIAE GIT WORKFLOW ══╗`
+```
+╔══════════════════════════════════════════════════════════════════╗
+║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
+║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
+║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
+║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
+║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
+║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
+║              🔨 DevForge · SIAE GIT WORKFLOW                     ║
+║         "Il codice si forgia. Il developer cresce."              ║
+╚══════════════════════════════════════════════════════════════════╝
+```
 
 > **Tipo:** Rigid | **Fase SDLC:** 3. Branching
 
@@ -166,6 +177,28 @@ Regole aggiuntive:
 ---
 
 ## 8. Flusso Operativo
+
+**Pre-flight card 🟡 MEDIO — obbligatoria prima di `git add/commit`:**
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| 🌿 Branch: `<branch-name>` |
+| 1. 📌 Azione: `git add` + `git commit` |
+| 📂 `<file/i modificati>` |
+| 💡 Perche': Si stanno registrando modifiche nella history locale del branch |
+| 🚫 Se NO: Le modifiche restano unstaged / uncommitted |
+
+**Pre-flight card 🔴 ALTO — obbligatoria prima di `git push`, `git merge`, `git tag`:**
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 🌿 Branch: `<branch-name>` |
+| 🎯 Target: `<branch-target o remote>` |
+| 1. 🚀 Azione: `git push / merge / tag` |
+| 📂 `origin/<branch-name>` |
+| 💡 Perche': L'operazione modifica lo stato del repository remoto o condiviso |
+| 🚫 Se NO: L'operazione non viene eseguita — lo stato remoto rimane invariato |
 
 ### Nuova feature
 ```bash
@@ -333,11 +366,11 @@ git push origin PRODUZIONE
 
 | Operazione              | Rischio    | Card                          |
 |-------------------------|------------|-------------------------------|
-| `git status/log/diff`   | 🟢 SICURO  | Nessuna card                  |
-| `git add/commit`        | 🟡 MEDIO   | Card bordo `╔══╗` giallo      |
-| `git push`              | 🔴 ALTO    | Card bordo `┏━━┓` rosso       |
-| `git merge`             | 🔴 ALTO    | Card bordo `┏━━┓` rosso       |
-| `git tag` + push        | 🔴 ALTO    | Card bordo `┏━━┓` rosso       |
-| `git push --force`      | 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |
-| `git rebase` (condiviso)| 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |
-| `git push origin :refs/tags/*` (rollback) | 🚨 CRITICO | Card bordo `┏━━┓` rosso bold  |
+| `git status/log/diff`   | 🟢 SICURO  | No                            |
+| `git add/commit`        | 🟡 MEDIO   | Si                            |
+| `git push`              | 🔴 ALTO    | Si                            |
+| `git merge`             | 🔴 ALTO    | Si                            |
+| `git tag` + push        | 🔴 ALTO    | Si                            |
+| `git push --force`      | 🚨 CRITICO | Si                            |
+| `git rebase` (condiviso)| 🚨 CRITICO | Si                            |
+| `git push origin :refs/tags/*` (rollback) | 🚨 CRITICO | Si         |
