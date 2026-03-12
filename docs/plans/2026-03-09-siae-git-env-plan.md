@@ -16,7 +16,7 @@ Stabilisce `GH_MODE` (gh disponibile) o `FALLBACK_MODE` (gh assente) per la sess
 
 ---
 
-## Task 1: Crea `skills/siae-git-env/SKILL.md`
+## Task 1: Crea `skills/siae-git-env/SKILL.md` [DONE]
 
 **File coinvolti:**
 - Crea: `skills/siae-git-env/SKILL.md`
@@ -172,7 +172,7 @@ Output atteso: `[feature/... <sha>] feat(skills): add siae-git-env...`
 
 ---
 
-## Task 2: Aggiorna `siae-git-workflow` — Step 0
+## Task 2: Aggiorna `siae-git-workflow` — Step 0 [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-git-workflow/SKILL.md`
@@ -234,7 +234,7 @@ git commit -m "feat(skills): add step 0 siae-git-env to siae-git-workflow"
 
 ---
 
-## Task 3: Aggiorna `siae-finishing-branch` — Step 0 + Step 5 condizionale
+## Task 3: Aggiorna `siae-finishing-branch` — Step 0 + Step 5 condizionale [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-finishing-branch/SKILL.md`
@@ -344,7 +344,7 @@ git commit -m "feat(skills): add step 0 siae-git-env and conditional gh/fallback
 
 ---
 
-## Task 4: Aggiorna `plugin.json` e `marketplace.json` — count skill
+## Task 4: Aggiorna `plugin.json` e `marketplace.json` — count skill [DONE]
 
 **File coinvolti:**
 - Modifica: `.claude-plugin/plugin.json` (riga 3 — description)
