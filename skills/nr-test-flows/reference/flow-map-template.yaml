@@ -1,10 +1,11 @@
 # Flow Map Template — nr-test-flows
 #
-# Template YAML per mappare la struttura navigazionale di un'applicazione frontend.
-# Ogni sezione corrisponde a un'area navigazionale distinta vista dall'utente finale.
-# Ogni flusso corrisponde a un'operazione che l'utente può eseguire in quella sezione.
+# Schema deterministico per NRT flow map.
+# Flow ID derivato da simboli del codice — NON libero.
+# L5 signals obbligatori per ogni flusso.
+# Priority evidence obbligatorio — nessun giudizio di dominio.
 #
-# OBBLIGATORIO: ogni sezione e flusso DEVONO citare il file sorgente che li prova.
+# OBBLIGATORIO: ogni sezione e flusso DEVONO citare il file sorgente (file:riga).
 # Se non hai evidenza → confidence: UNVERIFIED (non omettere, non inventare).
 
 flow_map:
@@ -16,29 +17,37 @@ flow_map:
     generated_at: "{YYYY-MM-DD}"
     analyst: "nr-test-flows"
 
-  # Lista delle sezioni navigazionali dell'applicazione.
-  # Una "sezione" è un'area dell'app accessibile tramite navigazione principale
-  # (menu, tab bar, routing top-level, drawer).
   sections:
 
     - id: "section-auth"
       name: "Autenticazione"
       access: "pubblico"           # pubblico | autenticato | ruolo:{nome-ruolo}
-      route_prefix: "/auth"        # prefisso route (se applicabile)
+      route_prefix: "/auth"
       source: "{file:riga}"        # es. src/router/index.ts:12
       confidence: "CONFIRMED"      # CONFIRMED | INFERRED | UNVERIFIED
 
-      # Lista dei flussi utente in questa sezione.
       flows:
 
-        - id: "flow-auth-login"
+        - id: "auth--LoginView--POST-auth-login"
+          # Formato ID deterministico: {route-slug}--{ComponentName}--{HTTP_METHOD}-{api-path-segment}
+          # Se solo navigazione (nessuna API): {route-slug}--{ComponentName}--nav-only
+          # Se solo GET: {route-slug}--{ComponentName}--GET-{api-path-segment}
           name: "Login con credenziali"
-          priority: "CRITICAL"     # CRITICAL | HIGH | MEDIUM
+          priority: "CRITICAL"
+          # Regole priority (da evidence-patterns.md § 5 Pattern Meccanici):
+          # CRITICAL: canActivate/guard + API mutante, entry point post-login, /auth|/payment|/submit|/sign|/confirm|/delete
+          # HIGH: API mutante (P1) senza CRITICAL, form discriminator che cambia payload (P5), rendering per ruolo
+          # MEDIUM: solo P4 (submit) senza API, solo P2 (navigation) senza API
+          # LOW/SKIP: nessun pattern → component presentazionale, non genera flusso NRT
+          priority_evidence:
+            rule: "endpoint-path-contains-auth"   # la regola applicata (non il giudizio)
+            source_guard: ""                       # file:riga del guard (se applicabile)
+            source_api: "{file:riga}"              # es. src/api/auth.ts:12
+
           trigger: "Apertura app / navigazione a /login"
-          entry_point: "{file:riga}"  # es. src/views/LoginView.vue:1
+          entry_point: "{file:riga}"
           confidence: "CONFIRMED"
 
-          # Passi del flusso (navigazione e azioni principali)
           steps:
             - step: 1
               action: "Utente visualizza il form di login"
@@ -53,39 +62,34 @@ flow_map:
               action: "Sistema autentica → redirect alla home"
               component: "{file:riga}"
 
-          # API calls rilevate in questo flusso
           api_calls:
             - endpoint: "POST /api/auth/login"
               source: "{file:riga}"
               confidence: "CONFIRMED"
 
-          # Navigation guard che protegge o redirige questo flusso
-          guards: []  # es. [{name: "guestGuard", source: "src/router/guards.ts:5"}]
+          guards: []
 
-          # Ruoli/profili che possono eseguire questo flusso
           roles:
             - "tutti gli utenti (non autenticati)"
 
-        - id: "flow-auth-logout"
-          name: "Logout"
-          priority: "HIGH"
-          trigger: "Click su 'Esci' in header/menu"
-          entry_point: "{file:riga}"
-          confidence: "CONFIRMED"
-          steps:
-            - step: 1
-              action: "Utente clicca 'Esci'"
-              component: "{file:riga}"
-            - step: 2
-              action: "Sistema invalida sessione → redirect a /login"
-              component: "{file:riga}"
-          api_calls:
-            - endpoint: "POST /api/auth/logout"
-              source: "{file:riga}"
-              confidence: "CONFIRMED"
-          guards: []
-          roles:
-            - "utenti autenticati"
+          # L5 SIGNALS — obbligatorio per ogni flusso (anche se vuoto)
+          # Eseguire il grep L5 da evidence-patterns.md § "I 5 Pattern Meccanici" prima di compilare.
+          l5_signals:
+            store_states: []
+            # es. [{store: "src/stores/auth.ts:12", states: ["IDLE","LOADING","SUCCESS","ERROR"]}]
+            form_discriminators: []
+            # es. [{component: "src/views/LoginView.vue:45", v_if_var: "loginType", branches: ["standard","sso"]}]
+            computed_rendering: []
+            # es. [{component: "src/views/LoginView.vue:78", condition: "isSsoEnabled", renders: "SsoButton"}]
+
+          # VARIANTS — obbligatorio se form_discriminators non è vuoto
+          # Una variant per ogni branch del discriminatore.
+          variants: []
+          # es.:
+          # - variant_id: "auth--LoginView--POST-auth-login--variant-sso"
+          #   branch_condition: "loginType === 'sso'"
+          #   source: "src/views/LoginView.vue:45"
+          #   priority_delta: null  # null = stesso priority del flusso padre
 
     - id: "section-dashboard"
       name: "Dashboard"
@@ -96,9 +100,13 @@ flow_map:
 
       flows:
 
-        - id: "flow-dashboard-overview"
+        - id: "dashboard--DashboardView--GET-dashboard-stats"
           name: "Visualizzazione overview"
           priority: "HIGH"
+          priority_evidence:
+            rule: "get-api-core-content"
+            source_guard: "{file:riga}"
+            source_api: "{file:riga}"
           trigger: "Navigazione a /dashboard dopo login"
           entry_point: "{file:riga}"
           confidence: "CONFIRMED"
@@ -119,20 +127,29 @@ flow_map:
           roles:
             - "utente standard"
             - "amministratore"
+          l5_signals:
+            store_states: []
+            form_discriminators: []
+            computed_rendering: []
+          variants: []
 
-    # Template sezione generica — duplica e adatta per ogni sezione aggiuntiva
+    # Template sezione generica — duplica e adatta
     - id: "section-{nome}"
       name: "{Nome Sezione}"
-      access: "autenticato"        # cambia se sezione pubblica
+      access: "autenticato"
       route_prefix: "/{path}"
       source: "{file:riga}"
       confidence: "CONFIRMED | INFERRED | UNVERIFIED"
 
       flows:
 
-        - id: "flow-{sezione}-{operazione}"
+        - id: "{route-slug}--{ComponentName}--{HTTP_METHOD}-{api-path-segment}"
           name: "{Descrizione operazione}"
-          priority: "HIGH"         # valuta: CRITICAL se blocca accesso, HIGH se core, MEDIUM se secondario
+          priority: "HIGH"
+          priority_evidence:
+            rule: "{regola applicata: mutating-api+canActivate-guard | endpoint-path-contains-auth | mutating-api | form-discriminator-changes-payload | role-based-rendering | submit-no-api | nav-only}"
+            source_guard: ""
+            source_api: "{file:riga}"
           trigger: "{cosa scatena questo flusso}"
           entry_point: "{file:riga}"
           confidence: "CONFIRMED"
@@ -144,29 +161,30 @@ flow_map:
           guards: []
           roles:
             - "{ruolo o profilo}"
+          l5_signals:
+            store_states: []
+            form_discriminators: []
+            computed_rendering: []
+          variants: []
 
   # Gap Report — OBBLIGATORIO anche se vuoto
-  # Lista sezioni/flussi per cui non si è trovata evidenza sufficiente.
   gap_report:
-    - type: "UNVERIFIED_SECTION"
-      description: "{nome sezione} — route rilevata in router ma nessun component corrispondente trovato"
+    - type: "UNVERIFIED_SECTION | MISSING_GUARD_EVIDENCE | API_CALL_UNRESOLVED"
+      severity: "CRITICAL | INFO"
+      # CRITICAL: gap che potrebbe far mancare una regressione (guard mancante, flusso mutante non mappato)
+      # INFO: gap cosmetico (API GET non mappata a sezione, naming incerto)
+      description: "{descrizione}"
       evidence_searched: "{lista file cercati}"
-    - type: "MISSING_GUARD_EVIDENCE"
-      description: "{nome flusso} — guard dichiarato nel router ma file guard non trovato"
-      evidence_searched: "{lista file cercati}"
-    - type: "API_CALL_UNRESOLVED"
-      description: "{endpoint} chiamato in {file:riga} ma non mappato a una sezione specifica"
-      evidence_searched: "{lista file cercati}"
-    # Se nessun gap: lascia lista vuota []
 
-  # Statistiche riassuntive
   summary:
     total_sections: 0
     total_flows: 0
+    total_variants: 0
     by_priority:
       CRITICAL: 0
       HIGH: 0
       MEDIUM: 0
+      LOW_SKIP: 0
     by_access:
       pubblico: 0
       autenticato: 0
@@ -174,4 +192,10 @@ flow_map:
       CONFIRMED: 0
       INFERRED: 0
       UNVERIFIED: 0
-    gaps_found: 0
+    l5_signals_found:
+      store_states: 0
+      form_discriminators: 0
+      variants_generated: 0
+    gaps_found:
+      CRITICAL: 0
+      INFO: 0
