@@ -106,8 +106,19 @@ Suddividi il lavoro in task indipendenti (o con dipendenze esplicite).
 
 **Template per ogni task:**
 
+**Stato task:** Ogni task nasce con `[PENDING]`. Lo stato viene aggiornato
+durante l'esecuzione da `siae-executing-plans` o `siae-subagent-development`.
+NON scrivere task senza marker — un task senza marker è un bug nel piano.
+
+Tre stati possibili:
+- `[PENDING]` — non ancora iniziato (default)
+- `[DONE]` — completato e verificato
+- `[BLOCKED]` — non completabile (con motivo obbligatorio)
+
+**Regola:** un piano è "completo" se e solo se **tutti** i task sono `[DONE]`.
+
 ````markdown
-### Task N: [Nome Componente / Modulo]
+### Task N: [Nome Componente / Modulo] [PENDING]
 
 **File coinvolti:**
 - Crea: `path/esatto/al/file.py`

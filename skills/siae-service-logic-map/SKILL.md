@@ -256,24 +256,14 @@ gh api /repos/itsiae/{repo}/contents/{RepositoryFile} --jq '.content' | base64 -
 
 ### 4c — Pilot Test (OBBLIGATORIO su sistemi con 3+ cluster)
 
-🟡 MEDIO — Mostra pre-flight card prima del pilot test.
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-service-logic-map",
-  "context": [
-    {"emoji": "🔬", "label": "Pilot test", "value": "1 cluster su N totali"},
-    {"emoji": "📦", "label": "Dati pre-fetchati", "value": "Service.java + Entity.java + openapi"}
-  ],
-  "actions": [
-    {"emoji": "🤖", "label": "Dispatch 1 agente pilot (cluster piu piccolo)", "path": "docs/logic-catalog/"},
-    {"emoji": "📄", "label": "Scrittura 1 file cluster", "path": "docs/logic-catalog/cluster-{nome}.md"}
-  ],
-  "reason": "Validazione pipeline prima del full run",
-  "ifno": "Pilot annullato, full run non garantito senza validazione"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
+|:---|
+| 🔬 Pilot test: `1 cluster su N totali` |
+| 📦 Dati pre-fetchati: `Service.java + Entity.java + openapi` |
+| 1. 🤖 Dispatch 1 agente pilot (cluster piu piccolo): `docs/logic-catalog/` |
+| 2. 📄 Scrittura 1 file cluster: `docs/logic-catalog/cluster-{nome}.md` |
+| 💡 Perche': Validazione pipeline prima del full run |
+| 🚫 Se NO: Pilot annullato, full run non garantito senza validazione |
 
 Procedura pilot:
 1. Pre-fetcha dati per il cluster piu' piccolo (meno repo)
@@ -284,25 +274,15 @@ Procedura pilot:
 
 ### 4d — Dispatch Agenti per Cluster (Full Run)
 
-🟡 MEDIO — Mostra pre-flight card prima del full run.
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-service-logic-map",
-  "context": [
-    {"emoji": "🤖", "label": "Agenti", "value": "K agenti (1 per cluster) in parallelo"},
-    {"emoji": "📦", "label": "Cluster", "value": "lista cluster confermati al Step 3"},
-    {"emoji": "✅", "label": "Pilot", "value": "1/1 file verificato"}
-  ],
-  "actions": [
-    {"emoji": "⚡", "label": "Dispatch tutti gli agenti in parallelo", "path": "docs/logic-catalog/"},
-    {"emoji": "📄", "label": "Scrittura K file cluster", "path": "docs/logic-catalog/cluster-*.md"}
-  ],
-  "reason": "Pilot OK, full run pronto",
-  "ifno": "Full run annullato, catalogo parziale"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
+|:---|
+| 🤖 Agenti: `K agenti (1 per cluster) in parallelo` |
+| 📦 Cluster: `lista cluster confermati al Step 3` |
+| ✅ Pilot: `1/1 file verificato` |
+| 1. ⚡ Dispatch tutti gli agenti in parallelo: `docs/logic-catalog/` |
+| 2. 📄 Scrittura K file cluster: `docs/logic-catalog/cluster-*.md` |
+| 💡 Perche': Pilot OK, full run pronto |
+| 🚫 Se NO: Full run annullato, catalogo parziale |
 
 Dispatcha TUTTI i cluster in un blocco parallelo (1 agente per cluster).
 
@@ -357,23 +337,13 @@ Se mancano file → re-dispatcha solo i cluster mancanti (non tutto il batch).
 
 ## Step 5 — POST-BUILD: Documentazione Formale
 
-🟡 MEDIO — Mostra pre-flight card prima di eseguire la documentazione automatica
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-service-logic-map",
-  "context": [
-    {"emoji": "📚", "label": "Input", "value": "docs/logic-catalog/cluster-*.md + clusters.yaml"},
-    {"emoji": "🏗️", "label": "Scope", "value": "Documentazione formale catalogo L1+L2+L3"}
-  ],
-  "actions": [
-    {"emoji": "📄", "label": "Esecuzione siae-documentation su cluster generati", "path": "docs/logic-catalog/"}
-  ],
-  "reason": "POST-BUILD obbligatorio — genera doc navigabile dal team",
-  "ifno": "Il catalogo resta senza documentazione formale"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
+|:---|
+| 📚 Input: `docs/logic-catalog/cluster-*.md + clusters.yaml` |
+| 🏗️ Scope: `Documentazione formale catalogo L1+L2+L3` |
+| 1. 📄 Esecuzione siae-documentation su cluster generati: `docs/logic-catalog/` |
+| 💡 Perche': POST-BUILD obbligatorio — genera doc navigabile dal team |
+| 🚫 Se NO: Il catalogo resta senza documentazione formale |
 
 Dopo COLLECT (Step 4f), eseguire automaticamente `siae-documentation`
 sui cluster-*.md generati. Non proporre — eseguire.

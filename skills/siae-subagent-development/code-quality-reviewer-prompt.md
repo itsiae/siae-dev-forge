@@ -55,6 +55,27 @@ Presumi che qualcosa sia stato saltato fino a prova contraria.
 
 ---
 
+## CITATION RULE
+
+```
+Ogni issue e ogni PASS nel tuo report DEVE citare file:riga verificato.
+Nessuna affermazione positiva o negativa senza citazione.
+```
+
+**Per ogni issue (CRITICAL/MAJOR/MINOR/INFO):**
+- Il campo `File: path/file.ext:NN` DEVE essere verificato (non inventato)
+- Apri il file, leggi la riga, conferma che il problema esiste a quella riga
+- Se non puoi verificare la riga, non segnalare l'issue
+
+**Per ogni PASS nella CHECKLIST CONFORMITA':**
+- Cita almeno 1 file come evidenza del PASS
+- Esempio: `1. Standard SIAE: ✅ — src/service/UserService.java:1 (package it.siae.*, naming OK)`
+- "Sembra conforme" senza citazione = il punto non e' stato verificato
+
+**Formato citazione standard:** `path/to/file.ext:NN — descrizione breve`
+
+---
+
 ## Framework di Review — 6 Punti SIAE
 
 ### Punto 1: Conformita' Standard SIAE

@@ -63,7 +63,7 @@ echo '{
 
 ---
 
-## Task 1: Aggiorna devforge-visual.md
+## Task 1: Aggiorna devforge-visual.md [DONE]
 
 **File coinvolti:**
 - Modifica: `design-system/devforge-visual.md`
@@ -145,7 +145,7 @@ git commit -m "feat(design-system): sostituisci generate-card.py con markdown ta
 
 ---
 
-## Task 2: siae-git-workflow + siae-git-worktrees
+## Task 2: siae-git-workflow + siae-git-worktrees [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-git-workflow/SKILL.md` (1 occorrenza)
@@ -179,7 +179,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-git-
 
 ---
 
-## Task 3: siae-finishing-branch + siae-requesting-review + siae-receiving-review
+## Task 3: siae-finishing-branch + siae-requesting-review + siae-receiving-review [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-finishing-branch/SKILL.md` (1 occorrenza)
@@ -209,7 +209,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-fini
 
 ---
 
-## Task 4: siae-debugging + siae-verification
+## Task 4: siae-debugging + siae-verification [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-debugging/SKILL.md` (1 occorrenza)
@@ -244,7 +244,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-debu
 
 ---
 
-## Task 5: siae-qa + siae-automation
+## Task 5: siae-qa + siae-automation [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-qa/SKILL.md` (1 occorrenza)
@@ -272,7 +272,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-qa e
 
 ---
 
-## Task 6: siae-documentation + siae-codebase-map
+## Task 6: siae-documentation + siae-codebase-map [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-documentation/SKILL.md` (1 occorrenza)
@@ -300,7 +300,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-docu
 
 ---
 
-## Task 7: siae-security + siae-iac
+## Task 7: siae-security + siae-iac [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-security/SKILL.md` (2 occorrenze)
@@ -331,7 +331,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-secu
 
 ---
 
-## Task 8: siae-data-engineering
+## Task 8: siae-data-engineering [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-data-engineering/SKILL.md` (4 occorrenze)
@@ -357,7 +357,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-data
 
 ---
 
-## Task 9: siae-executing-plans + siae-parallel-agents + siae-writing-plans
+## Task 9: siae-executing-plans + siae-parallel-agents + siae-writing-plans [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-executing-plans/SKILL.md` (1 occorrenza)
@@ -387,7 +387,7 @@ git commit -m "feat(skills): migra pre-flight card a markdown table in siae-exec
 
 ---
 
-## Task 10: Verifica finale + version bump + release
+## Task 10: Verifica finale + version bump + release [DONE]
 
 **File coinvolti:**
 - Verifica: tutti i SKILL.md

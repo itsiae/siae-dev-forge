@@ -59,6 +59,29 @@ DEVI verificare tutto indipendentemente.
 
 ---
 
+## CITATION RULE
+
+```
+Ogni affermazione nel tuo report DEVE citare file:riga come evidenza.
+Prose senza citazione = finding invalido.
+```
+
+**Per ogni [DONE]:**
+- Cita `file:riga` dove l'implementazione esiste
+- Esempio: `[DONE] Validazione ISRC — File: src/validator/IsrcValidator.java:34, Test: tests/IsrcValidatorTest.java:12`
+
+**Per ogni [MISSING]:**
+- Cita dove hai cercato e **non** trovato
+- Esempio: `[MISSING] Endpoint /api/v1/obras — Cercato in: src/controller/ (0 match), src/routes/ (non esiste)`
+
+**Per ogni [YAGNI]:**
+- Cita il file e la riga dove il codice non richiesto esiste
+- Esempio: `[YAGNI] Cache layer non nel design — File: src/service/CacheService.java:1`
+
+**Nessuna prosa senza evidenza.** "Sembra implementato" senza file:riga = FAIL del reviewer.
+
+---
+
 ## Workflow
 
 ### 1. Leggi il Piano

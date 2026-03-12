@@ -133,22 +133,13 @@ Servizi AWS approvati e in uso nei repository SIAE.
 
 ## 4. Vincoli
 
-🔴 ALTO — Mostra pre-flight card prima di modificare un'architettura di sistema esistente
-
-```bash
-echo '{
-  "level": "ALTO",
-  "skill": "siae-architecture",
-  "context": [
-    {"emoji": "🏗️", "label": "Contesto", "value": "Modifica architettura sistema esistente in produzione SIAE"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "Modifica architettura", "path": "sistema esistente"}
-  ],
-  "reason": "Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. Rischio regressione e downtime.",
-  "ifno": "La modifica non viene applicata. Documentare la decisione come ADR con stato Rejected."
-}' | python3 design-system/generate-card.py
-```
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-architecture |
+|:---|
+| ⚠️ WARNING |
+| 🏗️ Contesto: `Modifica architettura sistema esistente in produzione SIAE` |
+| 1. ⚠️ Modifica architettura: `sistema esistente` |
+| 💡 Perche': Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. Rischio regressione e downtime. |
+| 🚫 Se NO: La modifica non viene applicata. Documentare la decisione come ADR con stato Rejected. |
 
 1. **Solo pattern reali** — non proporre architetture non presenti nel catalogo (sezione 2).
    Ogni design deve mappare su uno o piu' dei 5 pattern documentati.
@@ -157,42 +148,22 @@ echo '{
 4. **Servizi approvati** — usare solo i servizi nella AWS Service Map (sezione 3).
    Per servizi non in lista, richiedere approvazione esplicita.
 
-🟡 MEDIO — Mostra pre-flight card prima di scegliere librerie o dipendenze esterne
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-architecture",
-  "context": [
-    {"emoji": "🏗️", "label": "Contesto", "value": "Selezione libreria o dipendenza esterna per progetto SIAE"}
-  ],
-  "actions": [
-    {"emoji": "📦", "label": "Aggiunta dipendenza", "path": "pom.xml / package.json / requirements.txt"}
-  ],
-  "reason": "Librerie esterne introducono rischi di licenza, vulnerabilita' CVE e debito tecnico. Devono essere valutate rispetto ai pattern SIAE approvati.",
-  "ifno": "Non aggiungere la dipendenza. Rivalutare se esiste un servizio AWS o modulo interno equivalente."
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-architecture |
+|:---|
+| 🏗️ Contesto: `Selezione libreria o dipendenza esterna per progetto SIAE` |
+| 1. 📦 Aggiunta dipendenza: `pom.xml / package.json / requirements.txt` |
+| 💡 Perche': Librerie esterne introducono rischi di licenza, vulnerabilita' CVE e debito tecnico. Devono essere valutate rispetto ai pattern SIAE approvati. |
+| 🚫 Se NO: Non aggiungere la dipendenza. Rivalutare se esiste un servizio AWS o modulo interno equivalente. |
 
 5. **Diagrammi in Mermaid** — tutti i diagrammi architetturali devono essere in sintassi Mermaid,
    renderizzabili in GitHub e Confluence.
 
-🟡 MEDIO — Mostra pre-flight card prima di pubblicare un ADR su Confluence
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-architecture",
-  "context": [
-    {"emoji": "🏗️", "label": "Contesto", "value": "Pubblicazione ADR su Confluence per decisione architetturale SIAE"}
-  ],
-  "actions": [
-    {"emoji": "📄", "label": "Pubblicazione ADR", "path": "Confluence / docs/architecture/"}
-  ],
-  "reason": "Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. Deve essere revisionato e approvato prima della pubblicazione.",
-  "ifno": "L ADR rimane in stato Draft locale. Richiedere revisione al tech lead prima di procedere."
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-architecture |
+|:---|
+| 🏗️ Contesto: `Pubblicazione ADR su Confluence per decisione architetturale SIAE` |
+| 1. 📄 Pubblicazione ADR: `Confluence / docs/architecture/` |
+| 💡 Perche': Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. Deve essere revisionato e approvato prima della pubblicazione. |
+| 🚫 Se NO: L ADR rimane in stato Draft locale. Richiedere revisione al tech lead prima di procedere. |
 
 ## Tabella Anti-Razionalizzazione
 

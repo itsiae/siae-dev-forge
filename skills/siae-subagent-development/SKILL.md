@@ -72,23 +72,15 @@ PIANO DI IMPLEMENTAZIONE:
 
 ### Step 2 — Per Ogni Task: Dispatch Implementer
 
-🟡 MEDIO — Mostra pre-flight card prima di lanciare ogni subagent
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-subagent-development",
-  "context": [
-    {"emoji": "🤖", "label": "Task", "value": "<nome task dal piano>"},
-    {"emoji": "📋", "label": "Piano", "value": "docs/plans/<file>.md"}
-  ],
-  "actions": [
-    {"emoji": "🚀", "label": "Dispatch subagent implementer", "path": "docs/plans/<file>.md"}
-  ],
-  "reason": "Subagent con contesto fresco modifichera file reali",
-  "ifno": "Il task non viene implementato, piano resta in attesa"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
+|:---|
+| 🤖 Task: `<nome task dal piano>` |
+| 📋 Piano: `docs/plans/<file>.md` |
+| 1. 🚀 Dispatch subagent implementer: `docs/plans/<file>.md` |
+| 💡 Perche': Subagent con contesto fresco modifichera file reali |
+| 🚫 Se NO: Il task non viene implementato, piano resta in attesa |
 
 Per ogni task nel piano, lancia un subagent implementer con il prompt definito
 in [implementer-prompt.md](implementer-prompt.md).
@@ -147,6 +139,17 @@ con il prompt definito in [code-quality-reviewer-prompt.md](code-quality-reviewe
 
 Dopo il PASS di entrambi i reviewer:
 
+**Aggiorna il piano:**
+1. Apri `docs/plans/<filename>.md`
+2. Aggiorna il marker del task: `[PENDING]` → `[DONE]`
+3. Se il subagent ha fallito dopo 2 retry: `[PENDING]` → `[BLOCKED]` — motivo del fallimento
+4. Committa:
+
+```bash
+git add docs/plans/<filename>.md
+git commit -m "docs(plans): mark task N as DONE in <piano>"
+```
+
 ```
 REQUIRED SUB-SKILL: siae-verification
 ```
@@ -154,25 +157,44 @@ REQUIRED SUB-SKILL: siae-verification
 Esegui il protocollo di verifica completo (IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA)
 prima di dichiarare il task completato.
 
-### Step 6 — Final Review Complessiva
+### Step 5b — Plan Completion Gate
 
-🟡 MEDIO — Mostra pre-flight card prima di eseguire la test suite finale
+Prima della final review, verifica lo stato completo del piano:
 
 ```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-subagent-development",
-  "context": [
-    {"emoji": "🧪", "label": "Suite", "value": "Test suite completa progetto"},
-    {"emoji": "✅", "label": "Task completati", "value": "N/N"}
-  ],
-  "actions": [
-    {"emoji": "▶️", "label": "Esecuzione test suite finale", "path": "tests/"}
-  ],
-  "reason": "Verifica integrazione post-implementazione",
-  "ifno": "Completamento dichiarato senza verifica test suite"
-}' | python3 design-system/generate-card.py
+grep -c "\[PENDING\]" docs/plans/<filename>.md
+grep -c "\[BLOCKED\]" docs/plans/<filename>.md
+grep -c "\[DONE\]" docs/plans/<filename>.md
 ```
+
+**Se PENDING > 0 o BLOCKED > 0:** STOP. Non procedere alla final review.
+
+```
+🔴 PIANO INCOMPLETO
+
+Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Opzioni:
+1. Dispatcha subagent per i task [PENDING] rimanenti
+2. Chiedi all'utente se i [BLOCKED] vanno risolti o rimossi
+3. Solo quando tutti [DONE] → procedi con Step 6
+```
+
+**Se tutti [DONE]:** procedi con Step 6.
+
+---
+
+### Step 6 — Final Review Complessiva
+
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
+|:---|
+| 🧪 Suite: `Test suite completa progetto` |
+| ✅ Task completati: `N/N` |
+| 1. ▶️ Esecuzione test suite finale: `tests/` |
+| 💡 Perche': Verifica integrazione post-implementazione |
+| 🚫 Se NO: Completamento dichiarato senza verifica test suite |
 
 Dopo che tutti i task sono completati:
 
@@ -184,12 +206,14 @@ Dopo che tutti i task sono completati:
 **Output:**
 ```
 IMPLEMENTAZIONE COMPLETATA:
-  Piano:       docs/plans/YYYY-MM-DD-<topic>-design.md
+  Piano:       docs/plans/YYYY-MM-DD-<topic>-plan.md
   Task totali: N
-  Task completati: N
+  Task [DONE]:    N/N
+  Task [BLOCKED]: 0
+  Task [PENDING]: 0
   Review PASS: N/N spec + N/N quality
   Test suite:  [risultato]
-  Verdetto:    [COMPLETO | PARZIALE]
+  Verdetto:    COMPLETO (tutti [DONE])
 ```
 
 ---

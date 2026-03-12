@@ -115,42 +115,22 @@ Applica TDD alla documentazione. Vedi [reference/testing-skills.md](reference/te
 
 ### Step 3 — Scrivi il SKILL.md
 
-🟡 MEDIO — Mostra pre-flight card prima di procedere
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
+|:---|
+| 🛠️ Operazione: `Creazione directory skill` |
+| 📁 Skill: `<nome skill che si sta creando>` |
+| 1. ✏️ Crea directory: `skills/<nome-skill>/` |
+| 💡 Perche': La creazione della directory introduce un nuovo percorso nel plugin; un nome errato o duplicato rompe il catalogo skill e la discovery automatica. |
+| 🚫 Se NO: La directory skill non viene creata e nessun file viene scritto. |
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-writing-skills",
-  "context": [
-    {"emoji": "🛠️", "label": "Operazione", "value": "Creazione directory skill"},
-    {"emoji": "📁", "label": "Skill", "value": "<nome skill che si sta creando>"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Crea directory", "path": "skills/<nome-skill>/"}
-  ],
-  "reason": "La creazione della directory introduce un nuovo percorso nel plugin; un nome errato o duplicato rompe il catalogo skill e la discovery automatica.",
-  "ifno": "La directory skill non viene creata e nessun file viene scritto."
-}' | python3 design-system/generate-card.py
-```
-
-🟡 MEDIO — Mostra pre-flight card prima di procedere
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-writing-skills",
-  "context": [
-    {"emoji": "🛠️", "label": "Operazione", "value": "Scrittura SKILL.md e reference files"},
-    {"emoji": "📁", "label": "Skill", "value": "<nome skill che si sta creando>"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Scrivi SKILL.md", "path": "skills/<nome-skill>/SKILL.md"},
-    {"emoji": "✏️", "label": "Scrivi reference files", "path": "skills/<nome-skill>/reference/"}
-  ],
-  "reason": "La scrittura di SKILL.md e dei file reference definisce il comportamento della skill in modo permanente; errori nel frontmatter o nella struttura impediscono la corretta attivazione da parte di Claude.",
-  "ifno": "SKILL.md e i file reference non vengono scritti; la skill non esiste nel plugin."
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
+|:---|
+| 🛠️ Operazione: `Scrittura SKILL.md e reference files` |
+| 📁 Skill: `<nome skill che si sta creando>` |
+| 1. ✏️ Scrivi SKILL.md: `skills/<nome-skill>/SKILL.md` |
+| 2. ✏️ Scrivi reference files: `skills/<nome-skill>/reference/` |
+| 💡 Perche': La scrittura di SKILL.md e dei file reference definisce il comportamento della skill in modo permanente; errori nel frontmatter o nella struttura impediscono la corretta attivazione da parte di Claude. |
+| 🚫 Se NO: SKILL.md e i file reference non vengono scritti; la skill non esiste nel plugin. |
 
 Usa il template in [reference/skill-template.md](reference/skill-template.md).
 
@@ -170,23 +150,13 @@ Usa il template in [reference/skill-template.md](reference/skill-template.md).
 
 ### Step 4 — Cross-referencing
 
-🟡 MEDIO — Mostra pre-flight card prima di procedere
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-writing-skills",
-  "context": [
-    {"emoji": "🛠️", "label": "Operazione", "value": "Modifica using-devforge per registrazione"},
-    {"emoji": "📁", "label": "Skill", "value": "<nome skill che si sta creando>"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Registra skill in using-devforge", "path": "skills/using-devforge/SKILL.md"}
-  ],
-  "reason": "La modifica di using-devforge aggiorna il catalogo centrale del plugin; un errore nella registrazione rende la skill invisibile o rompe la discovery per tutti i developer.",
-  "ifno": "La skill non viene registrata in using-devforge e non sarà inclusa nel catalogo attivo del plugin."
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
+|:---|
+| 🛠️ Operazione: `Modifica using-devforge per registrazione` |
+| 📁 Skill: `<nome skill che si sta creando>` |
+| 1. ✏️ Registra skill in using-devforge: `skills/using-devforge/SKILL.md` |
+| 💡 Perche': La modifica di using-devforge aggiorna il catalogo centrale del plugin; un errore nella registrazione rende la skill invisibile o rompe la discovery per tutti i developer. |
+| 🚫 Se NO: La skill non viene registrata in using-devforge e non sara' inclusa nel catalogo attivo del plugin. |
 
 Per referenziare altre skill, usa il pattern `REQUIRED SUB-SKILL:`:
 
@@ -199,23 +169,13 @@ Questo dice a Claude di invocare la skill specificata come prerequisito.
 
 ### Step 5 — Valida
 
-🟡 MEDIO — Mostra pre-flight card prima di procedere
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-writing-skills",
-  "context": [
-    {"emoji": "🛠️", "label": "Operazione", "value": "Test di attivazione con prompt"},
-    {"emoji": "📁", "label": "Skill", "value": "<nome skill che si sta creando>"}
-  ],
-  "actions": [
-    {"emoji": "✏️", "label": "Esegui prompt di attivazione", "path": "skills/<nome-skill>/SKILL.md"}
-  ],
-  "reason": "Il test di attivazione verifica che la skill venga caricata da Claude nel contesto corretto; un test eseguito su una skill mal configurata può dare falsi positivi e mascherare problemi di trigger.",
-  "ifno": "Il test di attivazione non viene eseguito e non si ha garanzia che la skill funzioni correttamente in produzione."
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
+|:---|
+| 🛠️ Operazione: `Test di attivazione con prompt` |
+| 📁 Skill: `<nome skill che si sta creando>` |
+| 1. ✏️ Esegui prompt di attivazione: `skills/<nome-skill>/SKILL.md` |
+| 💡 Perche': Il test di attivazione verifica che la skill venga caricata da Claude nel contesto corretto; un test eseguito su una skill mal configurata puo' dare falsi positivi e mascherare problemi di trigger. |
+| 🚫 Se NO: Il test di attivazione non viene eseguito e non si ha garanzia che la skill funzioni correttamente in produzione. |
 
 Checklist di validazione:
 

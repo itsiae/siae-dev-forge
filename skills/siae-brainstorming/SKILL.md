@@ -55,19 +55,69 @@ DEVI presentarlo e ottenere l'approvazione.
 
 DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
-### 1. Esplora contesto progetto
+### 1. Smart Intake — Inferisci il contesto dal codebase
 
-- Controlla file, doc, commit recenti
-- Se MCP Atlassian e' disponibile: cerca ticket JIRA correlati con `searchJiraIssuesUsingJql`
-- Identifica vincoli tecnici, dipendenze, e decisioni architetturali esistenti
-- Leggi eventuali design doc precedenti in `docs/plans/`
+**NON chiedere cio' che il codice sa gia'.** Leggi prima, chiedi dopo.
 
-### 2. Domande chiarificatrici
+**Fonti da leggere (in ordine):**
 
-- Una domanda alla volta — non sovraccaricare l'utente
+| # | Fonte | Tool | Cosa cercare |
+|---|-------|------|-------------|
+| 1 | `CLAUDE.md` del progetto | Read | Stack, factory, regole operative |
+| 2 | Package manifest (`pom.xml`, `package.json`, `requirements.txt`, `terragrunt.hcl`) | Read | Dipendenze, framework, versioni |
+| 3 | Struttura directory (`src/`, `lib/`, `skills/`, `commands/`) | Glob | Pattern architetturale, moduli |
+| 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
+| 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
+| 6 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
+
+**Campi da inferire:**
+
+| Campo | Esempio |
+|-------|---------|
+| Stack | Java/Spring Boot, Vue.js 3, Python/PySpark, HCL/Terraform |
+| Pattern architetturale | Microservizio REST, Lambda serverless, ETL Medallion |
+| Test framework | JUnit 5, Vitest, pytest |
+| Build tool | Maven, Vite, esbuild |
+| Naming convention | camelCase, snake_case, PascalCase |
+| Dipendenze chiave | MapStruct, Drizzle ORM, PySpark |
+
+**Ogni inferenza ha:**
+- **Confidence:** HIGH (>= 90%), MEDIUM (60-89%), LOW (< 60%)
+- **Fonte:** `file:riga` (citation rule)
+
+Esempio:
+```
+Stack:     Java/Spring Boot  [HIGH]  pom.xml:5 — spring-boot-starter-parent
+Pattern:   REST microservice [HIGH]  src/main/java/it/siae/catalogo/controller/:* — 3 controller
+Test fw:   JUnit 5           [HIGH]  pom.xml:42 — junit-jupiter 5.9.3
+Deploy:    ECS               [MEDIUM] .github/workflows/deploy.yml:15 — ecs-deploy action
+```
+
+### 2. Presenta inferenze + domande mirate
+
+**Presenta le inferenze in tabella compatta per conferma rapida:**
+
+```
+CONTESTO INFERITO:
+──────────────────
+Stack:       Java/Spring Boot      [HIGH]   pom.xml:5
+Pattern:     REST microservice     [HIGH]   src/.../controller/:*
+Test fw:     JUnit 5               [HIGH]   pom.xml:42
+Deploy:      ECS                   [MEDIUM] .github/workflows/deploy.yml:15
+Naming:      camelCase             [HIGH]   src/.../CatalogoService.java
+
+Confermi? (si / correggi specifici)
+```
+
+**Regole:**
+- L'utente conferma in blocco o corregge singoli campi
+- Domande esplicite SOLO per: confidence LOW, campi non inferiti, scopo del task
+- Una domanda alla volta per i campi mancanti
 - Preferisci domande a scelta multipla quando possibile
-- Se un argomento richiede approfondimento, spezzalo in piu' domande
-- Focus su: scopo, vincoli, criteri di successo, utenti target
+- Focus residuo su: **scopo del task**, vincoli, criteri di successo
+
+**Se tutto e' HIGH e l'utente conferma**, procedi direttamente a Step 3 (Approcci).
+Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
 
 ### 3. Proponi 2-3 approcci con trade-off e raccomandazione
 
@@ -85,22 +135,15 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
 ### 5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
 
-🟡 **Pre-flight** — prima di scrivere il file:
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-brainstorming",
-  "context": [
-    {"emoji": "📝", "label": "Topic", "value": "<topic del design>"},
-    {"emoji": "📂", "label": "Path", "value": "docs/plans/YYYY-MM-DD-<topic>-design.md"},
-    {"emoji": "✅", "label": "Design approvato", "value": "Si"}
-  ],
-  "actions": [],
-  "reason": "Scrittura design doc dopo approvazione utente",
-  "ifno": "Non scrivere il file senza approvazione esplicita del design"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-brainstorming |
+|:---|
+| 📝 Topic: `<topic del design>` |
+| 📂 Path: `docs/plans/YYYY-MM-DD-<topic>-design.md` |
+| ✅ Design approvato: `Si` |
+| 💡 Perche': Scrittura design doc dopo approvazione utente |
+| 🚫 Se NO: Non scrivere il file senza approvazione esplicita del design |
 
 - Salva il design validato nel file
 - Includi: contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione
@@ -155,8 +198,10 @@ digraph brainstorming {
     node [shape=box, style="rounded,filled", fillcolor="#f0f0f0", fontname="Helvetica"];
     edge [fontname="Helvetica", fontsize=10];
 
-    explore [label="1. Esplora contesto\nprogetto + JIRA"];
-    questions [label="2. Domande\nchiarificatrici"];
+    intake [label="1. Smart Intake\nleggi codebase, inferisci"];
+    confirm [label="2. Presenta inferenze\nconferma rapida"];
+    need_questions [label="Campi LOW\no mancanti?", shape=diamond, fillcolor="#fff3cd"];
+    ask [label="Domande mirate\n(solo cio' che manca)"];
     approaches [label="3. Proponi 2-3\napprocci + SP"];
     design [label="4. Presenta design\nper sezioni"];
     approve [label="Utente approva\nsezione?", shape=diamond, fillcolor="#fff3cd"];
@@ -164,8 +209,11 @@ digraph brainstorming {
     spec_gate [label="5b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
     transition [label="6. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
 
-    explore -> questions;
-    questions -> approaches;
+    intake -> confirm;
+    confirm -> need_questions;
+    need_questions -> ask [label="si"];
+    need_questions -> approaches [label="no, tutto HIGH"];
+    ask -> approaches;
     approaches -> design;
     design -> approve;
     approve -> design [label="no, rivedi"];
@@ -226,11 +274,15 @@ Se l'utente conferma, crea il ticket con `createJiraIssue`.
 
 ## Il Processo nel Dettaglio
 
-**Comprendere l'idea:**
-- Controlla lo stato attuale del progetto (file, doc, commit recenti)
-- Fai domande una alla volta per raffinare l'idea
-- Preferisci domande a scelta multipla, ma le domande aperte vanno bene
-- Focus: scopo, vincoli, criteri di successo
+**Smart Intake — Inferisci prima:**
+- Leggi CLAUDE.md, manifest, struttura directory, git log, docs/plans/
+- Inferisci stack, pattern, test framework, build tool, naming, dipendenze
+- Ogni inferenza con confidence level (HIGH/MEDIUM/LOW) e citazione file:riga
+
+**Conferma e domande mirate:**
+- Presenta le inferenze in tabella compatta per conferma rapida
+- Domande solo per: confidence LOW, campi non inferiti, scopo del task
+- Se tutto HIGH e l'utente conferma, procedi direttamente agli approcci
 
 **Esplorare gli approcci:**
 - Proponi 2-3 approcci diversi con trade-off
@@ -283,7 +335,7 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | "Ho gia' fatto qualcosa di simile" | Il contesto e' diverso. Il design adatta la soluzione. |
 | "Il design blocca la velocita'" | Il refactoring da design mancato blocca di piu'. |
 | "L'utente approva dopo" | L'approvazione post-hoc non e' approvazione. |
-| "Bastano 2 domande, poi implemento" | Due domande non sostituiscono un design strutturato. |
+| "Ho letto il pom.xml, basta cosi'" | Un file non basta. Smart Intake legge manifest, struttura, log, e docs/plans/ prima di procedere. |
 
 ## Classificazione Rischio Operazioni
 

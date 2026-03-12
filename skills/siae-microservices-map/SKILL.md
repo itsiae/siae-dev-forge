@@ -167,25 +167,15 @@ gh api /orgs/{org}/repos?per_page=100&type=all --paginate \
 
 ### Step 3 — PROFILE + EXTRACT: Analisi Evidenze per Repo
 
-🟡 MEDIO — Mostra pre-flight card prima di eseguire
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-microservices-map",
-  "context": [
-    {"emoji": "📦", "label": "Repo da analizzare", "value": "{N repo}"},
-    {"emoji": "🏢", "label": "Organizzazione", "value": "{org}"},
-    {"emoji": "🔍", "label": "Pattern", "value": "{pattern}"}
-  ],
-  "actions": [
-    {"emoji": "🌐", "label": "Fetch file evidenza per ogni repo", "path": "GitHub API"},
-    {"emoji": "🤖", "label": "Dispatch subagent paralleli", "path": "1 subagent per repo"}
-  ],
-  "reason": "Lettura file da N repository remoti",
-  "ifno": "Analisi non eseguita, mappa non generata"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-microservices-map |
+|:---|
+| 📦 Repo da analizzare: `{N repo}` |
+| 🏢 Organizzazione: `{org}` |
+| 🔍 Pattern: `{pattern}` |
+| 1. 🌐 Fetch file evidenza per ogni repo: `GitHub API` |
+| 2. 🤖 Dispatch subagent paralleli: `1 subagent per repo` |
+| 💡 Perche': Lettura file da N repository remoti |
+| 🚫 Se NO: Analisi non eseguita, mappa non generata |
 
 #### 3a — PROFILE: Verifica Esistenza File Evidenza
 
@@ -377,24 +367,14 @@ Aggrega tutte le schede evidenza:
 
 ### Step 5 — OUTPUT: Scrivi `docs/SYSTEM_MAP.md`
 
-🟡 MEDIO — Mostra pre-flight card prima di scrivere
-
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-microservices-map",
-  "context": [
-    {"emoji": "📊", "label": "Repo mappati", "value": "{N}/{total}"},
-    {"emoji": "🔗", "label": "Edge confermati", "value": "{N}"},
-    {"emoji": "⚠️", "label": "Edge UNVERIFIED", "value": "{N}"}
-  ],
-  "actions": [
-    {"emoji": "📝", "label": "Scrittura SYSTEM_MAP.md", "path": "docs/SYSTEM_MAP.md"}
-  ],
-  "reason": "Creazione file documentazione architettura sistema",
-  "ifno": "Mappa presentata solo in chat — copiare manualmente"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-microservices-map |
+|:---|
+| 📊 Repo mappati: `{N}/{total}` |
+| 🔗 Edge confermati: `{N}` |
+| ⚠️ Edge UNVERIFIED: `{N}` |
+| 1. 📝 Scrittura SYSTEM_MAP.md: `docs/SYSTEM_MAP.md` |
+| 💡 Perche': Creazione file documentazione architettura sistema |
+| 🚫 Se NO: Mappa presentata solo in chat — copiare manualmente |
 
 Struttura del file output → vedi [reference/system-map-template.md](reference/system-map-template.md)
 
@@ -451,7 +431,7 @@ Sezioni obbligatorie:
 5. **SEMPRE** includere il Gap Report nel file output, anche se vuoto
 6. **SEMPRE** applicare confidence tag a ogni edge nel grafo
 7. **SEMPRE** dispatching subagent in parallelo (un blocco unico) — mai sequenziale
-8. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡 — genera con `design-system/generate-card.py`
+8. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡
 
 ---
 

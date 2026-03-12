@@ -219,6 +219,39 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
   ```
 - Se non esiste e il repo è piccolo (≤ 50 file) → nessun suggerimento
 
+### 4.1 Incomplete Plan Detection
+
+Dopo il welcome message, verifica se ci sono piani incompleti:
+
+```bash
+grep -l "\[PENDING\]\|\[BLOCKED\]" docs/plans/*-plan.md 2>/dev/null
+```
+
+**Se trovati**, per ogni piano incompleto conta gli stati:
+
+```bash
+grep -c "\[DONE\]" docs/plans/<file>.md
+grep -c "\[PENDING\]" docs/plans/<file>.md
+grep -c "\[BLOCKED\]" docs/plans/<file>.md
+```
+
+Mostra il seguente avviso:
+
+```
+⚠️  PIANI INCOMPLETI RILEVATI:
+─────────────────────────────
+📋 docs/plans/<filename>.md
+   X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Vuoi riprendere l'esecuzione (→ siae-executing-plans) o procedere con altro?
+```
+
+L'utente decide:
+- **Riprendere** → invoca `siae-executing-plans` con il piano incompleto
+- **Procedere con altro** → l'utente fornisce il motivo, si prosegue normalmente
+
+Nessun blocco forzato — il reminder è **sempre** visibile ma non impedisce il lavoro.
+
 Adatta le righe `Skill disponibili` in base allo stack rilevato:
 - Java -> aggiungi `siae-architecture`
 - TS Frontend -> aggiungi `siae-frontend`

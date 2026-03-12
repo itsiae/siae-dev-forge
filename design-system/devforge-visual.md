@@ -81,13 +81,19 @@ come output diretto nella risposta.
 | 🚫 Se NO: alternativa |
 ```
 
-**Mapping livello → emoji, subtitle, warning:**
+**Mapping livello:**
 
 | Livello | Emoji | Subtitle | Warning line |
 |---------|-------|----------|-------------|
-| MEDIO | 🟡 | reversibile | — (nessuna) |
+| MEDIO | 🟡 | reversibile | — |
 | ALTO | 🔴 | difficile da annullare | `⚠️ OPERAZIONE DIFFICILE DA ANNULLARE` |
 | CRITICO | 🚨 | irreversibile | `⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA` |
+
+**Regole:**
+- Valori tecnici (branch, path, ARN, URI): in backtick
+- Una riga `📂 path` per ogni file di ogni azione
+- La stessa azione su piu' file: ripetere le righe 📂
+- `generate-card.py` rimane nel repo per uso manuale ma non e' richiesto dalle skill
 
 **Esempio MEDIO:**
 ```markdown

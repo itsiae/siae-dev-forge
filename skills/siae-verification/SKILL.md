@@ -59,6 +59,35 @@ Se stai per dire una di queste cose, **FERMATI** e segui i 5 step.
 
 ## I 5 Step della Verifica
 
+### Step 0 — PLAN CHECK (se applicabile)
+
+Se il lavoro corrente è associato a un piano in `docs/plans/`:
+
+1. Identifica il piano associato (il più recente `*-plan.md` nella directory)
+2. Conta i task per stato:
+
+```bash
+grep -c "\[DONE\]" docs/plans/<file>.md
+grep -c "\[PENDING\]" docs/plans/<file>.md
+grep -c "\[BLOCKED\]" docs/plans/<file>.md
+```
+
+3. **Se PENDING > 0 o BLOCKED > 0:**
+
+```
+🔴 STOP — Il piano non è completo.
+
+Piano: docs/plans/<file>.md
+Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
+
+Non puoi procedere con la verifica finale.
+Torna a eseguire i task mancanti prima.
+```
+
+4. **Se tutti [DONE]:** procedi con Step 1 (IDENTIFICA)
+
+Se non c'è un piano associato (lavoro ad-hoc), salta questo step e procedi direttamente a Step 1.
+
 ### Step 1 — IDENTIFICA
 
 Determina il modo corretto per verificare il lavoro svolto.
@@ -131,10 +160,17 @@ Solo ora puoi dichiarare il completamento. La tua affermazione DEVE includere:
 
 ```
 VERIFICA COMPLETATA:
-  Comandi:  [lista comandi eseguiti]
+  Comandi:   [lista comandi eseguiti]
   Risultato: [output sintetico]
-  Claim:    [la tua dichiarazione]
+  Evidenza:
+    - path/to/file.java:45 — metodo process() implementato
+    - tests/test_file.py:12 — test should_validate_isrc passa
+  Claim:     [la tua dichiarazione]
 ```
+
+**Regola citazione:** minimo 1 citazione `file:riga` per ogni requisito verificato.
+Se non puoi citare `file:riga`, non puoi dichiarare quel requisito completato.
+Formato standard: `path/to/file.ext:NN — descrizione breve`
 
 ---
 
@@ -148,6 +184,7 @@ VERIFICA COMPLETATA:
 | "Ho fatto la stessa cosa su un altro progetto" | Ogni contesto e' diverso. |
 | "Il compilatore non ha dato errori" | La compilazione non testa il comportamento. |
 | "Ho copiato da codice che funziona" | Il contesto e' diverso. Verifica nel nuovo contesto. |
+| "Ho verificato che funziona" (senza citare file:riga) | Prose senza citazione non sono evidenza. Cita file:riga o non e' verifica. |
 
 ---
 
@@ -198,6 +235,8 @@ Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la re
 | "Il CI fara' i test, non devo farli in locale" | Se il CI fallisce, hai sprecato il tempo dell'intero team e bloccato la pipeline. Testa prima in locale. |
 | "Ho visto l'output scorrere e sembrava ok" | 'Sembrava ok' non e' evidenza. Devi leggere ogni riga, cercare FAILED, ERROR, WARN. |
 | "L'utente aspetta, devo dichiarare done il prima possibile" | Un false completion genera rework immediato. Tre minuti di test ora evitano ore di debug dopo. |
+| "I task BLOCKED non sono colpa mia" | Un piano con BLOCKED è un piano incompleto. Risolvi o rimuovi con l'utente. |
+| "Mancano solo 1-2 task, posso chiudere" | Parziale = incompleto. Zero eccezioni. |
 
 ---
 
@@ -245,6 +284,8 @@ Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la re
 VERIFICA COMPLETATA (manuale):
   Comandi:   [lista — eseguiti dall'utente]
   Risultato: [basato su output fornito dall'utente]
+  Evidenza:
+    - path/to/file.ext:NN — descrizione breve
   Claim:     [dichiarazione]
 ```
 
