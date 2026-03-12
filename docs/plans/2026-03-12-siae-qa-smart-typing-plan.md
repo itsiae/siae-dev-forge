@@ -328,7 +328,7 @@ git commit -m "feat(siae-qa): add Phase 0 Smart Req Typing with inference and co
 
 ---
 
-### Task 3: Aggiorna Phase 4a in `skills/siae-qa/SKILL.md` [PENDING]
+### Task 3: Aggiorna Phase 4a in `skills/siae-qa/SKILL.md` [DONE]
 
 **Dipende da:** Task 2
 
