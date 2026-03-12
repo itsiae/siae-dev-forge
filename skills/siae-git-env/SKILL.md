@@ -1,44 +1,14 @@
 ---
 name: siae-git-env
 description: >
-  ALWAYS use when configuring git environment, setting up hooks, .gitignore, GPG signing, or git-lfs for a project.
-  Trigger: configura git, git hooks, .gitignore, git config, pre-commit hooks, GPG commit, .gitattributes, git-lfs, template commit message, credenziali git.
+  Micro-skill di utility per la detection di GitHub CLI (gh).
+  Trigger: REQUIRED SUB-SKILL da siae-git-workflow e siae-finishing-branch.
+  Stabilisce GH_MODE o FALLBACK_MODE per la sessione corrente.
 ---
 
 # siae-git-env — GitHub CLI Environment Check
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨 DevForge · SIAE GIT ENV                          ║
-║         "Il codice si forgia. Il developer cresce."              ║
-╚══════════════════════════════════════════════════════════════════╝
-```
-
 > **Tipo:** Rigid | **Fase SDLC:** 3. Branching (prerequisito)
-
----
-
-## LA LEGGE DI FERRO
-
-```
-GH_ENV CHECK OBBLIGATORIO PRIMA DI OGNI OPERAZIONE GITHUB-NATIVE
-```
-
----
-
-## Quando si Applica
-
-Invoca questa skill come sub-skill prerequisito prima di:
-- Qualsiasi operazione GitHub-native (apertura PR, review, merge via gh)
-- All'avvio di `siae-git-workflow` o `siae-finishing-branch`
-
-**Non ripetere nella stessa sessione** — il GH_MODE determinato vale per tutta la sessione.
 
 ---
 
@@ -140,31 +110,7 @@ senza ri-eseguire il check.
 
 ---
 
-## Tabella Anti-Razionalizzazione
-
-| Pensiero | Realta' |
-|----------|---------|
-| "Non ho gh ma conosco i comandi git" | FALLBACK_MODE e' funzionale quanto GH_MODE. Il check stabilisce il contesto corretto per le skill downstream. |
-| "Lo so gia' se gh e' installata" | La sessione non ha stato persistente. Esegui il check ad ogni nuova sessione. |
-| "E' un'operazione veloce, salto il check" | Senza GIT_ENV CONTEXT le skill downstream non sanno quale modalita' usare. |
-| "gh auth status e' lento" | Il comando ritorna in meno di 1 secondo. Il costo e' trascurabile. |
-| "Basta sapere se gh c'e', l'auth non serve" | gh non autenticata equivale a gh assente per le operazioni GitHub-native. |
-| "Uso sempre lo stesso ambiente, non cambia mai" | L'ambiente di sviluppo e CI/CD cambiano senza preavviso. Il check e' rapido — 2 secondi. |
-| "gh funzionava ieri, funziona ancora" | L'autenticazione scade. Un token revocato non e' rilevabile senza check. |
-| "Sono in FALLBACK_MODE, non cambiera'" | Se gh viene installata o autenticata dopo, solo il check aggiorna il contesto. |
-
----
-
-## Vincoli
-
-1. Esegui il check **UNA SOLA VOLTA** per sessione — non ripetere se GH_MODE è già determinato.
-2. Il GH_MODE determinato è immutabile per la durata della sessione.
-3. Non esporre credenziali o token nell'output del blocco GIT_ENV CONTEXT.
-4. In FALLBACK_MODE, **NON omettere** nessuna operazione — ogni operazione GitHub-native ha un'alternativa documentata.
-
----
-
-## Classificazione Rischio Operazioni
+## Classificazione Rischio
 
 | Operazione | Rischio | Card |
 |---|---|---|
