@@ -382,7 +382,7 @@ git commit -m "feat(siae-qa): update Phase 4a to consume Req Profile from Phase 
 
 ---
 
-### Task 4: Aggiorna checklist, anti-razionalizzazione e vincoli in `skills/siae-qa/SKILL.md` [PENDING]
+### Task 4: Aggiorna checklist, anti-razionalizzazione e vincoli in `skills/siae-qa/SKILL.md` [DONE]
 
 **Dipende da:** Task 3
 
