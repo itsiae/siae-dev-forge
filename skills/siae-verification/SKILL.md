@@ -61,9 +61,9 @@ Se stai per dire una di queste cose, **FERMATI** e segui i 5 step.
 
 ### Step 0 — PLAN CHECK (se applicabile)
 
-Se il lavoro corrente è associato a un piano in `docs/plans/`:
+Se il lavoro corrente e' associato a un piano in `docs/plans/`:
 
-1. Identifica il piano associato (il più recente `*-plan.md` nella directory)
+1. Identifica il piano associato (il piu' recente `*-plan.md` nella directory)
 2. Conta i task per stato:
 
 ```bash
@@ -75,7 +75,7 @@ grep -c "\[BLOCKED\]" docs/plans/<file>.md
 3. **Se PENDING > 0 o BLOCKED > 0:**
 
 ```
-🔴 STOP — Il piano non è completo.
+🔴 STOP — Il piano non e' completo.
 
 Piano: docs/plans/<file>.md
 Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
@@ -86,7 +86,7 @@ Torna a eseguire i task mancanti prima.
 
 4. **Se tutti [DONE]:** procedi con Step 1 (IDENTIFICA)
 
-Se non c'è un piano associato (lavoro ad-hoc), salta questo step e procedi direttamente a Step 1.
+Se non c'e' un piano associato (lavoro ad-hoc), salta questo step e procedi direttamente a Step 1.
 
 ### Step 1 — IDENTIFICA
 
@@ -235,7 +235,7 @@ Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la re
 | "Il CI fara' i test, non devo farli in locale" | Se il CI fallisce, hai sprecato il tempo dell'intero team e bloccato la pipeline. Testa prima in locale. |
 | "Ho visto l'output scorrere e sembrava ok" | 'Sembrava ok' non e' evidenza. Devi leggere ogni riga, cercare FAILED, ERROR, WARN. |
 | "L'utente aspetta, devo dichiarare done il prima possibile" | Un false completion genera rework immediato. Tre minuti di test ora evitano ore di debug dopo. |
-| "I task BLOCKED non sono colpa mia" | Un piano con BLOCKED è un piano incompleto. Risolvi o rimuovi con l'utente. |
+| "I task BLOCKED non sono colpa mia" | Un piano con BLOCKED e' un piano incompleto. Risolvi o rimuovi con l'utente. |
 | "Mancano solo 1-2 task, posso chiudere" | Parziale = incompleto. Zero eccezioni. |
 
 ---

@@ -128,7 +128,7 @@ Organizzazione per dominio infrastrutturale:
 
 Ogni modulo ha: `_input.tf`, `_local.tf`, `_output.tf` + resource file specifici.
 
-**🚨 Quando la risorsa modificata è IAM — pre-flight card CRITICO aggiuntiva:**
+**🚨 Quando la risorsa modificata e' IAM — pre-flight card CRITICO aggiuntiva:**
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-iac |
 |:---|

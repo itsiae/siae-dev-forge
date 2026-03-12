@@ -30,8 +30,8 @@ description: >
 NESSUNA PR SENZA VERIFICA COMPLETA DEL BRANCH
 ```
 
-Aprire una PR è un atto pubblico che coinvolge i reviewer. Rispetta il loro tempo.
-Un branch non verificato è un'interruzione mascherata da contributo.
+Aprire una PR e' un atto pubblico che coinvolge i reviewer. Rispetta il loro tempo.
+Un branch non verificato e' un'interruzione mascherata da contributo.
 
 ---
 
@@ -55,7 +55,7 @@ REQUIRED SUB-SKILL: siae-git-env
 ```
 
 Esegui `siae-git-env` prima di procedere. Il `GH_MODE` determina i comandi usati in Step 5 (apertura PR).
-Se già eseguita nella sessione, usa il contesto esistente senza ripetere il check.
+Se gia' eseguita nella sessione, usa il contesto esistente senza ripetere il check.
 
 ---
 
@@ -72,7 +72,7 @@ git status
 # Confronto con sviluppo (quanti commit avanti/dietro?)
 git log origin/sviluppo..HEAD --oneline
 
-# Controlla se sviluppo è avanzato
+# Controlla se sviluppo e' avanzato
 git fetch origin
 git log HEAD..origin/sviluppo --oneline
 ```
@@ -82,7 +82,7 @@ git log HEAD..origin/sviluppo --oneline
 - [ ] Tutti i commit sono nel branch (nessun lavoro perso)
 - [ ] Conosco quanti commit apporto a sviluppo
 
-**Se sviluppo è avanzato rispetto al tuo branch:**
+**Se sviluppo e' avanzato rispetto al tuo branch:**
 
 ```
 REQUIRED SUB-SKILL: siae-git-workflow
@@ -126,7 +126,7 @@ terraform validate && terraform plan -detailed-exitcode
 **Criteri di OK:**
 - [ ] Tutti i test passano (0 failed, 0 skipped non-intentional)
 - [ ] Nessuna regressione introdotta
-- [ ] Coverage non è scesa sotto la soglia del progetto
+- [ ] Coverage non e' scesa sotto la soglia del progetto
 
 **Se i test falliscono:**
 
@@ -182,11 +182,11 @@ git log origin/sviluppo..HEAD --oneline
 
 **Criteri di OK:**
 - [ ] Tutti i commit seguono conventional commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`)
-- [ ] Ogni commit è atomico (un singolo cambiamento logico)
+- [ ] Ogni commit e' atomico (un singolo cambiamento logico)
 - [ ] Nessun commit di "fix typo" che potrebbe essere squashato
-- [ ] Il JIRA ID è presente nei commit rilevanti
+- [ ] Il JIRA ID e' presente nei commit rilevanti
 
-**Se la history è caotica (troppi WIP commit):**
+**Se la history e' caotica (troppi WIP commit):**
 
 Considera di squashare localmente prima della PR:
 ```bash
@@ -195,8 +195,8 @@ git rebase -i origin/sviluppo
 # Nel editor: lascia "pick" solo sul primo, cambia gli altri in "squash"
 ```
 
-> ⚠️ Il rebase modifica la history. Farlo SOLO se il branch NON è ancora stato pushato,
-> o se è un branch personale non condiviso.
+> ⚠️ Il rebase modifica la history. Farlo SOLO se il branch NON e' ancora stato pushato,
+> o se e' un branch personale non condiviso.
 
 ---
 
@@ -216,7 +216,7 @@ grep -l "\[PENDING\]\|\[BLOCKED\]" docs/plans/*-plan.md 2>/dev/null
 Piano: docs/plans/<file>.md
 Stato: X [DONE] / Y [PENDING] / Z [BLOCKED]
 
-Non puoi aprire la PR finché il piano non è completato al 100%.
+Non puoi aprire la PR finche' il piano non e' completato al 100%.
 
 Opzioni:
 1. Completa i task [PENDING]
@@ -328,17 +328,17 @@ Poi apri la PR manualmente:
 | Serie di commit WIP / fix intermedi | Squash merge (default su sviluppo) |
 | Branch sincronizzato con sviluppo (pochi commit) | Rebase (history lineare) |
 
-Su SIAE, la strategia default per feature → sviluppo è **squash merge** (cfr. `siae-git-workflow`).
+Su SIAE, la strategia default per feature → sviluppo e' **squash merge** (cfr. `siae-git-workflow`).
 
 ### Quanti reviewer?
 
 Minimo 1 reviewer obbligatorio per merge su sviluppo (regola SIAE).
 Per modifiche ad architettura o moduli condivisi: almeno 2.
 
-### La PR è troppo grande?
+### La PR e' troppo grande?
 
-Una PR > 400 righe di diff è difficile da revieware correttamente.
-Considera di spezzarla in PR più piccole con un branch intermedio.
+Una PR > 400 righe di diff e' difficile da revieware correttamente.
+Considera di spezzarla in PR piu' piccole con un branch intermedio.
 
 ---
 
@@ -388,7 +388,7 @@ Se i permessi sono negati:
 | "I console.log li tolgo dopo il merge" | Dopo il merge non li togli. Fallo ora. |
 | "La history caotica va bene, lo squasha GitHub" | Squash in PR perde contesto. Fallo tu con intenzione. |
 | "Il JIRA ID non serve nel commit" | Tracciabilita' obbligatoria. Sempre. |
-| "Il piano è quasi completo, apro la PR lo stesso" | Quasi completo = incompleto. Finisci i task o chiedi eccezione esplicita. |
+| "Il piano e' quasi completo, apro la PR lo stesso" | Quasi completo = incompleto. Finisci i task o chiedi eccezione esplicita. |
 
 ---
 

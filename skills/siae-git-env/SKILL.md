@@ -12,9 +12,20 @@ description: >
 
 ---
 
+## LA LEGGE DI FERRO
+
+```
+NESSUNA OPERAZIONE GITHUB SENZA VERIFICA AMBIENTE
+```
+
+Prima di qualsiasi comando `gh`, devi sapere se `gh` e' disponibile e autenticato.
+Assumere GH_MODE senza check porta a errori silenziosi e operazioni mancate.
+
+---
+
 ## Scopo
 
-Verifica se GitHub CLI (`gh`) è installata e autenticata nel sistema locale.
+Verifica se GitHub CLI (`gh`) e' installata e autenticata nel sistema locale.
 Imposta il modo operativo per la sessione:
 
 - **GH_MODE** — `gh` disponibile: usa `gh` per tutte le operazioni GitHub-native
@@ -110,9 +121,39 @@ senza ri-eseguire il check.
 
 ---
 
+## Tabella Anti-Razionalizzazione
+
+| Pensiero | Realta' |
+|----------|---------|
+| "So gia' che gh e' installato" | L'ambiente cambia tra sessioni. Verifica sempre. |
+| "Non serve il check, uso solo git" | Se una skill downstream richiede gh, il check e' obbligatorio. |
+| "Lo verifico dopo se serve" | Il check costa 2 secondi. Un errore gh a meta' workflow costa minuti. |
+| "Ho usato gh ieri, funziona" | Token scaduti, config cambiate. Verifica questa sessione. |
+
+---
+
 ## Classificazione Rischio
 
 | Operazione | Rischio | Card |
 |---|---|---|
 | `gh --version` | 🟢 Sicuro | No |
 | `gh auth status` | 🟢 Sicuro | No |
+
+---
+
+## Permission Denied Handling
+
+**Se Bash viene negato (check gh):**
+1. Chiedi all'utente di eseguire nel suo terminale:
+   ```bash
+   gh --version 2>/dev/null && gh auth status 2>&1
+   ```
+2. Quando l'utente incolla l'output, determina GH_MODE o FALLBACK_MODE
+3. Mostra il blocco GIT_ENV CONTEXT normalmente
+
+**Se l'utente non esegue i comandi:**
+- Assumi **FALLBACK_MODE** come default sicuro
+- Segnala: "Impossibile verificare gh CLI. Uso FALLBACK_MODE."
+
+**Fasi completabili senza permessi:** Determinazione GH_MODE (da output utente), propagazione sessione
+**Fasi che richiedono permessi:** Step 1-2 (Bash per `gh --version` e `gh auth status`)
