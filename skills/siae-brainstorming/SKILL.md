@@ -55,12 +55,43 @@ DEVI presentarlo e ottenere l'approvazione.
 
 DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
-### 1. Esplora contesto progetto
+### 1. Smart Intake — Inferisci il contesto dal codebase
 
-- Controlla file, doc, commit recenti
-- Se MCP Atlassian e' disponibile: cerca ticket JIRA correlati con `searchJiraIssuesUsingJql`
-- Identifica vincoli tecnici, dipendenze, e decisioni architetturali esistenti
-- Leggi eventuali design doc precedenti in `docs/plans/`
+**NON chiedere cio' che il codice sa gia'.** Leggi prima, chiedi dopo.
+
+**Fonti da leggere (in ordine):**
+
+| # | Fonte | Tool | Cosa cercare |
+|---|-------|------|-------------|
+| 1 | `CLAUDE.md` del progetto | Read | Stack, factory, regole operative |
+| 2 | Package manifest (`pom.xml`, `package.json`, `requirements.txt`, `terragrunt.hcl`) | Read | Dipendenze, framework, versioni |
+| 3 | Struttura directory (`src/`, `lib/`, `skills/`, `commands/`) | Glob | Pattern architetturale, moduli |
+| 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
+| 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
+| 6 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
+
+**Campi da inferire:**
+
+| Campo | Esempio |
+|-------|---------|
+| Stack | Java/Spring Boot, Vue.js 3, Python/PySpark, HCL/Terraform |
+| Pattern architetturale | Microservizio REST, Lambda serverless, ETL Medallion |
+| Test framework | JUnit 5, Vitest, pytest |
+| Build tool | Maven, Vite, esbuild |
+| Naming convention | camelCase, snake_case, PascalCase |
+| Dipendenze chiave | MapStruct, Drizzle ORM, PySpark |
+
+**Ogni inferenza ha:**
+- **Confidence:** HIGH (>= 90%), MEDIUM (60-89%), LOW (< 60%)
+- **Fonte:** `file:riga` (citation rule)
+
+Esempio:
+```
+Stack:     Java/Spring Boot  [HIGH]  pom.xml:5 — spring-boot-starter-parent
+Pattern:   REST microservice [HIGH]  src/main/java/it/siae/catalogo/controller/:* — 3 controller
+Test fw:   JUnit 5           [HIGH]  pom.xml:42 — junit-jupiter 5.9.3
+Deploy:    ECS               [MEDIUM] .github/workflows/deploy.yml:15 — ecs-deploy action
+```
 
 ### 2. Domande chiarificatrici
 
