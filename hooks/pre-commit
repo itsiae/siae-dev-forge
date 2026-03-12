@@ -115,7 +115,7 @@ Se trovi un secret:
 | ⚠️ COMMIT BLOCCATO — SECRET RILEVATO |
 | 🔍 Pattern: `[tipo di secret rilevato]` |
 | 1. 🚫 Azione: Rimuovi il secret prima di procedere |
-| 📂 `[percorso del file]` |
+| 📦 File: `[percorso del file]` |
 | 💡 Perche': Credenziali nei sorgenti sono una violazione critica di sicurezza |
 | 🚫 Se non risolto: Le credenziali finiscono nel repository e sono compromesse |
 
