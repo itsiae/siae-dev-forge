@@ -110,7 +110,17 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 
 1. Genera il documento in Markdown
 2. Mostra anteprima all'utente
-3. Pre-flight card 🔴 ALTO prima della pubblicazione:
+3. Pre-flight card 🟡 MEDIO prima di scrivere il file su disco:
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-documentation |
+|:---|
+| 📝 Documento: `<tipo: HLD / LLD / API doc>` |
+| 1. ✏️ Azione: Scrittura file Markdown |
+| 📂 `docs/<nome-file>.md` |
+| 💡 Perche': Crea o sovrascrive il file di documentazione su disco |
+| 🚫 Se NO: Il documento resta solo in chat — non salvato su disco |
+
+4. Pre-flight card 🔴 ALTO prima della pubblicazione su Confluence:
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-documentation |
 |:---|

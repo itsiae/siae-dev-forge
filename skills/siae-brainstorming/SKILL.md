@@ -147,7 +147,15 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 - Salva il design validato nel file
 - Includi: contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione
-- Committa il documento
+- Committa il documento con la card 🟡 MEDIO:
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-brainstorming |
+|:---|
+| 📝 Topic: `<topic del design>` |
+| 1. 📌 Azione: `git commit` design doc |
+| 📂 `docs/plans/YYYY-MM-DD-<topic>-design.md` |
+| 💡 Perche': Registra il design approvato nella history del repository |
+| 🚫 Se NO: Il file esiste ma non è committato — invisibile in git history |
 
 ### 5b. Spec Review Gate
 
@@ -268,7 +276,16 @@ Acceptance Criteria:
   - [ ] [criterio N]
 ```
 
-Se l'utente conferma, crea il ticket con `createJiraIssue`.
+Se l'utente conferma, mostra la pre-flight card e poi crea il ticket con `createJiraIssue`:
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-brainstorming |
+|:---|
+| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 🎫 Ticket: `<Tipo> — <Sommario>` |
+| 🌍 Project: `<JIRA project key>` |
+| 1. 📤 Azione: Creazione ticket JIRA via MCP Atlassian |
+| 💡 Perche': Il ticket viene creato nel sistema JIRA del team — visibile a tutti |
+| 🚫 Se NO: Il ticket non viene creato — il lavoro resta non tracciato in JIRA |
 
 ---
 
