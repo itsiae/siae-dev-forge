@@ -98,10 +98,20 @@ Il security scan automatico e' passato (nessun secret nel diff).
 DEVI dispatchare ENTRAMBI gli agent ADESSO, PRIMA di eseguire gh pr create.
 Questo NON e' opzionale. NON e' un suggerimento. E' un gate bloccante.
 
+### Step 0: Ottieni il diff (OBBLIGATORIO)
+
+```bash
+git diff origin/main...HEAD
+```
+
+Salva l'output. Lo passerai nel prompt di ENTRAMBI gli agent.
+NON passare i path dei file — passa il DIFF TESTUALE. Leggere file interi spreca token.
+
 ### Step 1: Dispatch code-reviewer agent
 
 Usa il tool Agent con subagent_type siae-devforge:code-reviewer.
-Il prompt deve includere: branch corrente, file modificati, design doc se presente.
+Il prompt deve includere: il DIFF TESTUALE (da Step 0), design doc se presente.
+L'agent NON deve usare Read/Glob per leggere file — tutto il contesto e' nel diff.
 ATTENDI il risultato.
 
 Se il verdetto e' BLOCKED (>= 1 CRITICAL): BLOCCA la PR. NON procedere.
@@ -111,7 +121,8 @@ Se il verdetto e' APPROVED: procedi.
 ### Step 2: Dispatch spec-reviewer agent
 
 Usa il tool Agent con subagent_type siae-devforge:spec-reviewer.
-Il prompt deve includere: design doc da docs/plans/, file modificati.
+Il prompt deve includere: il DIFF TESTUALE (da Step 0), design doc path per i criteri di accettazione.
+L'agent NON deve leggere i file interi — solo il diff + criteri dal design doc.
 ATTENDI il risultato.
 
 Se il verdetto e' FAIL: mostra discrepanze e chiedi conferma all'utente.
