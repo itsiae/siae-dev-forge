@@ -291,6 +291,22 @@ Gap Report: {N elementi}
 Passaggio al Step 3: SI
 ```
 
+#### 2d — L5 Scan (obbligatorio prima di chiudere ogni sezione)
+
+Per ogni component letto durante il MAP, esegui i grep L5 da `reference/evidence-patterns.md`
+§ "L5 Scan — {framework}":
+
+1. **P5 — Form discriminators**: ogni branch `v-if`/`*ngIf` su variabile di form state → aggiungi `variants[]` nel YAML
+2. **P3 — Store states**: stati nominati nello store → aggiungi `store_states` in `l5_signals`
+3. **Computed rendering su ruolo**: `isAdmin`, `userRole`, `canEdit` → aggiungi `computed_rendering` in `l5_signals`
+
+**Dichiarazione obbligatoria:** anche se il grep non produce risultati, scrivi esplicitamente:
+```
+L5 scan sezione {nome}: nessun discriminatore rilevato — l5_signals: {}
+```
+
+Se non esegui 2d o non dichiari il risultato → la sezione è INCOMPLETA.
+
 ---
 
 ### Step 3 — PRIORITIZE: Tag Flussi Critici
@@ -299,11 +315,23 @@ Passaggio al Step 3: SI
 
 Assegna a ogni flusso una priorità basandosi su questi criteri:
 
-| Priorità | Criteri |
-|----------|---------|
-| **CRITICAL** | Blocca l'accesso all'app (login, auth flow) / operazione core del business (pagamento, submit documentazione) / perdita dati se fallisce |
-| **HIGH** | Funzionalità principale della sezione (crea record, aggiorna stato) / flusso usato da tutti gli utenti / operazione irreversibile |
-| **MEDIUM** | Funzionalità secondaria (filtri, sorting, export) / configurazione profilo / operazioni raramente eseguite |
+Applica le regole code-derivable da `reference/evidence-patterns.md` § "Regole Priority":
+
+| Priorità | Regola (code-derivable) | `priority_evidence.rule` |
+|----------|------------------------|--------------------------|
+| **CRITICAL** | canActivate/redirect guard + P1 (API mutante) | `mutating-api+canActivate-guard` |
+| **CRITICAL** | Prima route dopo redirect post-login | `entry-point-post-login` |
+| **CRITICAL** | Endpoint contiene `/auth`, `/payment`, `/submit`, `/sign`, `/confirm`, `/delete` | `endpoint-path-contains-{keyword}` |
+| **HIGH** | P1 (API mutante) senza pattern CRITICAL | `mutating-api` |
+| **HIGH** | P5 (form discriminator) che cambia payload API | `form-discriminator-changes-payload` |
+| **HIGH** | Rendering condizionale su ruolo (isAdmin, userRole, canEdit) | `role-based-rendering` |
+| **MEDIUM** | Solo P4 (submit) senza API call | `submit-no-api` |
+| **MEDIUM** | Solo P2 (router navigation) senza API | `nav-only` |
+| **LOW/SKIP** | Nessuno dei 5 pattern → component presentazionale | Non aggiungere alla flow map |
+
+Compila sempre `priority_evidence.rule` con il valore della colonna destra.
+Se non riesci a identificare la regola → assegna MEDIUM di default.
+Nessun giudizio di dominio: "operazione importante per il business" non è una regola.
 
 **Applica anche i tag di accesso:**
 - `pubblico` — sezione accessibile senza autenticazione
