@@ -164,8 +164,8 @@ Se trovi file > 1 MB:
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · pre-commit-quality-gate |
 |:---|
 | ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
+| 📦 File: `[percorso del file] ([dimensione] MB)` |
 | 1. 🚫 Azione: File staged supera 1 MB |
-| 📂 `[percorso del file] ([dimensione] MB)` |
 | 💡 Perche': File grandi degradano performance del repository |
 | 🚫 Se NO: Il file grande viene committato nel repository |
 

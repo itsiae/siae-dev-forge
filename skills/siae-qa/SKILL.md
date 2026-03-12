@@ -124,7 +124,9 @@ REQ PROFILE:
   Stack:      [tecnologie rilevate]
 ```
 
-- **Se HIGH:** procedi direttamente con le domande del tree (0c)
+- **Se HIGH:** mostra la card e procedi con le domande del tree (0c).
+  L'utente può correggere il tipo prima che il tree parta rispondendo con il tipo corretto
+  (es. "in realtà è Auth"). In assenza di correzione, il tree parte immediatamente.
 - **Se MEDIUM/LOW:** chiedi conferma con scelta multipla:
   "Il requisito mi sembra [tipo inferito]. Confermi? (si / altro tipo: FE / BE / ETL / DB / Auth / Integration)"
 
