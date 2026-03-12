@@ -8,10 +8,20 @@ set -euo pipefail
 # Read tool input from stdin (JSON with tool_name, tool_input, tool_output)
 HOOK_INPUT=$(cat)
 
+# Determine plugin root (needed early for telemetry upload)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # Extract the command that was executed
 TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
-# Only trigger on PR creation or git push (not on every commit)
+# Upload telemetry on every commit (non-blocking, background)
+if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+    source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
+    devforge_upload_logs &
+fi
+
+# Only trigger review on PR creation or git push (not on every commit)
 if [[ ! "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+create ]] && \
    [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
     echo '{}'
@@ -24,10 +34,6 @@ if echo "$TOOL_OUTPUT" | grep -qi "error\|fatal\|rejected\|failed"; then
     echo '{}'
     exit 0
 fi
-
-# Determine plugin root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true

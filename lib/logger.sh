@@ -47,7 +47,8 @@ devforge_get_sdlc_phase() {
 # Get user identity: git email → $USER → whoami → unknown
 devforge_get_user() {
     local user
-    user=$(devforge_get_user)
+    user=$(git config user.email 2>/dev/null)
+    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
     echo "$user"
 }
 
