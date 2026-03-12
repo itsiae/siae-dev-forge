@@ -173,7 +173,7 @@ grep -c "\[BLOCKED\]" docs/plans/<filename>.md
 grep -c "\[DONE\]" docs/plans/<filename>.md
 ```
 
-**Se PENDING > 0 o BLOCKED > 0:** STOP. Il piano non è completo.
+**Se PENDING > 0 o BLOCKED > 0:** STOP. Il piano non e' completo.
 
 ```
 🔴 PIANO INCOMPLETO — non puoi procedere con siae-verification.

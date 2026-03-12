@@ -14,7 +14,7 @@ description: >
 
 ## Scopo
 
-Verifica se GitHub CLI (`gh`) è installata e autenticata nel sistema locale.
+Verifica se GitHub CLI (`gh`) e' installata e autenticata nel sistema locale.
 Imposta il modo operativo per la sessione:
 
 - **GH_MODE** — `gh` disponibile: usa `gh` per tutte le operazioni GitHub-native

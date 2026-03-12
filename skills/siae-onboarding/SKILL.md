@@ -217,7 +217,7 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
   💡 Questo progetto non ha una mappa architetturale.
      Esegui /forge-map per generarla (subagent Sonnet, ~5 min).
   ```
-- Se non esiste e il repo è piccolo (≤ 50 file) → nessun suggerimento
+- Se non esiste e il repo e' piccolo (≤ 50 file) → nessun suggerimento
 
 ### 4.1 Incomplete Plan Detection
 
@@ -250,7 +250,7 @@ L'utente decide:
 - **Riprendere** → invoca `siae-executing-plans` con il piano incompleto
 - **Procedere con altro** → l'utente fornisce il motivo, si prosegue normalmente
 
-Nessun blocco forzato — il reminder è **sempre** visibile ma non impedisce il lavoro.
+Nessun blocco forzato — il reminder e' **sempre** visibile ma non impedisce il lavoro.
 
 Adatta le righe `Skill disponibili` in base allo stack rilevato:
 - Java -> aggiungi `siae-architecture`
