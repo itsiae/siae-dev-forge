@@ -77,25 +77,18 @@ Struttura `src/`: `components/`, `hooks/`, `services/`, `store/`, `types/`
 
 ## 2. Deploy (S3 + CloudFront)
 
-🚨 **Pre-flight OBBLIGATORIA prima del deploy:**
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "CRITICO",
-  "skill": "siae-frontend",
-  "context": [
-    {"emoji": "🏗️", "label": "Ambiente", "value": "<dev|collaudo|produzione>"},
-    {"emoji": "🏷️", "label": "Tag rc-*", "value": "<rc-YYYY-MM-DD-N>"},
-    {"emoji": "✅", "label": "Build locale", "value": "OK / Fallita"},
-    {"emoji": "🧪", "label": "Test suite", "value": "N passed, 0 failed"}
-  ],
-  "actions": [
-    {"emoji": "⚠️", "label": "S3 sync + CloudFront invalidation", "path": "<bucket-name>"}
-  ],
-  "reason": "Deploy frontend — assets sovrascritta, CloudFront invalidata",
-  "ifno": "STOP — nessun deploy eseguito"
-}' | python3 design-system/generate-card.py
-```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-frontend |
+|:---|
+| ⚠️ WARNING — operazione CRITICA |
+| 🏗️ Ambiente: `<dev\|collaudo\|produzione>` |
+| 🏷️ Tag rc-*: `<rc-YYYY-MM-DD-N>` |
+| ✅ Build locale: `OK / Fallita` |
+| 🧪 Test suite: `N passed, 0 failed` |
+| 1. ⚠️ S3 sync + CloudFront invalidation: `<bucket-name>` |
+| 💡 Perche': Deploy frontend — assets sovrascritta, CloudFront invalidata |
+| 🚫 Se NO: STOP — nessun deploy eseguito |
 
 `vite build` -> `dist/` -> S3 bucket (no static hosting, access via CloudFront OAI/OAC). `index.html` no-cache, assets con hash per cache busting.
 

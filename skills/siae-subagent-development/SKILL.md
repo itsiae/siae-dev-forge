@@ -72,23 +72,15 @@ PIANO DI IMPLEMENTAZIONE:
 
 ### Step 2 — Per Ogni Task: Dispatch Implementer
 
-🟡 MEDIO — Mostra pre-flight card prima di lanciare ogni subagent
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-subagent-development",
-  "context": [
-    {"emoji": "🤖", "label": "Task", "value": "<nome task dal piano>"},
-    {"emoji": "📋", "label": "Piano", "value": "docs/plans/<file>.md"}
-  ],
-  "actions": [
-    {"emoji": "🚀", "label": "Dispatch subagent implementer", "path": "docs/plans/<file>.md"}
-  ],
-  "reason": "Subagent con contesto fresco modifichera file reali",
-  "ifno": "Il task non viene implementato, piano resta in attesa"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
+|:---|
+| 🤖 Task: `<nome task dal piano>` |
+| 📋 Piano: `docs/plans/<file>.md` |
+| 1. 🚀 Dispatch subagent implementer: `docs/plans/<file>.md` |
+| 💡 Perche': Subagent con contesto fresco modifichera file reali |
+| 🚫 Se NO: Il task non viene implementato, piano resta in attesa |
 
 Per ogni task nel piano, lancia un subagent implementer con il prompt definito
 in [implementer-prompt.md](implementer-prompt.md).
@@ -194,23 +186,15 @@ Opzioni:
 
 ### Step 6 — Final Review Complessiva
 
-🟡 MEDIO — Mostra pre-flight card prima di eseguire la test suite finale
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-subagent-development",
-  "context": [
-    {"emoji": "🧪", "label": "Suite", "value": "Test suite completa progetto"},
-    {"emoji": "✅", "label": "Task completati", "value": "N/N"}
-  ],
-  "actions": [
-    {"emoji": "▶️", "label": "Esecuzione test suite finale", "path": "tests/"}
-  ],
-  "reason": "Verifica integrazione post-implementazione",
-  "ifno": "Completamento dichiarato senza verifica test suite"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
+|:---|
+| 🧪 Suite: `Test suite completa progetto` |
+| ✅ Task completati: `N/N` |
+| 1. ▶️ Esecuzione test suite finale: `tests/` |
+| 💡 Perche': Verifica integrazione post-implementazione |
+| 🚫 Se NO: Completamento dichiarato senza verifica test suite |
 
 Dopo che tutti i task sono completati:
 

@@ -135,22 +135,15 @@ Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
 
 ### 5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
 
-🟡 **Pre-flight** — prima di scrivere il file:
+Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-```bash
-echo '{
-  "level": "MEDIO",
-  "skill": "siae-brainstorming",
-  "context": [
-    {"emoji": "📝", "label": "Topic", "value": "<topic del design>"},
-    {"emoji": "📂", "label": "Path", "value": "docs/plans/YYYY-MM-DD-<topic>-design.md"},
-    {"emoji": "✅", "label": "Design approvato", "value": "Si"}
-  ],
-  "actions": [],
-  "reason": "Scrittura design doc dopo approvazione utente",
-  "ifno": "Non scrivere il file senza approvazione esplicita del design"
-}' | python3 design-system/generate-card.py
-```
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-brainstorming |
+|:---|
+| 📝 Topic: `<topic del design>` |
+| 📂 Path: `docs/plans/YYYY-MM-DD-<topic>-design.md` |
+| ✅ Design approvato: `Si` |
+| 💡 Perche': Scrittura design doc dopo approvazione utente |
+| 🚫 Se NO: Non scrivere il file senza approvazione esplicita del design |
 
 - Salva il design validato nel file
 - Includi: contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione
