@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Rename directory + aggiorna tutti i riferimenti [PENDING]
+### Task 1: Rename directory + aggiorna tutti i riferimenti [DONE]
 
 **File coinvolti:**
 - Rinomina: `skills/siae-frontend-flows/` → `skills/nr-test-flows/`
