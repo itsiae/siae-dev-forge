@@ -37,11 +37,11 @@ modules/cognito/
 │                              #   (prefix-based o custom domain)
 ├── cognito-identity-pool.tf   # aws_cognito_identity_pool (solo scenario B)
 │                              #   + IAM roles authenticated/unauthenticated
-│                              #   count = var.auth_scenario == "user_pool_identity" ? 1 : 0
+│                              #   count = condition ? 1 : 0 (singleton condizionale — V4 eccezione)
 ├── cognito-idp.tf             # aws_cognito_identity_provider (solo scenario C)
 │                              #   SAML: metadata_url da IdP aziendale
 │                              #   OIDC: issuer, client_id, client_secret
-│                              #   for_each = var.auth_scenario == "federation" ? var.identity_providers : {}
+│                              #   for_each = condition ? var.identity_providers : {} (collezione condizionale)
 ├── cognito-lambda-triggers.tf # (opzionale) Lambda triggers per:
 │                              #   pre_sign_up, post_confirmation,
 │                              #   pre_token_generation, custom_message

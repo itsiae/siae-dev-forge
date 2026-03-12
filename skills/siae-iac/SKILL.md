@@ -164,7 +164,7 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V1 | No inline IAM policy                       | Usa `aws_iam_policy` separata, riusabile |
 | V2 | No hardcoded AMI ID                        | Usa data source `aws_ami` o variabile    |
 | V3 | No hardcoded region                        | Leggi da `config.yaml` o variabile       |
-| V4 | Usa `for_each`, mai `count`                | `for_each` e' stabile su add/remove      |
+| V4 | Usa `for_each`, mai `count` (eccezione: `count = condition ? 1 : 0` ammesso per risorse singleton condizionali) | `for_each` e' stabile su add/remove |
 | V5 | No `terraform apply` senza plan review     | Sempre `plan` -> review -> `apply`       |
 | V6 | Pin provider versions                      | `required_providers` con `~>` constraint |
 | V7 | Tag obbligatori su ogni risorsa            | `Environment`, `Project`, `ManagedBy`    |
