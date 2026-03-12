@@ -35,7 +35,7 @@ flow_map:
           name: "Login con credenziali"
           priority: "CRITICAL"
           # Regole priority (da evidence-patterns.md § 5 Pattern Meccanici):
-          # CRITICAL: canActivate/guard + API mutante, entry point post-login, /auth|/payment|/submit|/sign|/confirm|/delete
+          # CRITICAL: canActivate/guard + API mutante [rule: "mutating-api+canActivate-guard"], entry point post-login [rule: "entry-point-post-login"], /auth|/payment|/submit|/sign|/confirm|/delete [rule: "endpoint-path-contains-{keyword}"]
           # HIGH: API mutante (P1) senza CRITICAL, form discriminator che cambia payload (P5), rendering per ruolo
           # MEDIUM: solo P4 (submit) senza API, solo P2 (navigation) senza API
           # LOW/SKIP: nessun pattern → component presentazionale, non genera flusso NRT
@@ -102,9 +102,10 @@ flow_map:
 
         - id: "dashboard--DashboardView--GET-dashboard-stats"
           name: "Visualizzazione overview"
-          priority: "HIGH"
+          priority: "MEDIUM"
           priority_evidence:
-            rule: "get-api-core-content"
+            rule: "nav-only"
+            # Nota: se il flusso è solo GET senza chiamate mutanti, usa "nav-only" e priority: MEDIUM
             source_guard: "{file:riga}"
             source_api: "{file:riga}"
           trigger: "Navigazione a /dashboard dopo login"

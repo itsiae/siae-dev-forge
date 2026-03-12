@@ -276,21 +276,6 @@ Queste sezioni sono comuni nella maggior parte delle app — verifica se esiston
 
 **Se una sezione non esiste nel repo → non includerla. Documenta nel Gap Report.**
 
-#### Output Step 2
-
-File YAML salvato in `/tmp/siae-flows-{timestamp}/flow-map.yaml` (o presentato in chat).
-
-**Annuncia:**
-```
-STEP 2 COMPLETATO
-Evidenza: flow map YAML costruita
-Sezioni mappate: {N}
-Flussi mappati: {N}
-Sezioni UNVERIFIED: {N}
-Gap Report: {N elementi}
-Passaggio al Step 3: SI
-```
-
 #### 2d — L5 Scan (obbligatorio prima di chiudere ogni sezione)
 
 Per ogni component letto durante il MAP, esegui i grep L5 da `reference/evidence-patterns.md`
@@ -305,7 +290,24 @@ Per ogni component letto durante il MAP, esegui i grep L5 da `reference/evidence
 L5 scan sezione {nome}: nessun discriminatore rilevato — l5_signals: {}
 ```
 
-Se non esegui 2d o non dichiari il risultato → la sezione è INCOMPLETA.
+Se non esegui 2d o non dichiari il risultato → la sezione è INCOMPLETA:
+aggiungi nel Gap Report un entry `type: L5_SCAN_MISSING, severity: CRITICAL`
+e NON procedere al Step 3 PRIORITIZE fino a risoluzione.
+
+#### Output Step 2
+
+File YAML salvato in `/tmp/siae-flows-{timestamp}/flow-map.yaml` (o presentato in chat).
+
+**Annuncia:**
+```
+STEP 2 COMPLETATO
+Evidenza: flow map YAML costruita
+Sezioni mappate: {N}
+Flussi mappati: {N}
+Sezioni UNVERIFIED: {N}
+Gap Report: {N elementi}
+Passaggio al Step 3: SI
+```
 
 ---
 

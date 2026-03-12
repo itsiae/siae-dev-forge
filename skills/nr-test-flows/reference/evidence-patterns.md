@@ -170,6 +170,7 @@ lib/app.dart
 # P5 — Form discriminators (conditional widget rendering)
 Grep pattern: if\s*\([a-zA-Z][a-zA-Z0-9_]*\s*[=!]==.*\)\s*\n?\s*[A-Z]
 # cerca blocchi if/switch che rendono widget diversi basati su form state
+# poi filtra: escludi isAuthenticated|isAdmin|isLoading|isError|showError|hasPermission
 
 # P3 — Store states (Riverpod/Bloc/Provider)
 Grep pattern: StateNotifier<|Cubit<|BlocBuilder|ChangeNotifier
