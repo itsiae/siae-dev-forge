@@ -44,6 +44,13 @@ devforge_get_sdlc_phase() {
     esac
 }
 
+# Get user identity: git email → $USER → whoami → unknown
+devforge_get_user() {
+    local user
+    user=$(devforge_get_user)
+    echo "$user"
+}
+
 # Get or generate session ID
 devforge_get_sid() {
     if [ -f "$DEVFORGE_SID_FILE" ]; then
@@ -80,8 +87,7 @@ devforge_log() {
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
     local user
-    user=$(git config user.email 2>/dev/null)
-    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
+    user=$(devforge_get_user)
 
     # Atomic append — printf avoids echo quoting issues
     printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
@@ -114,8 +120,7 @@ devforge_log_timed() {
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
     local user
-    user=$(git config user.email 2>/dev/null)
-    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
+    user=$(devforge_get_user)
 
     printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
         "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
