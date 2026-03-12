@@ -139,7 +139,7 @@ Output atteso: commit creato con messaggio corretto.
 
 ---
 
-### Task 2: Nuovo schema `flow-map-template.yaml` [PENDING]
+### Task 2: Nuovo schema `flow-map-template.yaml` [DONE]
 
 **Dipende da:** Task 1 (directory rinominata)
 
@@ -391,7 +391,7 @@ git commit -m "feat(nr-test-flows): deterministic flow-map schema with L5 signal
 
 ---
 
-### Task 3: Update `evidence-patterns.md` — 5 Pattern Meccanici + L5 grep [PENDING]
+### Task 3: Update `evidence-patterns.md` — 5 Pattern Meccanici + L5 grep [DONE]
 
 **Dipende da:** Task 1
 
@@ -572,7 +572,7 @@ git commit -m "feat(nr-test-flows): add 5 mechanical patterns and L5 scan sectio
 
 ---
 
-### Task 4: Update `SKILL.md` body — Step 2d e Step 3 code-derivable rules [PENDING]
+### Task 4: Update `SKILL.md` body — Step 2d e Step 3 code-derivable rules [DONE]
 
 **Dipende da:** Task 1
 
