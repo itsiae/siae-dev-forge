@@ -493,6 +493,8 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 - **Remote state:** S3 + DynamoDB lock, key = `{env}-{repo-name}-terraform-state`
 - **CI/CD:** Makefile tag-based deploy, GH Actions reusable workflows
 - **Vincoli:** No inline policy, no hardcoded AMI/region, `for_each` invece di `count`
+- **Template repo:** Sezione dedicata a `itsiae/project-template-aws-iac` con blueprint per 6 moduli (vpc, api-private, api-public, rds-postgres, dynamodb, cognito), convenzioni template e checklist per nuovi moduli
+- **Reference files:** `reference/template-vpc.md`, `reference/template-api-private.md`, `reference/template-api-public.md`, `reference/template-rds-postgres.md`, `reference/template-dynamodb.md`, `reference/template-cognito.md`
 - **Tipo:** Flexible
 
 #### `siae-data-engineering` — Data Pipeline (Fase 4)
