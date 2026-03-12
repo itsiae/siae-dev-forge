@@ -1,6 +1,6 @@
 # DevForge Visual Design System
 
-Questo documento è il riferimento visivo **obbligatorio** per TUTTE le skill del plugin `siae-devforge`.
+Questo documento e' il riferimento visivo **obbligatorio** per TUTTE le skill del plugin `siae-devforge`.
 Ogni skill generata, ogni risposta durante l'esecuzione di una skill, e ogni output DevForge
 deve rispettare le convenzioni definite qui.
 
@@ -242,7 +242,7 @@ La differenziazione visiva si ottiene tramite:
 - Compila ogni campo in modo specifico e contestuale, MAI generico
 - Il campo **Rischio** deve usare uno dei quattro livelli della tabella 0.2
 - Il campo **Alternativa** deve descrivere concretamente cosa succede se l'utente nega
-- Se l'azione tocca più categorie, usa il livello più alto tra quelli applicabili
+- Se l'azione tocca piu' categorie, usa il livello piu' alto tra quelli applicabili
 - Per azioni 🟢 (solo lettura, analisi, spiegazioni): la card NON si mostra
 - Valori tecnici (branch, path, ARN, S3 URI, ISRC, env vars): sempre in backtick
 - Una riga `📂 path` per ogni file di ogni azione

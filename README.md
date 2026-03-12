@@ -15,7 +15,7 @@
 
 **siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 29 skill, 5 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.7.0-mvp
+> **Versione:** 1.8.0-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 

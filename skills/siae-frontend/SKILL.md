@@ -25,7 +25,7 @@ description: >
 
 ## Panoramica
 
-Pattern frontend SIAE per sviluppo, testing, deploy e brand. **Vue.js 3 è lo stack standard SIAE** per i nuovi progetti. Angular e React sono supportati dove già adottati.
+Pattern frontend SIAE per sviluppo, testing, deploy e brand. **Vue.js 3 e' lo stack standard SIAE** per i nuovi progetti. Angular e React sono supportati dove gia' adottati.
 
 Le sezioni di **deploy**, **Firebase** e **brand** si applicano a tutti i framework. Le sezioni di **stack** e **testing** variano per framework.
 
