@@ -88,6 +88,67 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
 ---
 
+## Phase 0 — Smart Req Typing [SEMPRE OBBLIGATORIA — prima di tutto]
+
+Prima di leggere AC o interrogare Jira, inferisci il tipo di requisito.
+**Non chiedere ciò che la story dice già.** Leggi prima, chiedi solo il delta.
+
+### 0a — Inferisci il tipo
+
+Leggi in ordine: summary della story, AC/description, commenti, label Jira, stack del progetto.
+Cerca i segnali della tabella seguente:
+
+| Tipo | Segnali (summary, AC, description, label, stack) |
+|------|--------------------------------------------------|
+| **Frontend (FE)** | "componente", "pagina", "form", "UI", "Vue", "Angular", "React", "click", "visualizza", "render", "responsive" |
+| **Backend Microservice (BE)** | "API", "endpoint", "service", "REST", "controller", "Spring", "Lambda", "validazione", "business rule" |
+| **ETL / Data Pipeline** | "Glue", "PySpark", "pipeline", "trasformazione", "bronze", "silver", "gold", "job", "ETL", "medallion" |
+| **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase" |
+| **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
+| **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
+
+**Confidence:**
+- **HIGH (≥ 90%):** 2+ segnali forti convergenti
+- **MEDIUM (60-89%):** 1 segnale forte o 2+ deboli
+- **LOW (< 60%):** segnali ambigui o assenti
+
+### 0b — Mostra Req Typing Card
+
+Mostra sempre la card con il tipo inferito:
+
+```
+REQ PROFILE:
+  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration]
+  Confidence: [HIGH / MEDIUM / LOW]
+  Segnali:    [elenco segnali usati dall'inferenza]
+  Stack:      [tecnologie rilevate]
+```
+
+- **Se HIGH:** procedi direttamente con le domande del tree (0c)
+- **Se MEDIUM/LOW:** chiedi conferma con scelta multipla:
+  "Il requisito mi sembra [tipo inferito]. Confermi? (si / altro tipo: FE / BE / ETL / DB / Auth / Integration)"
+
+### 0c — Lancia le domande del tree contestuale
+
+Usa le domande in `reference/question-trees.md` per il tipo confermato.
+
+**Regola fondamentale:** salta ogni domanda già rispondibile dagli AC/description esistenti.
+Fai UNA domanda alla volta. Aspetta la risposta prima di procedere alla successiva.
+
+Al termine delle domande, aggiorna la Req Profile Card con gli scenari raccolti:
+
+```
+REQ PROFILE (aggiornato):
+  Tipo:       [tipo]
+  Scenari L1: [lista scenari flusso principale]
+  Scenari L2: [lista edge case contestuali]
+  Scenari L3: [lista scenari integrazione/dipendenze]
+```
+
+Questa card è l'input aggiuntivo per Phase 4a (matrice scenari).
+
+---
+
 ## WORKFLOW A 5 FASI
 
 ### Fase 1 — Lettura AC da Jira [HARD-GATE]
