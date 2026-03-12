@@ -49,31 +49,47 @@ escape_for_json() {
 read -r -d '' REVIEW_INSTRUCTIONS << 'REVIEW_EOF' || true
 # DevForge PR Auto-Review
 
-Una PR e' stata creata o il branch e' stato pushato. DEVI lanciare automaticamente questi due agent in parallelo
-sui file CAMBIATI nel branch (usa `git diff origin/main...HEAD --name-only` per la lista).
+Una PR e' stata creata o il branch e' stato pushato. DEVI lanciare automaticamente questi due agent in parallelo.
+
+## REGOLA CRITICA: Passa il DIFF, non i path dei file
+
+Gli agent di review DEVONO ricevere il diff testuale nel prompt, NON i path dei file.
+Passare i path causa la lettura dei file interi — spreco di token enorme.
+
+**Step preliminare obbligatorio:**
+```bash
+git diff origin/main...HEAD
+```
+
+Salva l'output di questo comando. Lo passerai nel prompt di ENTRAMBI gli agent.
 
 ## 1. Code Review (siae-devforge:code-reviewer)
 
-Lancia l'agent `siae-devforge:code-reviewer` sui file cambiati nel branch.
-L'agent eseguira' la review a 6 punti: conformita' al piano, code standards,
+Lancia l'agent con subagent_type="siae-devforge:code-reviewer".
+Nel prompt INCLUDI il diff testuale completo, NON i path dei file.
+L'agent eseguira' la review a 6 punti SOLO sul diff: conformita' al piano, code standards,
 security, error handling, test coverage, architettura.
 
 ## 2. Security Check (siae-devforge:siae-security)
 
-Invoca la skill `siae-devforge:siae-security` per verificare:
-- Nessun secret/credenziale nei file cambiati
+Invoca la skill siae-devforge:siae-security per verificare SOLO il diff:
+- Nessun secret/credenziale nel diff
 - IAM least privilege se ci sono policy AWS
 - OWASP Top 10 compliance
 - PII handling per dati autori/artisti SIAE
 
 ## Istruzioni
 
-1. Ottieni la lista dei file cambiati: `git diff origin/main...HEAD --name-only`
+1. Ottieni il diff completo: `git diff origin/main...HEAD`
 2. Lancia ENTRAMBI in parallelo usando il tool Agent:
-   - Agent con subagent_type="siae-devforge:code-reviewer" in background
-   - Invoca Skill("siae-devforge:siae-security") per il security check
+   - Agent con subagent_type="siae-devforge:code-reviewer" — passa il DIFF nel prompt
+   - Invoca Skill("siae-devforge:siae-security") per il security check — passa il DIFF
 3. Mostra i risultati quando arrivano
 4. Se trovano problemi critici, segnalali PRIMA di qualsiasi altra azione
+
+IMPORTANTE: Gli agent NON devono leggere file con Read o Glob. Tutto il contesto
+necessario e' nel diff. Se un agent ha bisogno di contesto aggiuntivo (es. design doc),
+passa il path nel prompt ma SOLO per i criteri di accettazione, non per rileggere il codice.
 
 NON chiedere all'utente se vuole la review — e' automatica.
 NON saltare questo step — ogni PR viene revisionata.

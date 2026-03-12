@@ -91,6 +91,63 @@ echo "  Skill totali: ${skill_count} | OK: ${skill_ok} | FAIL: ${skill_fail}"
 TOTAL_PASS=$((TOTAL_PASS + skill_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + skill_fail))
 
+# --- Subagent Prompt Content Validation ---
+echo ""
+echo "=== Subagent Prompt Content Validation ==="
+echo ""
+
+IMPL_PROMPT="${PLUGIN_ROOT}/skills/siae-subagent-development/implementer-prompt.md"
+prompt_ok=0
+prompt_fail=0
+
+if [ -f "$IMPL_PROMPT" ]; then
+  # Check TDD read instruction
+  if grep -q 'Glob(".*siae-tdd/SKILL.md")' "$IMPL_PROMPT"; then
+    echo "  PASS  implementer-prompt: contiene istruzione Glob per siae-tdd"
+    prompt_ok=$((prompt_ok + 1))
+  else
+    echo "  FAIL  implementer-prompt: manca istruzione Glob per siae-tdd/SKILL.md"
+    prompt_fail=$((prompt_fail + 1))
+  fi
+
+  # Check telemetry event
+  if grep -q 'devforge_log "tdd_cycle"' "$IMPL_PROMPT"; then
+    echo "  PASS  implementer-prompt: contiene telemetria tdd_cycle"
+    prompt_ok=$((prompt_ok + 1))
+  else
+    echo "  FAIL  implementer-prompt: manca telemetria tdd_cycle"
+    prompt_fail=$((prompt_fail + 1))
+  fi
+
+  # Check TDD cycles in report
+  if grep -q 'TDD cycles:' "$IMPL_PROMPT"; then
+    echo "  PASS  implementer-prompt: report contiene campo TDD cycles"
+    prompt_ok=$((prompt_ok + 1))
+  else
+    echo "  FAIL  implementer-prompt: report manca campo TDD cycles"
+    prompt_fail=$((prompt_fail + 1))
+  fi
+
+  # Check bash snippet syntax
+  bash_snippet=$(sed -n '/^```bash$/,/^```$/p' "$IMPL_PROMPT" | grep -v '```')
+  if echo "$bash_snippet" | bash -n 2>/dev/null; then
+    echo "  PASS  implementer-prompt: snippet bash sintatticamente valido"
+    prompt_ok=$((prompt_ok + 1))
+  else
+    echo "  FAIL  implementer-prompt: snippet bash ha errori di sintassi"
+    prompt_fail=$((prompt_fail + 1))
+  fi
+else
+  echo "  FAIL  implementer-prompt.md non trovato"
+  prompt_fail=$((prompt_fail + 1))
+fi
+
+echo ""
+echo "  Prompt check: ${prompt_ok} OK | ${prompt_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + prompt_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + prompt_fail))
+echo ""
+
 # --- Dynamic Catalog Validation ---
 echo ""
 echo "=== Dynamic Catalog Validation ==="

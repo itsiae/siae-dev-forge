@@ -70,17 +70,29 @@ Se hai dubbi su qualsiasi punto, **chiedi prima di implementare**. Non assumere.
 
 ## Istruzioni di Implementazione
 
-### 1. TDD Obbligatorio
+### 1. TDD Obbligatorio — Leggi la Skill Completa
 
-```
-REQUIRED SUB-SKILL: siae-tdd
-```
+<EXTREMELY-IMPORTANT>
+PRIMA di scrivere qualsiasi codice di produzione, DEVI leggere la skill TDD:
 
-Segui il workflow RED-GREEN-REFACTOR:
+1. Trova il file: Glob("**/siae-tdd/SKILL.md")
+2. Leggilo INTERAMENTE con Read
+3. Segui ESATTAMENTE il workflow RED-GREEN-REFACTOR descritto nel file
+4. Leggi anche: testing-anti-patterns.md nella stessa directory
+
+Se non trovi il file, cerca ricorsivamente in ~/.claude/plugins/
+
+NON procedere senza aver letto la skill.
+Il riassunto qui sotto e' un PROMEMORIA, non un sostituto della skill completa.
+</EXTREMELY-IMPORTANT>
+
+**Promemoria RED-GREEN-REFACTOR (la skill completa ha i dettagli):**
 - **RED:** Scrivi il test PRIMA del codice. Il test DEVE fallire.
 - **GREEN:** Scrivi il codice MINIMO per far passare il test.
 - **REFACTOR:** Migliora il codice, i test restano verdi.
 - **COMMIT:** Un commit per ciclo RED-GREEN-REFACTOR.
+
+**Legge di Ferro:** Hai scritto codice prima del test? Cancellalo. Ricomincia.
 
 ### 2. Standard SIAE
 
@@ -109,6 +121,24 @@ Segui le convenzioni per lo stack rilevato:
 - Branch naming: `feature/{JIRA-ID}-{descrizione}` (se non gia' creato)
 - Commit message: conventional commits (`feat:`, `fix:`, `test:`, `refactor:`)
 - Un commit per ciclo TDD
+
+### 4. Telemetria TDD
+
+Dopo OGNI ciclo RED-GREEN-REFACTOR completato, logga l'evento:
+
+```bash
+LOGGER_SH=$(find ~/.claude/plugins -name 'logger.sh' -path '*/siae-dev-forge/lib/*' 2>/dev/null | head -1)
+if [ -n "$LOGGER_SH" ] && head -1 "$LOGGER_SH" | grep -q 'DevForge Activity Logger'; then
+  source "$LOGGER_SH"
+  devforge_log "tdd_cycle" "success" '{"phase":"complete","task":"{task_id}","test_file":"{test_file}"}'
+fi
+```
+
+Sostituisci:
+- `{task_id}` con l'ID del task dal piano (es. "task-1")
+- `{test_file}` con il path del file test creato/modificato
+
+Se il logger non viene trovato, procedi senza loggare — il TDD resta obbligatorio.
 
 ---
 
@@ -157,15 +187,16 @@ Quando hai finito, produci questo report:
 
 ```
 IMPLEMENTER REPORT:
-  Task:         {task_id} — {task_title}
-  File creati:  [lista]
+  Task:           {task_id} — {task_title}
+  File creati:    [lista]
   File modificati: [lista]
-  Test aggiunti: [lista]
-  Test result:  [N passed, 0 failed]
-  Coverage:     [XX%]
-  Commit:       [hash — message]
-  Self-review:  [checklist completa: SI/NO]
-  Note:         [eventuali deviazioni dal piano, con motivazione]
+  Test aggiunti:  [lista]
+  TDD cycles:     [N cicli RED-GREEN-REFACTOR completati]
+  Test result:    [N passed, 0 failed]
+  Coverage:       [XX%]
+  Commit:         [hash — message]
+  Self-review:    [checklist completa: SI/NO]
+  Note:           [eventuali deviazioni dal piano, con motivazione]
 ```
 
 ---
