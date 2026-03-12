@@ -668,7 +668,7 @@ git commit -m "feat(nr-test-flows): add Step 2d L5 scan and replace subjective p
 
 ---
 
-### Task 5: Verifica coerenza interna [PENDING]
+### Task 5: Verifica coerenza interna [DONE]
 
 **Dipende da:** Task 1, 2, 3, 4
 
