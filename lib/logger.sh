@@ -79,9 +79,13 @@ devforge_log() {
     project=$(echo "$git_ctx" | cut -d'|' -f3)
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
+    local user
+    user=$(git config user.email 2>/dev/null)
+    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
+
     # Atomic append — printf avoids echo quoting issues
-    printf '{"ts":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
-        "$ts" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$meta" >> "$DEVFORGE_LOG_FILE"
+    printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+        "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
 
 # Log with duration measurement
@@ -109,6 +113,10 @@ devforge_log_timed() {
     project=$(echo "$git_ctx" | cut -d'|' -f3)
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
 
-    printf '{"ts":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
-        "$ts" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+    local user
+    user=$(git config user.email 2>/dev/null)
+    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
+
+    printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+        "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
