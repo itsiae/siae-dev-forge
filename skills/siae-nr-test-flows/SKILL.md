@@ -1,5 +1,5 @@
 ---
-name: nr-test-flows
+name: siae-nr-test-flows
 description: >
   Analizza repository frontend/mobile e genera NRT flow map + test list deterministici
   pronti per Xray. Trigger: no-regression test flows, NRT suite, /forge-flows,
@@ -10,16 +10,14 @@ description: >
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║                                                                  ║
 ║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
 ║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
 ║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
 ║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
 ║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
 ║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║                                                                  ║
-║              🔨 DevForge · NR TEST FLOWS                       ║
-║         "Il codice si forgia. Il developer cresce."             ║
+║              🔨 DevForge · NR TEST FLOWS                         ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -100,7 +98,7 @@ VIETATO   README, commenti liberi, nomi di file senza averli letti, memoria
 
 Dopo il banner, mostra questa card prima di iniziare il workflow:
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · nr-test-flows |
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
 | 📁 Repository: `{path o URL}` |
 | 🔍 Framework: `{da rilevare — CONFIRMED \| INFERRED}` |
@@ -194,7 +192,7 @@ Tier C — Clonazione manuale (ultimo fallback)
 
 Mostra questa card prima di procedere (aggiorna `📡 Fonte` con il tier rilevato):
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · nr-test-flows |
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
 | 📁 Repository: `{org/repo o URL GitHub}` |
 | 📡 Fonte: `Tier A — gh CLI / Tier B — GitHub API / Tier C — manuale` |
@@ -721,7 +719,7 @@ Rispondi "OK" per procedere all'export, oppure indica le modifiche da apportare.
 
 🟡 MEDIO — Mostra pre-flight card prima di esportare
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · nr-test-flows |
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
 | 📡 Tier: `Tier 1 MCP Atlassian / Tier 3 CSV` |
 | 🎫 Story Jira: `{PROJ-XXX}` |
@@ -791,7 +789,7 @@ Per generare test automatizzati dai TC con Automazione=Y:
 
 ```
 siae-brainstorming (design feature frontend)
-    └── nr-test-flows (/forge-flows)
+    └── siae-nr-test-flows (/forge-flows)
         ├── Step 1-3: INGEST + MAP + PRIORITIZE → flow map YAML
         ├── Step 4:   GENERATE → test list per sezione
         ├── Step 5:   REVIEW → HARD GATE approvazione utente

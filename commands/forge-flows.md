@@ -4,7 +4,7 @@ description: "Analisi flussi frontend: rileva framework, mappa sezioni navigazio
 disable-model-invocation: true
 ---
 
-Invoca la skill siae-devforge:nr-test-flows e seguila esattamente come ti viene presentata.
+Invoca la skill siae-devforge:siae-nr-test-flows e seguila esattamente come ti viene presentata.
 Esegui il workflow completo a 6 step: framework detection, flow map YAML, prioritizzazione,
 generazione test list per sezione (happy path + edge + negativi + profilazione),
 presentazione con hard gate approvazione utente, export in Xray o CSV.

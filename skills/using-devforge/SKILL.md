@@ -199,7 +199,7 @@ L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si app
 
 | Skill | Trigger / quando usarla | Tipo | Fase SDLC |
 |-------|------------------------|------|-----------|
-| nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
+| siae-nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
 
 ## DevForge Visual Design System
 
