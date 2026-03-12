@@ -102,18 +102,21 @@ class DatePartitionedGlueJob:
         # Ritorna stringa SQL per il predicate pushdown
         ...
 
-    def get_delta_incremental_df(self, df, pk_columns):
+    def get_delta_incremental_df(self, spark_session, df, silver_pk):
         """Dedup CDC: mantiene solo l'operazione piu' recente per PK nella finestra."""
-        pk_str = ", ".join(pk_columns)
-        df.createOrReplaceTempView("delta_raw")
-        return self.spark.sql(f"""
-            SELECT * FROM (
-                SELECT *, ROW_NUMBER() OVER (
-                    PARTITION BY {pk_str}
-                    ORDER BY last_commit_time DESC, last_transact_id DESC
-                ) as rn
-                FROM delta_raw
-            ) WHERE rn = 1
+        df.createOrReplaceTempView("delta")
+        pk_str = ", ".join([f"s.{pk}" for pk in silver_pk])
+        return spark_session.sql(f"""
+            WITH delta_filtered AS (
+                SELECT s.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY {pk_str}
+                        ORDER BY s.last_commit_time DESC, s.last_transact_id DESC
+                    ) AS rn
+                FROM delta AS s
+                WHERE 1 = 1
+            )
+            SELECT * FROM delta_filtered WHERE rn = 1
         """).drop("rn")
 ```
 
@@ -187,7 +190,7 @@ class NomeTabella(IcebergGlueJob, DatePartitionedGlueJob):
         ]).toDF()
 
         # 3. Dedup CDC
-        df = self.get_delta_incremental_df(mapped, self.silver_table_pk)
+        df = self.get_delta_incremental_df(self.spark, mapped, self.silver_table_pk)
         df = df.drop("year", "month", "day")
 
         # 4. Standardize

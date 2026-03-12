@@ -327,7 +327,7 @@ datalake-{domain}-etl/
 ### Pattern IaC chiave
 
 - **Shared module = data source registry**: solo lookup di risorse create altrove (piattaforma). Nessuna risorsa creata.
-- **glue-definitions.yaml → Terraform**: file YAML dichiarativo, Terraform itera con `count` per creare i job
+- **glue-definitions.yaml → Terraform**: file YAML dichiarativo, Terraform itera con `for_each` per creare i job
 - **Custom libraries upload**: `--extra-py-files` per classi base, `--extra-files` per log4j2. Change detection via `etag = filemd5()`
 - **Template .tmpl**: i file ambiente non sono committati. La CI/CD li genera a runtime sostituendo variabili (`$AWS_ENV`, `$BRONZE_DATALAKE_BUCKET_ID`, etc.)
 - **Deploy tag-based**: `make dev` → tag `COLLAUDO`, `make qa` → tag `CERTIFICAZIONE`. Produzione solo via GitHub Actions UI

@@ -7,7 +7,7 @@
 ## Concetto
 
 I Glue job sono definiti in un file YAML dichiarativo (`glue-definitions.yaml`),
-non direttamente in Terraform. Terraform legge il YAML e crea le risorse con `count`.
+non direttamente in Terraform. Terraform legge il YAML e crea le risorse con `for_each`.
 
 Questo separa **la configurazione dei job** (competenza data engineering) dalla
 **infrastruttura** (competenza IaC), permettendo ai data engineer di aggiungere
@@ -19,31 +19,32 @@ job senza toccare Terraform.
 
 ```yaml
 jobs:
-  - name: areedipendenti
-    src_file: aree_dipendenti
+  - job_name: areedipendenti
+    description: "ETL bronze-to-silver aree dipendenti"
+    file_name: aree_dipendenti
     silver_table: aree_dipendenti
+    worker_type: G.1X
+    glue_version: "5.0"
+    execution_class: FLEX
+    max_concurrent_runs: 1
     dev_number_of_workers: 2
     qa_number_of_workers: 2
     prod_number_of_workers: 2
-    timeout: 60
+    timeout_min: 60
     enable_gluejob_sparkui: true
 
-  - name: dipendenti
-    src_file: dipendenti
+  - job_name: dipendenti
+    description: "ETL bronze-to-silver dipendenti"
+    file_name: dipendenti
     silver_table: dipendenti
+    worker_type: G.1X
+    glue_version: "5.0"
+    execution_class: FLEX
+    max_concurrent_runs: 1
     dev_number_of_workers: 4
     qa_number_of_workers: 4
     prod_number_of_workers: 4
-    timeout: 90
-    enable_gluejob_sparkui: true
-
-  - name: unitaorganizzative
-    src_file: unita_organizzative
-    silver_table: unita_organizzative
-    dev_number_of_workers: 4
-    qa_number_of_workers: 4
-    prod_number_of_workers: 4
-    timeout: 90
+    timeout_min: 90
     enable_gluejob_sparkui: true
 ```
 
@@ -51,13 +52,18 @@ jobs:
 
 | Campo | Tipo | Scopo |
 |-------|------|-------|
-| `name` | string | Nome del Glue job (senza prefisso ambiente) |
-| `src_file` | string | Nome del file Python in `glue-jobs/src/` (senza `.py`) |
+| `job_name` | string | Nome del Glue job (senza prefisso ambiente) |
+| `description` | string | Descrizione del job |
+| `file_name` | string | Nome del file Python in `glue-jobs/src/` (senza `.py`) |
 | `silver_table` | string | Nome della tabella silver target |
+| `worker_type` | string | Tipo worker Glue (`G.1X`, `G.2X`) |
+| `glue_version` | string | Versione Glue (`"4.0"` o `"5.0"`, preferire `"5.0"` per nuovi job) |
+| `execution_class` | string | `FLEX` (spot, costo ridotto) o `STANDARD` |
+| `max_concurrent_runs` | int | Esecuzioni concorrenti massime (default: 1) |
 | `dev_number_of_workers` | int | Worker per ambiente dev |
 | `qa_number_of_workers` | int | Worker per ambiente qa |
 | `prod_number_of_workers` | int | Worker per ambiente prod |
-| `timeout` | int | Timeout in minuti |
+| `timeout_min` | int | Timeout in minuti |
 | `enable_gluejob_sparkui` | bool | Abilita Spark History Server per il job |
 
 ---
@@ -72,26 +78,28 @@ data "local_file" "glue_jobs_definition" {
 
 locals {
   glue_jobs = yamldecode(data.local_file.glue_jobs_definition.content)
+  # Mappa per for_each (key = job_name)
+  glue_jobs_map = { for job in local.glue_jobs.jobs : job.job_name => job }
 }
 
-# Creazione risorse iterando sulla lista
+# Creazione risorse iterando sulla mappa
 resource "aws_glue_job" "silver" {
-  count = length(local.glue_jobs.jobs)
+  for_each = local.glue_jobs_map
 
-  name     = "${local.prefix}-${local.glue_jobs.jobs[count.index].name}"
+  name     = "${local.prefix}-${each.key}"
   role_arn = aws_iam_role.silver_batch_jobs.arn
 
   command {
     name            = "glueetl"
-    script_location = "s3://${var.glue_packages_bucket.id}/etl/${var.module}/${local.glue_jobs.jobs[count.index].src_file}.py"
+    script_location = "s3://${var.glue_packages_bucket.id}/etl/${var.module}/${each.value.file_name}.py"
     python_version  = "3"
   }
 
-  glue_version      = "5.0"
-  worker_type       = "G.1X"
-  execution_class   = "FLEX"
-  number_of_workers = local.glue_jobs.jobs[count.index]["${var.env}_number_of_workers"]
-  timeout           = local.glue_jobs.jobs[count.index].timeout
+  glue_version      = each.value.glue_version
+  worker_type       = each.value.worker_type
+  execution_class   = each.value.execution_class
+  number_of_workers = each.value["${var.env}_number_of_workers"]
+  timeout           = each.value.timeout_min
   max_retries       = 0
   max_capacity      = null
 
@@ -109,7 +117,7 @@ resource "aws_glue_job" "silver" {
     "--extra-files"                  = join(",", local.silver_batch_extra_files_s3_path)
     "--enable-spark-ui"              = (
       var.config.enable_spark_ui == "false" ? "false" :
-      try(local.glue_jobs.jobs[count.index].enable_gluejob_sparkui, "false")
+      try(each.value.enable_gluejob_sparkui, "false")
     )
   }
 
@@ -118,11 +126,11 @@ resource "aws_glue_job" "silver" {
 
 # Upload script su S3 per ogni job
 resource "aws_s3_object" "glue_script_upload" {
-  count  = length(local.glue_jobs.jobs)
-  bucket = var.glue_packages_bucket.id
-  key    = "etl/${var.module}/${local.glue_jobs.jobs[count.index].src_file}.py"
-  source = "${path.module}/glue-jobs/src/${local.glue_jobs.jobs[count.index].src_file}.py"
-  etag   = filemd5("${path.module}/glue-jobs/src/${local.glue_jobs.jobs[count.index].src_file}.py")
+  for_each = local.glue_jobs_map
+  bucket   = var.glue_packages_bucket.id
+  key      = "etl/${var.module}/${each.value.file_name}.py"
+  source   = "${path.module}/glue-jobs/src/${each.value.file_name}.py"
+  etag     = filemd5("${path.module}/glue-jobs/src/${each.value.file_name}.py")
 }
 ```
 
@@ -160,6 +168,6 @@ Passati ai job tramite:
 
 1. **Aggiungi entry in `glue-definitions.yaml`** con nome, src_file, worker, timeout
 2. **Crea il file Python** in `glue-jobs/src/{nome}.py`
-3. **Non toccare `glue-jobs.tf`** — il `count` itera automaticamente sulla nuova entry
+3. **Non toccare `glue-jobs.tf`** — il `for_each` itera automaticamente sulla nuova entry
 4. **Aggiorna `silver-etl.json`** — aggiungi la tabella al `silver_mapping` nella Step Function
 5. **Verifica con `terraform plan`** — deve mostrare solo la nuova risorsa `aws_glue_job`

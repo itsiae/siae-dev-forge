@@ -64,7 +64,7 @@ chmod +x tests/run-tests.sh
 |---------|--------|
 | Immagine | `amazon/aws-glue-libs:glue_libs_4.0.0_image_01` |
 | Python | 3.10 |
-| Spark | 3.3.0 (Glue 4.0) |
+| Spark | 3.3.0 (Glue 4.0). Per Glue 5.0 vedi nota sotto |
 | Java | 8 (Corretto) |
 | `awsglue` | Disponibile (DynamicFrame, GlueContext, etc.) |
 | Dimensione | ~2.5 GB (primo pull lento, poi cached) |
@@ -72,6 +72,12 @@ chmod +x tests/run-tests.sh
 
 **Note sull'entrypoint:** l'immagine ha un entrypoint custom che avvia lo Spark History Server.
 Per i test, sovrascrivilo con `--entrypoint /usr/bin/bash`.
+
+**Glue 4.0 vs 5.0:** Al 2026-03 non esiste un'immagine Docker pubblica per Glue 5.0.
+L'immagine 4.0 (Spark 3.3) e' usata per i test. La logica di trasformazione e' compatibile
+tra le versioni. I nuovi job dovrebbero usare Glue 5.0 in produzione (`glue_version: "5.0"`
+in `glue-definitions.yaml`). Se AWS rilascia un'immagine Glue 5.0, aggiornare il tag qui
+e nel `run-tests.sh`.
 
 ### Script `tests/run-tests.sh`
 
@@ -545,8 +551,9 @@ def test_merge_soft_deletes(spark, silver_db):
 
 Esempio di fixture JSON per dati bronze:
 
+File: `tests/fixtures/bronze_dipendenti.json`
+
 ```json
-// tests/fixtures/bronze_dipendenti.json
 [
   {
     "op": "I", "commit_time": "100", "transact_id": "1",
