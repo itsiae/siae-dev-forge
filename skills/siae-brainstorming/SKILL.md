@@ -93,12 +93,31 @@ Test fw:   JUnit 5           [HIGH]  pom.xml:42 — junit-jupiter 5.9.3
 Deploy:    ECS               [MEDIUM] .github/workflows/deploy.yml:15 — ecs-deploy action
 ```
 
-### 2. Domande chiarificatrici
+### 2. Presenta inferenze + domande mirate
 
-- Una domanda alla volta — non sovraccaricare l'utente
+**Presenta le inferenze in tabella compatta per conferma rapida:**
+
+```
+CONTESTO INFERITO:
+──────────────────
+Stack:       Java/Spring Boot      [HIGH]   pom.xml:5
+Pattern:     REST microservice     [HIGH]   src/.../controller/:*
+Test fw:     JUnit 5               [HIGH]   pom.xml:42
+Deploy:      ECS                   [MEDIUM] .github/workflows/deploy.yml:15
+Naming:      camelCase             [HIGH]   src/.../CatalogoService.java
+
+Confermi? (si / correggi specifici)
+```
+
+**Regole:**
+- L'utente conferma in blocco o corregge singoli campi
+- Domande esplicite SOLO per: confidence LOW, campi non inferiti, scopo del task
+- Una domanda alla volta per i campi mancanti
 - Preferisci domande a scelta multipla quando possibile
-- Se un argomento richiede approfondimento, spezzalo in piu' domande
-- Focus su: scopo, vincoli, criteri di successo, utenti target
+- Focus residuo su: **scopo del task**, vincoli, criteri di successo
+
+**Se tutto e' HIGH e l'utente conferma**, procedi direttamente a Step 3 (Approcci).
+Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
 
 ### 3. Proponi 2-3 approcci con trade-off e raccomandazione
 
