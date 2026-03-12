@@ -9,3 +9,10 @@ evals/workspace/*
 
 # Eval results (log trigger regression, generati da run-trigger-eval.py)
 evals/results/
+
+# Terraform state and cache (infra deployed separately)
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+infra/**/handler.zip
