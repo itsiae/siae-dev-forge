@@ -104,11 +104,11 @@ User Pool con `allow_admin_create_user_only = true` (no self-signup).
 
 ## Token Validity
 
-| Token         | Sviluppo  | Produzione |
-|---------------|-----------|------------|
-| Access token  | 1 ora     | 15 minuti  |
-| ID token      | 1 ora     | 15 minuti  |
-| Refresh token | 30 giorni | 7 giorni   |
+| Token         | Sviluppo  | Collaudo  | Certificazione | Produzione |
+|---------------|-----------|-----------|----------------|------------|
+| Access token  | 1 ora     | 1 ora     | 30 minuti      | 15 minuti  |
+| ID token      | 1 ora     | 1 ora     | 30 minuti      | 15 minuti  |
+| Refresh token | 30 giorni | 30 giorni | 14 giorni      | 7 giorni   |
 
 ## Security
 

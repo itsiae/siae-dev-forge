@@ -25,3 +25,12 @@ modules/api-public/
 | VPC Policy  | Si (Endpoint only) | No                |
 | burst_limit | 10000              | 100               |
 | rate_limit  | 100                | 50                |
+
+## Output esposti
+
+| Output                       | Tipo   | Descrizione                          |
+|------------------------------|--------|--------------------------------------|
+| `rest_api_id`                | string | ID del REST API Gateway              |
+| `rest_api_root_resource_id`  | string | Root resource ID per aggiungere path |
+| `stage_invoke_url`           | string | URL di invocazione dello stage       |
+| `stage_name`                 | string | Nome dello stage (es. prod)          |

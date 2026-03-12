@@ -243,7 +243,7 @@ live/                              modules/
 | Variabili standard | `account_id`, `region`, `project`, `env`, `module`, `config`         |
 | Naming locals      | `prefix = "${var.env}-${var.project}-${var.module}"`                 |
 | Dipendenze         | `dependency` block Terragrunt con `mock_outputs` per plan/validate   |
-| Config globale     | `config.yaml` alla root, env-specific in `live/_envs/{env}.yaml`     |
+| Config globale     | `config.yaml` alla root, env in `live/_envs/prod.tmpl` (template con `$VAR` placeholder, diverso dal pattern `_envs/*.hcl` dei repo classici in sezione 1) |
 | Remote state       | S3 `${env}-${repo_name}-terraform-state` + DynamoDB lock             |
 | CI/CD              | GitHub Actions: plan per env, deploy manuale, release-please         |
 

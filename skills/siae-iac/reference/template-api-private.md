@@ -31,3 +31,13 @@ Creato solo se `create_shared_resources = true` (una volta per account).
 | rate_limit  | 100    |
 
 Logging: ERROR in prod, INFO altrimenti.
+
+## Output esposti
+
+| Output                       | Tipo   | Descrizione                          |
+|------------------------------|--------|--------------------------------------|
+| `rest_api_id`                | string | ID del REST API Gateway              |
+| `rest_api_root_resource_id`  | string | Root resource ID per aggiungere path |
+| `stage_invoke_url`           | string | URL di invocazione dello stage       |
+| `stage_name`                 | string | Nome dello stage (es. prod)          |
+| `route53_record_fqdn`        | string | FQDN del record CNAME Route53        |
