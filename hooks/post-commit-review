@@ -28,7 +28,7 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
 
     CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
     HAS_TESTS="false"
-    if echo "$CHANGED_FILES" | grep -qE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/)'; then
+    if echo "$CHANGED_FILES" | grep -qE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|^test_|^tests/)'; then
         HAS_TESTS="true"
     fi
 
