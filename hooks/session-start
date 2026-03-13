@@ -80,4 +80,41 @@ EOF
 # Log session start event
 devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
 
+# Save session start timestamp for duration calculation in session_end
+echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
+
+# Detect PR merges in last 24h (requires gh + jq, graceful skip if unavailable)
+if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    USER_EMAIL=$(devforge_get_user)
+    MERGED_PRS=$(gh pr list --state merged --author "@me" \
+        --json number,mergedAt,createdAt,reviews \
+        --jq '[.[] | select((.mergedAt | fromdateiso8601) > (now - 86400))]' 2>/dev/null || echo "[]")
+
+    if [ "$MERGED_PRS" != "[]" ] && [ -n "$MERGED_PRS" ]; then
+        echo "$MERGED_PRS" | jq -c '.[]' 2>/dev/null | while IFS= read -r pr; do
+            PR_NUMBER=$(echo "$pr" | jq -r '.number' 2>/dev/null || echo "0")
+            CREATED_AT=$(echo "$pr" | jq -r '.createdAt' 2>/dev/null || echo "")
+            MERGED_AT=$(echo "$pr" | jq -r '.mergedAt' 2>/dev/null || echo "")
+            REVIEWERS_COUNT=$(echo "$pr" | jq '[.reviews[]? | .author.login] | unique | length' 2>/dev/null || echo "0")
+
+            REVIEW_CYCLE_HOURS="0"
+            if [ -n "$CREATED_AT" ] && [ -n "$MERGED_AT" ]; then
+                CREATED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$CREATED_AT" +%s 2>/dev/null || date -d "$CREATED_AT" +%s 2>/dev/null || echo "0")
+                MERGED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$MERGED_AT" +%s 2>/dev/null || date -d "$MERGED_AT" +%s 2>/dev/null || echo "0")
+                if [ "$CREATED_EPOCH" != "0" ] && [ "$MERGED_EPOCH" != "0" ]; then
+                    DELTA_SECONDS=$((MERGED_EPOCH - CREATED_EPOCH))
+                    REVIEW_CYCLE_HOURS=$(echo "scale=1; $DELTA_SECONDS / 3600" | bc 2>/dev/null || echo "0")
+                fi
+            fi
+
+            devforge_log "pr_merged" "success" \
+                "{\"pr_number\":${PR_NUMBER},\"review_cycle_hours\":${REVIEW_CYCLE_HOURS},\"reviewers_count\":${REVIEWERS_COUNT}}"
+        done
+    fi
+fi
+
+# Initialize session counters
+echo "0" > "${HOME}/.claude/.devforge-session-commits"
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+
 exit 0

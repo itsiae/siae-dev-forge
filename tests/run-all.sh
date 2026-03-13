@@ -317,6 +317,24 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
+# Check 5: post-skill emette skill_completed per skill precedente
+SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+echo '1710000000000000000|test-skill-prev|2. Design' > "$SKILL_TS_FILE"
+TEST_LOG="/tmp/devforge-test-skill-completed.jsonl"
+DEVFORGE_LOG_FILE_BAK="${DEVFORGE_LOG_FILE:-}"
+export DEVFORGE_LOG_FILE="$TEST_LOG"
+rm -f "$TEST_LOG"
+skill_completed_output=$(echo '{"skill":"siae-devforge:siae-brainstorming"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" 2>/dev/null; echo "exit:$?")
+if echo "$skill_completed_output" | grep -q 'exit:0' && grep -q '"event":"skill_completed"' "$TEST_LOG" 2>/dev/null; then
+  echo "  PASS  hooks/post-skill: emette skill_completed per skill precedente"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/post-skill: non emette skill_completed"
+  hook_fail=$((hook_fail + 1))
+fi
+rm -f "$TEST_LOG" "$SKILL_TS_FILE"
+[ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
+
 echo ""
 echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
 TOTAL_PASS=$((TOTAL_PASS + hook_ok))
@@ -335,6 +353,87 @@ if [ "$WITH_TRIGGER_REGRESSION" = true ]; then
     TOTAL_SKIP=$((TOTAL_SKIP + 1))
   fi
 fi
+
+# --- Telemetry Event Validation ---
+echo ""
+echo "=== Telemetry Event Validation ==="
+echo ""
+
+telemetry_ok=0
+telemetry_fail=0
+
+# Test has_tests detection regex
+HAS_TESTS_PATTERN='(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|^test_|^tests/)'
+
+# Positive cases
+for test_file in "UserServiceTest.java" "test_validator.py" "app.test.ts" "login.spec.ts" "src/test/MyTest.java" "tests/test_main.py"; do
+  if echo "$test_file" | grep -qE "$HAS_TESTS_PATTERN"; then
+    echo "  PASS  has_tests: riconosce '$test_file'"
+    telemetry_ok=$((telemetry_ok + 1))
+  else
+    echo "  FAIL  has_tests: non riconosce '$test_file'"
+    telemetry_fail=$((telemetry_fail + 1))
+  fi
+done
+
+# Negative cases (should NOT match)
+for src_file in "UserService.java" "validator.py" "app.ts" "login.vue" "README.md"; do
+  if echo "$src_file" | grep -qE "$HAS_TESTS_PATTERN"; then
+    echo "  FAIL  has_tests: falso positivo su '$src_file'"
+    telemetry_fail=$((telemetry_fail + 1))
+  else
+    echo "  PASS  has_tests: correttamente ignora '$src_file'"
+    telemetry_ok=$((telemetry_ok + 1))
+  fi
+done
+
+# Test JSONL schema: verify all event types produce valid JSON
+echo ""
+echo "  --- JSONL Schema Validation ---"
+SCHEMA_LOG="/tmp/devforge-test-schema.jsonl"
+rm -f "$SCHEMA_LOG"
+DEVFORGE_LOG_FILE_BAK="${DEVFORGE_LOG_FILE:-}"
+export DEVFORGE_LOG_FILE="$SCHEMA_LOG"
+
+source "${PLUGIN_ROOT}/lib/logger.sh"
+
+# Generate sample events
+devforge_log "skill_invoked" "success" '{"skill_name":"test","sdlc_phase":"5. Testing"}'
+devforge_log "skill_completed" "success" '{"skill_name":"test","sdlc_phase":"5. Testing","outcome":"success"}'
+devforge_log "commit_created" "success" '{"files_changed":3,"insertions":42,"deletions":7,"has_tests":true}'
+devforge_log "pr_opened" "success" '{"pr_number":1,"base_branch":"main","files_changed":5,"commits_count":2}'
+devforge_log "pr_merged" "success" '{"pr_number":1,"review_cycle_hours":4.5,"reviewers_count":2}'
+devforge_log_timed "session_end" "success" "$(date +%s%N)" '{"skills_used_count":3,"commits_count":2}'
+
+# Validate each line is valid JSON
+TOTAL_LINES=$(wc -l < "$SCHEMA_LOG" | tr -d ' ')
+VALID_LINES=0
+if command -v jq >/dev/null 2>&1; then
+    while IFS= read -r line; do
+        if echo "$line" | jq . >/dev/null 2>&1; then
+            VALID_LINES=$((VALID_LINES + 1))
+        fi
+    done < "$SCHEMA_LOG"
+
+    if [ "$VALID_LINES" -eq "$TOTAL_LINES" ]; then
+        echo "  PASS  JSONL schema: ${VALID_LINES}/${TOTAL_LINES} linee JSON valide"
+        telemetry_ok=$((telemetry_ok + 1))
+    else
+        echo "  FAIL  JSONL schema: ${VALID_LINES}/${TOTAL_LINES} linee JSON valide"
+        telemetry_fail=$((telemetry_fail + 1))
+    fi
+else
+    echo "  SKIP  JSONL schema: jq non disponibile"
+    TOTAL_SKIP=$((TOTAL_SKIP + 1))
+fi
+
+rm -f "$SCHEMA_LOG"
+[ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
+
+echo ""
+echo "  Telemetry check: ${telemetry_ok} OK | ${telemetry_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + telemetry_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + telemetry_fail))
 
 # --- Report Finale ---
 echo ""
