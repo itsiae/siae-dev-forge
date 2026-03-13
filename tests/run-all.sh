@@ -449,6 +449,73 @@ rm -f "$SANITIZE_LOG"
 
 unset DEVFORGE_LOG_FILE
 
+# Test: session_end guard — stop-gate emits session_end only once
+GUARD_LOG="/tmp/devforge-test-guard.jsonl"
+rm -f "$GUARD_LOG"
+export DEVFORGE_LOG_FILE="$GUARD_LOG"
+# Cleanup any stale guard
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+# Setup session state
+echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
+echo "1" > "${HOME}/.claude/.devforge-session-commits"
+echo "test-skill" > "${HOME}/.claude/.devforge-session-skills"
+# Invoke stop-gate twice — session_end should appear only once
+stop_input='{"messages":[{"role":"assistant","content":"tutto fatto"}]}'
+echo "$stop_input" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true
+sleep 1  # wait for background telemetry
+echo "$stop_input" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true
+sleep 1
+SESSION_END_COUNT=$(grep -c '"event":"session_end"' "$GUARD_LOG" 2>/dev/null || echo "0")
+if [ "$SESSION_END_COUNT" -eq 1 ]; then
+  echo "  PASS  session_end guard: emesso esattamente 1 volta su 2 invocazioni stop-gate"
+  telfunc_ok=$((telfunc_ok + 1))
+elif [ "$SESSION_END_COUNT" -eq 0 ]; then
+  echo "  FAIL  session_end guard: non emesso (atteso 1)"
+  telfunc_fail=$((telfunc_fail + 1))
+else
+  echo "  FAIL  session_end guard: emesso ${SESSION_END_COUNT} volte (atteso 1)"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$GUARD_LOG" "${HOME}/.claude/.devforge-session-start-ns" "${HOME}/.claude/.devforge-session-commits" "${HOME}/.claude/.devforge-session-skills"
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+
+# Test: post-skill with empty SKILL_NAME produces no events
+EMPTY_SKILL_LOG="/tmp/devforge-test-empty-skill.jsonl"
+rm -f "$EMPTY_SKILL_LOG"
+export DEVFORGE_LOG_FILE="$EMPTY_SKILL_LOG"
+# Setup a previous skill timestamp to verify it does NOT get closed
+echo '1710000000000000000|should-not-close|2. Design' > "${HOME}/.claude/.devforge-skill-start"
+# Send input without skill field — SKILL_NAME should be empty
+empty_output=$(echo '{"not_a_skill":"true"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" 2>/dev/null; echo "exit:$?")
+if echo "$empty_output" | grep -q 'exit:0'; then
+  if [ ! -s "$EMPTY_SKILL_LOG" ] || ! grep -q 'skill_completed' "$EMPTY_SKILL_LOG" 2>/dev/null; then
+    echo "  PASS  post-skill: empty SKILL_NAME produces no events (guard works)"
+    telfunc_ok=$((telfunc_ok + 1))
+  else
+    echo "  FAIL  post-skill: empty SKILL_NAME still emitted skill_completed"
+    telfunc_fail=$((telfunc_fail + 1))
+  fi
+else
+  echo "  FAIL  post-skill: crashed with empty SKILL_NAME"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$EMPTY_SKILL_LOG" "${HOME}/.claude/.devforge-skill-start"
+
+# Test: session-start cleans up stale guard directory
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+mkdir -p "${HOME}/.claude/.devforge-session-end-guard"  # simulate stale guard
+bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
+if [ ! -d "${HOME}/.claude/.devforge-session-end-guard" ]; then
+  echo "  PASS  session-start: cleans up stale session_end guard"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start: did not clean up stale session_end guard"
+  telfunc_fail=$((telfunc_fail + 1))
+  rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+fi
+
+unset DEVFORGE_LOG_FILE
+
 echo ""
 echo "  Telemetry functional: ${telfunc_ok} OK | ${telfunc_fail} FAIL"
 TOTAL_PASS=$((TOTAL_PASS + telfunc_ok))

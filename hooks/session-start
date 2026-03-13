@@ -113,9 +113,12 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     fi
 fi
 
-# Initialize session counters and cleanup stale guards
+# Initialize session counters and cleanup stale guards.
+# Remove session_end guard so the next stop-gate can emit session_end.
+# Without this cleanup, a stale guard from a crashed session would prevent
+# session_end telemetry from firing.
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
-rm -f "${HOME}/.claude/.devforge-session-end-done"
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 
 exit 0

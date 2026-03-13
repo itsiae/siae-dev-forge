@@ -9,13 +9,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
-SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-done"
+# Atomic guard: mkdir fails if directory already exists (POSIX atomic, no TOCTOU race)
+SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
+TELEMETRY_TIMEOUT_SECS=5
 
 # Only emit telemetry once per session (guard against multiple stop-gate fires)
-if [ ! -f "$SESSION_END_GUARD" ]; then
-    # Mark as done FIRST to prevent race with concurrent stop-gate fires
-    touch "$SESSION_END_GUARD"
-
+if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     (
         # Close last skill via timestamp chaining
         SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
@@ -52,15 +51,13 @@ if [ ! -f "$SESSION_END_GUARD" ]; then
         devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
             "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT}}"
 
-        # Cleanup session files
-        rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE" "$SESSION_END_GUARD"
+        # Cleanup session files (guard persists until next session-start cleans it)
+        rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
     ) &
-    # Background with 5s timeout — telemetry must never block the stop-gate
+    # Fire-and-forget with timeout — telemetry must never block the stop-gate
     TELEM_PID=$!
-    ( sleep 5 && kill "$TELEM_PID" 2>/dev/null ) &
-    TIMEOUT_PID=$!
-    wait "$TELEM_PID" 2>/dev/null || true
-    kill "$TIMEOUT_PID" 2>/dev/null || true
+    ( sleep "$TELEMETRY_TIMEOUT_SECS" && kill "$TELEM_PID" 2>/dev/null ) &
+    disown
 fi
 # --- End telemetry ---
 

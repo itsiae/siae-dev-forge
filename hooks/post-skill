@@ -54,7 +54,7 @@ if [ -n "$SKILL_NAME" ]; then
     SAFE_SDLC_PHASE=$(devforge_sanitize_json_str "$SDLC_PHASE")
     devforge_log "skill_invoked" "success" "{\"skill_name\":\"${SAFE_SKILL_NAME}\",\"sdlc_phase\":\"${SAFE_SDLC_PHASE}\"}"
 
-    # Step 3: Save current timestamp for chaining
+    # Step 3: Save raw (unsanitized) values; JSON-escaping happens at log time
     NOW_NS=$(date +%s%N 2>/dev/null || echo "0")
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
 

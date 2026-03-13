@@ -51,8 +51,8 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
             BASE_BRANCH=$(echo "$PR_JSON" | grep -o '"baseRefName":"[^"]*"' | sed 's/.*"baseRefName":"//;s/"$//' || echo "unknown")
             FILES_CHANGED=$(echo "$PR_JSON" | grep -o '"changedFiles":[0-9]*' | grep -oE '[0-9]+' || echo "0")
             COMMITS_COUNT=$(echo "$PR_JSON" | grep -o '"totalCount":[0-9]*' | grep -oE '[0-9]+' || echo "0")
-            # Sanitize BASE_BRANCH for safe JSON embedding
-            SAFE_BASE_BRANCH=$(echo "$BASE_BRANCH" | sed 's/[\\\"]/\\&/g; s/$//' | tr -d '\n\r')
+            # Sanitize BASE_BRANCH for safe JSON embedding (logger.sh already sourced above)
+            SAFE_BASE_BRANCH=$(devforge_sanitize_json_str "$BASE_BRANCH")
             devforge_log "pr_opened" "success" \
                 "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT}}"
         fi
@@ -77,7 +77,7 @@ fi
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 
 # Log PR review trigger (sanitize command for JSON safety)
-SAFE_TOOL_COMMAND=$(echo "$TOOL_COMMAND" | sed 's/[\\\"]/\\&/g; s/$//' | tr -d '\n\r')
+SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
 devforge_log "pr_auto_review" "triggered" "{\"command\":\"${SAFE_TOOL_COMMAND}\"}" 2>/dev/null || true
 
 # Escape string for JSON embedding
