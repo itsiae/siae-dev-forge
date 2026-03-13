@@ -11,7 +11,7 @@
 
 ---
 
-## Task 1: `skill_completed` — Timestamp chaining in post-skill + stop-gate [PENDING]
+## Task 1: `skill_completed` — Timestamp chaining in post-skill + stop-gate [DONE]
 
 **Problema tecnico:** Il hook `post-skill` scatta quando il Skill tool ritorna contenuto,
 non quando la skill "finisce". Soluzione: **timestamp chaining** — ogni invocazione skill
@@ -156,7 +156,7 @@ Duration computed from nanosecond timestamps saved between invocations."
 
 ---
 
-## Task 2: `commit_created` — Metriche git nel post-commit-review [PENDING]
+## Task 2: `commit_created` — Metriche git nel post-commit-review [DONE]
 
 **File coinvolti:**
 - Modifica: `hooks/post-commit-review` (righe 19-22)
@@ -244,7 +244,7 @@ Tracks session commit counter for session_end aggregation."
 
 ---
 
-## Task 3: `pr_opened` — Detection PR dopo push in post-commit-review [PENDING]
+## Task 3: `pr_opened` — Detection PR dopo push in post-commit-review [DONE]
 
 **File coinvolti:**
 - Modifica: `hooks/post-commit-review` (dopo il blocco git commit, prima del check gh pr create)
@@ -322,7 +322,7 @@ Detects open PR via gh CLI after push. Gracefully skips if gh not available."
 
 ---
 
-## Task 4: `pr_merged` — Detection PR merge recenti in session-start [PENDING]
+## Task 4: `pr_merged` — Detection PR merge recenti in session-start [DONE]
 
 **File coinvolti:**
 - Modifica: `hooks/session-start` (dopo riga 81, prima di `exit 0`)
@@ -411,7 +411,7 @@ Initializes session counters for commits and skills tracking."
 
 ---
 
-## Task 5: `session_end` — Metriche sessione nel stop-gate [PENDING]
+## Task 5: `session_end` — Metriche sessione nel stop-gate [DONE]
 
 **File coinvolti:**
 - Modifica: `hooks/stop-gate` (dopo il blocco skill_completed aggiunto in Task 1, prima della detection completion keywords)
@@ -531,7 +531,7 @@ and commits_count. Session counters tracked across hooks via temp files."
 
 ---
 
-## Task 6: Test `has_tests` detection + schema JSONL validation [PENDING]
+## Task 6: Test `has_tests` detection + schema JSONL validation [DONE]
 
 **File coinvolti:**
 - Modifica: `tests/run-all.sh`
