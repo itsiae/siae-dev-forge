@@ -35,9 +35,10 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     devforge_log "commit_created" "success" \
         "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}}"
 
+    # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
     CURRENT_COMMITS=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
-    echo $((CURRENT_COMMITS + 1)) > "$SESSION_COMMITS_FILE"
+    echo $((CURRENT_COMMITS + 1)) > "${SESSION_COMMITS_FILE}.tmp" && mv "${SESSION_COMMITS_FILE}.tmp" "$SESSION_COMMITS_FILE"
 fi
 
 # Emit pr_opened event after push if a PR exists (requires gh CLI)
@@ -50,8 +51,10 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
             BASE_BRANCH=$(echo "$PR_JSON" | grep -o '"baseRefName":"[^"]*"' | sed 's/.*"baseRefName":"//;s/"$//' || echo "unknown")
             FILES_CHANGED=$(echo "$PR_JSON" | grep -o '"changedFiles":[0-9]*' | grep -oE '[0-9]+' || echo "0")
             COMMITS_COUNT=$(echo "$PR_JSON" | grep -o '"totalCount":[0-9]*' | grep -oE '[0-9]+' || echo "0")
+            # Sanitize BASE_BRANCH for safe JSON embedding (logger.sh already sourced above)
+            SAFE_BASE_BRANCH=$(devforge_sanitize_json_str "$BASE_BRANCH")
             devforge_log "pr_opened" "success" \
-                "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT}}"
+                "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT}}"
         fi
     fi
 fi
@@ -73,8 +76,9 @@ fi
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 
-# Log PR review trigger
-devforge_log "pr_auto_review" "triggered" "{\"command\":\"${TOOL_COMMAND}\"}" 2>/dev/null || true
+# Log PR review trigger (sanitize command for JSON safety)
+SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
+devforge_log "pr_auto_review" "triggered" "{\"command\":\"${SAFE_TOOL_COMMAND}\"}" 2>/dev/null || true
 
 # Escape string for JSON embedding
 escape_for_json() {

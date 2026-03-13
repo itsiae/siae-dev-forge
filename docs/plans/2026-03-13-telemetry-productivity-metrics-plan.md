@@ -656,3 +656,14 @@ Task 6 (test validation) ← dipende da Task 1-5 (testa il risultato finale)
 
 **Parallelizzabili:** Task 1 + Task 2 + Task 4 (file diversi, nessuna dipendenza)
 **Sequenziali:** Task 3 dopo Task 2 (stesso file), Task 5 dopo Task 1+2+4, Task 6 alla fine
+
+---
+
+## Nota: `tdd_cycle` — Deferred (gia' implementato nel subagent)
+
+L'evento `tdd_cycle` e' gia' integrato in `skills/siae-subagent-development/implementer-prompt.md`
+come istruzione al subagent implementer di chiamare `devforge_log "tdd_cycle"` a fine ciclo
+RED-GREEN-REFACTOR. Non richiede modifiche agli hook — viene emesso direttamente dal subagent.
+
+Il test di validazione (Check "implementer-prompt: contiene telemetria tdd_cycle") e'
+gia' presente in `tests/run-all.sh` nella sezione "Subagent Prompt Content Validation".
