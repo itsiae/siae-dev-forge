@@ -77,6 +77,21 @@ Riavvia Claude Code per attivare il plugin.
 > claude plugin update "siae-devforge@siae-devforge"
 > ```
 
+> **Aggiornamento forzato (se `plugin update` non rileva la nuova versione):**
+>
+> Claude Code puo' servire dalla cache locale una versione obsoleta. Per forzare il download della versione piu' recente:
+> ```bash
+> # 1. Disinstalla il plugin
+> claude plugin uninstall "siae-devforge@siae-devforge"
+>
+> # 2. Pulisci la cache locale
+> rm -rf ~/.claude/plugins/cache/siae-devforge ~/.claude/plugins/marketplaces/siae-devforge
+>
+> # 3. Reinstalla (scarica la versione piu' recente dal marketplace)
+> claude plugin install "siae-devforge@siae-devforge"
+> ```
+> Riavvia Claude Code dopo la reinstallazione.
+
 ### Requisiti
 
 - [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) installato e configurato
