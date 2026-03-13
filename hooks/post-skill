@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # PostToolUse hook for siae-devforge plugin (intercepts Skill tool invocations)
-# Logs skill_invoked events to the activity JSONL log.
+# Logs skill_invoked events and skill_completed via timestamp chaining.
+#
+# Timestamp chaining: each invocation closes the PREVIOUS skill by computing
+# its duration from the saved timestamp, then records the CURRENT skill start.
 
 set -euo pipefail
 
@@ -10,6 +13,9 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
+
+# Timestamp file for chaining
+SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
 
 # Read tool output from stdin (JSON with tool_name and tool_input)
 HOOK_INPUT=$(cat)
@@ -23,9 +29,27 @@ if [ -z "$SKILL_NAME" ]; then
     SKILL_NAME=$(echo "$HOOK_INPUT" | grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 fi
 
+# Step 1: If a previous skill timestamp exists, close it with skill_completed
+if [ -f "$SKILL_TS_FILE" ]; then
+    PREV_DATA=$(cat "$SKILL_TS_FILE")
+    PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
+    PREV_SKILL=$(echo "$PREV_DATA" | cut -d'|' -f2)
+    PREV_PHASE=$(echo "$PREV_DATA" | cut -d'|' -f3)
+
+    if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
+        devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
+            "{\"skill_name\":\"${PREV_SKILL}\",\"sdlc_phase\":\"${PREV_PHASE}\",\"outcome\":\"success\"}"
+    fi
+fi
+
+# Step 2: Log skill_invoked for the CURRENT skill and save its timestamp
 if [ -n "$SKILL_NAME" ]; then
     SDLC_PHASE=$(devforge_get_sdlc_phase "$SKILL_NAME")
     devforge_log "skill_invoked" "success" "{\"skill_name\":\"${SKILL_NAME}\",\"sdlc_phase\":\"${SDLC_PHASE}\"}"
+
+    # Step 3: Save current timestamp for chaining
+    NOW_NS=$(date +%s%N 2>/dev/null || echo "0")
+    echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
 fi
 
 # Pass through — PostToolUse hooks should not block

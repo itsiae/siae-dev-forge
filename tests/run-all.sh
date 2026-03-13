@@ -317,6 +317,24 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
+# Check 5: post-skill emette skill_completed per skill precedente
+SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+echo '1710000000000000000|test-skill-prev|2. Design' > "$SKILL_TS_FILE"
+TEST_LOG="/tmp/devforge-test-skill-completed.jsonl"
+DEVFORGE_LOG_FILE_BAK="${DEVFORGE_LOG_FILE:-}"
+export DEVFORGE_LOG_FILE="$TEST_LOG"
+rm -f "$TEST_LOG"
+skill_completed_output=$(echo '{"skill":"siae-devforge:siae-brainstorming"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" 2>/dev/null; echo "exit:$?")
+if echo "$skill_completed_output" | grep -q 'exit:0' && grep -q '"event":"skill_completed"' "$TEST_LOG" 2>/dev/null; then
+  echo "  PASS  hooks/post-skill: emette skill_completed per skill precedente"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/post-skill: non emette skill_completed"
+  hook_fail=$((hook_fail + 1))
+fi
+rm -f "$TEST_LOG" "$SKILL_TS_FILE"
+[ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
+
 echo ""
 echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
 TOTAL_PASS=$((TOTAL_PASS + hook_ok))

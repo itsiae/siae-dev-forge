@@ -4,6 +4,26 @@
 
 set -euo pipefail
 
+# --- Close last skill via timestamp chaining (runs ALWAYS, before stdin) ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+
+SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+if [ -f "$SKILL_TS_FILE" ]; then
+    PREV_DATA=$(cat "$SKILL_TS_FILE")
+    PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
+    PREV_SKILL=$(echo "$PREV_DATA" | cut -d'|' -f2)
+    PREV_PHASE=$(echo "$PREV_DATA" | cut -d'|' -f3)
+
+    if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
+        devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
+            "{\"skill_name\":\"${PREV_SKILL}\",\"sdlc_phase\":\"${PREV_PHASE}\",\"outcome\":\"success\"}"
+    fi
+    rm -f "$SKILL_TS_FILE"
+fi
+# --- End close last skill ---
+
 escape_for_json() {
     local s="$1"
     s="${s//\\/\\\\}"

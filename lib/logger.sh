@@ -2,7 +2,7 @@
 # DevForge Activity Logger
 # Appends structured JSONL events to ~/.claude/devforge-activity.jsonl
 
-DEVFORGE_LOG_FILE="${HOME}/.claude/devforge-activity.jsonl"
+DEVFORGE_LOG_FILE="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
 DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
 
 # Ensure log directory exists
