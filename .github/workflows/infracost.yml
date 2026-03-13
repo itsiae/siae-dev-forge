@@ -1,0 +1,77 @@
+name: Infracost Cost Estimation
+
+on:
+  workflow_call:
+    inputs:
+      terragrunt_path:
+        description: 'Path to Terragrunt directory'
+        required: false
+        type: string
+        default: 'live/'
+      threshold:
+        description: 'Monthly cost threshold in USD for cost-impact label'
+        required: false
+        type: number
+        default: 50
+    secrets:
+      INFRACOST_API_KEY:
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cost-estimate:
+    name: Infracost Cost Estimation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate baseline
+        run: |
+          infracost breakdown \
+            --path=${{ inputs.terragrunt_path }} \
+            --format=json \
+            --out-file=/tmp/infracost-base.json \
+            --terraform-binary=terragrunt
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Generate diff
+        run: |
+          infracost diff \
+            --path=${{ inputs.terragrunt_path }} \
+            --compare-to=/tmp/infracost-base.json \
+            --format=json \
+            --out-file=/tmp/infracost-diff.json \
+            --terraform-binary=terragrunt
+
+      - name: Post PR comment
+        run: |
+          infracost comment github \
+            --path=/tmp/infracost-diff.json \
+            --repo=${{ github.repository }} \
+            --pull-request=${{ github.event.pull_request.number }} \
+            --github-token=${{ github.token }} \
+            --behavior=update
+
+      - name: Check threshold and label
+        if: always()
+        run: |
+          DIFF_COST=$(cat /tmp/infracost-diff.json | jq -r '.diffTotalMonthlyCost // "0"' | tr -d '"')
+          THRESHOLD=${{ inputs.threshold }}
+          if [ "$(echo "$DIFF_COST > $THRESHOLD" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "cost-impact"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
