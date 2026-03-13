@@ -19,6 +19,25 @@ TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
     devforge_upload_logs &
+
+    source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+    DIFF_STAT=$(git diff --stat HEAD~1 HEAD 2>/dev/null || echo "")
+    FILES_CHANGED=$(echo "$DIFF_STAT" | tail -1 | grep -oE '[0-9]+ file' | grep -oE '[0-9]+' || echo "0")
+    INSERTIONS=$(echo "$DIFF_STAT" | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+    DELETIONS=$(echo "$DIFF_STAT" | tail -1 | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
+
+    CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+    HAS_TESTS="false"
+    if echo "$CHANGED_FILES" | grep -qE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/)'; then
+        HAS_TESTS="true"
+    fi
+
+    devforge_log "commit_created" "success" \
+        "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}}"
+
+    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
+    CURRENT_COMMITS=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
+    echo $((CURRENT_COMMITS + 1)) > "$SESSION_COMMITS_FILE"
 fi
 
 # Only trigger review on PR creation or git push (not on every commit)
