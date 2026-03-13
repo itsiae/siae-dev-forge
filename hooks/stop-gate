@@ -24,6 +24,29 @@ if [ -f "$SKILL_TS_FILE" ]; then
 fi
 # --- End close last skill ---
 
+# --- Emit session_end event with aggregated counters ---
+SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
+SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+
+SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
+COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
+SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+# Count distinct skills
+if [ -n "$SKILLS_LIST" ]; then
+    SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
+else
+    SKILLS_USED_COUNT=0
+fi
+
+devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
+    "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT}}"
+
+# Cleanup session files
+rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
+# --- End session_end ---
+
 escape_for_json() {
     local s="$1"
     s="${s//\\/\\\\}"

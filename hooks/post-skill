@@ -50,6 +50,15 @@ if [ -n "$SKILL_NAME" ]; then
     # Step 3: Save current timestamp for chaining
     NOW_NS=$(date +%s%N 2>/dev/null || echo "0")
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
+
+    # Track skill names for session_end aggregation
+    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+    EXISTING_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+    if [ -z "$EXISTING_SKILLS" ]; then
+        echo "$SKILL_NAME" > "$SESSION_SKILLS_FILE"
+    elif ! echo "$EXISTING_SKILLS" | grep -qF "$SKILL_NAME"; then
+        echo "${EXISTING_SKILLS},${SKILL_NAME}" > "$SESSION_SKILLS_FILE"
+    fi
 fi
 
 # Pass through — PostToolUse hooks should not block
