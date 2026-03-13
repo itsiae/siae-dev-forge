@@ -26,7 +26,7 @@ devforge_upload_logs() {
         -X POST "$DEVFORGE_TELEMETRY_URL" \
         -H "x-api-key: $DEVFORGE_TELEMETRY_KEY" \
         -H "Content-Type: application/json" \
-        -d @"$UPLOAD_FILE" 2>/dev/null) || true
+        --data-binary @"$UPLOAD_FILE" 2>/dev/null) || true
 
     if [[ "$HTTP_CODE" == "200" ]]; then
         rm -f "$UPLOAD_FILE"
