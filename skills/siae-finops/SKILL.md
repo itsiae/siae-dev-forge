@@ -245,150 +245,33 @@ Basta **uno** tra AWS CLI e Azure CLI. L'analisi completa funziona con soli CLI 
 
 ### Quando usare
 
-Prima di ogni PR che modifica file `.tf` o `terragrunt.hcl`. Stima l'impatto economico della modifica.
+Prima di ogni PR che modifica file `.tf` o `terragrunt.hcl`. Stima l'impatto economico
+della modifica PRIMA del deploy. Questo e' l'unico tool esterno che serve: AWS CLI non
+puo' stimare i costi di un `terraform plan`.
 
-### Flusso manuale (Claude Code)
+**Prerequisito:** `infracost` CLI + `INFRACOST_API_KEY` (gratuito: `infracost auth login`)
+
+### Flusso manuale (/forge-cost)
 
 ```
 REQUIRED SUB-SKILL: siae-iac
 ```
 
-**Step 1:** Detecta file Terragrunt/Terraform nella directory corrente
-
-```bash
-# Verifica presenza IaC
-ls -la *.tf terragrunt.hcl 2>/dev/null || echo "Nessun file IaC trovato"
-```
-
-**Step 2:** Esegui stima costi
-
-🟡 MEDIO — Mostra pre-flight card prima di eseguire
-
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finops |
-|:---|
-| Azione: Stima costi Infracost |
-| Path: `<directory IaC>` |
-| Perche': Calcola impatto economico delle modifiche Terraform |
-| Se NO: Nessuna chiamata API esterna |
-
-```bash
-infracost diff --path=. --format=json --out-file=/tmp/infracost.json
-infracost output --path=/tmp/infracost.json --format=table
-```
-
-**Step 3:** Analizza e presenta risultati
-
-Presenta tabella riassuntiva:
-
-| Risorsa | Costo Attuale | Costo Nuovo | Delta |
-|---------|---------------|-------------|-------|
-| `<risorsa>` | $X/mese | $Y/mese | +$Z/mese |
-
-Se delta > $50/mese, mostra warning con suggerimenti da [infracost-patterns.md](reference/infracost-patterns.md).
+1. Detecta file Terragrunt/Terraform nella directory corrente
+2. Esegui `infracost diff --path=. --format=json --out-file=/tmp/infracost.json`
+3. Presenta tabella delta costi per risorsa
+4. Se delta > $50/mese → warning con suggerimenti da [infracost-patterns.md](reference/infracost-patterns.md)
 
 ### Flusso automatico (GitHub Actions)
 
-Vedi sezione 4 per il reusable workflow. Ogni PR su repo HCL riceve automaticamente un commento con la stima costi.
+Reusable workflow in `.github/workflows/infracost.yml`. Ogni PR su repo HCL
+riceve automaticamente un commento con la stima costi. Rollout: 5 righe per repo.
 
-### Usage File per Servizi SIAE
-
-Per servizi usage-based (Lambda, DynamoDB, Glue) Infracost non puo' stimare senza un usage file. Vedi [infracost-patterns.md](reference/infracost-patterns.md) per template.
-
----
-
-## 2. Query Interattive — Steampipe MCP
-
-### Setup MCP Server
-
-Aggiungere in configurazione Claude Code MCP servers:
-
-```json
-{
-  "steampipe": {
-    "command": "npx",
-    "args": ["-y", "@turbot/steampipe-mcp"],
-    "env": {
-      "STEAMPIPE_INSTALL_DIR": "~/.steampipe"
-    }
-  }
-}
-```
-
-### Query Catalog
-
-Usa il tool `steampipe_query` per eseguire SQL sulle risorse AWS. Catalogo completo in [steampipe-queries.md](reference/steampipe-queries.md).
-
-**Query principali:**
-
-| Obiettivo | Uso |
-|-----------|-----|
-| Top spender del mese | Identifica servizi piu' costosi |
-| Risorse idle | Lambda >90gg, DynamoDB <10 RCU, EBS detached |
-| Tag audit | Risorse senza tag obbligatori (6 tag SIAE) |
-| Cost trend | Confronto mese-su-mese per anomalie |
-| Query libera | L'utente chiede, tu traduci in SQL |
-
-### AWS Thrifty Benchmark
-
-Per check sistematico, esegui AWS Thrifty (55 benchmark):
-
-```bash
-powerpipe benchmark run aws_thrifty.benchmark.aws_thrifty --output=brief
-```
+Vedi [infracost-patterns.md](reference/infracost-patterns.md) per setup, usage file templates, e soglie.
 
 ---
 
-## 3. Governance Automatizzata — Cloud Custodian
-
-```
-REQUIRED SUB-SKILL: siae-verification
-```
-
-### Policy Library SIAE
-
-8 policy iniziali documentate in [custodian-policies.md](reference/custodian-policies.md).
-
-| # | Policy | Risorsa | Azione | Trigger |
-|---|--------|---------|--------|---------|
-| 1 | tag-enforcement | Tutte | notify + auto-tag | Tag obbligatorio mancante |
-| 2 | unused-lambda | Lambda | notify | Non invocata >90 giorni |
-| 3 | idle-dynamodb | DynamoDB | notify | <10 RCU/giorno per 14gg |
-| 4 | detached-ebs | EBS | notify + schedule delete | Non attached |
-| 5 | old-snapshots | Snapshot | notify | >180 giorni |
-| 6 | off-hours-dev | ECS, RDS | stop | Sviluppo fuori orario (20:00-08:00) |
-| 7 | oversized-rds | RDS | rightsizing notify | CPU media <10% per 14gg |
-| 8 | glue-runaway | Glue | notify | Job running >4 ore |
-
-### Pattern Enforcement
-
-```
-dry-run → notify → tag → stop/delete
-```
-
-**MAI** eseguire policy con azioni distruttive senza:
-
-| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-finops |
-|:---|
-| OPERAZIONE DIFFICILE DA ANNULLARE |
-| Policy: `<nome policy>` |
-| Account: `<account AWS>` |
-| 1. Azione: Esecuzione policy Cloud Custodian con remediation |
-| Perche': `<motivazione>` |
-| Se NO: Policy non eseguita, risorse invariate |
-
-### Setup Multi-Account (c7n-org)
-
-```bash
-# Dry-run su tutti gli account
-custodian run -s /tmp/c7n-output --dry-run policies/cost/*.yml
-
-# Esecuzione reale (dopo approvazione)
-c7n-org run -c accounts.yml -s /tmp/c7n-output -u policies/cost/*.yml
-```
-
----
-
-## 4. Tagging Strategy Evoluta
+## 2. Tagging Strategy
 
 ```
 REQUIRED SUB-SKILL: siae-iac
@@ -396,26 +279,23 @@ REQUIRED SUB-SKILL: siae-iac
 
 ### 6 Tag Obbligatori SIAE
 
-| Tag | Scopo | Valori | Enforcement |
-|-----|-------|--------|-------------|
-| `Environment` | Segregazione ambienti | sviluppo, collaudo, certificazione, produzione | Terragrunt |
-| `Project` | Raggruppamento progetto | diritti, catalogo, sport, ... | Terragrunt |
-| `ManagedBy` | Drift detection | Terraform | Terragrunt |
-| `Team` | Chargeback tra factory | digital-factory, core-platforms, data-platform, devops | Terragrunt + Custodian |
-| `CostCenter` | Allocazione finanziaria | CC-XXXX | Terragrunt + Custodian |
-| `Repository` | Link al repo GitHub | itsiae/repo-name | Terragrunt + Custodian |
+| Tag | Scopo | Valori |
+|-----|-------|--------|
+| `Environment` | Segregazione ambienti | sviluppo, collaudo, certificazione, produzione |
+| `Project` | Raggruppamento progetto | diritti, catalogo, sport, ... |
+| `ManagedBy` | Drift detection | Terraform |
+| `Team` | Chargeback tra factory | digital-factory, core-platforms, data-platform, devops |
+| `CostCenter` | Allocazione finanziaria | CC-XXXX |
+| `Repository` | Link al repo GitHub | itsiae/repo-name |
 
 Dettagli implementativi in [tagging-strategy.md](reference/tagging-strategy.md).
 
 ### Enforcement Chain
 
 ```
-Terragrunt config.yaml → definisce Team + CostCenter
-  → Terraform _local.tf → applica su ogni risorsa
-    → Infracost PR → segnala risorse senza tag
-      → Cloud Custodian → tag-or-notify post-deploy
-        → CUR 2.0 → groupBy tag per dashboard
+Terragrunt config.yaml → Terraform _local.tf → Infracost PR → CUR 2.0 dashboard
 ```
+
 
 ---
 
@@ -463,7 +343,5 @@ Terragrunt config.yaml → definisce Team + CostCenter
 
 ## Risorse Aggiuntive
 
-- [reference/infracost-patterns.md](reference/infracost-patterns.md) — Setup Terragrunt, usage file templates
-- [reference/steampipe-queries.md](reference/steampipe-queries.md) — Catalogo query SQL per servizio AWS
-- [reference/custodian-policies.md](reference/custodian-policies.md) — Policy YAML library SIAE
-- [reference/tagging-strategy.md](reference/tagging-strategy.md) — Evoluzione tag 3→6 + enforcement chain
+- [reference/infracost-patterns.md](reference/infracost-patterns.md) — Setup Terragrunt, usage file templates, soglie warning
+- [reference/tagging-strategy.md](reference/tagging-strategy.md) — Evoluzione tag 3→6 + enforcement chain + CUR 2.0
