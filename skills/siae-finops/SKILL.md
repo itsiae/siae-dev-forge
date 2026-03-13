@@ -28,7 +28,8 @@ description: >
 ## Quando si Applica
 
 **Sempre:**
-- Revisione costi AWS (risorse idle, sprechi, ottimizzazione)
+- Analisi completa costi cloud (AWS o Azure)
+- Revisione costi (risorse idle, sprechi, ottimizzazione)
 - Stima impatto economico di modifiche Terraform/Terragrunt nelle PR
 - Audit tag compliance (risorse senza tag obbligatori)
 - Query interattive sui costi da Claude Code
@@ -40,18 +41,203 @@ description: >
 
 ---
 
+## 0. Analisi Completa — /forge-finops
+
+Questa sezione descrive il flusso operativo principale. Quando l'utente chiede
+un'analisi costi, esegui questo flusso **automaticamente**.
+
+### LEGGE ANTI-ALLUCINAZIONE
+
+```
+MAI INVENTARE DATI DI COSTO, RISORSE, O METRICHE.
+OGNI DATO PRESENTATO DEVE VENIRE DA UN COMANDO ESEGUITO O UNA QUERY REALE.
+SE UN TOOL NON E' DISPONIBILE, DILLO — NON INVENTARE L'OUTPUT.
+```
+
+### Step 1 — Cloud & Account Detection
+
+🟢 SICURO
+
+Detecta automaticamente quale cloud e' configurato:
+
+```bash
+# Prova AWS
+aws sts get-caller-identity --output json 2>/dev/null
+
+# Prova Azure
+az account show --output json 2>/dev/null
+```
+
+**Risultati possibili:**
+- Solo AWS → procedi con analisi AWS
+- Solo Azure → procedi con analisi Azure
+- Entrambi → chiedi all'utente quale analizzare
+- Nessuno → guida setup credenziali (aws configure / az login)
+
+Presenta all'utente:
+```
+CLOUD DETECTATO: AWS
+Account:  123456789012 (alias: siae-produzione)
+Identity: arn:aws:iam::123456789012:user/lorenzo
+Region:   eu-west-1
+```
+
+### Step 2 — Dispatch Analisi Parallele (Subagent)
+
+🟡 MEDIO — Mostra pre-flight card
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finops |
+|:---|
+| 🔍 Azione: Analisi FinOps completa |
+| ☁️ Cloud: `<AWS/Azure>` |
+| 🏢 Account: `<account-id>` |
+| 💡 Perche': Esegue query read-only per identificare sprechi e ottimizzazioni |
+| 🚫 Se NO: Nessuna query eseguita |
+
+Lancia **subagent paralleli** per le 4 aree di analisi. Ogni subagent:
+- Riceve SOLO i comandi/query da eseguire
+- Esegue comandi READ-ONLY (nessuna modifica a risorse)
+- Riporta SOLO dati reali dall'output dei comandi
+- Se un comando fallisce, riporta l'errore — NON inventa dati
+
+**Subagent A — Cost Overview:**
+```bash
+# AWS
+aws ce get-cost-and-usage \
+  --time-period Start=$(date -v-30d +%Y-%m-%d),End=$(date +%Y-%m-%d) \
+  --granularity MONTHLY \
+  --metrics UnblendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE \
+  --output json
+
+# Trend mese precedente
+aws ce get-cost-and-usage \
+  --time-period Start=$(date -v-60d +%Y-%m-%d),End=$(date -v-30d +%Y-%m-%d) \
+  --granularity MONTHLY \
+  --metrics UnblendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE \
+  --output json
+```
+
+**Subagent B — Risorse Idle:**
+```bash
+# Lambda non invocate (lista + ultima modifica)
+aws lambda list-functions --query 'Functions[].{Name:FunctionName,LastModified:LastModified,Runtime:Runtime,MemorySize:MemorySize}' --output table
+
+# EBS non attached
+aws ec2 describe-volumes --filters Name=status,Values=available --query 'Volumes[].{ID:VolumeId,Size:Size,Type:VolumeType,Created:CreateTime}' --output table
+
+# Snapshot vecchi
+aws ec2 describe-snapshots --owner-ids self --query 'Snapshots[?StartTime<`'$(date -v-180d +%Y-%m-%d)'`].{ID:SnapshotId,Size:VolumeSize,Date:StartTime,Desc:Description}' --output table
+
+# RDS instances
+aws rds describe-db-instances --query 'DBInstances[].{ID:DBInstanceIdentifier,Class:DBInstanceClass,Engine:Engine,Status:DBInstanceStatus,MultiAZ:MultiAZ}' --output table
+```
+
+**Subagent C — Tag Compliance:**
+```bash
+# Conta risorse per tag Environment
+aws resourcegroupstaggingapi get-resources --tag-filters Key=Environment --query 'length(ResourceTagMappingList)'
+
+# Risorse SENZA tag Environment
+aws resourcegroupstaggingapi get-resources --query 'ResourceTagMappingList[?!contains(Tags[].Key, `Environment`)].{ARN:ResourceARN}' --output table | head -20
+
+# Ripeti per Team, CostCenter, Repository
+```
+
+**Subagent D — Ottimizzazioni:**
+```bash
+# Compute Optimizer recommendations (se abilitato)
+aws compute-optimizer get-ec2-instance-recommendations --query 'instanceRecommendations[].{ID:instanceArn,Finding:finding,Current:currentInstanceType,Recommended:recommendationOptions[0].instanceType}' --output table 2>/dev/null
+
+# DynamoDB billing mode
+aws dynamodb list-tables --output json | jq -r '.TableNames[]' | while read t; do
+  aws dynamodb describe-table --table-name "$t" --query 'Table.{Name:TableName,BillingMode:BillingModeSummary.BillingMode,ItemCount:ItemCount,SizeBytes:TableSizeBytes}' --output json
+done
+
+# S3 lifecycle rules check
+aws s3api list-buckets --query 'Buckets[].Name' --output text | tr '\t' '\n' | while read b; do
+  rules=$(aws s3api get-bucket-lifecycle-configuration --bucket "$b" 2>/dev/null | jq '.Rules | length' 2>/dev/null || echo "0")
+  echo "$b: $rules lifecycle rules"
+done
+```
+
+### Step 3 — Aggregazione e Report
+
+🟢 SICURO
+
+Aggrega i risultati dei subagent in un report strutturato:
+
+```
+FINOPS ANALYSIS REPORT
+══════════════════════════════════════════════════════
+Cloud:        <AWS / Azure>
+Account:      <account-id> (<alias>)
+Region:       <region>
+Data:         <YYYY-MM-DD>
+══════════════════════════════════════════════════════
+
+1. COST OVERVIEW
+   ┌─────────────────────────┬────────────┬────────────┬──────────┐
+   │ Servizio                │ Mese Corr. │ Mese Prec. │ Delta    │
+   ├─────────────────────────┼────────────┼────────────┼──────────┤
+   │ <dati reali da CLI>     │ $X         │ $Y         │ +/-$Z    │
+   └─────────────────────────┴────────────┴────────────┴──────────┘
+
+2. SPRECHI IDENTIFICATI
+   ┌──────────────────┬──────────────┬───────────────┬──────────────┐
+   │ Risorsa          │ Tipo Spreco  │ Costo Stimato │ Azione       │
+   ├──────────────────┼──────────────┼───────────────┼──────────────┤
+   │ <dati reali>     │ <tipo>       │ $X/mese       │ <azione>     │
+   └──────────────────┴──────────────┴───────────────┴──────────────┘
+
+3. TAG COMPLIANCE
+   Risorse totali analizzate: N
+   ┌──────────────┬───────────┬─────────────┐
+   │ Tag          │ Conformi  │ % Compliance │
+   ├──────────────┼───────────┼─────────────┤
+   │ Environment  │ X/N       │ XX%          │
+   └──────────────┴───────────┴─────────────┘
+
+4. OTTIMIZZAZIONI RACCOMANDATE
+   Priorita' per risparmio stimato:
+   1. [azione] → risparmio $X/mese
+   2. [azione] → risparmio $Y/mese
+
+══════════════════════════════════════════════════════
+RISPARMIO STIMATO TOTALE: $X/mese
+══════════════════════════════════════════════════════
+```
+
+**Regole report:**
+- OGNI numero nel report deve venire da un comando eseguito
+- Se un dato non e' disponibile (comando fallito, permessi), scrivi "N/D" con motivo
+- Le stime di risparmio devono essere conservative (stima bassa)
+- Citare il comando sorgente per ogni dato: `(fonte: aws ce get-cost-and-usage)`
+
+---
+
 ## Prerequisiti
 
-| Tool | Scopo | Installazione | Verifica |
-|------|-------|---------------|----------|
-| Infracost CLI | Stima costi pre-deploy | `brew install infracost` | `infracost --version` |
-| INFRACOST_API_KEY | Autenticazione API pricing | `infracost auth login` (gratuito) | `infracost configure get api_key` |
-| Steampipe | Query SQL su risorse AWS | `brew install steampipe` | `steampipe --version` |
-| Steampipe AWS plugin | Accesso dati AWS | `steampipe plugin install aws` | `steampipe plugin list` |
-| Steampipe MCP server | Integrazione Claude Code | Config in `mcp_servers` | Verifica tool `steampipe_query` disponibile |
-| Cloud Custodian | Governance automatizzata | `pip install c7n c7n-org` | `custodian version` |
+### Obbligatori (analisi base)
 
-**Se un prerequisito manca:** guida l'utente al setup con i comandi sopra. Non procedere senza verifica.
+| Tool | Scopo | Verifica |
+|------|-------|----------|
+| AWS CLI | Analisi costi e risorse AWS | `aws sts get-caller-identity` |
+| Azure CLI | Analisi costi e risorse Azure | `az account show` |
+| jq | Parsing JSON output | `jq --version` |
+
+Basta **uno** tra AWS CLI e Azure CLI. L'analisi completa funziona con soli CLI nativi.
+
+### Opzionali (funzionalita' avanzate)
+
+| Tool | Scopo | Quando serve |
+|------|-------|-------------|
+| Infracost CLI | Stima costi pre-deploy nelle PR | Solo per /forge-cost su repo Terraform |
+| Steampipe + MCP | Query SQL interattive | Alternativa piu' potente ad AWS CLI |
+| Cloud Custodian | Governance automatizzata | Solo per enforcement policy automatiche |
+
+**Se AWS/Azure CLI non disponibile:** guida setup (`aws configure` / `az login`).
 
 ---
 
@@ -252,6 +438,7 @@ Terragrunt config.yaml → definisce Team + CostCenter
 
 | Operazione | Livello | Card |
 |-----------|---------|------|
+| AWS/Azure CLI read-only (describe, list, get-cost) | 🟢 Sicuro | No |
 | Query Steampipe (read-only) | 🟢 Sicuro | No |
 | Infracost breakdown/diff | 🟡 Medio | Si (API call esterna) |
 | Cloud Custodian dry-run | 🟡 Medio | No |
@@ -263,11 +450,14 @@ Terragrunt config.yaml → definisce Team + CostCenter
 
 ## Vincoli
 
-1. **NON** eseguire policy Custodian con azioni distruttive senza pre-flight card 🔴
-2. **NON** chiamare Infracost API senza informare l'utente (chiama API pricing esterne)
-3. **SEMPRE** verificare prerequisiti tool prima di usarli (fallback con istruzioni setup)
-4. **SEMPRE** presentare risultati in tabella markdown leggibile
-5. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡 — costruisci come markdown table inline
+1. **NON** inventare dati — ogni numero deve venire da un comando eseguito
+2. **NON** eseguire comandi che MODIFICANO risorse (solo read-only durante analisi)
+3. **NON** eseguire policy Custodian con azioni distruttive senza pre-flight card 🔴
+4. **SEMPRE** verificare credenziali cloud prima di iniziare (aws sts / az account show)
+5. **SEMPRE** presentare risultati in tabella markdown con fonte del dato
+6. **SEMPRE** usare subagent paralleli per le 4 aree di analisi (cost, idle, tags, optimization)
+7. **SE** un comando fallisce, riporta l'errore e prosegui — non bloccare l'intera analisi
+8. **PRE-FLIGHT OBBLIGATORIA** per operazioni con rischio >= 🟡
 
 ---
 
