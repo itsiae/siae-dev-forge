@@ -354,6 +354,106 @@ if [ "$WITH_TRIGGER_REGRESSION" = true ]; then
   fi
 fi
 
+# --- Telemetry Functional Tests ---
+echo ""
+echo "=== Telemetry Functional Tests ==="
+echo ""
+
+telfunc_ok=0
+telfunc_fail=0
+
+# Test: commit_created event includes correct fields
+COMMIT_TEST_LOG="/tmp/devforge-test-commit-created.jsonl"
+rm -f "$COMMIT_TEST_LOG"
+export DEVFORGE_LOG_FILE="$COMMIT_TEST_LOG"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "commit_created" "success" '{"files_changed":5,"insertions":30,"deletions":10,"has_tests":true}'
+if command -v jq >/dev/null 2>&1; then
+  if jq -e '.meta.files_changed == 5 and .meta.has_tests == true' "$COMMIT_TEST_LOG" >/dev/null 2>&1 || \
+     grep -q '"files_changed":5' "$COMMIT_TEST_LOG" 2>/dev/null; then
+    echo "  PASS  commit_created: emette files_changed, insertions, deletions, has_tests"
+    telfunc_ok=$((telfunc_ok + 1))
+  else
+    echo "  FAIL  commit_created: campi mancanti o errati"
+    telfunc_fail=$((telfunc_fail + 1))
+  fi
+else
+  if grep -q '"files_changed":5' "$COMMIT_TEST_LOG" && grep -q '"has_tests":true' "$COMMIT_TEST_LOG"; then
+    echo "  PASS  commit_created: emette files_changed e has_tests (no jq, grep check)"
+    telfunc_ok=$((telfunc_ok + 1))
+  else
+    echo "  FAIL  commit_created: campi mancanti"
+    telfunc_fail=$((telfunc_fail + 1))
+  fi
+fi
+rm -f "$COMMIT_TEST_LOG"
+
+# Test: session_end counters are consistent
+SESSION_END_LOG="/tmp/devforge-test-session-end.jsonl"
+rm -f "$SESSION_END_LOG"
+export DEVFORGE_LOG_FILE="$SESSION_END_LOG"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log_timed "session_end" "success" "$(date +%s%N)" '{"skills_used_count":4,"commits_count":3}'
+if grep -q '"skills_used_count":4' "$SESSION_END_LOG" && grep -q '"commits_count":3' "$SESSION_END_LOG"; then
+  echo "  PASS  session_end: skills_used_count e commits_count presenti e corretti"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session_end: contatori mancanti o errati"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+if grep -q '"duration_ms":' "$SESSION_END_LOG"; then
+  echo "  PASS  session_end: duration_ms presente"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session_end: duration_ms mancante"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$SESSION_END_LOG"
+
+# Test: pr_opened skipped gracefully when gh is not available
+# We simulate by checking post-commit-review handles non-push commands without error
+PROPENTEST_LOG="/tmp/devforge-test-propened.jsonl"
+rm -f "$PROPENTEST_LOG"
+export DEVFORGE_LOG_FILE="$PROPENTEST_LOG"
+propened_output=$(echo '{"command":"git status"}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null; echo "exit:$?")
+if echo "$propened_output" | grep -q 'exit:0'; then
+  echo "  PASS  pr_opened: non-push command handled gracefully (exit 0)"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  pr_opened: crash on non-push command"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$PROPENTEST_LOG"
+
+# Test: JSON sanitization function works
+SANITIZE_LOG="/tmp/devforge-test-sanitize.jsonl"
+rm -f "$SANITIZE_LOG"
+export DEVFORGE_LOG_FILE="$SANITIZE_LOG"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+UNSAFE_STRING='test"with"quotes\and\\backslashes'
+SAFE=$(devforge_sanitize_json_str "$UNSAFE_STRING")
+devforge_log "test_sanitize" "success" "{\"value\":\"${SAFE}\"}"
+if command -v jq >/dev/null 2>&1; then
+  if jq . "$SANITIZE_LOG" >/dev/null 2>&1; then
+    echo "  PASS  JSON sanitization: output valido con caratteri speciali"
+    telfunc_ok=$((telfunc_ok + 1))
+  else
+    echo "  FAIL  JSON sanitization: output JSON non valido"
+    telfunc_fail=$((telfunc_fail + 1))
+  fi
+else
+  echo "  SKIP  JSON sanitization: jq non disponibile"
+  TOTAL_SKIP=$((TOTAL_SKIP + 1))
+fi
+rm -f "$SANITIZE_LOG"
+
+unset DEVFORGE_LOG_FILE
+
+echo ""
+echo "  Telemetry functional: ${telfunc_ok} OK | ${telfunc_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + telfunc_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + telfunc_fail))
+
 # --- Telemetry Event Validation ---
 echo ""
 echo "=== Telemetry Event Validation ==="

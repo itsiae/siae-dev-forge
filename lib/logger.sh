@@ -69,6 +69,18 @@ devforge_new_sid() {
     echo "$sid"
 }
 
+# Sanitize a string for safe JSON embedding (escapes \, ", newlines, tabs)
+# Usage: devforge_sanitize_json_str "unsafe string"
+devforge_sanitize_json_str() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
 # Log an event to the JSONL file
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'

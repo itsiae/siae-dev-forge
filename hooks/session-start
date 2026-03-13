@@ -113,8 +113,9 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     fi
 fi
 
-# Initialize session counters
+# Initialize session counters and cleanup stale guards
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
+rm -f "${HOME}/.claude/.devforge-session-end-done"
 
 exit 0
