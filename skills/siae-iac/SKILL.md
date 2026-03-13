@@ -167,7 +167,7 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V4 | Usa `for_each`, mai `count` (eccezione: `count = condition ? 1 : 0` ammesso per risorse singleton condizionali) | `for_each` e' stabile su add/remove |
 | V5 | No `terraform apply` senza plan review     | Sempre `plan` -> review -> `apply`       |
 | V6 | Pin provider versions                      | `required_providers` con `~>` constraint |
-| V7 | Tag obbligatori su ogni risorsa            | `Environment`, `Project`, `ManagedBy`    |
+| V7 | Tag obbligatori su ogni risorsa            | `Environment`, `Project`, `ManagedBy`, `Team`, `CostCenter`, `Repository` — vedi [siae-finops tagging-strategy](../siae-finops/reference/tagging-strategy.md) |
 | V8 | No secret in variabili TF                  | Usa Secrets Manager o SSM                |
 
 **🚨 Operazione CRITICA — pre-flight card OBBLIGATORIA prima di `terraform apply`:**
