@@ -23,6 +23,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 45% dei bug frontend reportati in collaudo era riproducibile solo con test E2E — unit test insufficienti.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Panoramica
 
 Pattern frontend SIAE per sviluppo, testing, deploy e brand. **Vue.js 3 e' lo stack standard SIAE** per i nuovi progetti. Angular e React sono supportati dove gia' adottati.
@@ -255,6 +258,22 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | V6 | No secret in codice frontend               | Usa env variables (`VITE_*`)             |
 | V7 | Componenti tipizzati con `defineComponent` | Props, emits, slots tipizzati            |
 | V8 | No dipendenze non approvate                | Review team lead per nuovi package       |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+## REQUIRED SUB-SKILL: siae-tdd
+
+Implementa ogni componente frontend seguendo `siae-tdd` (test Vitest fallente prima del codice).
 
 ---
 

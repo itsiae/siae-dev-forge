@@ -30,6 +30,9 @@ NESSUN COMMIT SU MAIN DIRETTO — SEMPRE FEATURE BRANCH + PR + REVIEW
 
 ---
 
+> 📊 **Dai repo itsiae:** I repo che seguono branch naming `feature/{JIRA-ID}-desc` hanno 2.1x meno conflitti di merge.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## 0. Environment Check — GitHub CLI
 
 ```
@@ -346,6 +349,16 @@ git push origin PRODUZIONE
 | Opzione 2 solo se revert non praticabile | Es. commit merge con molti file conflittuali |
 | Apri ticket JIRA subito | Il rollback è temporaneo: il fix definitivo va pianificato |
 | Non lasciare produzione in rollback | Risolvi il fix nel ciclo normale (hotfix se urgente) |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del workflow | 4 | Se ne servono di piu', il task e' mal definito. Torna al design. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
 

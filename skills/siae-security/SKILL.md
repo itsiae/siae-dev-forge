@@ -31,6 +31,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Su 816 repo, 23 avevano secrets committati in history. Il 100% era in repo senza pre-commit hook attivo.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## 1. OWASP Top 10 — Checklist AWS
 
 Checklist adattata al contesto AWS/serverless SIAE.
@@ -263,6 +266,22 @@ Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 | "E' un progetto interno, nessuno lo vede" | Il 60% delle violazioni viene dall'interno. Stesse regole. |
 | "La policy IAM `*` e' temporanea" | Le policy temporanee diventano permanenti. Least privilege da subito. |
 | "Il bucket S3 deve essere pubblico per il frontend" | Usa CloudFront + OAI. Mai bucket pubblici diretti. |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare il codice sicuro.
 
 ---
 

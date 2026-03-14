@@ -37,6 +37,9 @@ Nessun task viene dichiarato completo senza:
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 28% dei task implementati da subagent senza spec-review conteneva drift rispetto al design doc originale.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando si Applica
 
 **Prerequisiti obbligatori:**
@@ -215,6 +218,16 @@ IMPLEMENTAZIONE COMPLETATA:
   Test suite:  [risultato]
   Verdetto:    COMPLETO (tutti [DONE])
 ```
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali dell'orchestrazione | 4 | Se ne servono di piu', il piano ha troppi task per sessione. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
 

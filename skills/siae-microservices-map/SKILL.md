@@ -25,6 +25,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Senza mappa delle dipendenze, il 44% dei cambi cross-service causa regressioni non anticipate.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## ANTI-HALLUCINATION PROTOCOL — NON NEGOZIABILE
 
 ```
@@ -389,6 +392,16 @@ Sezioni obbligatorie:
 - Service Inventory
 - **Gap Report** — relazioni non verificate, obbligatorio anche se vuoto
 - Evidence Index — path file sorgente per ogni relazione confermata
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
 
 ---
 

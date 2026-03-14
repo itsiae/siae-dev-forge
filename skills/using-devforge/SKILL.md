@@ -33,6 +33,9 @@ SE UNA SKILL SI APPLICA AL TUO TASK, NON HAI SCELTA. DEVI USARLA.
 Questo non e' negoziabile. Non e' opzionale. Non puoi razionalizzare per evitarlo.
 </EXTREMELY-IMPORTANT>
 
+> 📊 **Dai repo itsiae:** L'adozione di skill sale dal 33% al 72% quando il loader le presenta automaticamente al SessionStart.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Come Accedere alle Skill
 
 **In Claude Code:** Usa lo `Skill` tool. Quando invochi una skill, il suo contenuto viene caricato e presentato — seguilo direttamente. Non usare mai il Read tool sui file delle skill.
@@ -90,6 +93,15 @@ EnterPlanMode senza brainstorming = design non validato = lavoro da rifare.
 
 Il flowchart sopra modella questo comportamento nel nodo "About to EnterPlanMode?".
 Non bypassarlo mai, nemmeno per task "semplici".
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Skill invocate per singolo messaggio utente | 3 | Se ne servono di piu', il messaggio e' troppo ampio. Chiedi di decomporre. |
+| Output max per skill check | 100 righe | Il loader deve essere veloce e trasparente. |
+
+---
 
 ## Red Flags
 

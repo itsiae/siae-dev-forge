@@ -24,6 +24,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Skill scritte senza seguire il template siae-create-skill.md mancano in media 3.2 sezioni obbligatorie su 8.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Obiettivo
 
 Questa skill insegna a scrivere skill DevForge che **funzionano** — non solo documentazione,
@@ -191,6 +194,21 @@ Checklist di validazione:
 - [ ] Test di attivazione superato (prompt naturale → skill si attiva)
 
 ---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+```
+REQUIRED SUB-SKILL: siae-verification
+```
+Invoca `siae-verification` per validare la skill contro il template siae-create-skill.md.
 
 ## Errori Comuni
 

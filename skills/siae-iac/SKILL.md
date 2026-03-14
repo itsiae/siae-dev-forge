@@ -23,6 +23,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 52% degli incident infrastrutturali derivava da moduli Terraform senza state locking o senza tag di cost allocation.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Panoramica
 
 Pattern IaC da 44 repo HCL itsiae (enterpriseplatform-core-iaac, dataplatform-datalake-iaac, etc.). Guida scrittura `.tf`, `.hcl`, `terragrunt.hcl` secondo convenzioni SIAE.
@@ -182,6 +185,22 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | 📂 `<modulo terraform>` |
 | 💡 Perche': Plan verificato, risorse da creare/modificare |
 | 🚫 Se NO: STOP — nessuna modifica applicata all'infrastruttura |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare il modulo Terraform completo.
 
 ---
 

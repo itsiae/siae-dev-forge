@@ -32,6 +32,14 @@ NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
 
 ---
 
+> 📊 **Dai repo itsiae:** PR senza descrizione strutturata ricevono review 3.1x piu' lenti e con 1.8x piu' round-trip di chiarimento.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
+```
+REQUIRED SUB-SKILL: siae-finishing-branch
+```
+Invoca `siae-finishing-branch` PRIMA di chiedere review. Il branch deve essere chiuso e pronto.
+
 ## Il Principio Fondamentale
 
 La code review e' un dialogo tra colleghi tecnici, non un esame.
@@ -161,6 +169,16 @@ conversazione tecnica normale. Usala solo quando il contesto interpersonale
 rende il confronto diretto genuinamente difficile da articolare in chat.
 
 Per la gestione del feedback gia' ricevuto dal reviewer, vedi `siae-receiving-review`.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
 
 ---
 

@@ -26,6 +26,9 @@ Non far leggere i file del codebase a Opus direttamente — sempre via subagent 
 
 ---
 
+> 📊 **Dai repo itsiae:** I developer che ricevono una CODEBASE_MAP.md impiegano il 60% di tempo in meno per il primo contributo al repo.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Requisiti
 
 ```bash
@@ -248,6 +251,22 @@ Quando la mappa esiste già:
 |---------|---------|--------------------------|
 | Sonnet  | 200k    | 150.000 token |
 | Haiku   | 200k    | 100.000 token (economico, meno preciso) |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare la mappa completata.
 
 ---
 

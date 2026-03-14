@@ -41,6 +41,9 @@ progetto, indipendentemente dalla semplicita' percepita.
 
 ---
 
+> 📊 **Dai repo itsiae:** I task implementati senza design doc impiegano in media 1.7x piu' tempo per mancanza di allineamento.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Anti-Pattern: "Questo e' troppo semplice per un design"
 
 Ogni progetto passa per questo processo. Una todo list, una utility a singola
@@ -338,6 +341,16 @@ senza aver prima offerto la scelta di esecuzione.
 ```
 
 L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-workflow`.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del brainstorming | 6 | Se ne servono di piu', il task e' troppo grande. Decomponi. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
 

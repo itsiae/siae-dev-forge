@@ -32,6 +32,9 @@ OGNI COMMENTO RICHIEDE UNA REAZIONE ESPLICITA — IL SILENZIO NON E' UNA RISPOST
 
 ---
 
+> 📊 **Dai repo itsiae:** I developer che categorizzano i commenti review (REQUIRED/SUGGESTION/NITPICK) rispondono 2.4x piu' velocemente.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Il Principio Fondamentale
 
 La code review richiede **valutazione tecnica**, non performance emotiva.
@@ -267,6 +270,21 @@ da seguire per il reviewer. Usa sempre il thread corretto.
 come commento top-level via `gh pr comment {pr_number} --body "[testo]"`.
 
 ---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali della gestione review | 4 | Se ne servono di piu', il feedback e' troppo ampio. Chiedi priorita'. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
+
+---
+
+```
+REQUIRED SUB-SKILL: siae-verification
+```
+Invoca `siae-verification` dopo aver applicato tutti i fix richiesti dal reviewer, prima di rispondere.
 
 ## Tabella Anti-Razionalizzazione
 
