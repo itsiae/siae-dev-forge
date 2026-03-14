@@ -1,8 +1,10 @@
 ---
 name: siae-git-worktrees
 description: >
-  Trigger: prima di eseguire un piano implementativo,
-  setup workspace isolato, implementazione su branch separato.
+  OBBLIGATORIA prima di implementazioni multi-file. Workspace isolato per ogni feature.
+  Trigger: prima di eseguire un piano implementativo, setup workspace isolato,
+  implementazione su branch separato, /forge-implement, inizio feature multi-commit,
+  isola lavoro, worktree, branch dedicato per implementazione.
 ---
 
 # SIAE Git Worktrees
@@ -30,6 +32,14 @@ NON INIZIARE MAI L'IMPLEMENTAZIONE NEL BRANCH CORRENTE
 ```
 
 **Violare la lettera di questa regola significa violare lo spirito della regola.**
+
+<EXTREMELY-IMPORTANT>
+Stai per iniziare a scrivere codice nel branch corrente senza creare un worktree?
+FERMATI. Crea il worktree prima. Il branch corrente deve restare pulito.
+
+"E' una modifica piccola, non serve il worktree" = le modifiche piccole diventano grandi.
+"Ho gia' il branch checkout, lavoro qui" = file parziali che inquinano il context.
+</EXTREMELY-IMPORTANT>
 
 Lavorare nel branch principale durante lo sviluppo significa:
 - File non committati che inquinano il context di Claude

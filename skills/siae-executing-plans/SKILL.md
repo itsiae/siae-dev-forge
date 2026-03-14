@@ -33,6 +33,17 @@ LEGGI IL PIANO CRITICAMENTE PRIMA DI TOCCARE QUALSIASI FILE.
 ESEGUI PER BATCH. RIPORTA. ATTENDI FEEDBACK.
 ```
 
+<EXTREMELY-IMPORTANT>
+Stai per implementare task da un piano senza aver letto e rivisto il piano completo?
+FERMATI. Leggi TUTTO il piano prima di toccare qualsiasi file.
+
+Stai per procedere senza checkpoint umano dopo il batch?
+FERMATI. Ogni batch di 3 task richiede report + attesa feedback. Non procedere alla cieca.
+
+Stai per improvvisare qualcosa non previsto dal piano?
+FERMATI. Se non e' nel piano, non farlo. Proponi la modifica nel report e attendi.
+</EXTREMELY-IMPORTANT>
+
 **Annuncia all'inizio:** "Uso siae-executing-plans per implementare il piano."
 
 ---

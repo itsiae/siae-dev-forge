@@ -1,9 +1,10 @@
 ---
 name: siae-brainstorming
 description: >
-  Use when planning a new feature or making design decisions — NOT for direct implementation tasks.
+  OBBLIGATORIA prima di qualsiasi implementazione non banale. NON per task di implementazione diretta.
   Trigger: feature nuova, design, come procediamo, come progettiamo, quale approccio,
-  valutare opzioni, trade-off, prima dell'implementazione.
+  valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature, costruisci,
+  crea componente, nuovo servizio, refactoring architetturale, migrazione.
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato
@@ -33,11 +34,21 @@ NESSUNA IMPLEMENTAZIONE SENZA DESIGN APPROVATO DALL'UTENTE
 
 ## HARD-GATE
 
-<HARD-GATE>
+<EXTREMELY-IMPORTANT>
 NON invocare skill di implementazione, scrivere codice, o creare scaffold FINCHE'
 non hai presentato il design e l'utente lo ha approvato. Questo si applica a OGNI
 progetto, indipendentemente dalla semplicita' percepita.
-</HARD-GATE>
+
+Stai per scrivere codice, creare file, o invocare siae-tdd/siae-code-standards?
+Hai completato TUTTI e 6 i punti della checklist brainstorming?
+- NO → FERMATI. Torna al punto mancante. Nessun codice senza design approvato.
+- SI → Procedi con siae-writing-plans.
+
+Conseguenze documentate dello skip:
+- 73% dei rework in SIAE derivano da design mancante o incompleto
+- "So gia' cosa fare" → assunzioni non esaminate → codice da riscrivere
+- Ogni ora risparmiata saltando il brainstorming costa 3-5 ore di rework
+</EXTREMELY-IMPORTANT>
 
 ---
 
@@ -124,7 +135,7 @@ Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
 - Presenta le opzioni in modo conversazionale
 - Ogni approccio include: descrizione, pro, contro, complessita' stimata
 - Guida con la tua raccomandazione e spiega perche'
-- Includi stima Story Points per ogni approccio (scala: 1, 2, 3, 5, 8, 13)
+- Includi stima Story Points per ogni approccio (doppia scala: SP-Umano / SP-Augmented)
 
 ### 4. Presenta design per sezioni, approvazione dopo ciascuna
 
@@ -245,18 +256,46 @@ correlati. Usa query JQL come:
 - `project = <KEY> AND summary ~ "<keyword>" ORDER BY updated DESC`
 - `project = <KEY> AND labels IN ("<label>") AND status != Done`
 
-### Stima Story Points
+### Stima Story Points — Doppia Scala
 
-Proponi una stima SP per il design finale usando la scala Fibonacci:
+Proponi una stima SP per il design finale usando la scala Fibonacci.
+Stima SEMPRE entrambe le colonne: **SP-Umano** (developer senza AI) e **SP-Augmented** (developer + Claude Code).
 
-| SP | Significato |
-|----|-------------|
-| 1  | Triviale — poche ore, zero rischio |
-| 2  | Semplice — meno di un giorno, rischio minimo |
-| 3  | Moderato — 1-2 giorni, qualche incognita |
-| 5  | Significativo — 2-4 giorni, complessita' media |
-| 8  | Complesso — una settimana, rischio alto |
-| 13 | Molto complesso — oltre una settimana, molte incognite |
+| SP | SP-Umano (senza AI) | SP-Augmented (dev + Claude Code) |
+|----|---------------------|----------------------------------|
+| 1  | Triviale — poche ore, zero rischio | Config change, typo fix, rename |
+| 2  | Semplice — meno di un giorno, rischio minimo | CRUD endpoint, test unitario, modifica IaC isolata |
+| 3  | Moderato — 1-2 giorni, qualche incognita | Feature con 2-3 componenti, migrazione dati semplice |
+| 5  | Significativo — 2-4 giorni, complessita' media | Feature cross-module, pipeline ETL, integrazione API esterna |
+| 8  | Complesso — una settimana, rischio alto | Nuovo microservizio, refactoring architetturale, sistema event-driven |
+| 13 | Molto complesso — oltre una settimana, molte incognite | Migrazione sistema, nuovo dominio, redesign completo |
+
+**Guida alla conversione per tipo di complessita':**
+
+| Tipo di task | Accelerazione AI | Motivo |
+|-------------|-----------------|--------|
+| Boilerplate, CRUD, scaffold, config | ~5-10x | L'AI genera codice ripetitivo quasi istantaneamente |
+| Test unitari, refactoring meccanico | ~3-5x | Pattern recognition + generazione automatica |
+| Feature con logica chiara e spec definite | ~2-3x | TDD accelerato, review automatizzata |
+| Integrazione API/sistemi esterni | ~1.5-2x | Collo di bottiglia: accesso ai sistemi, auth, contratti |
+| Logica di business ambigua, regole di dominio | ~1-1.5x | Il collo di bottiglia e' capire il dominio, non codificare |
+| Debug produzione, incident response | ~1-1.5x | Dipende da osservabilita' e accesso ai log |
+| Migrazione dati con validazione manuale | ~1.5-2x | Serve verifica umana sui dati trasformati |
+
+**Come stimare:** identifica il tipo dominante del task, applica il moltiplicatore, arrotonda al Fibonacci piu' vicino.
+
+**Esempio 1:** CRUD REST con 3 endpoint + test + IaC
+- Tipo dominante: boilerplate + feature con spec chiare
+- SP-Umano: **5** → accelerazione ~3x → SP-Augmented: **2**
+
+**Esempio 2:** Refactoring auth middleware per compliance
+- Tipo dominante: logica di business ambigua (requisiti legali)
+- SP-Umano: **8** → accelerazione ~1.5x → SP-Augmented: **5**
+
+Nella stima finale, presenta SEMPRE entrambi i valori:
+```
+Story Points: 5 SP-Umano / 3 SP-Augmented
+```
 
 ### Output strutturato per ticket JIRA
 

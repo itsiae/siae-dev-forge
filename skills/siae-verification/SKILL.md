@@ -1,9 +1,10 @@
 ---
 name: siae-verification
 description: >
-  Use when about to claim work is complete, fixed, or passing — requires running
-  verification commands before any success claims. Trigger: prima di commit, PR,
-  task complete, dichiarazioni di successo, "fatto", "fixato", "funziona".
+  OBBLIGATORIA prima di QUALSIASI dichiarazione di completamento. Nessun "fatto" senza evidenza.
+  Trigger: prima di commit, PR, task complete, dichiarazioni di successo, "fatto", "fixato",
+  "funziona", "completato", "pronto", "implementato", "risolto", "test passano",
+  "build verde", "tutto ok", "finito".
 ---
 
 # SIAE Verification — Protocollo di Verifica Pre-Completamento

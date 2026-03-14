@@ -1,8 +1,10 @@
 ---
 name: siae-finishing-branch
 description: >
-  Chiusura sicura di un branch di sviluppo.
-  Trigger: "pronto per PR", "finisco il branch", "ready to merge", "apro la PR".
+  OBBLIGATORIA prima di aprire qualsiasi PR. Chiusura sicura di un branch.
+  Trigger: "pronto per PR", "finisco il branch", "ready to merge", "apro la PR",
+  gh pr create, git push + PR, apertura pull request, branch completato,
+  implementazione finita, lavoro completato su branch, pre-merge checklist.
 ---
 
 # SIAE Finishing Branch — Chiusura Sicura di un Branch
@@ -30,8 +32,18 @@ description: >
 NESSUNA PR SENZA VERIFICA COMPLETA DEL BRANCH
 ```
 
+<EXTREMELY-IMPORTANT>
 Aprire una PR e' un atto pubblico che coinvolge i reviewer. Rispetta il loro tempo.
 Un branch non verificato e' un'interruzione mascherata da contributo.
+
+Stai per eseguire `git push` + `gh pr create` o suggerire all'utente di aprire una PR?
+Hai completato TUTTI e 5 gli step di questa skill?
+- NO → NON procedere. Torna allo step mancante.
+- SI → Procedi con la pre-flight card 🔴 ALTO.
+
+NON ESISTE una PR "troppo semplice" per questo processo.
+Anche un singolo file modificato merita: test verdi, diff review, commit history pulita.
+</EXTREMELY-IMPORTANT>
 
 ---
 

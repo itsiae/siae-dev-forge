@@ -30,6 +30,18 @@ description: >
 NESSUN TEST AUTOMATIZZATO SENZA LISTA TC CONFERMATA DAL DEVELOPER
 ```
 
+<EXTREMELY-IMPORTANT>
+Stai per generare test E2E senza la lista TC confermata dal developer?
+FERMATI. La proposta ROI e' un suggerimento — la conferma esplicita e' obbligatoria.
+
+Stai per automatizzare TUTTI i TC senza valutare il ROI?
+FERMATI. Automatizzare TC con 15 step o logica ambigua genera test fragili
+che si rompono a ogni release. Il ROI serve per scegliere cosa vale la manutenzione.
+
+Stai per procedere senza cercare la TL esistente in Xray?
+FERMATI. Una TL potrebbe esistere da un sprint precedente. Non sovrascrivere lavoro fatto.
+</EXTREMELY-IMPORTANT>
+
 ---
 
 ## QUANDO SI APPLICA

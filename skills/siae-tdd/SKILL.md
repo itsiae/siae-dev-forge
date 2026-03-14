@@ -1,7 +1,10 @@
 ---
 name: siae-tdd
 description: >
-  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice.
+  OBBLIGATORIA per qualsiasi scrittura di codice di produzione. Test PRIMA del codice, sempre.
+  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice,
+  aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi funzione,
+  implementa, codifica, sviluppa.
 ---
 
 # SIAE TDD — Test-Driven Development
@@ -30,6 +33,22 @@ NESSUN CODICE DI PRODUZIONE SENZA UN TEST FALLENTE PRIMA
 ```
 
 **Violare la lettera di questa regola significa violare lo spirito della regola.**
+
+<EXTREMELY-IMPORTANT>
+Stai per scrivere, modificare, o generare codice di produzione?
+Esiste gia' un test fallente che giustifica questa modifica?
+- NO → FERMATI. Scrivi il test prima. Poi torna qui.
+- SI → Procedi. Il test deve essere in stato RED (fallente).
+
+Stai per dire "scrivo il test dopo", "e' troppo semplice per testarlo", "aggiungo i test nello sprint dopo"?
+Stai razionalizzando. Leggi la tabella anti-razionalizzazione in fondo.
+
+Conseguenze documentate dello skip TDD:
+- Il 40% dei bug in produzione SIAE derivano da codice scritto senza test
+- "Scrivo il test dopo" → il test non viene mai scritto → il bug torna
+- Un test scritto dopo l'implementazione prova niente: passa subito, non sai se testa la cosa giusta
+- Il costo di un bug in produzione e' 10x il costo di scrivere il test ora
+</EXTREMELY-IMPORTANT>
 
 Hai scritto codice prima del test? **Cancellalo. Ricomincia.**
 

@@ -1,8 +1,10 @@
 ---
 name: siae-receiving-review
 description: >
-  Use when code review feedback has been received and needs to be actioned.
-  Trigger: ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED.
+  OBBLIGATORIA quando si riceve feedback di code review. Ogni commento richiede reazione esplicita.
+  Trigger: ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED,
+  commenti su PR, review ricevuta, fix richiesti dal reviewer, rispondi ai commenti,
+  il reviewer ha chiesto modifiche.
 ---
 
 # SIAE Receiving Review — Elaborare il Feedback di Code Review
@@ -29,6 +31,17 @@ description: >
 ```
 OGNI COMMENTO RICHIEDE UNA REAZIONE ESPLICITA — IL SILENZIO NON E' UNA RISPOSTA
 ```
+
+<EXTREMELY-IMPORTANT>
+Stai per pushare fix senza aver risposto a TUTTI i commenti del reviewer?
+FERMATI. Ogni commento = una risposta. Il silenzio non e' una risposta.
+
+Stai per implementare fix senza aver letto TUTTI i commenti prima?
+FERMATI. Leggi tutto prima di agire. Un commento puo' chiarire o contraddire un altro.
+
+Stai per rispondere "Ottimo punto!" o "Grazie per il feedback!"?
+CANCELLALO. Performance emotiva, non tecnica. Descrivi il fix invece.
+</EXTREMELY-IMPORTANT>
 
 ---
 

@@ -26,6 +26,19 @@ description: >
 NESSUN RILASCIO SENZA CASI DI TEST VERIFICATI E DOCUMENTATI IN XRAY
 ```
 
+<EXTREMELY-IMPORTANT>
+Stai per dichiarare l'implementazione completa senza Test Case in Xray?
+FERMATI. Nessun rilascio senza TC verificati e documentati.
+
+Stai per generare TC senza aver completato Phase 0 (Smart Req Typing)?
+FERMATI. Il tipo di requisito determina le domande contestuali — senza Phase 0 i TC
+coprono solo cio' che e' scritto negli AC, non cio' che puo' rompersi.
+
+Stai per scrivere TC senza aver compilato la matrice scenari (4a)?
+FERMATI. Tutti e 4 le categorie (positivi, edge, negativi, profilazioni) devono essere
+valutate PRIMA di generare qualsiasi TC.
+</EXTREMELY-IMPORTANT>
+
 > **Tipo:** Rigid | **Fase SDLC:** 5. Testing / QA
 
 ---
