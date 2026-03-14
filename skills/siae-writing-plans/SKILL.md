@@ -1,7 +1,7 @@
 ---
 name: siae-writing-plans
 description: >
-  ALWAYS use when transforming an approved design into a concrete step-by-step implementation plan.
+  OBBLIGATORIA per trasformare un design approvato in un piano implementativo step-by-step concreto.
   Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: siae-executing-plans
 description: >
-  Use when opening a brand-new session to execute an existing plan (not the session where the plan was written).
+  OBBLIGATORIA quando si apre una sessione separata per eseguire un piano esistente (non la sessione dove il piano e' stato scritto).
   Trigger: sessione nuova/separata con piano in docs/plans/, batch execution richiesta,
   piano con REQUIRED SUB-SKILL siae-executing-plans.
   (Per la stessa sessione in cui il piano e' stato scritto usa siae-subagent-development)

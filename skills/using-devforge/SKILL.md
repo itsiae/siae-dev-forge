@@ -32,7 +32,7 @@ SE UNA SKILL SI APPLICA AL TUO TASK, NON HAI SCELTA. DEVI USARLA.
 
 Questo non e' negoziabile. Non e' opzionale. Non puoi razionalizzare per evitarlo.
 
-**OBBLIGO CATALOGO:** Per OGNI messaggio utente, DEVI scansionare il Dynamic Skill Catalog in fondo a questo documento. Leggi la colonna **Keywords** di ogni riga e confrontala col messaggio utente. Se trovi un match anche parziale, invoca la skill corrispondente PRIMA di rispondere. Non saltare mai la scansione del catalogo.
+**OBBLIGO CATALOGO:** Per OGNI messaggio utente, DEVI scansionare il Dynamic Skill Catalog in fondo a questo documento. Leggi la colonna **INVOCA SE l'utente menziona** di ogni riga e confrontala col messaggio utente. Se trovi un match anche parziale, invoca la skill corrispondente PRIMA di rispondere. Non saltare mai la scansione del catalogo.
 </EXTREMELY-IMPORTANT>
 
 ## Come Accedere alle Skill
