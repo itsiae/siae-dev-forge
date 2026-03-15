@@ -53,6 +53,8 @@ if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${D
             claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
                 echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
                 echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
+        else
+            echo "✅ DevForge v${PLUGIN_VERSION} — aggiornato" >&2
         fi
     ) &
 fi
