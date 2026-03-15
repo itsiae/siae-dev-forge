@@ -31,7 +31,7 @@ BANNER
 
 # Auto-update check: compare installed version with latest GitHub release
 # Runs in background to avoid blocking session start
-if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ]; then
+if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${DEVFORGE_SKIP_UPDATE:-}" != "1" ]; then
     (
         LATEST_TAG=$(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
         # Strip leading 'v' if present for comparison
