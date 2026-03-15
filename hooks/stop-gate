@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # stop-gate — Stop hook: siae-verification reminder before Claude stops
 # Only fires when the last assistant message contains completion claims.
+# ─────────────────────────────────────────────────────────────────
+# Hook:     stop-gate
+# Evento:   Stop
+# Matcher:  *
+# Timeout:  5s — Telemetry + verification reminder
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
@@ -87,9 +94,12 @@ LAST_ASSISTANT_MSG=$(echo "$INPUT" | jq -r '
 ' 2>/dev/null || true)
 
 # Completion claim keywords (case-insensitive check)
-COMPLETION_KEYWORDS="fatto|fixato|completato|funziona|done|fixed|pass|completato con successo|implementato|risolto|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato"
+COMPLETION_KEYWORDS="fatto|fatti|fatta|fatte|fixato|fixata|completato|completata|completati|funziona|done|fixed|pass|implementato|implementata|risolto|risolta|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato|finito|finita|concluso|conclusa|terminato|terminata|pronto|pronta"
 
 # Check if last assistant message contains any completion claim
+# Safety-first: il gate scatta sempre se c'e' un keyword, anche in contesto negato.
+# Falsi positivi (gate scatta quando non dovrebbe) sono preferibili a falsi negativi
+# (gate non scatta quando dovrebbe) per un meccanismo di verifica.
 if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
     # No completion claim found — exit silently
     exit 0
@@ -103,7 +113,11 @@ stop_gate_context="<EXTREMELY_IMPORTANT>\nDevForge Verification Gate: ${stop_gat
 
 cat <<EOF
 {
-  "systemMessage": "${stop_gate_context}"
+  "additional_context": "${stop_gate_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "Stop",
+    "additionalContext": "${stop_gate_context}"
+  }
 }
 EOF
 

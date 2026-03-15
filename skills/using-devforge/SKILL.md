@@ -23,6 +23,8 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+> **Tipo:** Meta | **Fase SDLC:** Cross-cutting
+
 Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
 
 Subito dopo il banner, stampa su una riga separata il messaggio di stato versione.

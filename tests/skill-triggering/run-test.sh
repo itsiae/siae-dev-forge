@@ -43,26 +43,16 @@ PROMPT_CONTENT=$(cat "$PROMPT_FILE")
 # --dangerously-skip-permissions: necessario in modalita' non-interattiva
 # (la skill invocation richiede permessi che bloccherebbero il test)
 # macOS usa gtimeout (coreutils), Linux usa timeout
-TIMEOUT_CMD="timeout"
-if ! command -v timeout >/dev/null 2>&1; then
-  if command -v gtimeout >/dev/null 2>&1; then
-    TIMEOUT_CMD="gtimeout"
-  else
-    TIMEOUT_CMD=""
-  fi
+TIMEOUT_CMD=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || echo "")
+if [ -z "$TIMEOUT_CMD" ]; then
+    echo "[ERROR] 'timeout' o 'gtimeout' non trovato. Installa coreutils: brew install coreutils" >&2
+    exit 1
 fi
 
-if [ -n "$TIMEOUT_CMD" ]; then
-  OUTPUT=$($TIMEOUT_CMD 60 claude -p "$PROMPT_CONTENT" \
-    --dangerously-skip-permissions \
-    --output-format stream-json \
-    --verbose 2>/dev/null || true)
-else
-  OUTPUT=$(claude -p "$PROMPT_CONTENT" \
-    --dangerously-skip-permissions \
-    --output-format stream-json \
-    --verbose 2>/dev/null || true)
-fi
+OUTPUT=$($TIMEOUT_CMD 60 claude -p "$PROMPT_CONTENT" \
+  --dangerously-skip-permissions \
+  --output-format stream-json \
+  --verbose 2>/dev/null || true)
 
 if [ -z "$OUTPUT" ]; then
   echo "  SKIP  ${PROMPT_NAME}: nessun output da claude (timeout o errore)"

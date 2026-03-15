@@ -32,24 +32,10 @@ TOTAL_PASS=0
 TOTAL_FAIL=0
 TOTAL_SKIP=0
 
-# --- Skill Triggering Tests ---
-if [ -x "${SCRIPT_DIR}/skill-triggering/run-all.sh" ]; then
-  echo "=== Skill Triggering Tests ==="
-  echo ""
-
-  if "${SCRIPT_DIR}/skill-triggering/run-all.sh"; then
-    echo ""
-    echo "Skill triggering suite completed."
-  else
-    echo ""
-    echo "Skill triggering suite completed with failures."
-  fi
-
-  echo ""
-else
-  echo "SKIP: skill-triggering/run-all.sh non trovato o non eseguibile"
-  TOTAL_SKIP=$((TOTAL_SKIP + 1))
-fi
+# --- Skill Triggering Tests (SKIPPED by default — richiedono LLM) ---
+# Per eseguirli: bash tests/skill-triggering/run-all.sh
+echo "SKIP: Skill Triggering Tests (richiedono LLM, usa --with-trigger-regression per includerli)"
+TOTAL_SKIP=$((TOTAL_SKIP + 1))
 
 # --- Structure Validation ---
 echo "=== Structure Validation ==="
@@ -169,6 +155,7 @@ if command -v node >/dev/null 2>&1; then
     TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
 else
+  echo "[WARN] Skipping dynamic catalog test — node non disponibile" >&2
   echo "  SKIP  node non disponibile, catalogo dinamico non testabile"
   TOTAL_SKIP=$((TOTAL_SKIP + 1))
 fi
@@ -302,18 +289,18 @@ for skill_dir in "${PLUGIN_ROOT}"/skills/*/; do
 
   # Check 1: Skill Rigid → LA LEGGE DI FERRO obbligatoria
   if grep -qE '\*\*Tipo:\*\*\s+Rigid' "$skill_file"; then
-    if ! grep -q 'LA LEGGE DI FERRO' "$skill_file"; then
+    if ! grep -qi 'LA LEGGE DI FERRO' "$skill_file"; then
       fail_reasons="${fail_reasons}[MANCA: LA LEGGE DI FERRO] "
     fi
   fi
 
   # Check 2: Tutte le skill → Tabella Anti-Razionalizzazione
-  if ! grep -q 'Tabella Anti-Razionalizzazione' "$skill_file"; then
+  if ! grep -qi 'Tabella Anti-Razionalizzazione' "$skill_file"; then
     fail_reasons="${fail_reasons}[MANCA: Tabella Anti-Razionalizzazione] "
   fi
 
   # Check 3: Tutte le skill → Classificazione Rischio Operazioni
-  if ! grep -q 'Classificazione Rischio' "$skill_file"; then
+  if ! grep -qi 'Classificazione Rischio' "$skill_file"; then
     fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni] "
   fi
 

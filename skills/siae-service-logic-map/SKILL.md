@@ -76,8 +76,10 @@ REQUIRED SUB-SKILL: siae-microservices-map
 ```
 
 Non chiedere all'utente di eseguire un comando separato.
-L'output di `siae-microservices-map` viene passato direttamente al Step 3
-senza richiedere commit intermedio — usa il path `/tmp/siae-sysmap-*/SYSTEM_MAP.md`.
+
+Cerca SYSTEM_MAP.md in questo ordine:
+1. `docs/SYSTEM_MAP.md` (output standard di siae-microservices-map)
+2. Se non trovato: invoca `siae-microservices-map` per generarlo
 
 ---
 

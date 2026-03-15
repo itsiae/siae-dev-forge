@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 # SessionStart hook for siae-devforge plugin
+# ─────────────────────────────────────────────────────────────────
+# Hook:     session-start
+# Evento:   SessionStart
+# Matcher:  startup/resume/clear/compact
+# Timeout:  async:false — Deve completare prima del primo prompt
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
@@ -69,6 +76,10 @@ using_devforge_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/SKILL.md" 2>&
 skill_catalog=""
 if command -v node >/dev/null 2>&1; then
     skill_catalog=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" 2>/dev/null || echo "")
+fi
+if [ -z "$skill_catalog" ]; then
+    skill_catalog="| (catalogo non disponibile — skills-core.js ha fallito) | | |"
+    devforge_log "skill_catalog" "warning" "{\"reason\":\"skills-core.js returned empty or failed\"}" 2>/dev/null || true
 fi
 
 # Escape string for JSON embedding using bash parameter substitution.

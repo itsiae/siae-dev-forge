@@ -97,6 +97,13 @@ Region:   eu-west-1
 | 💡 Perche': Esegue query read-only per identificare sprechi e ottimizzazioni |
 | 🚫 Se NO: Nessuna query eseguita |
 
+**Dispatch 4 subagent in parallelo:**
+Lancia 4 Agent tool call in un singolo messaggio con `run_in_background: true`:
+1. Agent "Cost Overview" — `aws ce get-cost-and-usage`
+2. Agent "Idle Resources" — `aws ec2/rds/lambda describe-*`
+3. Agent "Tag Compliance" — `aws resourcegroupstaggingapi`
+4. Agent "Optimization" — `aws compute-optimizer`
+
 Lancia **subagent paralleli** per le 4 aree di analisi. Ogni subagent:
 - Riceve SOLO i comandi/query da eseguire
 - Esegue comandi READ-ONLY (nessuna modifica a risorse)

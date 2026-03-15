@@ -150,6 +150,8 @@ REQ PROFILE:
 
 Usa le domande in `reference/question-trees.md` per il tipo confermato.
 
+> Il file `reference/question-trees.md` si trova nella directory `reference/` di questa skill.
+
 **Regola fondamentale:** salta ogni domanda già rispondibile dagli AC/description esistenti.
 Fai UNA domanda alla volta. Aspetta la risposta prima di procedere alla successiva.
 

@@ -23,7 +23,7 @@ description: >
 
 # siae-code-standards
 
-> **Tipo:** Passivo | **Fase SDLC:** 2. Coding
+> **Tipo:** Flexible | **Fase SDLC:** 2. Coding
 >
 > Questa skill si attiva automaticamente durante la scrittura di codice Java,
 > TypeScript, Python o HCL/Terraform. Applica naming conventions, struttura
