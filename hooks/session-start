@@ -137,33 +137,38 @@ echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
 RESOLVED_USER=$(devforge_get_user)
 echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
 
-# Detect PR merges in last 24h (requires gh + jq, graceful skip if unavailable)
+# F4: Detect PR merges in last 24h — use explicit --repo from git remote
 if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-    USER_EMAIL=$(devforge_get_user)
-    MERGED_PRS=$(gh pr list --state merged --author "@me" \
-        --json number,mergedAt,createdAt,reviews \
-        --jq '[.[] | select((.mergedAt | fromdateiso8601) > (now - 86400))]' 2>/dev/null || echo "[]")
+    GH_REPO=$(git remote get-url origin 2>/dev/null \
+        | grep -oE '[^/:]+/[^/.]+' | tail -1 || echo "")
 
-    if [ "$MERGED_PRS" != "[]" ] && [ -n "$MERGED_PRS" ]; then
-        echo "$MERGED_PRS" | jq -c '.[]' 2>/dev/null | while IFS= read -r pr; do
-            PR_NUMBER=$(echo "$pr" | jq -r '.number' 2>/dev/null || echo "0")
-            CREATED_AT=$(echo "$pr" | jq -r '.createdAt' 2>/dev/null || echo "")
-            MERGED_AT=$(echo "$pr" | jq -r '.mergedAt' 2>/dev/null || echo "")
-            REVIEWERS_COUNT=$(echo "$pr" | jq '[.reviews[]? | .author.login] | unique | length' 2>/dev/null || echo "0")
+    if [ -n "$GH_REPO" ]; then
+        USER_EMAIL=$(devforge_get_user)
+        MERGED_PRS=$(gh pr list --repo "$GH_REPO" --state merged --author "@me" \
+            --json number,mergedAt,createdAt,reviews \
+            --jq '[.[] | select((.mergedAt | fromdateiso8601) > (now - 86400))]' 2>/dev/null || echo "[]")
 
-            REVIEW_CYCLE_HOURS="0"
-            if [ -n "$CREATED_AT" ] && [ -n "$MERGED_AT" ]; then
-                CREATED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$CREATED_AT" +%s 2>/dev/null || date -d "$CREATED_AT" +%s 2>/dev/null || echo "0")
-                MERGED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$MERGED_AT" +%s 2>/dev/null || date -d "$MERGED_AT" +%s 2>/dev/null || echo "0")
-                if [ "$CREATED_EPOCH" != "0" ] && [ "$MERGED_EPOCH" != "0" ]; then
-                    DELTA_SECONDS=$((MERGED_EPOCH - CREATED_EPOCH))
-                    REVIEW_CYCLE_HOURS=$(echo "scale=1; $DELTA_SECONDS / 3600" | bc 2>/dev/null || echo "0")
+        if [ "$MERGED_PRS" != "[]" ] && [ -n "$MERGED_PRS" ]; then
+            echo "$MERGED_PRS" | jq -c '.[]' 2>/dev/null | while IFS= read -r pr; do
+                PR_NUMBER=$(echo "$pr" | jq -r '.number' 2>/dev/null || echo "0")
+                CREATED_AT=$(echo "$pr" | jq -r '.createdAt' 2>/dev/null || echo "")
+                MERGED_AT=$(echo "$pr" | jq -r '.mergedAt' 2>/dev/null || echo "")
+                REVIEWERS_COUNT=$(echo "$pr" | jq '[.reviews[]? | .author.login] | unique | length' 2>/dev/null || echo "0")
+
+                REVIEW_CYCLE_HOURS="0"
+                if [ -n "$CREATED_AT" ] && [ -n "$MERGED_AT" ]; then
+                    CREATED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$CREATED_AT" +%s 2>/dev/null || date -d "$CREATED_AT" +%s 2>/dev/null || echo "0")
+                    MERGED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$MERGED_AT" +%s 2>/dev/null || date -d "$MERGED_AT" +%s 2>/dev/null || echo "0")
+                    if [ "$CREATED_EPOCH" != "0" ] && [ "$MERGED_EPOCH" != "0" ]; then
+                        DELTA_SECONDS=$((MERGED_EPOCH - CREATED_EPOCH))
+                        REVIEW_CYCLE_HOURS=$(echo "scale=1; $DELTA_SECONDS / 3600" | bc 2>/dev/null || echo "0")
+                    fi
                 fi
-            fi
 
-            devforge_log "pr_merged" "success" \
-                "{\"pr_number\":${PR_NUMBER},\"review_cycle_hours\":${REVIEW_CYCLE_HOURS},\"reviewers_count\":${REVIEWERS_COUNT}}"
-        done
+                devforge_log "pr_merged" "success" \
+                    "{\"pr_number\":${PR_NUMBER},\"review_cycle_hours\":${REVIEW_CYCLE_HOURS},\"reviewers_count\":${REVIEWERS_COUNT}}"
+            done
+        fi
     fi
 fi
 
@@ -172,6 +177,8 @@ fi
 # Without this cleanup, a stale guard from a crashed session would prevent
 # session_end telemetry from firing.
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
+# F2: Init last commit hash for commit_created detection
+git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null || echo "" > "${HOME}/.claude/.devforge-last-commit-hash"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
