@@ -23,7 +23,12 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra esattamente come appare, inclusa qualsiasi riga dopo la cornice di chiusura (es. stato versione). Poi procedi.
+Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
+
+Subito dopo il banner, stampa su una riga separata il messaggio di stato versione.
+Questo messaggio si trova nel testo di questa sessione, PRIMA del blocco "Below is the full content".
+Cerca la riga che inizia con "✅ DevForge" oppure "🔄 Aggiornamento" oppure "DevForge v" e stampala esattamente.
+Se non trovi nessuna di queste righe, non stampare nulla.
 
 <EXTREMELY-IMPORTANT>
 Se pensi che ci sia anche l'1% di possibilita' che una skill si applichi a quello che stai facendo, DEVI ASSOLUTAMENTE invocarla.
