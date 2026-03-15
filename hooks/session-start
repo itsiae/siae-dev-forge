@@ -30,33 +30,29 @@ cat >&2 <<'BANNER'
 BANNER
 
 # Auto-update check: compare installed version with latest GitHub release
-# Runs in background to avoid blocking session start
+# Version check is synchronous so output is visible; only the actual update runs in background
 if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${DEVFORGE_SKIP_UPDATE:-}" != "1" ]; then
-    (
-        LATEST_TAG=$(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
-        # Strip leading 'v' if present for comparison
-        LATEST_VERSION="${LATEST_TAG#v}"
+    LATEST_TAG=$(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+    LATEST_VERSION="${LATEST_TAG#v}"
 
-        # Validate tag format (semver with optional -suffix)
-        if [ -z "$LATEST_VERSION" ] || ! echo "$LATEST_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
-            exit 0
-        fi
-
+    # Validate tag format (semver with optional -suffix)
+    if [ -n "$LATEST_VERSION" ] && echo "$LATEST_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
         # Compare versions using sort -V (version sort) with portability guard
-        if ! printf '1.0\n2.0' | sort -V >/dev/null 2>&1; then
-            exit 0
+        if printf '1.0\n2.0' | sort -V >/dev/null 2>&1; then
+            if [ "$PLUGIN_VERSION" != "$LATEST_VERSION" ] && \
+               [ "$(printf '%s\n%s' "$PLUGIN_VERSION" "$LATEST_VERSION" | sort -V | tail -1)" = "$LATEST_VERSION" ]; then
+                echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
+                echo "   Aggiornamento in corso..." >&2
+                # Only the update itself runs in background to not block session start
+                (claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
+                    echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
+                    echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
+                ) &
+            else
+                echo "✅ DevForge v${PLUGIN_VERSION} — aggiornato" >&2
+            fi
         fi
-        if [ "$PLUGIN_VERSION" != "$LATEST_VERSION" ] && \
-           [ "$(printf '%s\n%s' "$PLUGIN_VERSION" "$LATEST_VERSION" | sort -V | tail -1)" = "$LATEST_VERSION" ]; then
-            echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
-            echo "   Aggiornamento in corso..." >&2
-            claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
-                echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
-                echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
-        else
-            echo "✅ DevForge v${PLUGIN_VERSION} — aggiornato" >&2
-        fi
-    ) &
+    fi
 fi
 
 # Read using-devforge content
