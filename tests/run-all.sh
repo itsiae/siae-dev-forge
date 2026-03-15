@@ -198,6 +198,83 @@ echo ""
 echo "  Comandi totali: ${cmd_count} | OK: ${cmd_ok}"
 TOTAL_PASS=$((TOTAL_PASS + cmd_ok))
 
+# --- Plugin.json Consistency Validation ---
+echo ""
+echo "=== Plugin.json Consistency Validation ==="
+echo ""
+
+consist_ok=0
+consist_fail=0
+
+PLUGIN_JSON="${PLUGIN_ROOT}/.claude-plugin/plugin.json"
+PLUGIN_DESC=$(grep -o '"description"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_JSON" | sed 's/.*"description"[[:space:]]*:[[:space:]]*"//;s/"$//')
+PLUGIN_VER=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PLUGIN_JSON" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"//;s/"$//')
+
+# Count actual skills (directories with SKILL.md)
+ACTUAL_SKILLS=$(find "${PLUGIN_ROOT}/skills" -name "SKILL.md" -maxdepth 2 | wc -l | tr -d ' ')
+# Count actual commands (.md files in commands/)
+ACTUAL_COMMANDS=$(find "${PLUGIN_ROOT}/commands" -name "*.md" -maxdepth 1 | wc -l | tr -d ' ')
+# Count actual agents (.md files in agents/)
+ACTUAL_AGENTS=$(find "${PLUGIN_ROOT}/agents" -name "*.md" -maxdepth 1 | wc -l | tr -d ' ')
+# Count actual hook events in hooks.json
+ACTUAL_HOOKS=$(grep -oE '"(SessionStart|PreToolUse|PostToolUse|Stop)"' "${PLUGIN_ROOT}/hooks/hooks.json" | sort -u | wc -l | tr -d ' ')
+
+# Extract declared counts from description
+DECLARED_SKILLS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ skill' | grep -oE '[0-9]+')
+DECLARED_COMMANDS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ comandi' | grep -oE '[0-9]+')
+DECLARED_AGENTS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ agent' | grep -oE '[0-9]+')
+DECLARED_HOOKS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ hook' | grep -oE '[0-9]+')
+
+# Check skills count
+if [ "$ACTUAL_SKILLS" = "$DECLARED_SKILLS" ]; then
+  echo "  PASS  skill count: ${ACTUAL_SKILLS} actual == ${DECLARED_SKILLS} declared"
+  consist_ok=$((consist_ok + 1))
+else
+  echo "  FAIL  skill count: ${ACTUAL_SKILLS} actual != ${DECLARED_SKILLS} declared in plugin.json"
+  consist_fail=$((consist_fail + 1))
+fi
+
+# Check commands count
+if [ "$ACTUAL_COMMANDS" = "$DECLARED_COMMANDS" ]; then
+  echo "  PASS  commands count: ${ACTUAL_COMMANDS} actual == ${DECLARED_COMMANDS} declared"
+  consist_ok=$((consist_ok + 1))
+else
+  echo "  FAIL  commands count: ${ACTUAL_COMMANDS} actual != ${DECLARED_COMMANDS} declared in plugin.json"
+  consist_fail=$((consist_fail + 1))
+fi
+
+# Check agents count
+if [ "$ACTUAL_AGENTS" = "$DECLARED_AGENTS" ]; then
+  echo "  PASS  agents count: ${ACTUAL_AGENTS} actual == ${DECLARED_AGENTS} declared"
+  consist_ok=$((consist_ok + 1))
+else
+  echo "  FAIL  agents count: ${ACTUAL_AGENTS} actual != ${DECLARED_AGENTS} declared in plugin.json"
+  consist_fail=$((consist_fail + 1))
+fi
+
+# Check hooks count
+if [ "$ACTUAL_HOOKS" = "$DECLARED_HOOKS" ]; then
+  echo "  PASS  hooks count: ${ACTUAL_HOOKS} actual == ${DECLARED_HOOKS} declared"
+  consist_ok=$((consist_ok + 1))
+else
+  echo "  FAIL  hooks count: ${ACTUAL_HOOKS} actual != ${DECLARED_HOOKS} declared in plugin.json"
+  consist_fail=$((consist_fail + 1))
+fi
+
+# Check version format (semver-like with -mvp suffix)
+if echo "$PLUGIN_VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+  echo "  PASS  version format: '${PLUGIN_VER}' is valid semver"
+  consist_ok=$((consist_ok + 1))
+else
+  echo "  FAIL  version format: '${PLUGIN_VER}' is not valid semver"
+  consist_fail=$((consist_fail + 1))
+fi
+
+echo ""
+echo "  Consistency: ${consist_ok} OK | ${consist_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + consist_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + consist_fail))
+
 # --- Visual Design System Validation ---
 echo ""
 echo "=== Visual Design System Validation ==="
@@ -504,7 +581,7 @@ rm -f "$EMPTY_SKILL_LOG" "${HOME}/.claude/.devforge-skill-start"
 # Test: session-start cleans up stale guard directory
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 mkdir -p "${HOME}/.claude/.devforge-session-end-guard"  # simulate stale guard
-bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
+DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
 if [ ! -d "${HOME}/.claude/.devforge-session-end-guard" ]; then
   echo "  PASS  session-start: cleans up stale session_end guard"
   telfunc_ok=$((telfunc_ok + 1))
