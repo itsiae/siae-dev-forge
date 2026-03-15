@@ -23,7 +23,7 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
+Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra esattamente come appare, inclusa qualsiasi riga dopo la cornice di chiusura (es. stato versione). Poi procedi.
 
 <EXTREMELY-IMPORTANT>
 Se pensi che ci sia anche l'1% di possibilita' che una skill si applichi a quello che stai facendo, DEVI ASSOLUTAMENTE invocarla.

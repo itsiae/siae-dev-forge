@@ -61,8 +61,13 @@ if [ -z "$VERSION_STATUS" ] && [ "$PLUGIN_VERSION" != "unknown" ]; then
     VERSION_STATUS="DevForge v${PLUGIN_VERSION}"
 fi
 
-# Read using-devforge content
+# Read using-devforge content and inject version status into the banner block
 using_devforge_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/SKILL.md" 2>&1 || echo "Error reading using-devforge skill")
+# Inject VERSION_STATUS right after the closing banner line (╚══...╝)
+# so Claude prints it as part of the mandatory banner output
+if [ -n "$VERSION_STATUS" ]; then
+    using_devforge_content=$(echo "$using_devforge_content" | sed "s|╚══════════════════════════════════════════════════════════════════╝|╚══════════════════════════════════════════════════════════════════╝\n${VERSION_STATUS}|"  )
+fi
 
 # Generate dynamic skill catalog using skills-core.js
 # Falls back to empty string if node is not available or the script fails
