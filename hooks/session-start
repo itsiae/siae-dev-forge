@@ -140,7 +140,7 @@ echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
 # F4: Detect PR merges in last 24h — use explicit --repo from git remote
 if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     GH_REPO=$(git remote get-url origin 2>/dev/null \
-        | grep -oE '[^/:]+/[^/.]+' | tail -1 || echo "")
+        | sed 's/\.git$//' | grep -oE '[^/:]+/[^/]+$' || echo "")
 
     if [ -n "$GH_REPO" ]; then
         USER_EMAIL=$(devforge_get_user)
