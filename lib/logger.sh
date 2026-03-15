@@ -8,13 +8,26 @@ DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
+# Log rotation: max 50MB, 1 backup
+_devforge_check_rotation() {
+    local max_bytes=52428800
+    if [ -f "$DEVFORGE_LOG_FILE" ]; then
+        local file_size
+        file_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
+        if [ "$file_size" -gt "$max_bytes" ] 2>/dev/null; then
+            mv "$DEVFORGE_LOG_FILE" "${DEVFORGE_LOG_FILE}.1"
+        fi
+    fi
+}
+
 # Extract git context for cross-session correlation
 # Returns: branch|jira_id|project
 devforge_get_git_context() {
     local branch jira_id project
     branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "no-branch")
     project=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
-    jira_id=$(echo "$branch" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+    # Anchored to branch naming convention (feature|bugfix|hotfix)
+    jira_id=$(git branch --show-current 2>/dev/null | grep -oE '(feature|bugfix|hotfix)/[A-Z]+-[0-9]+' | grep -oE '[A-Z]+-[0-9]+' || echo "")
     [ -z "$jira_id" ] && jira_id="null"
     echo "${branch}|${jira_id}|${project}"
 }
@@ -85,6 +98,7 @@ devforge_sanitize_json_str() {
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'
 devforge_log() {
+    _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
     local meta="${3-}"
@@ -110,6 +124,7 @@ devforge_log() {
 # Log with duration measurement
 # Usage: devforge_log_timed <event_type> <status> <start_time_epoch_ns> [meta_json]
 devforge_log_timed() {
+    _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
     local start_ns="$3"

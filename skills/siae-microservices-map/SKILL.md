@@ -244,6 +244,10 @@ Prima del full run, verifica il pattern con 2 repo:
 
 #### 3d — EXTRACT: Dispatch Subagent Paralleli (Full Run)
 
+**Template dispatch subagent:**
+Usa il tool Agent con: `subagent_type: "general-purpose"`, `mode: "bypassPermissions"`, `run_in_background: true`.
+Il prompt deve includere il testo della ISTRUZIONE CRITICA con i placeholder risolti.
+
 **FULL RUN SEMPRE** — non chiedere mai all'utente se fare campione o run completa.
 Tutti i repo enumerati devono essere processati. Nessuna eccezione.
 

@@ -2,6 +2,13 @@
 # PostToolUse hook: after PR creation or push, trigger code-reviewer + security agents
 # Fires on Bash tool completion — checks if the command was gh pr create or git push.
 # Reviews only CHANGED files in the branch (diff vs base branch).
+# ─────────────────────────────────────────────────────────────────
+# Hook:     post-commit-review
+# Evento:   PostToolUse
+# Matcher:  Bash
+# Timeout:  10s — Analisi diff post-push
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
@@ -132,8 +139,9 @@ Invoca la skill siae-devforge:siae-security per verificare SOLO il diff:
 3. Mostra i risultati quando arrivano
 4. Se trovano problemi critici, segnalali PRIMA di qualsiasi altra azione
 
-IMPORTANTE: Gli agent NON devono leggere file con Read o Glob. Tutto il contesto
-necessario e' nel diff. Se un agent ha bisogno di contesto aggiuntivo (es. design doc),
+IMPORTANTE: Analizza SOLO il diff — NON leggere file interi. Gli agent NON devono usare
+Read o Glob per leggere file completi. Tutto il contesto necessario e' nel diff.
+Se un agent ha bisogno di contesto aggiuntivo (es. design doc),
 passa il path nel prompt ma SOLO per i criteri di accettazione, non per rileggere il codice.
 
 NON chiedere all'utente se vuole la review — e' automatica.

@@ -310,6 +310,8 @@ chiedi al developer quale elemento concreto o testo visibile conferma l'esito. N
 
 **Output atteso Step 4.0:** un Test Prompt per ogni TC confermato. Mostrali tutti al developer prima di procedere ai path, in modo che possa correggerli se qualcosa è stato mal interpretato.
 
+**Chi converte:** L'agent stesso prende il Test Prompt canale-agnostico e genera il codice specifico per il canale rilevato (Cypress per web, appium-mcp per mobile). La conversione avviene in Step 4, non in Step 4.0.
+
 ---
 
 #### PATH MOBILE — Appium + BrowserStack App Automate

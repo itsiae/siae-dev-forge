@@ -4,6 +4,13 @@
 #
 # Timestamp chaining: each invocation closes the PREVIOUS skill by computing
 # its duration from the saved timestamp, then records the CURRENT skill start.
+# ─────────────────────────────────────────────────────────────────
+# Hook:     post-skill
+# Evento:   PostToolUse
+# Matcher:  Skill
+# Timeout:  5s — Solo logging JSONL
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 

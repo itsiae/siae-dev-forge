@@ -23,7 +23,7 @@ description: >
 
 # siae-security
 
-> **Tipo:** Passivo + On-demand | **Fase SDLC:** Trasversale (tutte le fasi)
+> **Tipo:** Flexible | **Fase SDLC:** Trasversale (tutte le fasi)
 >
 > Questa skill si attiva su codice security-sensitive: gestione credenziali,
 > IAM policy, encryption, dati personali autori/artisti, codici ISWC/ISRC.

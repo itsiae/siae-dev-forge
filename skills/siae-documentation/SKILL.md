@@ -41,6 +41,8 @@ Visione d'insieme del sistema. Risponde a: "come funziona il sistema e perche' e
 
 > Template: `template/hld-template.md`
 
+Template path: `${SKILL_DIR}/template/hld-template.md` (relativo alla directory della skill)
+
 ### 1.2 LLD (Low Level Design)
 
 Dettaglio implementativo di un componente o feature. Risponde a: "come si implementa concretamente?"
@@ -56,6 +58,8 @@ Dettaglio implementativo di un componente o feature. Risponde a: "come si implem
 
 > Template: `template/lld-template.md`
 
+Template path: `${SKILL_DIR}/template/lld-template.md` (relativo alla directory della skill)
+
 ### 1.3 API Documentation
 
 Documentazione endpoint REST/GraphQL. Segue struttura OpenAPI 3.x.
@@ -69,6 +73,8 @@ Documentazione endpoint REST/GraphQL. Segue struttura OpenAPI 3.x.
 | Esempi               | Request/response completi, cURL                        |
 
 > Template: `template/api-doc-template.md`
+
+Template path: `${SKILL_DIR}/template/api-doc-template.md` (relativo alla directory della skill)
 
 ---
 
