@@ -25,6 +25,11 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 
 Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
 
+Subito dopo il banner, stampa lo stato versione che trovi nel contesto di questa sessione
+(es. "✅ DevForge v1.17.1-mvp — aggiornato" oppure "🔄 Aggiornamento disponibile...").
+Cercalo nel testo che precede questa skill — e' iniettato dinamicamente dal session-start hook.
+Se non lo trovi, non stampare nulla.
+
 <EXTREMELY-IMPORTANT>
 Se pensi che ci sia anche l'1% di possibilita' che una skill si applichi a quello che stai facendo, DEVI ASSOLUTAMENTE invocarla.
 
