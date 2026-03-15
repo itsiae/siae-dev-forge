@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# stop-gate — Stop hook: siae-verification reminder before Claude stops
-# Only fires when the last assistant message contains completion claims.
+# stop-gate — Stop hook: telemetry + siae-verification reminder before Claude stops
 # ─────────────────────────────────────────────────────────────────
 # Hook:     stop-gate
 # Evento:   Stop
@@ -11,62 +10,61 @@
 
 set -euo pipefail
 
-# --- Telemetry: close last skill + session_end (one-shot, background with timeout) ---
+# --- BLOCCO 1: Setup + stdin (F5: read stdin FIRST, consumed once) ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
-# Atomic guard: mkdir fails if directory already exists (POSIX atomic, no TOCTOU race)
+INPUT=$(cat)
+
+# --- BLOCCO 2: Telemetry sincrona (F1: no background, no kill, no disown) ---
 SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
-TELEMETRY_TIMEOUT_SECS=5
 
-# Only emit telemetry once per session (guard against multiple stop-gate fires)
 if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
-    (
-        # Close last skill via timestamp chaining
-        SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
-        if [ -f "$SKILL_TS_FILE" ]; then
-            PREV_DATA=$(cat "$SKILL_TS_FILE")
-            PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
-            PREV_SKILL=$(echo "$PREV_DATA" | cut -d'|' -f2)
-            PREV_PHASE=$(echo "$PREV_DATA" | cut -d'|' -f3)
-            SAFE_PREV_SKILL=$(devforge_sanitize_json_str "$PREV_SKILL")
-            SAFE_PREV_PHASE=$(devforge_sanitize_json_str "$PREV_PHASE")
+    # Close last skill via timestamp chaining
+    SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+    if [ -f "$SKILL_TS_FILE" ]; then
+        PREV_DATA=$(cat "$SKILL_TS_FILE")
+        PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
+        PREV_SKILL=$(echo "$PREV_DATA" | cut -d'|' -f2)
+        PREV_PHASE=$(echo "$PREV_DATA" | cut -d'|' -f3)
+        SAFE_PREV_SKILL=$(devforge_sanitize_json_str "$PREV_SKILL")
+        SAFE_PREV_PHASE=$(devforge_sanitize_json_str "$PREV_PHASE")
 
-            if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
-                devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
-                    "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\"}"
-            fi
-            rm -f "$SKILL_TS_FILE"
+        if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
+            devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
+                "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\"}"
         fi
+        rm -f "$SKILL_TS_FILE"
+    fi
 
-        # Emit session_end event with aggregated counters
-        SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
-        SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
-        SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+    # Emit session_end event with aggregated counters
+    SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
+    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
+    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 
-        SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
-        COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
-        SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+    SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
+    COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
+    SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
-        if [ -n "$SKILLS_LIST" ]; then
-            SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
-        else
-            SKILLS_USED_COUNT=0
-        fi
+    if [ -n "$SKILLS_LIST" ]; then
+        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
+    else
+        SKILLS_USED_COUNT=0
+    fi
 
-        devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
-            "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT}}"
+    devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
+        "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT}}"
 
-        # Cleanup session files (guard persists until next session-start cleans it)
-        rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
-    ) &
-    # Fire-and-forget with timeout — telemetry must never block the stop-gate
-    TELEM_PID=$!
-    ( sleep "$TELEMETRY_TIMEOUT_SECS" && kill "$TELEM_PID" 2>/dev/null ) &
-    disown
+    # Cleanup session files (guard persists until next session-start cleans it)
+    rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
 fi
 # --- End telemetry ---
+
+# --- BLOCCO 3: Verification reminder (F5: skip if stdin empty) ---
+if [ -z "$INPUT" ]; then
+    exit 0
+fi
 
 escape_for_json() {
     local s="$1"
@@ -77,9 +75,6 @@ escape_for_json() {
     s="${s//$'\t'/\\t}"
     printf '%s' "$s"
 }
-
-# Read stdin (JSON payload from Claude Code)
-INPUT=$(cat)
 
 # Extract last assistant message text — cascading fallback: jq → node → python3
 LAST_ASSISTANT_MSG=""
@@ -116,19 +111,13 @@ try:
 except:print('',end='')
     " 2>/dev/null || true)
 else
-    # No JSON parser available — log warning and skip gate
     devforge_log "stop_gate" "warning" "{\"reason\":\"no_json_parser\",\"tried\":\"jq,node,python3\"}"
 fi
 
 # Completion claim keywords (case-insensitive check)
 COMPLETION_KEYWORDS="fatto|fatti|fatta|fatte|fixato|fixata|completato|completata|completati|funziona|done|fixed|pass|implementato|implementata|risolto|risolta|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato|finito|finita|concluso|conclusa|terminato|terminata|pronto|pronta"
 
-# Check if last assistant message contains any completion claim
-# Safety-first: il gate scatta sempre se c'e' un keyword, anche in contesto negato.
-# Falsi positivi (gate scatta quando non dovrebbe) sono preferibili a falsi negativi
-# (gate non scatta quando dovrebbe) per un meccanismo di verifica.
 if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
-    # No completion claim found — exit silently
     exit 0
 fi
 

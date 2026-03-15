@@ -19,11 +19,15 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Extract the command that was executed
+# Extract the command that was executed (best-effort, may truncate on escaped quotes)
 TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
-# Upload telemetry on every commit (non-blocking, background)
-if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+# F2: Detect new commit by comparing HEAD hash with saved hash (robust for heredoc/complex commands)
+LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash"
+CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
+SAVED_HASH=$(cat "$LAST_HASH_FILE" 2>/dev/null || echo "")
+
+if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$SAVED_HASH" ]; then
     source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
     devforge_upload_logs &
 
@@ -46,6 +50,9 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
     CURRENT_COMMITS=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
     echo $((CURRENT_COMMITS + 1)) > "${SESSION_COMMITS_FILE}.tmp" && mv "${SESSION_COMMITS_FILE}.tmp" "$SESSION_COMMITS_FILE"
+
+    # Save current HEAD for next comparison
+    echo "$CURRENT_HEAD" > "$LAST_HASH_FILE"
 fi
 
 # Emit pr_opened event after push if a PR exists (requires gh CLI)

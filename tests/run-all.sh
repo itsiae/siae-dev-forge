@@ -616,9 +616,7 @@ echo "test-skill" > "${HOME}/.claude/.devforge-session-skills"
 # Invoke stop-gate twice — session_end should appear only once
 stop_input='{"messages":[{"role":"assistant","content":"tutto fatto"}]}'
 echo "$stop_input" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true
-sleep 1  # wait for background telemetry
 echo "$stop_input" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true
-sleep 1
 SESSION_END_COUNT=$(grep -c '"event":"session_end"' "$GUARD_LOG" 2>/dev/null || echo "0")
 if [ "$SESSION_END_COUNT" -eq 1 ]; then
   echo "  PASS  session_end guard: emesso esattamente 1 volta su 2 invocazioni stop-gate"
@@ -677,6 +675,68 @@ else
   echo "  FAIL  session-start: VERSION_STATUS missing from additional_context"
   telfunc_fail=$((telfunc_fail + 1))
 fi
+
+# Test F5: stop-gate with empty stdin emits telemetry but no verification JSON
+F5_LOG="/tmp/devforge-test-f5.jsonl"
+rm -f "$F5_LOG"
+export DEVFORGE_LOG_FILE="$F5_LOG"
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
+echo "0" > "${HOME}/.claude/.devforge-session-commits"
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+F5_OUTPUT=$(echo "" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true)
+if [ -z "$F5_OUTPUT" ] && grep -q '"event":"session_end"' "$F5_LOG" 2>/dev/null; then
+  echo "  PASS  stop-gate F5: empty stdin emits session_end, no verification JSON"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  stop-gate F5: empty stdin — output='${F5_OUTPUT}', session_end=$(grep -c session_end "$F5_LOG" 2>/dev/null || echo 0)"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$F5_LOG" "${HOME}/.claude/.devforge-session-start-ns" "${HOME}/.claude/.devforge-session-commits" "${HOME}/.claude/.devforge-session-skills"
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+
+# Test F2: commit_created detection via HEAD hash comparison
+F2_LOG="/tmp/devforge-test-f2.jsonl"
+rm -f "$F2_LOG"
+export DEVFORGE_LOG_FILE="$F2_LOG"
+REAL_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "abc123")
+# Same hash → should NOT emit commit_created
+echo "$REAL_HEAD" > "${HOME}/.claude/.devforge-last-commit-hash"
+echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
+F2_COUNT_SAME=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
+# Different hash → should emit commit_created
+echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash"
+echo "0" > "${HOME}/.claude/.devforge-session-commits"
+echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
+F2_COUNT_DIFF=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
+if [ "$F2_COUNT_SAME" -eq 0 ] && [ "$F2_COUNT_DIFF" -eq 1 ]; then
+  echo "  PASS  post-commit-review F2: hash comparison detects new commit correctly"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  post-commit-review F2: same_hash_events=$F2_COUNT_SAME (want 0), diff_hash_events=$F2_COUNT_DIFF (want 1)"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+rm -f "$F2_LOG" "${HOME}/.claude/.devforge-last-commit-hash" "${HOME}/.claude/.devforge-session-commits"
+
+# Test F3: user cache fallback in devforge_get_user
+F3_CACHE="${HOME}/.claude/.devforge-user"
+F3_BACKUP=""
+[ -f "$F3_CACHE" ] && F3_BACKUP=$(cat "$F3_CACHE")
+echo "cached-test-user@siae.it" > "$F3_CACHE"
+# Call devforge_get_user from a non-git directory where git config fails
+F3_USER=$(cd /tmp && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME_ORIG="$HOME" bash -c "
+  source '${PLUGIN_ROOT}/lib/logger.sh'
+  devforge_get_user
+" 2>/dev/null || echo "")
+if echo "$F3_USER" | grep -qF "cached-test-user@siae.it"; then
+  echo "  PASS  logger.sh F3: user cache fallback works"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  logger.sh F3: user cache returned '${F3_USER}' instead of 'cached-test-user@siae.it'"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+# Restore cache
+if [ -n "$F3_BACKUP" ]; then echo "$F3_BACKUP" > "$F3_CACHE"; else rm -f "$F3_CACHE"; fi
 
 unset DEVFORGE_LOG_FILE
 
