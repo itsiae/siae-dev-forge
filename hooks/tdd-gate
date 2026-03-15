@@ -28,7 +28,7 @@ if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
 fi
 
 # Exclude test files and non-production paths
-EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.java$|IT\.java$|\.spec\.|\.test\.|test_.*\.py$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
 if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
     echo '{}'
     exit 0
