@@ -37,11 +37,15 @@ if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${D
         # Strip leading 'v' if present for comparison
         LATEST_VERSION="${LATEST_TAG#v}"
 
-        if [ -z "$LATEST_VERSION" ]; then
+        # Validate tag format (semver with optional -suffix)
+        if [ -z "$LATEST_VERSION" ] || ! echo "$LATEST_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
             exit 0
         fi
 
-        # Compare versions using sort -V (version sort)
+        # Compare versions using sort -V (version sort) with portability guard
+        if ! printf '1.0\n2.0' | sort -V >/dev/null 2>&1; then
+            exit 0
+        fi
         if [ "$PLUGIN_VERSION" != "$LATEST_VERSION" ] && \
            [ "$(printf '%s\n%s' "$PLUGIN_VERSION" "$LATEST_VERSION" | sort -V | tail -1)" = "$LATEST_VERSION" ]; then
             echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
