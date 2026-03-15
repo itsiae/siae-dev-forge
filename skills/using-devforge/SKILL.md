@@ -31,6 +31,8 @@ Se pensi che ci sia anche l'1% di possibilita' che una skill si applichi a quell
 SE UNA SKILL SI APPLICA AL TUO TASK, NON HAI SCELTA. DEVI USARLA.
 
 Questo non e' negoziabile. Non e' opzionale. Non puoi razionalizzare per evitarlo.
+
+**OBBLIGO CATALOGO:** Per OGNI messaggio utente, DEVI scansionare il Dynamic Skill Catalog in fondo a questo documento. Leggi la colonna **INVOCA SE l'utente menziona** di ogni riga e confrontala col messaggio utente. Se trovi un match anche parziale, invoca la skill corrispondente PRIMA di rispondere. Non saltare mai la scansione del catalogo.
 </EXTREMELY-IMPORTANT>
 
 ## Come Accedere alle Skill
@@ -75,6 +77,28 @@ digraph skill_flow {
 }
 ```
 
+## Git Operations Intercept
+
+<EXTREMELY-IMPORTANT>
+Stai per eseguire QUALSIASI operazione git (`git checkout -b`, `git commit`, `git push`, `git merge`, `git tag`, `gh pr create`)?
+
+STOP. Prima verifica:
+- Hai invocato `siae-git-workflow` in questa sessione?
+  - NO → Invoca PRIMA siae-git-workflow. NON eseguire il comando git.
+  - SI → Procedi seguendo le regole gia' caricate.
+
+Stai per aprire una PR o dichiarare un branch "pronto"?
+- Hai invocato `siae-finishing-branch` in questa sessione?
+  - NO → Invoca PRIMA siae-finishing-branch. NON aprire la PR.
+  - SI → Procedi seguendo il processo a 5 step gia' caricato.
+
+**Ogni operazione git senza la skill caricata = branch naming sbagliato, commit non-conventional, push senza pre-flight, PR senza review.**
+
+Nessuna operazione git e' "troppo semplice" per la skill. Un singolo `git commit` sbagliato inquina la history per sempre.
+</EXTREMELY-IMPORTANT>
+
+---
+
 ## EnterPlanMode Intercept
 
 <EXTREMELY-IMPORTANT>
@@ -109,6 +133,10 @@ Questi pensieri significano STOP — stai razionalizzando:
 | "Faccio solo questa cosa prima" | Controlla PRIMA di fare qualsiasi cosa. |
 | "Mi sembra produttivo" | L'azione indisciplinata spreca tempo. Le skill lo prevengono. |
 | "So cosa significa" | Conoscere il concetto != usare la skill. Invocala. |
+| "E' solo un commit/push veloce" | Ogni commit senza siae-git-workflow = naming sbagliato, no pre-flight. |
+| "Creo il branch e poi carico la skill" | Il branch naming si decide PRIMA di `git checkout -b`. Carica la skill. |
+| "La PR e' banale, non serve finishing-branch" | Anche 1 file cambiato merita test verdi e diff review. Sempre. |
+| "Pusho e poi sistemo" | Dopo il push non sistemi. La history e' pubblica. |
 
 ## Priorita' Skill
 

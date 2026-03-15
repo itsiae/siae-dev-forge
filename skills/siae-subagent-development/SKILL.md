@@ -1,7 +1,7 @@
 ---
 name: siae-subagent-development
 description: >
-  ALWAYS use when dispatching implementation tasks to parallel subagents from a validated plan in the current session.
+  OBBLIGATORIA per dispatchare task implementativi a subagent paralleli da un piano validato nella sessione corrente.
   Trigger: /forge-implement, implementa il piano, dispatcha task, lancia implementer, subagent, controller-subagent, orchestrazione implementazione.
 ---
 
@@ -34,6 +34,16 @@ Nessun task viene dichiarato completo senza:
 1. Implementazione da subagent con contesto fresco
 2. Review di conformita' alla specifica (spec-reviewer)
 3. Review di qualita' del codice (code-quality-reviewer)
+
+<EXTREMELY-IMPORTANT>
+Stai per implementare codice direttamente invece di dispatchare un subagent?
+FERMATI. Ogni task va implementato da un subagent fresco — nessuna eccezione.
+Stai per dichiarare un task completo senza PASS da entrambi i reviewer?
+FERMATI. Nessun completamento senza spec-review + code-quality-review.
+
+"Posso implementare io, conosco il codice" = bias accumulato = bug invisibili.
+"La review e' eccessiva per questo task" = i bug peggiori vengono dai task "semplici".
+</EXTREMELY-IMPORTANT>
 
 ---
 

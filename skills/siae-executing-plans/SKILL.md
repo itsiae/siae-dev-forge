@@ -1,7 +1,7 @@
 ---
 name: siae-executing-plans
 description: >
-  Use when opening a brand-new session to execute an existing plan (not the session where the plan was written).
+  OBBLIGATORIA quando si apre una sessione separata per eseguire un piano esistente (non la sessione dove il piano e' stato scritto).
   Trigger: sessione nuova/separata con piano in docs/plans/, batch execution richiesta,
   piano con REQUIRED SUB-SKILL siae-executing-plans.
   (Per la stessa sessione in cui il piano e' stato scritto usa siae-subagent-development)
@@ -32,6 +32,17 @@ description: >
 LEGGI IL PIANO CRITICAMENTE PRIMA DI TOCCARE QUALSIASI FILE.
 ESEGUI PER BATCH. RIPORTA. ATTENDI FEEDBACK.
 ```
+
+<EXTREMELY-IMPORTANT>
+Stai per implementare task da un piano senza aver letto e rivisto il piano completo?
+FERMATI. Leggi TUTTO il piano prima di toccare qualsiasi file.
+
+Stai per procedere senza checkpoint umano dopo il batch?
+FERMATI. Ogni batch di 3 task richiede report + attesa feedback. Non procedere alla cieca.
+
+Stai per improvvisare qualcosa non previsto dal piano?
+FERMATI. Se non e' nel piano, non farlo. Proponi la modifica nel report e attendi.
+</EXTREMELY-IMPORTANT>
 
 **Annuncia all'inizio:** "Uso siae-executing-plans per implementare il piano."
 

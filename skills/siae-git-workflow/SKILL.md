@@ -1,8 +1,10 @@
 ---
 name: siae-git-workflow
 description: >
-  Trigger: operazioni git (branch, merge, release, tag), inizio feature,
-  preparazione deploy.
+  OBBLIGATORIA per qualsiasi operazione git: git checkout -b, git commit,
+  git push, git merge, git tag, creazione branch, naming branch, conventional
+  commits, pre-flight card, inizio feature, preparazione deploy, promozione
+  ambiente, hotfix, rollback, push remoto, tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
 ---
 
 # SIAE Git Workflow
@@ -27,6 +29,23 @@ description: >
 ```
 NESSUN COMMIT SU MAIN DIRETTO — SEMPRE FEATURE BRANCH + PR + REVIEW
 ```
+
+<EXTREMELY-IMPORTANT>
+Questa skill e' OBBLIGATORIA per QUALSIASI operazione git. Non esiste un commit "troppo piccolo",
+un push "troppo veloce", o una PR "troppo banale" per saltare queste regole.
+
+Se stai per eseguire `git checkout -b`, `git commit`, `git push`, `git merge`, `git tag`,
+o `gh pr create` SENZA aver caricato e seguito questa skill: FERMATI.
+
+Violazioni comuni che questa skill previene:
+- Branch creato senza JIRA ID → impossibile tracciare il lavoro
+- Commit senza conventional format → history illeggibile
+- Push senza pre-flight card → nessun checkpoint prima dell'irreversibile
+- PR senza test verdi → sprechi il tempo dei reviewer
+
+L'unico modo per "saltare" questa skill e' che l'utente scriva esplicitamente:
+"procedi senza git-workflow" — e anche in quel caso, registra il bypass nel commit message.
+</EXTREMELY-IMPORTANT>
 
 ---
 

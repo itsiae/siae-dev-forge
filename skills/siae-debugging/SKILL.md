@@ -1,8 +1,10 @@
 ---
 name: siae-debugging
 description: >
-  Use when encountering any bug, error, or unexpected behavior — before proposing fixes.
-  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso.
+  OBBLIGATORIA prima di proporre qualsiasi fix. Root cause investigation PRIMA di tentare soluzioni.
+  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso, eccezione,
+  stacktrace, crash, errore di compilazione, build failure, 500, timeout, NullPointerException,
+  TypeError, non funziona, rotto, fallisce, non va.
 ---
 
 # SIAE Debugging Sistematico
@@ -38,6 +40,21 @@ I fix casuali sprecano tempo e creano nuovi bug. Le patch rapide mascherano prob
 ```
 NESSUN FIX SENZA ROOT CAUSE INVESTIGATION COMPLETATA (FASE 1)
 ```
+
+<EXTREMELY-IMPORTANT>
+Stai per proporre un fix, scrivere una patch, o suggerire una soluzione?
+Hai completato la Fase 1 (Root Cause Investigation)?
+- NO → FERMATI. Nessun fix senza root cause. Torna alla Fase 1.
+- SI → Procedi con la Fase 2 (Pattern Analysis).
+
+Stai pensando "so gia' cos'e'", "e' un fix veloce", "aggiungo un try-catch"?
+Stai razionalizzando. Il 95% dei "so gia' cos'e'" si rivela sbagliato.
+
+Conseguenze documentate dello skip:
+- Ogni "quick fix" senza root cause ha richiesto in media 2 ulteriori fix
+- Il guess-and-check richiede 2-3 ore di thrashing vs 15-30 min del metodo sistematico
+- I fix senza root cause hanno un first-time fix rate del 40% vs 90% del metodo sistematico
+</EXTREMELY-IMPORTANT>
 
 Se non hai completato la Fase 1, **non puoi proporre fix**. Punto.
 

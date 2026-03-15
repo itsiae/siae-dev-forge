@@ -1,7 +1,7 @@
 ---
 name: siae-automation
 description: >
-  ALWAYS use when setting up E2E test automation, configuring Playwright/Cypress, or creating CI/CD test pipelines.
+  OBBLIGATORIA per setup test automation E2E, configurazione Playwright/Cypress, o creazione pipeline CI/CD test.
   Trigger: automatizza test, setup Playwright, setup Cypress, test E2E, test di regressione automatici, CI/CD pipeline test, GitHub Actions test, /forge-automate.
 ---
 
@@ -29,6 +29,18 @@ description: >
 ```
 NESSUN TEST AUTOMATIZZATO SENZA LISTA TC CONFERMATA DAL DEVELOPER
 ```
+
+<EXTREMELY-IMPORTANT>
+Stai per generare test E2E senza la lista TC confermata dal developer?
+FERMATI. La proposta ROI e' un suggerimento — la conferma esplicita e' obbligatoria.
+
+Stai per automatizzare TUTTI i TC senza valutare il ROI?
+FERMATI. Automatizzare TC con 15 step o logica ambigua genera test fragili
+che si rompono a ogni release. Il ROI serve per scegliere cosa vale la manutenzione.
+
+Stai per procedere senza cercare la TL esistente in Xray?
+FERMATI. Una TL potrebbe esistere da un sprint precedente. Non sovrascrivere lavoro fatto.
+</EXTREMELY-IMPORTANT>
 
 ---
 

@@ -1,8 +1,10 @@
 ---
 name: siae-requesting-review
 description: >
+  OBBLIGATORIA dopo aver aperto una PR. Nessuna PR senza description completa e reviewer assegnato.
   Trigger: "pronto per review", "ho aperto la PR", "chiedo il review",
-  PR aperta senza reviewer assegnato.
+  PR aperta senza reviewer assegnato, assegna reviewer, richiedi review,
+  PR creata, post-PR, reviewer mancante.
 ---
 
 # SIAE Requesting Review — Richiedere una Code Review Efficace
@@ -29,6 +31,17 @@ description: >
 ```
 NESSUNA PR SENZA DESCRIPTION COMPLETA E REVIEWER ASSEGNATO
 ```
+
+<EXTREMELY-IMPORTANT>
+Hai appena aperto o pushato una PR senza description (Cosa/Perche'/Come verificare)?
+FERMATI. Aggiorna la description prima di assegnare il reviewer.
+
+Hai una PR aperta senza reviewer assegnato?
+FERMATI. Una PR senza reviewer e' una PR che nessuno guarda. Assegna ora.
+
+"Il codice e' ovvio, non servono note" = il reviewer non ha il tuo contesto.
+"Aspetto che il reviewer trovi tutto" = stai scaricando la responsabilita'.
+</EXTREMELY-IMPORTANT>
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: siae-writing-plans
 description: >
-  ALWAYS use when transforming an approved design into a concrete step-by-step implementation plan.
+  OBBLIGATORIA per trasformare un design approvato in un piano implementativo step-by-step concreto.
   Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
 ---
 
@@ -26,12 +26,18 @@ description: >
 
 ## HARD-GATE
 
-<HARD-GATE>
+<EXTREMELY-IMPORTANT>
 NON scrivere il piano senza un design approvato. Se non esiste un design doc
 validato dall'utente, torna a `siae-brainstorming` prima.
-</HARD-GATE>
+
+Stai per scrivere task implementativi, step-by-step, o istruzioni per subagent?
+Esiste un design doc approvato in docs/plans/?
+- NO → FERMATI. Torna a siae-brainstorming. Nessun piano senza design.
+- SI → Procedi con la decomposizione in task.
 
 Un piano senza design validato = assunzioni non esaminate = lavoro da rifare.
+Un piano con step vaghi ("aggiungi la validazione") = un piano che fallira'.
+</EXTREMELY-IMPORTANT>
 
 ---
 
