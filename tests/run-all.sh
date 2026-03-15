@@ -591,6 +591,16 @@ else
   rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 fi
 
+# Test: session-start injects VERSION_STATUS into additional_context JSON
+SESSION_JSON=$(DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+if echo "$SESSION_JSON" | grep -q "DevForge v"; then
+  echo "  PASS  session-start: VERSION_STATUS injected in additional_context"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start: VERSION_STATUS missing from additional_context"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 unset DEVFORGE_LOG_FILE
 
 echo ""
