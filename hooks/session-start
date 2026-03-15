@@ -53,8 +53,11 @@ if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${D
                 echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
                 echo "   Aggiornamento in corso..." >&2
                 # Only the update itself runs in background to not block session start
-                # Invalidate cache first: claude plugin update skips re-copy if version string matches
-                (rm -rf "${HOME}/.claude/plugins/cache/siae-devforge" 2>/dev/null; \
+                # 1. Pull marketplace clone: claude plugin update does NOT git pull automatically
+                # 2. Invalidate cache: claude plugin update skips re-copy if version string matches
+                (MARKETPLACE_DIR="${HOME}/.claude/plugins/marketplaces/siae-devforge"; \
+                [ -d "$MARKETPLACE_DIR/.git" ] && git -C "$MARKETPLACE_DIR" pull origin main --ff-only >/dev/null 2>&1; \
+                rm -rf "${HOME}/.claude/plugins/cache/siae-devforge" 2>/dev/null; \
                 claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
                     echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
                     echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
