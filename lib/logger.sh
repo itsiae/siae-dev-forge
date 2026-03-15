@@ -57,10 +57,16 @@ devforge_get_sdlc_phase() {
     esac
 }
 
-# Get user identity: git email → $USER → whoami → unknown
+# Get user identity: repo email → global email → cache → $USER → whoami → unknown
 devforge_get_user() {
     local user
+    # 1. Repo-local git config
     user=$(git config user.email 2>/dev/null)
+    # 2. Global git config
+    [ -z "$user" ] && user=$(git config --global user.email 2>/dev/null)
+    # 3. Session cache (set by session-start)
+    [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ] && user=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null)
+    # 4. OS user
     [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
     echo "$user"
 }
