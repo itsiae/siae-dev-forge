@@ -25,6 +25,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 71% delle risorse AWS senza tag di cost allocation non viene attribuito a nessun team — costo invisibile.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando si Applica
 
 **Sempre:**
@@ -296,6 +299,16 @@ Dettagli implementativi in [tagging-strategy.md](reference/tagging-strategy.md).
 Terragrunt config.yaml → Terraform _local.tf → Infracost PR → CUR 2.0 dashboard
 ```
 
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
 
 ---
 

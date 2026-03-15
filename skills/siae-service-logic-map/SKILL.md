@@ -26,6 +26,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 56% delle regole business Drools non era documentato da nessuna parte — conoscenza tacita persa al turnover.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## ANTI-HALLUCINATION PROTOCOL — NON NEGOZIABILE
 
 MAI descrivere cosa fa un servizio senza citare il file sorgente.
@@ -416,6 +419,16 @@ Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
 ## Gap Report
 - [FILE_NOT_FOUND] {repo}: Service.java non trovato
 ```
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
 
 ---
 

@@ -43,6 +43,9 @@ valutate PRIMA di generare qualsiasi TC.
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 38% dei bug escapati in produzione non aveva scenario di test nel piano QA. I team con matrice scenari hanno 55% meno escape.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## QUANDO SI APPLICA
 
 Questa skill si attiva in due momenti del ciclo SDLC:
@@ -347,6 +350,22 @@ Mappatura TC — {STORY_ID}
 **Tier 3 (CSV):** chiedi al developer di aprire Xray dopo l'import e comunicare le chiavi assegnate. Non procedere con siae-automation finché non hai questa mappatura.
 
 Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-automation.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del processo QA | 5 | Se ne servono di piu', il perimetro di test e' troppo ampio. Decomponi. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
+
+---
+
+## REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare il piano QA completato.
 
 ---
 

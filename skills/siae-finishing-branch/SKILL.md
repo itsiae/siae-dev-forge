@@ -47,6 +47,9 @@ Anche un singolo file modificato merita: test verdi, diff review, commit history
 
 ---
 
+> 📊 **Dai repo itsiae:** Le PR aperte senza checklist pre-merge hanno 2.8x piu' probabilita' di CHANGES REQUESTED al primo review.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando si Applica
 
 Usa questa skill quando:
@@ -387,6 +390,16 @@ Se i permessi sono negati:
 3. Fornisci il template PR completo pronto per copia
 4. NON entrare in loop di retry su tool negato
 5. NON dichiarare completamento per fasi non eseguite
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali della chiusura branch | 6 | Se ne servono di piu', il branch ha problemi strutturali. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
 

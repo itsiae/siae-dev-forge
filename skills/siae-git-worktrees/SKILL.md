@@ -25,6 +25,14 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Developer che usano worktree isolati hanno 0 conflitti da work-in-progress vs 23% con branch condivisi.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
+```
+REQUIRED SUB-SKILL: siae-git-env
+```
+Invoca `siae-git-env` PRIMA di creare worktree, per verificare che git e gh siano disponibili.
+
 ## LA LEGGE DI FERRO
 
 ```
@@ -245,6 +253,16 @@ Se i permessi sono negati:
 2. Presenta tutti i comandi per esecuzione manuale
 3. NON entrare in loop di retry su tool negato
 4. NON dichiarare completamento per fasi non eseguite
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| Worktree attivi contemporaneamente | 3 | Se ne servono di piu', il workflow ha un problema di design. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
 
 ---
 

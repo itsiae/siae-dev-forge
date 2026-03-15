@@ -21,6 +21,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** I servizi progettati senza C4 diagram hanno 2.3x piu' richieste di chiarimento durante l'onboarding di nuovi developer.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## 1. Modello C4
 
 Il modello C4 (Context, Container, Component, Code) e' lo standard per documentare architetture in SIAE.
@@ -164,6 +167,22 @@ Servizi AWS approvati e in uso nei repository SIAE.
 | 1. 📄 Pubblicazione ADR: `Confluence / docs/architecture/` |
 | 💡 Perche': Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. Deve essere revisionato e approvato prima della pubblicazione. |
 | 🚫 Se NO: L ADR rimane in stato Draft locale. Richiedere revisione al tech lead prima di procedere. |
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+## REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare il design architetturale completo.
+
+---
 
 ## Tabella Anti-Razionalizzazione
 

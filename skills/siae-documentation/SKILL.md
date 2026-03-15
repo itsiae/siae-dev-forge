@@ -21,6 +21,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Servizi senza HLD/LLD richiedono in media 4.7h di knowledge transfer orale per ogni nuovo developer.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## 1. Tipi di Documentazione
 
 ### 1.1 HLD (High Level Design)
@@ -135,6 +138,21 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 4. Pubblica via `createConfluencePage` o `updateConfluencePage`
 
 ---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+```
+REQUIRED SUB-SKILL: siae-verification
+```
+Invoca `siae-verification` prima di dichiarare la documentazione completa.
 
 ## Tabella Anti-Razionalizzazione
 

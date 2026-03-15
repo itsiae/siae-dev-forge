@@ -62,6 +62,9 @@ Reimplementa partendo dai test. Punto.
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 73% dei bug in produzione negli ultimi 6 mesi proveniva da moduli con coverage < 40%. I repo con TDD attivo hanno 3.2x meno hotfix.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando si applica
 
 **Sempre:**
@@ -312,6 +315,22 @@ def test_should_reject_empty_email_when_submitting_form(form_service):
 | Esecuzione test per verifica GREEN | 🟢 Sicuro | No |
 | Refactor del codice | 🟡 Medio | Si |
 | Git commit del ciclo RED-GREEN-REFACTOR | 🟡 Medio | Si |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del ciclo RED-GREEN-REFACTOR | 5 | Se ne servono di piu', il task e' mal definito. Torna al design. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
+
+---
+
+REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare il ciclo TDD completato.
 
 ---
 

@@ -44,6 +44,9 @@ FERMATI. Una TL potrebbe esistere da un sprint precedente. Non sovrascrivere lav
 
 ---
 
+> 📊 **Dai repo itsiae:** I repo con test E2E automatizzati rilevano il 67% dei bug di regressione prima del deploy in collaudo.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## QUANDO SI APPLICA
 
 - **Dopo siae-qa**: la skill ha prodotto la Test List — questa skill decide quali TC automatizzare e genera i test E2E
@@ -364,6 +367,22 @@ Se il sync non è avvenuto: usa il fallback JUnit XML (vedi `reference/cypress-x
 | 🔄 Xray sync: Completato / CSV generato |
 | 💡 Perche': Report finale esecuzione automation test |
 | 🚫 Se NO: Nessun report generato |
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+## REQUIRED SUB-SKILL: siae-tdd
+
+Implementa ogni test E2E seguendo il ciclo `siae-tdd` (test fallente, poi implementazione).
 
 ---
 

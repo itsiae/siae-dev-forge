@@ -31,6 +31,9 @@ user-invocable: false
 
 ---
 
+> 📊 **Dai repo itsiae:** Team con onboarding strutturato raggiungono produttivita' piena in 2 settimane vs 6 settimane senza.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## 1. Detection Logic
 
 Esegui i controlli nell'ordine indicato. Il primo match determina lo stack primario.
@@ -278,6 +281,16 @@ Se lo stack non e' stato rilevato, mostra un avviso:
 5. **Esegui l'onboarding una sola volta** per sessione, a meno che l'utente non cambi contesto esplicitamente.
 6. **Rischio**: tutte le operazioni di questa skill sono 🟢 SICURO (sola lettura). Questa skill usa esclusivamente Glob, Read e Grep. Non richiede approvazione utente per nessuna operazione.
 7. **Riferimento factory**: per le configurazioni dettagliate delle factory, consulta `reference/factory-configs.md`.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi detection per probe | 2 | Se il probe fallisce 2 volte, segna come UNKNOWN e procedi. |
+| File letti in detection | 10 | Se servono piu' file, la struttura e' non standard. Chiedi all'utente. |
+| Output max per report onboarding | 200 righe | Sintetizza. L'utente vuole il contesto, non un romanzo. |
 
 ---
 

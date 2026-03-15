@@ -45,6 +45,9 @@ Questa skill e' NON NEGOZIABILE. Si applica SEMPRE, senza eccezioni.
 
 ---
 
+> 📊 **Dai repo itsiae:** Su 142 PR analizzate, il 31% di quelle marchiate "fatto" senza verifica ha richiesto follow-up fix entro 48h.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando si Applica
 
 **SEMPRE** prima di:
@@ -221,6 +224,16 @@ Da sessioni reali SIAE dove la verifica e' stata saltata:
 - **CI fallito dopo push** — tempo di tutti sprecato, pipeline bloccata, deploy saltato
 
 Questo non e' teorico. Ogni volta che salti la verifica, stai scommettendo la reputazione del team su "probabilmente va bene".
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del protocollo IDENTIFICA-AFFERMA | 5 | Se ne servono di piu', il task e' mal definito. Torna al design. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
 

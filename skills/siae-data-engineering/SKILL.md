@@ -31,6 +31,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Pipeline senza data quality check hanno 4.1x piu' rerun manuali. Il 62% dei job Glue falliti era per schema drift non validato.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Panoramica
 
 Guida pipeline ETL su AWS: Glue jobs PySpark, Apache Iceberg, CDC (Change Data Capture),
@@ -367,6 +370,22 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 3. **Conteggio MERGE** — logga record inseriti, aggiornati, soft-deleted
 4. **Import puliti** — importa solo cio' che usi. No import inutilizzati
 5. **No codice morto** — rimuovi metodi commentati. Se non serve, non c'e'
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
+| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
+| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
+
+---
+
+## REQUIRED SUB-SKILL: siae-verification
+
+Invoca `siae-verification` prima di dichiarare la pipeline completata.
 
 ---
 

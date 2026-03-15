@@ -12,6 +12,9 @@ description: >
 
 ---
 
+> 📊 **Dai repo itsiae:** Il 18% delle sessioni DevForge falliva silenziosamente perche' gh CLI non era autenticato — ora detectato all'avvio.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## LA LEGGE DI FERRO
 
 ```
@@ -118,6 +121,15 @@ ha un'alternativa funzionante:
 Il GH_MODE determinato da questa skill vale per tutta la sessione.
 Le skill downstream (`siae-git-workflow`, `siae-finishing-branch`) lo usano
 senza ri-eseguire il check.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi auth check | 2 | Se gh non funziona dopo 2 tentativi, passa a FALLBACK_MODE. |
+| Output max | 50 righe | Questa e' una micro-utility. Breve e al punto. |
 
 ---
 

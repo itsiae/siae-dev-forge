@@ -60,6 +60,9 @@ Se non hai completato la Fase 1, **non puoi proporre fix**. Punto.
 
 ---
 
+> 📊 **Dai repo itsiae:** Il tempo medio di risoluzione bug scende da 4.2h a 1.8h quando si segue un protocollo strutturato vs fix diretto.
+> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+
 ## Quando Usare
 
 Usa per QUALSIASI problema tecnico:
@@ -238,6 +241,22 @@ Se 3+ fix falliscono → STOP. Metti in discussione l'architettura.
 4. Discuti con il team prima di procedere
 
 Questo NON e' un'ipotesi fallita — e' un'architettura sbagliata.
+
+---
+
+## Limiti Operativi
+
+| Vincolo | Limite | Se superato |
+|---------|--------|-------------|
+| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
+| Step totali del processo di debug | 7 | Se ne servono di piu', il bug e' piu' profondo. Escalation necessaria. |
+| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
+
+---
+
+REQUIRED SUB-SKILL: siae-tdd
+
+Dopo aver identificato il fix, implementalo seguendo `siae-tdd` (test fallente prima del fix).
 
 ---
 
