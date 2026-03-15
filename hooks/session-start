@@ -153,6 +153,7 @@ fi
 # session_end telemetry from firing.
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 
 exit 0

@@ -74,17 +74,44 @@ escape_for_json() {
 # Read stdin (JSON payload from Claude Code)
 INPUT=$(cat)
 
-# Extract last assistant message text using jq
-# Handles both 'messages' and 'transcript' keys; content can be string or array of blocks
-LAST_ASSISTANT_MSG=$(echo "$INPUT" | jq -r '
-    (.messages // .transcript // [])
-    | map(select(.role == "assistant"))
-    | last
-    | if . == null then ""
-      elif (.content | type) == "string" then .content
-      else (.content | map(select(.type == "text") | .text) | join(" "))
-      end
-' 2>/dev/null || true)
+# Extract last assistant message text — cascading fallback: jq → node → python3
+LAST_ASSISTANT_MSG=""
+if command -v jq >/dev/null 2>&1; then
+    LAST_ASSISTANT_MSG=$(echo "$INPUT" | jq -r '
+        (.messages // .transcript // [])
+        | map(select(.role == "assistant"))
+        | last
+        | if . == null then ""
+          elif (.content | type) == "string" then .content
+          else (.content | map(select(.type == "text") | .text) | join(" "))
+          end
+    ' 2>/dev/null || true)
+elif command -v node >/dev/null 2>&1; then
+    LAST_ASSISTANT_MSG=$(echo "$INPUT" | node -e "
+        let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{
+        try{const j=JSON.parse(d);const ms=(j.messages||j.transcript||[]).filter(m=>m.role==='assistant');
+        const l=ms[ms.length-1];if(!l){process.stdout.write('');return;}
+        const c=l.content;if(typeof c==='string')process.stdout.write(c);
+        else process.stdout.write((c||[]).filter(b=>b.type==='text').map(b=>b.text).join(' '));
+        }catch(e){process.stdout.write('');}});
+    " 2>/dev/null || true)
+elif command -v python3 >/dev/null 2>&1; then
+    LAST_ASSISTANT_MSG=$(echo "$INPUT" | python3 -c "
+import sys,json
+try:
+    j=json.load(sys.stdin)
+    ms=[m for m in (j.get('messages') or j.get('transcript') or []) if m.get('role')=='assistant']
+    if not ms:print('',end='')
+    else:
+        c=ms[-1].get('content','')
+        if isinstance(c,str):print(c,end='')
+        else:print(' '.join(b.get('text','') for b in c if b.get('type')=='text'),end='')
+except:print('',end='')
+    " 2>/dev/null || true)
+else
+    # No JSON parser available — log warning and skip gate
+    devforge_log "stop_gate" "warning" "{\"reason\":\"no_json_parser\",\"tried\":\"jq,node,python3\"}"
+fi
 
 # Completion claim keywords (case-insensitive check)
 COMPLETION_KEYWORDS="fatto|fixato|completato|funziona|done|fixed|pass|completato con successo|implementato|risolto|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato"
