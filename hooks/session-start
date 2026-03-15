@@ -53,7 +53,9 @@ if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${D
                 echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
                 echo "   Aggiornamento in corso..." >&2
                 # Only the update itself runs in background to not block session start
-                (claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
+                # Invalidate cache first: claude plugin update skips re-copy if version string matches
+                (rm -rf "${HOME}/.claude/plugins/cache/siae-devforge" 2>/dev/null; \
+                claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
                     echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
                     echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
                 ) &
@@ -164,6 +166,7 @@ fi
 # session_end telemetry from firing.
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 
 exit 0

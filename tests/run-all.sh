@@ -399,6 +399,96 @@ fi
 rm -f "$TEST_LOG" "$SKILL_TS_FILE"
 [ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
 
+# Check 7: tdd-gate inietta reminder per file .java senza siae-tdd
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+tdd_java_output=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
+if echo "$tdd_java_output" | grep -q "EXTREMELY_IMPORTANT" && echo "$tdd_java_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/tdd-gate: inietta reminder per .java senza siae-tdd"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non inietta reminder per .java"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 8: tdd-gate silenzioso su file .md
+tdd_md_output=$(echo '{"file_path":"docs/README.md"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_md_output" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: silenzioso su file .md (non produzione)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non silenzioso su file .md"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 9: tdd-gate silenzioso su file test
+tdd_test_output=$(echo '{"file_path":"tests/test_service.py"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_test_output" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: silenzioso su file test (escluso)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non silenzioso su file test"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 10: tdd-gate silenzioso con siae-tdd già invocata
+echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
+tdd_with_skill=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_with_skill" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: silenzioso con siae-tdd in sessione"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non silenzioso con siae-tdd in sessione"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 11: plan-gate inietta reminder senza siae-brainstorming
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+plan_output=$(echo '{"tool_name":"EnterPlanMode"}' | bash "${PLUGIN_ROOT}/hooks/plan-gate" 2>/dev/null; echo "exit:$?")
+if echo "$plan_output" | grep -q "EXTREMELY_IMPORTANT" && echo "$plan_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/plan-gate: inietta reminder senza siae-brainstorming"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/plan-gate: non inietta reminder"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 12: plan-gate silenzioso con siae-brainstorming invocata
+echo "siae-brainstorming" > "${HOME}/.claude/.devforge-session-skills"
+plan_with_skill=$(echo '{"tool_name":"EnterPlanMode"}' | bash "${PLUGIN_ROOT}/hooks/plan-gate" 2>/dev/null)
+if [ "$plan_with_skill" = "{}" ]; then
+  echo "  PASS  hooks/plan-gate: silenzioso con siae-brainstorming in sessione"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/plan-gate: non silenzioso con siae-brainstorming"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 13: pre-commit tool counter incrementa e reset da session-start
+echo "0" > "${HOME}/.claude/.devforge-tool-counter"
+echo '{"command":"ls"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" >/dev/null 2>&1
+COUNTER_VAL=$(cat "${HOME}/.claude/.devforge-tool-counter" 2>/dev/null || echo "0")
+if [ "$COUNTER_VAL" = "1" ]; then
+  echo "  PASS  hooks/pre-commit: tool counter incrementa (0 -> 1)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: tool counter non incrementa (val=$COUNTER_VAL)"
+  hook_fail=$((hook_fail + 1))
+fi
+# Verify session-start resets counter
+DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
+COUNTER_AFTER_RESET=$(cat "${HOME}/.claude/.devforge-tool-counter" 2>/dev/null || echo "X")
+if [ "$COUNTER_AFTER_RESET" = "0" ]; then
+  echo "  PASS  hooks/session-start: resetta tool counter a 0"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/session-start: non resetta tool counter (val=$COUNTER_AFTER_RESET)"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Cleanup session state
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "0" > "${HOME}/.claude/.devforge-tool-counter"
+
 echo ""
 echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
 TOTAL_PASS=$((TOTAL_PASS + hook_ok))

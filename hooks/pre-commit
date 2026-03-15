@@ -24,6 +24,29 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
+# --- Session-aware enforcement + catalog re-injection ---
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+# Tool counter for periodic catalog re-injection
+TOOL_COUNTER_FILE="${HOME}/.claude/.devforge-tool-counter"
+COUNTER=$(cat "$TOOL_COUNTER_FILE" 2>/dev/null || echo "0")
+COUNTER=$((COUNTER + 1))
+echo "$COUNTER" > "$TOOL_COUNTER_FILE"
+
+# Generate catalog re-injection every N Bash calls
+CATALOG_REINJECT=""
+REINJECT_INTERVAL=20
+if [ $((COUNTER % REINJECT_INTERVAL)) -eq 0 ]; then
+    if command -v node >/dev/null 2>&1; then
+        RAW_CATALOG=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" 2>/dev/null || echo "")
+        if [ -n "$RAW_CATALOG" ]; then
+            CATALOG_REINJECT="$RAW_CATALOG"
+        fi
+    fi
+fi
+# --- End session-aware block ---
+
 # Escape string for JSON embedding using bash parameter substitution.
 escape_for_json() {
     local s="$1"
@@ -37,6 +60,11 @@ escape_for_json() {
 
 # Route to appropriate check based on command
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+    # Check if siae-git-workflow was invoked this session
+    SKILL_REMINDER=""
+    if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
+        SKILL_REMINDER="<EXTREMELY_IMPORTANT>\\nDevForge Skill Gate: NON hai invocato siae-git-workflow in questa sessione.\\nDEVI invocarla PRIMA di procedere con il commit.\\nLa skill stabilisce naming convention, conventional commits, e pre-flight checks.\\nInvoca ora: Skill tool -> siae-devforge:siae-git-workflow\\n</EXTREMELY_IMPORTANT>\\n\\n"
+    fi
     : # proceed to quality gate below
 elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
     # Branch check: warn if feature branch without design doc
@@ -77,7 +105,22 @@ elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space
 EOF
     exit 0
 else
-    # All other commands — exit silently
+    # Non-git commands: inject catalog re-injection if counter hit
+    if [ -n "$CATALOG_REINJECT" ]; then
+        catalog_reinject_escaped=$(escape_for_json "$CATALOG_REINJECT")
+        reinject_context="<IMPORTANT>\\nDevForge Skill Catalog (reminder periodico — invoca le skill rilevanti):\\n\\n${catalog_reinject_escaped}\\n</IMPORTANT>"
+
+        cat <<EOF
+{
+  "additional_context": "${reinject_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${reinject_context}"
+  }
+}
+EOF
+        exit 0
+    fi
     echo '{}'
     exit 0
 fi
@@ -238,7 +281,15 @@ Procedi con il commit SOLO se tutte le verifiche bloccanti passano.
 INSTRUCTIONS_EOF
 
 precommit_escaped=$(escape_for_json "$PRECOMMIT_INSTRUCTIONS")
-precommit_context="<EXTREMELY_IMPORTANT>\nDevForge Pre-Commit Quality Gate attivo.\n\n**PRIMA di eseguire qualsiasi commit, DEVI completare TUTTE le verifiche seguenti sui file staged. Usa le pre-flight card del DevForge Visual Design System per segnalare problemi.**\n\n${precommit_escaped}\n</EXTREMELY_IMPORTANT>"
+
+# Compose catalog section if due for re-injection
+catalog_reinject_section=""
+if [ -n "$CATALOG_REINJECT" ]; then
+    catalog_reinject_escaped=$(escape_for_json "$CATALOG_REINJECT")
+    catalog_reinject_section="\\n\\n**DevForge Skill Catalog (re-injection periodica):**\\n\\n${catalog_reinject_escaped}"
+fi
+
+precommit_context="${SKILL_REMINDER}<EXTREMELY_IMPORTANT>\\nDevForge Pre-Commit Quality Gate attivo.\\n\\n**PRIMA di eseguire qualsiasi commit, DEVI completare TUTTE le verifiche seguenti sui file staged.**\\n\\n${precommit_escaped}${catalog_reinject_section}\\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # Keep both shapes for compatibility:

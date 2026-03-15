@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# PreToolUse hook: reminder siae-tdd quando si modifica codice di produzione
+# ─────────────────────────────────────────────────────────────────
+# Hook:     tdd-gate
+# Evento:   PreToolUse
+# Matcher:  Edit, Write
+# Timeout:  5s — Solo check file flat + estensione
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+HOOK_INPUT=$(cat)
+
+# Extract file_path from tool input
+FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+if [ -z "$FILE_PATH" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Check if file is production code (by extension)
+PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.tf$|\.hcl$|\.go$|\.kt$"
+if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
+    echo '{}'
+    exit 0
+fi
+
+# Exclude test files and non-production paths
+EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
+    echo '{}'
+    exit 0
+fi
+
+# Check if siae-tdd was invoked this session
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+    echo '{}'
+    exit 0
+fi
+
+# siae-tdd NOT invoked — inject reminder
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "tdd_gate" "warning" "{\"file_path\":\"${FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
+
+# Escape for JSON
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+BASENAME=$(basename "$FILE_PATH")
+TDD_MSG="STOP — Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd"
+tdd_escaped=$(escape_for_json "$TDD_MSG")
+tdd_context="<EXTREMELY_IMPORTANT>\nDevForge TDD Gate: ${tdd_escaped}\n</EXTREMELY_IMPORTANT>"
+
+cat <<EOF
+{
+  "additional_context": "${tdd_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${tdd_context}"
+  }
+}
+EOF
+exit 0
