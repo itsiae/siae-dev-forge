@@ -182,30 +182,15 @@ Dettagli completi delle configurazioni factory in `reference/factory-configs.md`
 
 Dopo la detection, mostra il seguente messaggio di benvenuto:
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge · Onboarding completato                             ║
-╠══════════════════════════════════════════════════════════════════╣
-║                                                                  ║
-║  📂 Progetto:     <nome directory>                               ║
-║  🏭 Factory:      <factory rilevata>                             ║
-║  🛠️  Stack:        <stack rilevato/i>                            ║
-║  🌍 Ambienti:     sviluppo · collaudo · certificazione · prod    ║
-║  🔄 CI/CD:        GitHub Actions (itsiae/siae-gh-actions v2.x)   ║
-║  📊 Quality:      Qodana                                         ║
-║                                                                  ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Skill disponibili per questo stack:                             ║
-║                                                                  ║
-║  • siae-code-standards   Convenzioni codice per <stack>          ║
-║  • siae-tdd              Test-driven development                 ║
-║  • siae-git-workflow      Branch, merge, release                 ║
-║  • siae-security          Security review                        ║
-║  • <skill specifiche per stack rilevato>                         ║
-║                                                                  ║
-║  Digita /help per la lista completa dei comandi DevForge.        ║
-╚══════════════════════════════════════════════════════════════════╝
-```
+| 🟢 SICURO — 🔨 DevForge · Onboarding completato | |
+|:---|:---|
+| 📂 Progetto | `<nome directory>` |
+| 🏭 Factory | `<factory rilevata>` |
+| 🛠️ Stack | `<stack rilevato/i>` |
+| 🌍 Ambienti | `sviluppo · collaudo · certificazione · prod` |
+| 🔄 CI/CD | `GitHub Actions (itsiae/siae-gh-actions v2.x)` |
+| 📊 Quality | `Qodana` |
+| 🧰 Skill consigliate | `siae-code-standards` · `siae-tdd` · `siae-architecture` · `siae-git-workflow` · `siae-security` |
 
 **Dopo il welcome message**, controlla se la mappa architetturale esiste (permission-free):
 

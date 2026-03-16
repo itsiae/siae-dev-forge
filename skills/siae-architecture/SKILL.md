@@ -138,10 +138,11 @@ Servizi AWS approvati e in uso nei repository SIAE.
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-architecture |
 |:---|
-| ⚠️ WARNING |
+| **⚠️ WARNING** |
 | 🏗️ Contesto: `Modifica architettura sistema esistente in produzione SIAE` |
-| 1. ⚠️ Modifica architettura: `sistema esistente` |
-| 💡 Perche': Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. Rischio regressione e downtime. |
+| **▼ Azione** |
+| 1. ⚠️ Modifica architettura → `sistema esistente` |
+| 💡 Perche': Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. |
 | 🚫 Se NO: La modifica non viene applicata. Documentare la decisione come ADR con stato Rejected. |
 
 1. **Solo pattern reali** — non proporre architetture non presenti nel catalogo (sezione 2).
@@ -154,8 +155,9 @@ Servizi AWS approvati e in uso nei repository SIAE.
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-architecture |
 |:---|
 | 🏗️ Contesto: `Selezione libreria o dipendenza esterna per progetto SIAE` |
-| 1. 📦 Aggiunta dipendenza: `pom.xml / package.json / requirements.txt` |
-| 💡 Perche': Librerie esterne introducono rischi di licenza, vulnerabilita' CVE e debito tecnico. Devono essere valutate rispetto ai pattern SIAE approvati. |
+| **▼ Azione** |
+| 1. 📦 Aggiunta dipendenza → `pom.xml / package.json / requirements.txt` |
+| 💡 Perche': Librerie esterne introducono rischi di licenza, CVE e debito tecnico. |
 | 🚫 Se NO: Non aggiungere la dipendenza. Rivalutare se esiste un servizio AWS o modulo interno equivalente. |
 
 5. **Diagrammi in Mermaid** — tutti i diagrammi architetturali devono essere in sintassi Mermaid,
@@ -164,8 +166,9 @@ Servizi AWS approvati e in uso nei repository SIAE.
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-architecture |
 |:---|
 | 🏗️ Contesto: `Pubblicazione ADR su Confluence per decisione architetturale SIAE` |
-| 1. 📄 Pubblicazione ADR: `Confluence / docs/architecture/` |
-| 💡 Perche': Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. Deve essere revisionato e approvato prima della pubblicazione. |
+| **▼ Azione** |
+| 1. 📄 Pubblicazione ADR → `Confluence / docs/architecture/` |
+| 💡 Perche': Un ADR pubblicato e' un artefatto ufficiale che impatta tutti i team. |
 | 🚫 Se NO: L ADR rimane in stato Draft locale. Richiedere revisione al tech lead prima di procedere. |
 
 ## Limiti Operativi

@@ -99,10 +99,11 @@ Pattern: `{domain}-{function}-{type}`
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-code-standards |
 |:---|
-| ⚠️ WARNING |
+| **⚠️ WARNING** |
 | ⚙️ Operazione: `Modifica configurazione build (POM, package.json)` |
-| 1. 🔧 Modifica dipendenze / plugin / versioni nel file di build: `pom.xml / package.json` |
-| 💡 Perche': Modifiche al POM o package.json impattano tutte le dipendenze, versioni e plugin del progetto. Un errore puo cambiare il comportamento di build in tutti gli ambienti SIAE. |
+| **▼ Azione** |
+| 1. 🔧 Modifica dipendenze / plugin / versioni nel file di build → `pom.xml / package.json` |
+| 💡 Perche': Modifiche al POM o package.json impattano tutte le dipendenze, versioni e plugin del progetto. |
 | 🚫 Se NO: La modifica non viene applicata. Verifica le regole parent POM e versioning prima di procedere. |
 
 ### 2.4 Pattern obbligatori
@@ -115,8 +116,9 @@ Pattern: `{domain}-{function}-{type}`
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-code-standards |
 |:---|
 | 📝 Operazione: `Creazione nuovo file sorgente` |
-| 1. ✏️ Crea nuovo file sorgente seguendo naming e package SIAE: `src/main/java/it/siae/{dominio}/{modulo}/` |
-| 💡 Perche': La creazione di un nuovo file introduce naming, package e struttura che devono rispettare i pattern SIAE sin dal primo commit. Errori di naming o package sono costosi da correggere in seguito. |
+| **▼ Azione** |
+| 1. ✏️ Crea nuovo file sorgente seguendo naming e package SIAE → `src/main/java/it/siae/{dominio}/{modulo}/` |
+| 💡 Perche': La creazione di un nuovo file introduce naming, package e struttura che devono rispettare i pattern SIAE. |
 | 🚫 Se NO: Il file non viene creato. Verifica naming conventions e package structure prima di procedere. |
 
 ---
@@ -252,15 +254,17 @@ Tutti gli stack SIAE usano logging strutturato in formato JSON.
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-code-standards |
 |:---|
 | 📝 Operazione: `Modifica file sorgente esistente` |
-| 1. ✏️ Modifica codice esistente rispettando lo stile e le convenzioni del file: `<path file target>` |
-| 💡 Perche': Modificare un file sorgente puo introdurre inconsistenze di stile, naming o struttura rispetto al codice esistente. Seguire il pattern gia presente nel file e prioritario sulle linee guida generali. |
+| **▼ Azione** |
+| 1. ✏️ Modifica codice esistente rispettando lo stile e le convenzioni del file → `<path file target>` |
+| 💡 Perche': Modificare un file sorgente puo introdurre inconsistenze di stile rispetto al codice esistente. |
 | 🚫 Se NO: La modifica non viene applicata. Analizza le convenzioni del file prima di procedere. |
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-code-standards |
 |:---|
 | 📝 Operazione: `Refactoring naming / struttura` |
-| 1. ✏️ Rinomina classi, metodi, file o riorganizza la struttura del progetto: `<path moduli coinvolti>` |
-| 💡 Perche': Il refactoring di naming o struttura impatta tutti i riferimenti al simbolo rinominato. In un monorepo con 816 repo, un rename non coordinato puo rompere dipendenze interne e build pipeline. |
+| **▼ Azione** |
+| 1. ✏️ Rinomina classi, metodi, file o riorganizza la struttura del progetto → `<path moduli coinvolti>` |
+| 💡 Perche': Il refactoring di naming o struttura impatta tutti i riferimenti. Un rename non coordinato puo rompere dipendenze e build pipeline. |
 | 🚫 Se NO: Il refactoring non viene eseguito. Verifica tutti i riferimenti e allinea il team prima di procedere. |
 
 ---

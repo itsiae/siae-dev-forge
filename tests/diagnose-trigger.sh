@@ -23,12 +23,10 @@ done
 COMMANDS_DIR="$PROJECT_ROOT/.claude/commands"
 mkdir -p "$COMMANDS_DIR"
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  DevForge — Trigger Diagnostics                              ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  Project root: ${PROJECT_ROOT}"
-echo "║  Commands dir: ${COMMANDS_DIR}"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · Trigger Diagnostics |"
+echo "|:---|"
+echo "| 📂 Project root: \`${PROJECT_ROOT}\` |"
+echo "| 📁 Commands dir: \`${COMMANDS_DIR}\` |"
 echo ""
 
 # Remove CLAUDECODE env for nesting
@@ -173,6 +171,5 @@ else
 fi
 echo ""
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  Diagnostica completata                                      ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · Diagnostica completata |"
+echo "|:---|"

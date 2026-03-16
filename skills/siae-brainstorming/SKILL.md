@@ -153,9 +153,9 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-brainstorming |
 |:---|
-| 📝 Topic: `<topic del design>` |
-| 📂 Path: `docs/plans/YYYY-MM-DD-<topic>-design.md` |
-| ✅ Design approvato: `Si` |
+| 📝 Topic: `<topic del design>` · ✅ Design approvato: `Si` |
+| **▼ Azione** |
+| 1. ✏️ Azione: Scrittura design doc → `docs/plans/YYYY-MM-DD-<topic>-design.md` |
 | 💡 Perche': Scrittura design doc dopo approvazione utente |
 | 🚫 Se NO: Non scrivere il file senza approvazione esplicita del design |
 
@@ -166,8 +166,8 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-brainstorming |
 |:---|
 | 📝 Topic: `<topic del design>` |
-| 1. 📌 Azione: `git commit` design doc |
-| 📂 `docs/plans/YYYY-MM-DD-<topic>-design.md` |
+| **▼ Azione** |
+| 1. 📌 Azione: `git commit` design doc → `docs/plans/YYYY-MM-DD-<topic>-design.md` |
 | 💡 Perche': Registra il design approvato nella history del repository |
 | 🚫 Se NO: Il file esiste ma non è committato — invisibile in git history |
 
@@ -322,9 +322,9 @@ Se l'utente conferma, mostra la pre-flight card e poi crea il ticket con `create
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-brainstorming |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🎫 Ticket: `<Tipo> — <Sommario>` |
-| 🌍 Project: `<JIRA project key>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🎫 Ticket: `<Tipo> — <Sommario>` · 🌍 Project: `<JIRA project key>` |
+| **▼ Azione** |
 | 1. 📤 Azione: Creazione ticket JIRA via MCP Atlassian |
 | 💡 Perche': Il ticket viene creato nel sistema JIRA del team — visibile a tutti |
 | 🚫 Se NO: Il ticket non viene creato — il lavoro resta non tracciato in JIRA |

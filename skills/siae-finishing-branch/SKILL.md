@@ -114,8 +114,8 @@ Esegui un rebase o merge da sviluppo prima di procedere.
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finishing-branch |
 |:---|
 | 🌿 Branch: `<branch-name>` |
-| 1. 🧪 Azione: Esecuzione suite di test completa |
-| 📂 `<directory test>` |
+| **▼ Azione** |
+| 1. 🧪 Azione: Esecuzione suite di test completa → `<directory test>` |
 | 💡 Perche': Verifica che il branch non abbia regressions prima di aprire la PR |
 | 🚫 Se NO: La suite non viene eseguita — rischio di aprire PR con test rossi |
 
@@ -254,12 +254,10 @@ Senza questa autorizzazione esplicita, NON procedere con Step 5.
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-finishing-branch |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🌿 Branch: `feature/{JIRA-ID}-descrizione` |
-| 🎯 Target: `sviluppo` |
-| 📝 Commit: `N commit` |
-| 1. 🚀 Azione: Push branch + apertura PR |
-| 📂 `origin/feature/{JIRA-ID}-descrizione` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `feature/{JIRA-ID}-descrizione` · 🎯 Target: `sviluppo` · 📝 Commit: `N commit` |
+| **▼ Azione** |
+| 1. 🚀 Azione: Push branch + apertura PR → `origin/feature/{JIRA-ID}-descrizione` |
 | 💡 Perche': Branch pronto, test verdi, diff revisionato |
 | 🚫 Se NO: Il branch resta locale, nessuna PR aperta |
 

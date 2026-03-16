@@ -205,8 +205,8 @@ Regole aggiuntive:
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-git-workflow |
 |:---|
 | 🌿 Branch: `<branch-name>` |
-| 1. 📌 Azione: `git add` + `git commit` |
-| 📂 `<file/i modificati>` |
+| **▼ Azione** |
+| 1. 📌 Azione: `git add` + `git commit` → `<file/i modificati>` |
 | 💡 Perche': Si stanno registrando modifiche nella history locale del branch |
 | 🚫 Se NO: Le modifiche restano unstaged / uncommitted |
 
@@ -214,11 +214,10 @@ Regole aggiuntive:
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🌿 Branch: `<branch-name>` |
-| 🎯 Target: `<branch-target o remote>` |
-| 1. 🚀 Azione: `git push / merge / tag` |
-| 📂 `origin/<branch-name>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `<branch-name>` · 🎯 Target: `<branch-target o remote>` |
+| **▼ Azione** |
+| 1. 🚀 Azione: `git push / merge / tag` → `origin/<branch-name>` |
 | 💡 Perche': L'operazione modifica lo stato del repository remoto o condiviso |
 | 🚫 Se NO: L'operazione non viene eseguita — lo stato remoto rimane invariato |
 
@@ -347,12 +346,10 @@ git tag -d PRODUZIONE
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-workflow |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🏷️ Tag da eliminare: `<tag-name>` |
-| 🌍 Ambiente: `PRODUZIONE` |
-| 📝 Commit stabile: `<commit-hash>` |
-| 1. ⚠️ Azione: Cancellazione tag remoto (trigga rollback deploy) |
-| 📂 `origin/refs/tags/<tag-name>` |
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🏷️ Tag da eliminare: `<tag-name>` · 🌍 Ambiente: `PRODUZIONE` · 📝 Commit stabile: `<commit-hash>` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Cancellazione tag remoto (trigga rollback deploy) → `origin/refs/tags/<tag-name>` |
 | 💡 Perche': Rollback necessario per incident/bug critico in produzione |
 | 🚫 Se NO: Il tag resta, nessun rollback — il deploy corrente rimane attivo |
 

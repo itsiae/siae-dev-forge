@@ -142,10 +142,9 @@ date -u +"%Y-%m-%dT%H:%M:%SZ"
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-codebase-map |
 |:---|
-| 📊 File analizzati: `<N> file, <N> token` |
-| 🤖 Subagent: `<N> report sintetizzati` |
-| 1. ✏️ Azione: Scrittura mappa codebase |
-| 📂 `docs/CODEBASE_MAP.md` |
+| 📊 File analizzati: `<N> file, <N> token` · 🤖 Subagent: `<N> report sintetizzati` |
+| **▼ Azione** |
+| 1. ✏️ Azione: Scrittura mappa codebase → `docs/CODEBASE_MAP.md` |
 | 💡 Perche': Analisi completa, mappa pronta per scrittura |
 | 🚫 Se NO: La mappa non viene scritta, analisi disponibile solo in chat |
 
@@ -211,10 +210,9 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-codebase-map |
 |:---|
-| 📋 Sezione: Architettura Codebase |
-| 🔄 Tipo: `<nuovo | aggiornamento>` |
-| 1. 📝 Azione: Aggiornamento sezione architettura |
-| 📂 `CLAUDE.md` |
+| 📋 Sezione: `Architettura Codebase` · 🔄 Tipo: `<nuovo | aggiornamento>` |
+| **▼ Azione** |
+| 1. 📝 Azione: Aggiornamento sezione architettura → `CLAUDE.md` |
 | 💡 Perche': Mappa aggiornata, CLAUDE.md da sincronizzare |
 | 🚫 Se NO: CLAUDE.md non aggiornato, future sessioni usano info vecchie |
 

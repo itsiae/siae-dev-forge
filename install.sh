@@ -17,9 +17,8 @@ warning() { echo -e "${YELLOW}!${NC} $1"; }
 error()   { echo -e "${RED}✗${NC} $1"; exit 1; }
 
 echo ""
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║       siae-devforge — Installazione plugin           ║"
-echo "╚══════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · Installazione plugin |"
+echo "|:---|"
 echo ""
 
 # Verifica prerequisiti
@@ -75,9 +74,9 @@ else
 fi
 
 echo ""
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║  Installazione completata. Riavvia Claude Code.      ║"
-echo "╚══════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · Installazione completata |"
+echo "|:---|"
+echo "| 💡 Riavvia Claude Code per attivare il plugin. |"
 echo ""
 echo "  Per aggiornare in futuro, riesegui:"
 echo "    bash <(gh api repos/${GITHUB_REPO}/contents/install.sh -q .content | base64 -d)"

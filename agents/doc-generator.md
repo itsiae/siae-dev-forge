@@ -311,14 +311,10 @@ Usa `contentFormat: "markdown"` — il contenuto e' gia' in Markdown.
 
 Al termine della generazione, mostra un riepilogo:
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — Doc Generator · Riepilogo                         ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Documento:    {tipo} — {nome sistema/componente}                ║
-║  Sezioni:      {N} sezioni compilate                             ║
-║  Diagrammi:    {N} diagrammi Mermaid generati                    ║
-║  Output:       {percorso file Markdown}                          ║
-║  Confluence:   {pubblicato / non richiesto}                      ║
-╚══════════════════════════════════════════════════════════════════╝
-```
+| 🟢 SICURO — 🔨 DevForge · Doc Generator · Riepilogo |
+|:---|
+| 📄 Documento: `{tipo} — {nome sistema/componente}` |
+| 📑 Sezioni: `{N} sezioni compilate` |
+| 📊 Diagrammi: `{N} diagrammi Mermaid generati` |
+| 📂 Output: `{percorso file Markdown}` |
+| ☁️ Confluence: `{pubblicato / non richiesto}` |

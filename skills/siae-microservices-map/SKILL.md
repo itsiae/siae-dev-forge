@@ -172,11 +172,10 @@ gh api /orgs/{org}/repos?per_page=100&type=all --paginate \
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-microservices-map |
 |:---|
-| 📦 Repo da analizzare: `{N repo}` |
-| 🏢 Organizzazione: `{org}` |
-| 🔍 Pattern: `{pattern}` |
-| 1. 🌐 Fetch file evidenza per ogni repo: `GitHub API` |
-| 2. 🤖 Dispatch subagent paralleli: `1 subagent per repo` |
+| 📦 Repo da analizzare: `{N repo}` · 🏢 Organizzazione: `{org}` · 🔍 Pattern: `{pattern}` |
+| **▼ Azioni** |
+| 1. 🌐 Fetch file evidenza per ogni repo → `GitHub API` |
+| 2. 🤖 Dispatch subagent paralleli → `1 subagent per repo` |
 | 💡 Perche': Lettura file da N repository remoti |
 | 🚫 Se NO: Analisi non eseguita, mappa non generata |
 
@@ -376,10 +375,9 @@ Aggrega tutte le schede evidenza:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-microservices-map |
 |:---|
-| 📊 Repo mappati: `{N}/{total}` |
-| 🔗 Edge confermati: `{N}` |
-| ⚠️ Edge UNVERIFIED: `{N}` |
-| 1. 📝 Scrittura SYSTEM_MAP.md: `docs/SYSTEM_MAP.md` |
+| 📊 Repo mappati: `{N}/{total}` · 🔗 Edge confermati: `{N}` · ⚠️ Edge UNVERIFIED: `{N}` |
+| **▼ Azioni** |
+| 1. 📝 Scrittura SYSTEM_MAP.md → `docs/SYSTEM_MAP.md` |
 | 💡 Perche': Creazione file documentazione architettura sistema |
 | 🚫 Se NO: Mappa presentata solo in chat — copiare manualmente |
 

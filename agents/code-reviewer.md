@@ -278,17 +278,13 @@ per severity in ordine decrescente di gravita'.
 
 ### Formato del Report
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — CODE REVIEW REPORT                                ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Progetto:    <nome progetto>                                    ║
-║  Branch:      <nome branch>                                      ║
-║  Stack:       <stack rilevato>                                   ║
-║  Reviewer:    DevForge Code Reviewer Agent                       ║
-║  Data:        <data review>                                      ║
-╚══════════════════════════════════════════════════════════════════╝
-```
+| 🟢 SICURO — 🔨 DevForge · Code Review Report |
+|:---|
+| 📂 Progetto: `<nome progetto>` |
+| 🌿 Branch: `<nome branch>` |
+| 🛠️ Stack: `<stack rilevato>` |
+| 🤖 Reviewer: `DevForge Code Reviewer Agent` |
+| 📅 Data: `<data review>` |
 
 ### Formato di Ogni Issue
 

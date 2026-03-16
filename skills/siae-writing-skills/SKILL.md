@@ -120,19 +120,19 @@ Applica TDD alla documentazione. Vedi [reference/testing-skills.md](reference/te
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
 |:---|
-| 🛠️ Operazione: `Creazione directory skill` |
-| 📁 Skill: `<nome skill che si sta creando>` |
-| 1. ✏️ Crea directory: `skills/<nome-skill>/` |
-| 💡 Perche': La creazione della directory introduce un nuovo percorso nel plugin; un nome errato o duplicato rompe il catalogo skill e la discovery automatica. |
+| 🛠️ Operazione: `Creazione directory skill` · 📁 Skill: `<nome skill che si sta creando>` |
+| **▼ Azione** |
+| 1. ✏️ Crea directory → `skills/<nome-skill>/` |
+| 💡 Perche': Un nome errato o duplicato rompe il catalogo skill e la discovery automatica. |
 | 🚫 Se NO: La directory skill non viene creata e nessun file viene scritto. |
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
 |:---|
-| 🛠️ Operazione: `Scrittura SKILL.md e reference files` |
-| 📁 Skill: `<nome skill che si sta creando>` |
-| 1. ✏️ Scrivi SKILL.md: `skills/<nome-skill>/SKILL.md` |
-| 2. ✏️ Scrivi reference files: `skills/<nome-skill>/reference/` |
-| 💡 Perche': La scrittura di SKILL.md e dei file reference definisce il comportamento della skill in modo permanente; errori nel frontmatter o nella struttura impediscono la corretta attivazione da parte di Claude. |
+| 🛠️ Operazione: `Scrittura SKILL.md e reference files` · 📁 Skill: `<nome skill che si sta creando>` |
+| **▼ Azione** |
+| 1. ✏️ Scrivi SKILL.md → `skills/<nome-skill>/SKILL.md` |
+| 2. ✏️ Scrivi reference files → `skills/<nome-skill>/reference/` |
+| 💡 Perche': Errori nel frontmatter o nella struttura impediscono la corretta attivazione da parte di Claude. |
 | 🚫 Se NO: SKILL.md e i file reference non vengono scritti; la skill non esiste nel plugin. |
 
 Usa il template in [reference/skill-template.md](reference/skill-template.md).
@@ -155,10 +155,10 @@ Usa il template in [reference/skill-template.md](reference/skill-template.md).
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
 |:---|
-| 🛠️ Operazione: `Modifica using-devforge per registrazione` |
-| 📁 Skill: `<nome skill che si sta creando>` |
-| 1. ✏️ Registra skill in using-devforge: `skills/using-devforge/SKILL.md` |
-| 💡 Perche': La modifica di using-devforge aggiorna il catalogo centrale del plugin; un errore nella registrazione rende la skill invisibile o rompe la discovery per tutti i developer. |
+| 🛠️ Operazione: `Modifica using-devforge per registrazione` · 📁 Skill: `<nome skill che si sta creando>` |
+| **▼ Azione** |
+| 1. ✏️ Registra skill in using-devforge → `skills/using-devforge/SKILL.md` |
+| 💡 Perche': Un errore nella registrazione rende la skill invisibile o rompe la discovery per tutti i developer. |
 | 🚫 Se NO: La skill non viene registrata in using-devforge e non sara' inclusa nel catalogo attivo del plugin. |
 
 Per referenziare altre skill, usa il pattern `REQUIRED SUB-SKILL:`:
@@ -174,11 +174,11 @@ Questo dice a Claude di invocare la skill specificata come prerequisito.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-skills |
 |:---|
-| 🛠️ Operazione: `Test di attivazione con prompt` |
-| 📁 Skill: `<nome skill che si sta creando>` |
-| 1. ✏️ Esegui prompt di attivazione: `skills/<nome-skill>/SKILL.md` |
-| 💡 Perche': Il test di attivazione verifica che la skill venga caricata da Claude nel contesto corretto; un test eseguito su una skill mal configurata puo' dare falsi positivi e mascherare problemi di trigger. |
-| 🚫 Se NO: Il test di attivazione non viene eseguito e non si ha garanzia che la skill funzioni correttamente in produzione. |
+| 🛠️ Operazione: `Test di attivazione con prompt` · 📁 Skill: `<nome skill che si sta creando>` |
+| **▼ Azione** |
+| 1. ✏️ Esegui prompt di attivazione → `skills/<nome-skill>/SKILL.md` |
+| 💡 Perche': Un test su una skill mal configurata puo' dare falsi positivi e mascherare problemi di trigger. |
+| 🚫 Se NO: Il test di attivazione non viene eseguito e non si ha garanzia che la skill funzioni in produzione. |
 
 Checklist di validazione:
 

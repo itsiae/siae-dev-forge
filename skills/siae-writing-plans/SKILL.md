@@ -192,10 +192,9 @@ Committa il file piano:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-plans |
 |:---|
-| 📋 Piano: `<filename>.md` |
-| 🔢 Task: `<N> task definiti` |
-| 1. 📌 Azione: Commit piano implementativo |
-| 📂 `docs/plans/<filename>.md` |
+| 📋 Piano: `<filename>.md` · 🔢 Task: `<N> task definiti` |
+| **▼ Azione** |
+| 1. 📌 Azione: Commit piano implementativo → `docs/plans/<filename>.md` |
 | 💡 Perche': Piano validato, pronto per commit |
 | 🚫 Se NO: Il piano resta non committato |
 

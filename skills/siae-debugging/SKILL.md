@@ -190,10 +190,9 @@ Devi completare ogni fase PRIMA di procedere alla successiva.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-debugging |
 |:---|
-| 🔑 Root cause: `<descrizione root cause identificata>` |
-| 📊 Ipotesi: Confermata in Fase 3 |
-| 1. 🧪 Azione: Scrivi test di regressione + fix minimale |
-| 📂 `<file target>` |
+| 🔑 Root cause: `<descrizione root cause identificata>` · 📊 Ipotesi: Confermata in Fase 3 |
+| **▼ Azione** |
+| 1. 🧪 Azione: Scrivi test di regressione + fix minimale → `<file target>` |
 | 💡 Perche': Root cause confermata, fix minimale pronto |
 | 🚫 Se NO: Nessun fix applicato, torna a Fase 3 per nuova ipotesi |
 

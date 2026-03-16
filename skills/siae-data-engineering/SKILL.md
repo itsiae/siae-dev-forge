@@ -130,12 +130,10 @@ class NomeJob(IcebergGlueJob, DatePartitionedGlueJob):
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🏗️ Ambiente: `<ambiente>` |
-| 📋 Job: `<job-name>` |
-| 🔄 Layer: `<bronze\|silver>` |
-| 1. ⚠️ Azione: Deploy Glue job via terraform apply |
-| 📂 `<modulo terraform>` |
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🏗️ Ambiente: `<ambiente>` · 📋 Job: `<job-name>` · 🔄 Layer: `<bronze\|silver>` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Deploy Glue job via terraform apply → `<modulo terraform>` |
 | 💡 Perche': Job aggiornato, test locali verdi |
 | 🚫 Se NO: STOP — job non deployato, versione precedente resta attiva |
 
@@ -143,12 +141,10 @@ class NomeJob(IcebergGlueJob, DatePartitionedGlueJob):
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🗄️ Database: `<glue-database>` |
-| 🔧 Tabella: `<table-name>` |
-| 📦 Downstream: `<query/job dipendenti>` |
-| 1. 🔧 Azione: Modifica schema Glue Catalog (backward compatibility) |
-| 📂 `<file schema/terraform>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🗄️ Database: `<glue-database>` · 🔧 Tabella: `<table-name>` · 📦 Downstream: `<query/job dipendenti>` |
+| **▼ Azione** |
+| 1. 🔧 Azione: Modifica schema Glue Catalog (backward compatibility) → `<file schema/terraform>` |
 | 💡 Perche': Schema da aggiornare per nuovi requisiti dati |
 | 🚫 Se NO: Schema invariato, downstream non impattati |
 
@@ -223,12 +219,10 @@ RetrieveTablesToUpdate (Lambda)
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 📋 Job: `<job-name>` |
-| 🏗️ Ambiente: `<ambiente>` |
-| 🔧 Parametri: `<parametri input>` |
-| 1. 🖥️ Azione: Esecuzione manuale Glue job (consuma risorse, scrive S3) |
-| 📂 `aws glue start-job-run --job-name <name>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 📋 Job: `<job-name>` · 🏗️ Ambiente: `<ambiente>` · 🔧 Parametri: `<parametri input>` |
+| **▼ Azione** |
+| 1. 🖥️ Azione: Esecuzione manuale Glue job (consuma risorse, scrive S3) → `aws glue start-job-run --job-name <name>` |
 | 💡 Perche': Esecuzione manuale necessaria per `<motivazione>` |
 | 🚫 Se NO: Job non eseguito, nessun dato processato |
 
@@ -290,12 +284,10 @@ Per dati raw prima dell'ingestion nel bronze.
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🗄️ Bucket: `<bucket-name>` |
-| 📁 Prefix: `<s3-prefix>` |
-| 📊 File coinvolti: `<N> file, <size>` |
-| 1. 🗑️ Azione: Cancellazione dati S3 (irreversibile senza backup) |
-| 📂 `s3://<bucket>/<prefix>` |
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🗄️ Bucket: `<bucket-name>` · 📁 Prefix: `<s3-prefix>` · 📊 File coinvolti: `<N> file, <size>` |
+| **▼ Azione** |
+| 1. 🗑️ Azione: Cancellazione dati S3 (irreversibile senza backup) → `s3://<bucket>/<prefix>` |
 | 💡 Perche': Dati obsoleti/corrotti da rimuovere |
 | 🚫 Se NO: STOP — dati preservati, nessuna cancellazione |
 

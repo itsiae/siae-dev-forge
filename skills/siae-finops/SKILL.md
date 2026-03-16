@@ -91,9 +91,12 @@ Region:   eu-west-1
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-finops |
 |:---|
-| 🔍 Azione: Analisi FinOps completa |
-| ☁️ Cloud: `<AWS/Azure>` |
-| 🏢 Account: `<account-id>` |
+| ☁️ Cloud: `<AWS/Azure>` · 🏢 Account: `<account-id>` |
+| **▼ Azioni (4 subagent paralleli)** |
+| 1. 💰 Agent "Cost Overview" → `aws ce get-cost-and-usage` |
+| 2. 🔍 Agent "Idle Resources" → `aws ec2/rds/lambda describe-*` |
+| 3. 🏷️ Agent "Tag Compliance" → `aws resourcegroupstaggingapi` |
+| 4. 📊 Agent "Optimization" → `aws compute-optimizer` |
 | 💡 Perche': Esegue query read-only per identificare sprechi e ottimizzazioni |
 | 🚫 Se NO: Nessuna query eseguita |
 

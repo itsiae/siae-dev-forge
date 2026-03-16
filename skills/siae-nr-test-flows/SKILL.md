@@ -100,14 +100,13 @@ Dopo il banner, mostra questa card prima di iniziare il workflow:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
-| 📁 Repository: `{path o URL}` |
-| 🔍 Framework: `{da rilevare — CONFIRMED \| INFERRED}` |
-| 📡 Tier export: `Tier 1 MCP Atlassian / Tier 3 CSV` |
-| 🎫 Story Jira: `{da confermare allo Step 5 — HARD GATE}` |
-| 1. 🖥️ Azione: Framework detection + harvest file rilevanti |
-| 2. 📝 Azione: Costruzione Flow Map YAML per sezione navigazionale |
-| 3. ✏️ Azione: Generazione test list (happy path + NEG + EDGE + PROFILO) |
-| 4. 📤 Azione: Export Xray (Tier 1 MCP o Tier 3 CSV con separatore `;`) |
+| 📁 Repository: `{path o URL}` · 🔍 Framework: `{da rilevare — CONFIRMED \| INFERRED}` |
+| 📡 Tier export: `Tier 1 MCP Atlassian / Tier 3 CSV` · 🎫 Story Jira: `{da confermare allo Step 5 — HARD GATE}` |
+| **▼ Azioni** |
+| 1. 🖥️ Framework detection + harvest file rilevanti |
+| 2. 📝 Costruzione Flow Map YAML per sezione navigazionale |
+| 3. ✏️ Generazione test list (happy path + NEG + EDGE + PROFILO) |
+| 4. 📤 Export Xray (Tier 1 MCP o Tier 3 CSV con separatore `;`) |
 | 💡 Perché: Analisi navigazione frontend per produrre test list QA pronta per Xray |
 | 🚫 Se NO: Analisi non eseguita — test list non generata |
 
@@ -194,12 +193,10 @@ Mostra questa card prima di procedere (aggiorna `📡 Fonte` con il tier rilevat
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
-| 📁 Repository: `{org/repo o URL GitHub}` |
-| 📡 Fonte: `Tier A — gh CLI / Tier B — GitHub API / Tier C — manuale` |
-| 1. ⚡ Azione: Dispatch 3 subagent paralleli per fetch repository remoto |
-| 📂 `{org}/router`, `{org}/views`, `{org}/guards` |
-| 2. 📝 Azione: Salvataggio output subagent in `/tmp/siae-flows-{timestamp}/` |
-| 📂 `/tmp/siae-flows-{timestamp}/routes.yaml`, `sections.yaml`, `auth-api.yaml` |
+| 📁 Repository: `{org/repo o URL GitHub}` · 📡 Fonte: `Tier A — gh CLI / Tier B — GitHub API / Tier C — manuale` |
+| **▼ Azioni** |
+| 1. ⚡ Dispatch 3 subagent paralleli per fetch repository remoto → `{org}/router`, `{org}/views`, `{org}/guards` |
+| 2. 📝 Salvataggio output subagent → `/tmp/siae-flows-{timestamp}/routes.yaml`, `sections.yaml`, `auth-api.yaml` |
 | 💡 Perché: Harvest remoto necessario — repo non disponibile in locale |
 | 🚫 Se NO: Chiedi all utente di clonare il repo e riprovare con path locale |
 
@@ -721,11 +718,9 @@ Rispondi "OK" per procedere all'export, oppure indica le modifiche da apportare.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-nr-test-flows |
 |:---|
-| 📡 Tier: `Tier 1 MCP Atlassian / Tier 3 CSV` |
-| 🎫 Story Jira: `{PROJ-XXX}` |
-| 📊 TC da esportare: `{N}` in `{N}` sezioni |
-| 1. ✏️ Azione: Creazione TC in Xray |
-| 📂 `{output.csv o MCP Atlassian}` |
+| 📡 Tier: `Tier 1 MCP Atlassian / Tier 3 CSV` · 🎫 Story Jira: `{PROJ-XXX}` · 📊 TC da esportare: `{N}` in `{N}` sezioni |
+| **▼ Azione** |
+| 1. ✏️ Creazione TC in Xray → `{output.csv o MCP Atlassian}` |
 | 💡 Perché: Test list approvata, pronta per Xray |
 | 🚫 Se NO: Export non eseguito, test list disponibile solo in chat |
 

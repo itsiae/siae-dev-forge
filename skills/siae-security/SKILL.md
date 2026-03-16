@@ -173,11 +173,10 @@ Quando un file contiene pattern sospetti, mostra la card:
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-security |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🔑 Pattern: Secret rilevato nel file |
-| 📁 File: `[percorso del file]` |
-| 1. ⚠️ Azione: Rilevato pattern segreto |
-| 📂 `[percorso del file]` |
+| **⚠️ STOP — Secret rilevato nel file** |
+| 🔑 Pattern: `Secret rilevato` · 📁 File: `[percorso del file]` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Rimozione/sostituzione pattern segreto → `[percorso del file]` |
 | 💡 Perche': Il file contiene potenziali credenziali |
 | 🚫 Se NO: Le credenziali potrebbero finire nel repository |
 
@@ -223,12 +222,10 @@ causare downtime immediato su tutti i servizi dipendenti.
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-security |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🔐 Secret: `<secret-name>` |
-| 🌍 Ambiente: `<dev|collaudo|produzione>` |
-| 📦 Servizi dipendenti: `<lista servizi>` |
-| 1. ⚠️ Azione: Rotazione credenziale / aggiornamento secret |
-| 📂 `aws secretsmanager update-secret --secret-id <id>` |
+| **⚠️ STOP — Rotazione credenziale causa downtime immediato se errata** |
+| 🔐 Secret: `<secret-name>` · 🌍 Ambiente: `<dev|collaudo|produzione>` · 📦 Servizi dipendenti: `<lista servizi>` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Rotazione credenziale / aggiornamento secret → `aws secretsmanager update-secret --secret-id <id>` |
 | 💡 Perche': Secret scaduto/compromesso, rotazione necessaria |
 | 🚫 Se NO: STOP — il secret resta invariato, valuta rischio manuale |
 

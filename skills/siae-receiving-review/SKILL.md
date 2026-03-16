@@ -127,10 +127,9 @@ Commento 4 [file:riga]: [NITPICK] — "preferisci camelCase per questa variabile
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-receiving-review |
 |:---|
-| 🌿 Branch: `<branch-name>` |
-| 📝 Fix da implementare: `<N> REQUIRED, <M> SUGGESTION` |
-| 1. 📝 Azione: Modifica file per fix review |
-| 📂 `<file/i coinvolti>` |
+| 🌿 Branch: `<branch-name>` · 📝 Fix da implementare: `<N> REQUIRED, <M> SUGGESTION` |
+| **▼ Azione** |
+| 1. 📝 Azione: Modifica file per fix review → `<file/i coinvolti>` |
 | 💡 Perche': Si stanno applicando modifiche al codice in risposta a feedback di review |
 | 🚫 Se NO: I fix non vengono applicati — i commenti REQUIRED restano aperti |
 
@@ -197,12 +196,10 @@ Non lasciare nessun commento senza risposta. Ogni commento = una risposta.
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-receiving-review |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🌿 Branch: `<branch-name>` |
-| 📝 Fix applicati: `<N> REQUIRED, <M> SUGGESTION` |
-| 🧪 Test suite: `<risultato test>` |
-| 1. 🚀 Azione: Push fix al branch della PR |
-| 📂 `origin/<branch-name>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `<branch-name>` · 📝 Fix applicati: `<N> REQUIRED, <M> SUGGESTION` · 🧪 Test suite: `<risultato test>` |
+| **▼ Azione** |
+| 1. 🚀 Azione: Push fix al branch della PR → `origin/<branch-name>` |
 | 💡 Perche': Fix review completati, test verdi, pronto per re-review |
 | 🚫 Se NO: I fix restano locali, il reviewer non vede le modifiche |
 
