@@ -9,9 +9,12 @@ set -euo pipefail
 
 # Parse arguments
 WITH_TRIGGER_REGRESSION=false
+WITH_EVALS=""
 for arg in "$@"; do
   case "$arg" in
     --with-trigger-regression) WITH_TRIGGER_REGRESSION=true ;;
+    --with-evals) WITH_EVALS="L1" ;;
+    --with-evals=*) WITH_EVALS="${arg#--with-evals=}" ;;
   esac
 done
 
@@ -825,6 +828,21 @@ echo ""
 echo "  Telemetry check: ${telemetry_ok} OK | ${telemetry_fail} FAIL"
 TOTAL_PASS=$((TOTAL_PASS + telemetry_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + telemetry_fail))
+
+# --- Eval Service Pipeline (opzionale, richiede claude CLI + Bedrock) ---
+if [ -n "$WITH_EVALS" ]; then
+  echo ""
+  echo "=== Eval Service Pipeline (levels: ${WITH_EVALS}) ==="
+  echo ""
+
+  if [ -f "${PLUGIN_ROOT}/evals/runner.py" ]; then
+    python3 "${PLUGIN_ROOT}/evals/runner.py" \
+      --all --level "${WITH_EVALS}" --verbose --report 2>&1 || true
+  else
+    echo "  SKIP  evals/runner.py non trovato"
+    TOTAL_SKIP=$((TOTAL_SKIP + 1))
+  fi
+fi
 
 # --- Report Finale ---
 echo ""
