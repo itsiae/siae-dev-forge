@@ -1,0 +1,23 @@
+[
+  {"query": "Il servizio catalogo-service restituisce un NullPointerException quando cerco un'opera per ISWC con codice territorio nullo. Ecco lo stack trace.", "should_trigger": true},
+  {"query": "Il Glue job silver-to-gold fallisce con OutOfMemoryError dopo aver processato circa 500k righe di ripartizioni. Come posso risolvere?", "should_trigger": true},
+  {"query": "Errore 500 sul endpoint GET /api/v1/opere/{id} in collaudo. Il servizio risponde correttamente in locale ma in collaudo crasha.", "should_trigger": true},
+  {"query": "Il test TestContrattoService::testRegistraContratto fallisce con AssertionError: expected 'ATTIVO' but was 'null'. Non capisco perche'.", "should_trigger": true},
+  {"query": "Comportamento strano: il calcolo delle ripartizioni restituisce quote negative per alcuni titolari con ruolo 'arrangiatore'. Non dovrebbe essere possibile.", "should_trigger": true},
+  {"query": "Il servizio notifiche-service e' down in produzione, i pod Kubernetes vanno in CrashLoopBackOff. I log mostrano connection refused verso DynamoDB.", "should_trigger": true},
+  {"query": "La lambda di ingestion S3-to-bronze lancia un timeout dopo 15 minuti quando processa file CSV superiori a 200MB. Come debuggiamo?", "should_trigger": true},
+  {"query": "Non funziona il login SSO sul portale associati. L'utente viene rediretto in loop tra Cognito e il frontend. Errore CORS nel browser.", "should_trigger": true},
+  {"query": "Il job di riconciliazione SPORT mostra una discrepanza: 1.247 opere nel sistema legacy non hanno corrispondenza nel catalogo nuovo. Serve investigare.", "should_trigger": true},
+  {"query": "Dopo l'ultimo deploy il servizio report-service impiega 45 secondi per generare il PDF delle ripartizioni trimestrali. Prima erano 3 secondi. Regressione di performance.", "should_trigger": true},
+
+  {"query": "Vorrei aggiungere un nuovo endpoint per esportare le ripartizioni in formato Excel. Come lo progettiamo?", "should_trigger": false},
+  {"query": "Come dovremmo strutturare il nuovo microservizio per le licenze di sincronizzazione?", "should_trigger": false},
+  {"query": "Puoi fare review della mia implementazione del metodo calcolaQuoteAutore? Ho pushato su feature/SPORT-890.", "should_trigger": false},
+  {"query": "Genera la documentazione per il modulo Terraform del VPC nel folder infrastructure/modules/vpc.", "should_trigger": false},
+  {"query": "Refactora il CatalogoService per estrarre la logica di validazione ISWC in una classe dedicata. Il codice funziona ma e' troppo lungo.", "should_trigger": false},
+  {"query": "Crea il branch feature/SPORT-345-export-excel e imposta la struttura base del nuovo endpoint.", "should_trigger": false},
+  {"query": "Scrivi i test unitari per il nuovo DTO RipartizioneResponse seguendo il pattern dei test esistenti.", "should_trigger": false},
+  {"query": "Qual e' la struttura standard per i moduli Terraform nei progetti SIAE?", "should_trigger": false},
+  {"query": "Ho finito l'implementazione del filtro per codice territorio. I test passano tutti, possiamo committare.", "should_trigger": false},
+  {"query": "Sono pronto per aprire la PR su feature/SPORT-567-nuovo-report. Cosa devo controllare prima?", "should_trigger": false}
+]

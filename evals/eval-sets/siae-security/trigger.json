@@ -1,0 +1,23 @@
+[
+  {"query": "Scrivi la IAM policy least-privilege per il servizio ripartizioni che deve leggere da DynamoDB tabella opere, scrivere su S3 data lake e pubblicare su SNS.", "should_trigger": true},
+  {"query": "Configura l'encryption at rest per la tabella DynamoDB dei contratti SIAE con chiave KMS customer-managed e rotation annuale.", "should_trigger": true},
+  {"query": "Implementa la gestione del token JWT nel servizio catalogo Spring Boot. Serve validazione firma, controllo scadenza e estrazione ruoli utente SIAE.", "should_trigger": true},
+  {"query": "Esegui un OWASP check sul controller del servizio contratti-service. Verifica injection, XSS, CSRF e gestione dei dati sensibili degli associati.", "should_trigger": true},
+  {"query": "Il servizio gestisce dati personali degli autori e artisti (nome, CF, IBAN). Devo implementare la mascheratura nei log e l'encryption in transit per compliance GDPR.", "should_trigger": true},
+  {"query": "Configura AWS Secrets Manager per le credenziali del database Oracle legacy usato dal servizio di migrazione SIAE. Serve rotation automatica ogni 30 giorni.", "should_trigger": true},
+  {"query": "Devo implementare il rate limiting e il throttling sull'API Gateway del portale associati per prevenire abuse. Quali limiti sono appropriati per il traffico SIAE?", "should_trigger": true},
+  {"query": "Verifica che il bucket S3 del data lake ripartizioni non sia pubblicamente accessibile e che abbia SSE-KMS, versioning e access logging abilitati.", "should_trigger": true},
+  {"query": "Il servizio notifiche invia email con dati delle ripartizioni agli associati. Devo assicurarmi che i dati finanziari siano cifrati e che l'accesso sia tracciato in CloudTrail.", "should_trigger": true},
+  {"query": "Implementa l'autenticazione mTLS tra il servizio catalogo e il sistema legacy SOAP SIAE. Serve la gestione dei certificati con ACM Private CA.", "should_trigger": true},
+
+  {"query": "Fai code review della PR #45 sul servizio catalogo. Verifica naming convention, struttura del codice e copertura test.", "should_trigger": false},
+  {"query": "Quale pattern architetturale usiamo per il nuovo servizio di gestione licenze? CQRS o CRUD tradizionale?", "should_trigger": false},
+  {"query": "Crea il componente Vue.js per il form di login del portale associati con validazione campi e gestione errori.", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-890-security-fix e pusha le modifiche alla policy IAM.", "should_trigger": false},
+  {"query": "Scrivi i test unitari per il servizio di calcolo ripartizioni con mock del repository DynamoDB.", "should_trigger": false},
+  {"query": "Il Glue job bronze-to-silver per le opere ha un bug nel parsing. Come correggo la trasformazione PySpark?", "should_trigger": false},
+  {"query": "Genera la documentazione dell'architettura del servizio contratti con diagramma C4 e flussi di integrazione.", "should_trigger": false},
+  {"query": "Scrivi il modulo Terraform per creare l'ECS cluster con Fargate per il servizio ripartizioni.", "should_trigger": false},
+  {"query": "Ho un'idea per velocizzare le query sulle ripartizioni. Possiamo aggiungere un layer di cache con ElastiCache Redis?", "should_trigger": false},
+  {"query": "Prepara i test case Xray per la funzionalita' di export report ripartizioni in formato Excel.", "should_trigger": false}
+]

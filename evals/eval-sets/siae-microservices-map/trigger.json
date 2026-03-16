@@ -1,0 +1,23 @@
+[
+  {"query": "Mappa il sistema SPORT: quali microservizi ci sono, come comunicano, quali dipendenze hanno tra loro?", "should_trigger": true},
+  {"query": "Dipendenze tra i microservizi del cluster ripartizioni: chi chiama chi e con quale protocollo?", "should_trigger": true},
+  {"query": "Chi chiama chi nel sistema contratti? Voglio la topologia completa dei servizi con le integrazioni EventBridge e SQS", "should_trigger": true},
+  {"query": "Topologia del sistema distribuito SPORT-catalogo: servizi, code, topic SNS, tabelle DynamoDB condivise", "should_trigger": true},
+  {"query": "/forge-sysmap", "should_trigger": true},
+  {"query": "Devo fare onboarding sul sistema distribuito delle ripartizioni, mappami tutti i servizi e le dipendenze esterne", "should_trigger": true},
+  {"query": "Quali sono i microservizi che compongono la piattaforma diritti d'autore e come si parlano?", "should_trigger": true},
+  {"query": "Genera la mappa del sistema multi-repo sport-contratti: ho 8 repo e non so come interagiscono", "should_trigger": true},
+  {"query": "Voglio capire il flusso end-to-end dal portale associati fino al calcolo ripartizioni: quali servizi attraversa una richiesta?", "should_trigger": true},
+  {"query": "Mappa le integrazioni tra sport-auth, sport-catalogo, sport-notifiche e il gateway API. Servono per il capacity planning", "should_trigger": true},
+
+  {"query": "Mappa questo codebase Spring Boot, ha 150 file e nessuna CODEBASE_MAP.md", "should_trigger": false},
+  {"query": "Scrivi il codice per un nuovo endpoint REST nel servizio catalogo che restituisca le opere per ISWC", "should_trigger": false},
+  {"query": "Il servizio sport-notifiche va in OutOfMemoryError dopo 2 ore, come debuggo il memory leak?", "should_trigger": false},
+  {"query": "Devo progettare da zero un nuovo microservizio per le licenze sincronizzazione, come lo architettiamo?", "should_trigger": false},
+  {"query": "Genera la documentazione tecnica completa del servizio catalogo-service con API reference e diagrammi", "should_trigger": false},
+  {"query": "Fai review della PR #67 su sport-contratti-service, controlla il nuovo handler per i contratti scaduti", "should_trigger": false},
+  {"query": "Quali sono le regole business nel servizio ripartizioni? Analizza i Drools rule file", "should_trigger": false},
+  {"query": "Crea un piano implementativo per aggiungere il campo codice_territorio al modello opere", "should_trigger": false},
+  {"query": "Esegui terraform plan per l'infrastruttura ECS del cluster SPORT", "should_trigger": false},
+  {"query": "Analizza la struttura interna del repo sport-catalogo: package, layer, entry point", "should_trigger": false}
+]

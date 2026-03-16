@@ -1,0 +1,22 @@
+[
+  {"query": "/forge-implement", "should_trigger": true},
+  {"query": "implementa il piano con subagent per il servizio ripartizioni SIAE", "should_trigger": true},
+  {"query": "dispatcha i task del piano di migrazione DynamoDB agli implementer", "should_trigger": true},
+  {"query": "lancia gli implementer per ogni task del piano SPORT", "should_trigger": true},
+  {"query": "orchestrazione implementazione: 5 task indipendenti dal piano delle licenze", "should_trigger": true},
+  {"query": "usa i subagent per implementare i task del piano di refactoring Spring Boot", "should_trigger": true},
+  {"query": "ho il piano pronto con 4 task indipendenti, lancia i subagent per il modulo mandati", "should_trigger": true},
+  {"query": "implementazione orchestrata dei task dal piano per le API diritti d'autore", "should_trigger": true},
+  {"query": "avvia gli implementer paralleli per i 3 task del piano Glue jobs ISWC", "should_trigger": true},
+  {"query": "controller-subagent: dispatcha l'implementazione del piano infrastruttura Terraform", "should_trigger": true},
+  {"query": "apro una nuova sessione separata per eseguire il piano di migrazione", "should_trigger": false},
+  {"query": "scrivi il piano implementativo per il servizio ripartizioni", "should_trigger": false},
+  {"query": "implementa questa singola funzione di calcolo royalties", "should_trigger": false},
+  {"query": "debugga il NullPointerException nel servizio mandati", "should_trigger": false},
+  {"query": "fai code review del PR sul modulo SPORT", "should_trigger": false},
+  {"query": "facciamo brainstorming sull'architettura del nuovo servizio licenze", "should_trigger": false},
+  {"query": "configura git hooks per il progetto ripartizioni", "should_trigger": false},
+  {"query": "scrivi i test TDD per il Glue job di importazione opere", "should_trigger": false},
+  {"query": "genera la documentazione API per il microservizio diritti d'autore", "should_trigger": false},
+  {"query": "analizza l'architettura del sistema SPORT prima di implementare", "should_trigger": false}
+]

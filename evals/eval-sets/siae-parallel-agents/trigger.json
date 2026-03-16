@@ -1,0 +1,22 @@
+[
+  {"query": "debugga questi 3 errori in parallelo: Glue job timeout, DynamoDB throttling, e Spring Boot 503", "should_trigger": true},
+  {"query": "2 test falliscono in moduli diversi: ripartizioni e mandati SIAE", "should_trigger": true},
+  {"query": "task paralleli indipendenti: fix linting nel repo SPORT e fix test nel repo licenze", "should_trigger": true},
+  {"query": "investigazione multi-dominio: errore sia nel Glue job ISWC che nell'API diritti d'autore", "should_trigger": true},
+  {"query": "lancia agenti paralleli per i 3 failure nei test di integrazione dei microservizi", "should_trigger": true},
+  {"query": "ho 2 bug indipendenti: uno nel calcolo royalties e uno nell'importazione CSV opere", "should_trigger": true},
+  {"query": "investiga in parallelo: il servizio mandati ritorna 500 e il Glue job delle ripartizioni fallisce", "should_trigger": true},
+  {"query": "3 moduli rotti contemporaneamente: SPORT frontend, API licenze, e batch ripartizioni", "should_trigger": true},
+  {"query": "fix paralleli: errore Terraform nel modulo networking e errore nel CDK stack DynamoDB", "should_trigger": true},
+  {"query": "due failure indipendenti nei test: NullPointer nel servizio ISWC e timeout nel servizio autori", "should_trigger": true},
+  {"query": "debugga questo singolo errore nel calcolo delle ripartizioni SIAE", "should_trigger": false},
+  {"query": "implementa la nuova feature di ricerca opere per codice ISWC", "should_trigger": false},
+  {"query": "prima fixa il bug nel servizio mandati, poi quello nelle ripartizioni che dipende dal primo", "should_trigger": false},
+  {"query": "fai code review del PR sul modulo diritti d'autore", "should_trigger": false},
+  {"query": "scrivi il design doc per la nuova architettura SPORT", "should_trigger": false},
+  {"query": "dispatcha i task del piano agli implementer subagent", "should_trigger": false},
+  {"query": "scrivi i test unitari per il Glue job di importazione CSV", "should_trigger": false},
+  {"query": "configura la pipeline CI/CD per il servizio licenze", "should_trigger": false},
+  {"query": "analizza il singolo stack trace del servizio Spring Boot mandati", "should_trigger": false},
+  {"query": "genera la documentazione per le API del microservizio ripartizioni", "should_trigger": false}
+]

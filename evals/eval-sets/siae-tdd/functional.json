@@ -1,0 +1,62 @@
+[
+  {
+    "query": "Implementa un metodo validateISWC nella classe ISWCValidator che validi il formato ISRC standard.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "test_first", "weight": 3, "check": "Ha scritto il test PRIMA del codice di produzione?"},
+      {"name": "test_fails", "weight": 2, "check": "Ha verificato che il test FALLISCE prima dell'implementazione?"},
+      {"name": "impl_minimal", "weight": 2, "check": "L'implementazione e' minimale per far passare il test?"},
+      {"name": "test_passes", "weight": 2, "check": "Ha verificato che il test PASSA dopo l'implementazione?"},
+      {"name": "commit_atomic", "weight": 1, "check": "Ha proposto un commit atomico per il ciclo TDD?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Aggiungi un endpoint GET /api/opere/{iswc} che restituisca l'opera corrispondente dal database.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "test_first", "weight": 3, "check": "Ha scritto il test dell'endpoint PRIMA del controller?"},
+      {"name": "test_fails", "weight": 2, "check": "Ha mostrato il test fallire?"},
+      {"name": "impl_minimal", "weight": 2, "check": "L'implementazione e' il minimo necessario?"},
+      {"name": "test_passes", "weight": 2, "check": "Ha mostrato il test passare?"},
+      {"name": "commit_atomic", "weight": 1, "check": "Commit atomico proposto?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Crea una funzione Python che calcoli le quote di ripartizione dato un array di percentuali e un importo totale.",
+    "setup": {},
+    "criteria": [
+      {"name": "test_first", "weight": 3, "check": "Ha scritto pytest PRIMA della funzione?"},
+      {"name": "test_fails", "weight": 2, "check": "Ha mostrato il test fallire?"},
+      {"name": "impl_minimal", "weight": 2, "check": "Implementazione minimale?"},
+      {"name": "test_passes", "weight": 2, "check": "Ha mostrato il test passare?"},
+      {"name": "commit_atomic", "weight": 1, "check": "Commit atomico?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Aggiungi la validazione che il campo codice_territorio non sia vuoto nel DTO CatalogoRequest.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml"]},
+    "criteria": [
+      {"name": "test_first", "weight": 3, "check": "Test di validazione scritto prima?"},
+      {"name": "test_fails", "weight": 2, "check": "Test fallisce prima dell'impl?"},
+      {"name": "impl_minimal", "weight": 2, "check": "Solo la validazione richiesta, nient'altro?"},
+      {"name": "test_passes", "weight": 2, "check": "Test passa dopo?"},
+      {"name": "commit_atomic", "weight": 1, "check": "Commit unico per il ciclo?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Scrivi un handler Lambda TypeScript che riceva eventi SQS e salvi i messaggi in DynamoDB.",
+    "setup": {},
+    "criteria": [
+      {"name": "test_first", "weight": 3, "check": "Ha scritto il test (vitest/jest) prima dell'handler?"},
+      {"name": "test_fails", "weight": 2, "check": "Test fallisce inizialmente?"},
+      {"name": "impl_minimal", "weight": 2, "check": "Handler minimale?"},
+      {"name": "test_passes", "weight": 2, "check": "Test passa dopo l'implementazione?"},
+      {"name": "commit_atomic", "weight": 1, "check": "Commit atomico?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]

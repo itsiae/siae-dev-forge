@@ -16,3 +16,7 @@ evals/results/
 *.tfstate.backup
 *.tfstate.*.backup
 infra/**/handler.zip
+
+# Eval reports (generati da reporter.py)
+evals/reports/*
+!evals/reports/.gitkeep

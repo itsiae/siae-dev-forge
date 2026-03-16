@@ -1,0 +1,62 @@
+[
+  {
+    "query": "Fai git checkout -b per la nuova feature di gestione licenze. Il ticket JIRA e' SPORT-456.",
+    "setup": {},
+    "criteria": [
+      {"name": "branch_naming", "weight": 3, "check": "Ha usato il pattern feature/SPORT-456-<descrizione>?"},
+      {"name": "conventional_commit", "weight": 2, "check": "Ha suggerito commit message conventional?"},
+      {"name": "pre_flight_shown", "weight": 2, "check": "Ha mostrato una pre-flight card prima dell'operazione?"},
+      {"name": "no_force_push", "weight": 2, "check": "Non ha usato --force o --no-verify?"},
+      {"name": "jira_id_present", "weight": 1, "check": "Il JIRA ID e' presente nel branch name?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Committa le modifiche al servizio catalogo con un messaggio appropriato.",
+    "setup": {},
+    "criteria": [
+      {"name": "branch_naming", "weight": 1, "check": "Ha verificato di essere sul branch corretto?"},
+      {"name": "conventional_commit", "weight": 3, "check": "Ha usato conventional commits (feat:/fix:/etc.)?"},
+      {"name": "pre_flight_shown", "weight": 2, "check": "Ha mostrato pre-flight card?"},
+      {"name": "no_force_push", "weight": 2, "check": "Non ha usato flag pericolosi?"},
+      {"name": "jira_id_present", "weight": 1, "check": "JIRA ID nel commit o branch?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Pusha il branch feature/SPORT-789-nuovo-endpoint al remote.",
+    "setup": {},
+    "criteria": [
+      {"name": "branch_naming", "weight": 2, "check": "Ha verificato il branch corrente?"},
+      {"name": "conventional_commit", "weight": 1, "check": "Ha verificato i commit prima del push?"},
+      {"name": "pre_flight_shown", "weight": 3, "check": "Ha mostrato pre-flight card PRIMA del push?"},
+      {"name": "no_force_push", "weight": 3, "check": "Ha usato git push -u origin (senza --force)?"},
+      {"name": "jira_id_present", "weight": 1, "check": "JIRA ID nel branch?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Tagga il rilascio per l'ambiente di collaudo. Versione 2.1.0.",
+    "setup": {},
+    "criteria": [
+      {"name": "branch_naming", "weight": 1, "check": "Ha verificato di essere su main/sviluppo?"},
+      {"name": "conventional_commit", "weight": 2, "check": "Ha seguito la convenzione tag SIAE?"},
+      {"name": "pre_flight_shown", "weight": 3, "check": "Ha mostrato pre-flight card per il tag?"},
+      {"name": "no_force_push", "weight": 2, "check": "Non ha forzato operazioni?"},
+      {"name": "jira_id_present", "weight": 1, "check": "Versione corretta nel tag?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Crea un hotfix branch per il bug critico in produzione. Ticket SPORT-999.",
+    "setup": {},
+    "criteria": [
+      {"name": "branch_naming", "weight": 3, "check": "Ha usato hotfix/SPORT-999-<descrizione>?"},
+      {"name": "conventional_commit", "weight": 2, "check": "Ha suggerito commit fix: convention?"},
+      {"name": "pre_flight_shown", "weight": 2, "check": "Ha mostrato pre-flight card?"},
+      {"name": "no_force_push", "weight": 2, "check": "Nessun flag pericoloso?"},
+      {"name": "jira_id_present", "weight": 3, "check": "SPORT-999 nel branch name?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]

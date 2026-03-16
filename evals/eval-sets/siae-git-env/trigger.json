@@ -1,0 +1,22 @@
+[
+  {"query": "configura git per il progetto di gestione ripartizioni SIAE", "should_trigger": true},
+  {"query": "setup git hooks per il repo del servizio mandati", "should_trigger": true},
+  {"query": "configurazione .gitignore per il progetto Spring Boot diritti d'autore", "should_trigger": true},
+  {"query": "git config per il team che lavora sui Glue jobs SIAE", "should_trigger": true},
+  {"query": "pre-commit hooks setup per validare il formato dei commit nel repo SPORT", "should_trigger": true},
+  {"query": "configurazione GPG per i commit firmati nel repo licenze SIAE", "should_trigger": true},
+  {"query": "setup .gitattributes per il repo Terraform infrastruttura SIAE", "should_trigger": true},
+  {"query": "configura git-lfs per i file di test fixtures nel repo importazione opere ISWC", "should_trigger": true},
+  {"query": "imposta il template dei commit message per il progetto ripartizioni", "should_trigger": true},
+  {"query": "configura l'ambiente git con le credenziali aziendali SIAE per il nuovo developer", "should_trigger": true},
+  {"query": "crea un feature branch per la nuova funzionalita' di calcolo royalties", "should_trigger": false},
+  {"query": "setup worktree isolato per debuggare il servizio mandati in parallelo", "should_trigger": false},
+  {"query": "chiudi il branch e prepara la PR per il modulo SPORT", "should_trigger": false},
+  {"query": "debugga il conflitto di merge nel servizio ripartizioni", "should_trigger": false},
+  {"query": "implementa l'endpoint REST per la ricerca opere ISWC", "should_trigger": false},
+  {"query": "fai il merge del branch feature/SPORT-123 su sviluppo", "should_trigger": false},
+  {"query": "crea il tag v2.0.0 per il rilascio del servizio licenze", "should_trigger": false},
+  {"query": "scrivi i test per il Glue job di importazione CSV delle opere", "should_trigger": false},
+  {"query": "genera la documentazione per il workflow git del team", "should_trigger": false},
+  {"query": "cherry-pick del commit di fix dal branch hotfix al branch develop", "should_trigger": false}
+]

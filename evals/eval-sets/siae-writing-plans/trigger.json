@@ -1,0 +1,23 @@
+[
+  {"query": "Scrivi il piano implementativo per il design approvato della feature codice_territorio", "should_trigger": true},
+  {"query": "Trasforma il design doc del nuovo endpoint ISWC in task implementativi concreti e ordinati", "should_trigger": true},
+  {"query": "Decomposizione in step: il brainstorming ha prodotto un design per le notifiche push, ora servono i task", "should_trigger": true},
+  {"query": "Piano bite-sized per il design approvato della migrazione da SQS a EventBridge nel servizio contratti", "should_trigger": true},
+  {"query": "Aggiorna il piano in docs/plans/ per la feature SPORT-456, abbiamo cambiato scope dopo il design review", "should_trigger": true},
+  {"query": "Ho le spec approvate per il nuovo flusso di approvazione contratti. Scrivimi il piano di implementazione step by step", "should_trigger": true},
+  {"query": "Il design della dashboard Vue.js per il monitoraggio Glue job e' pronto. Crea il piano implementativo", "should_trigger": true},
+  {"query": "Devo pianificare l'implementazione della feature export Excel nel report-service. Spec gia' definite", "should_trigger": true},
+  {"query": "Abbiamo il design approvato per l'integrazione SOAP col sistema legacy. Scrivi i task di implementazione", "should_trigger": true},
+  {"query": "Genera un piano implementativo dettagliato per la feature multi-lingua del portale associati, il design e' in docs/plans/", "should_trigger": true},
+
+  {"query": "Ho un'idea per migliorare il sistema di notifiche con Firebase push. Cosa ne pensi come approccio?", "should_trigger": false},
+  {"query": "Implementa il primo step del piano: crea l'entita' JPA LicenzaSincronizzazione con i campi definiti", "should_trigger": false},
+  {"query": "Esegui il piano implementativo usando subagent paralleli per i task indipendenti", "should_trigger": false},
+  {"query": "Il test del nuovo endpoint fallisce con 500 Internal Server Error, debugga il problema", "should_trigger": false},
+  {"query": "Fai review del piano scritto da Mario per la feature SPORT-789", "should_trigger": false},
+  {"query": "Genera la documentazione tecnica del servizio catalogo con API reference e diagrammi", "should_trigger": false},
+  {"query": "Voglio ripensare l'architettura del flusso ripartizioni. Facciamo brainstorming su un approccio asincrono", "should_trigger": false},
+  {"query": "Crea un worktree isolato per implementare la feature SPORT-456 senza toccare main", "should_trigger": false},
+  {"query": "Ho finito l'implementazione, prepara la PR con il summary delle modifiche", "should_trigger": false},
+  {"query": "Mappa il codebase di sport-catalogo-service, ha 200 file e nessuna documentazione strutturale", "should_trigger": false}
+]
