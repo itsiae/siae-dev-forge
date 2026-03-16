@@ -1,8 +1,10 @@
 ---
 name: siae-writing-plans
 description: >
-  OBBLIGATORIA per trasformare un design approvato in un piano implementativo step-by-step concreto.
-  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
+  Trasforma un design approvato in un piano implementativo step-by-step concreto
+  e bite-sized.
+  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione
+  step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo

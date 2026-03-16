@@ -1,10 +1,11 @@
 ---
 name: siae-git-workflow
 description: >
-  OBBLIGATORIA per qualsiasi operazione git: git checkout -b, git commit,
-  git push, git merge, git tag, creazione branch, naming branch, conventional
-  commits, pre-flight card, inizio feature, preparazione deploy, promozione
-  ambiente, hotfix, rollback, push remoto, tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
+  Gestisce tutte le operazioni git secondo il branch flow SIAE.
+  Trigger: git checkout -b, git commit, git push, git merge, git tag, creazione
+  branch, naming branch, conventional commits, pre-flight card, inizio feature,
+  preparazione deploy, promozione ambiente, hotfix, rollback, push remoto,
+  tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
 ---
 
 # SIAE Git Workflow

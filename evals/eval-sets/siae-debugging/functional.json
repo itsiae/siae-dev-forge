@@ -1,0 +1,62 @@
+[
+  {
+    "query": "Il test TestRipartizioneService::testCalcoloQuote fallisce con NullPointerException alla riga 234. Puoi fixarlo?",
+    "setup": {},
+    "criteria": [
+      {"name": "root_cause_before_fix", "weight": 3, "check": "Ha investigato la root cause PRIMA di proporre un fix?"},
+      {"name": "evidence_gathered", "weight": 3, "check": "Ha letto il codice/stacktrace prima di agire?"},
+      {"name": "no_shotgun_fix", "weight": 2, "check": "NON ha proposto un fix generico senza capire il problema?"},
+      {"name": "hypothesis_stated", "weight": 1, "check": "Ha formulato un'ipotesi esplicita?"},
+      {"name": "reproduction_attempted", "weight": 1, "check": "Ha tentato di riprodurre il bug o letto il test?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "La pipeline Glue job bronze-to-silver fallisce con OutOfMemoryError. Come lo risolvo?",
+    "setup": {},
+    "criteria": [
+      {"name": "root_cause_before_fix", "weight": 3, "check": "Ha chiesto dettagli prima di proporre soluzioni?"},
+      {"name": "evidence_gathered", "weight": 3, "check": "Ha chiesto log, configurazione worker, dimensione dati?"},
+      {"name": "no_shotgun_fix", "weight": 2, "check": "Non ha detto 'aumenta la memoria' senza analisi?"},
+      {"name": "hypothesis_stated", "weight": 1, "check": "Ha formulato ipotesi (skew, partitioning, driver vs executor)?"},
+      {"name": "reproduction_attempted", "weight": 1, "check": "Ha suggerito come riprodurre con subset di dati?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "L'API /api/contratti restituisce 500 in produzione ma funziona in locale. Cosa faccio?",
+    "setup": {},
+    "criteria": [
+      {"name": "root_cause_before_fix", "weight": 3, "check": "Ha chiesto differenze tra ambienti prima di fixare?"},
+      {"name": "evidence_gathered", "weight": 3, "check": "Ha chiesto log di produzione, env vars, versione deploy?"},
+      {"name": "no_shotgun_fix", "weight": 2, "check": "Non ha proposto 'rideeploya' senza analisi?"},
+      {"name": "hypothesis_stated", "weight": 1, "check": "Ha formulato ipotesi (config, DB, network)?"},
+      {"name": "reproduction_attempted", "weight": 1, "check": "Ha suggerito come riprodurre?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Il build Maven fallisce con 'could not resolve dependency'. Funzionava ieri.",
+    "setup": {},
+    "criteria": [
+      {"name": "root_cause_before_fix", "weight": 3, "check": "Ha chiesto il log completo prima di suggerire fix?"},
+      {"name": "evidence_gathered", "weight": 3, "check": "Ha chiesto quale dipendenza, pom.xml, settings.xml?"},
+      {"name": "no_shotgun_fix", "weight": 2, "check": "Non ha detto 'mvn clean install -U' senza analisi?"},
+      {"name": "hypothesis_stated", "weight": 1, "check": "Ha ipotizzato cause (repo down, versione rimossa, network)?"},
+      {"name": "reproduction_attempted", "weight": 1, "check": "Ha suggerito verifica con mvn dependency:tree?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "I test di integrazione passano localmente ma falliscono nella CI GitHub Actions. Timeout su testContrattoCreation.",
+    "setup": {},
+    "criteria": [
+      {"name": "root_cause_before_fix", "weight": 3, "check": "Ha investigato differenze CI vs locale?"},
+      {"name": "evidence_gathered", "weight": 3, "check": "Ha chiesto log CI, configurazione runner, risorse?"},
+      {"name": "no_shotgun_fix", "weight": 2, "check": "Non ha suggerito 'aumenta il timeout' senza analisi?"},
+      {"name": "hypothesis_stated", "weight": 1, "check": "Ha ipotizzato (risorse limitate, DB non pronto, race condition)?"},
+      {"name": "reproduction_attempted", "weight": 1, "check": "Ha suggerito come riprodurre il problema?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]

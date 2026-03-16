@@ -1,9 +1,10 @@
 ---
 name: siae-microservices-map
 description: >
-  Use when mapping a multi-repository microservices system (10+ repos). Trigger:
-  "mappa SPORT", "sistema a microservizi", "dipendenze tra servizi", "chi chiama chi",
-  "topologia sistema", /forge-sysmap, onboarding su sistema distribuito.
+  Mappa un sistema a microservizi multi-repository (10+ repo) senza allucinare.
+  Trigger: "mappa SPORT", "sistema a microservizi", "dipendenze tra servizi",
+  "chi chiama chi", "topologia sistema", /forge-sysmap, onboarding su sistema
+  distribuito.
 ---
 
 # SIAE Microservices Map — Mappa Sistemi Distribuiti Senza Allucinare
@@ -181,21 +182,7 @@ gh api /orgs/{org}/repos?per_page=100&type=all --paginate \
 
 #### 3a — PROFILE: Verifica Esistenza File Evidenza
 
-Per ogni repo, controlla quali file evidenza esistono **prima di fetcharli**:
-
-```
-manifest:   pom.xml | build.gradle | package.json | requirements.txt | pyproject.toml
-config:     src/main/resources/application.yml | application.properties | application-*.yml
-infra:      docker-compose.yml | k8s/*.yaml | terraform/*.tf | .env.example
-api:        openapi.yaml | swagger.yaml | api-docs.json | src/main/resources/static/openapi*
-```
-
-Usa GitHub API per HEAD check (non scaricare il file se non esiste):
-```bash
-gh api /repos/{org}/{repo}/contents/{path} --jq '.name' 2>/dev/null
-```
-
-Output: per ogni repo → lista file da fetchare (solo esistenti).
+Per ogni repo, verifica quali file evidenza esistono (manifest, config, infra, api) via GitHub API HEAD check prima di fetcharli. Output: per ogni repo, lista file da fetchare (solo esistenti).
 
 #### 3b — EXTRACT: Setup Output Directory e Pre-fetch Dati
 
@@ -210,120 +197,21 @@ mkdir -p "$OUTPUT_DIR"
 echo "Evidence dir: $OUTPUT_DIR"
 ```
 
-Per ogni repo, il parent pre-fetcha:
-```bash
-# 1. Manifest principale
-gh api /repos/{org}/{repo}/contents/pom.xml --jq '.content' | base64 -d
-
-# 2. File rilevanti (FeignClient, Kafka, config, datasource)
-gh api "/repos/{org}/{repo}/git/trees/HEAD?recursive=1" \
-  --jq '[.tree[].path | select(test("Client\\.java$|FeignClient|kafka|Kafka|datasource|application\\.yml|application\\.properties|openapi"))] | .[0:20]'
-
-# 3. Contenuto di ogni file rilevante trovato
-gh api /repos/{org}/{repo}/contents/{path} --jq '.content' | base64 -d
-```
-
-Salva `$OUTPUT_DIR` e tutti i dati pre-fetchati — li passerai inline nei prompt dei subagent.
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Pre-fetch Dati per Repo" per i comandi di pre-fetch completi.
+Salva `$OUTPUT_DIR` e tutti i dati pre-fetchati -- li passerai inline nei prompt dei subagent.
 
 #### 3c — EXTRACT: Pilot Test (OBBLIGATORIO su sistemi con 5+ repo)
 
-Prima del full run, verifica il pattern con 2 repo:
-
-1. Pre-fetcha i dati per i **primi 2 repo** usando i comandi in 3b (parent, via Bash)
-2. Dispatcha **2 subagent** con i dati già inline nel prompt + istruzione ISTRUZIONE CRITICA
-3. Attendi che completino e verifica:
-   ```bash
-   ls -la "$OUTPUT_DIR/"             # devono esistere 2 file .yaml
-   cat "$OUTPUT_DIR/{repo-1}.yaml"   # YAML valido e leggibile
-   ```
-4. Se i file esistono e sono leggibili → **procedi al full run (Step 3d)**
-5. Se i file NON esistono → l'agente non ha usato il Write tool → rivedi istruzioni, STOP e diagnostica
-
-**Non saltare il pilot.** Il costo è 2 agenti. Il risparmio è non perdere 42 agenti.
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Pilot Test Procedura" per la procedura completa.
+**Non saltare il pilot.** Il costo e' 2 agenti. Il risparmio e' non perdere 42 agenti.
 
 #### 3d — EXTRACT: Dispatch Subagent Paralleli (Full Run)
 
-**Template dispatch subagent:**
-Usa il tool Agent con: `subagent_type: "general-purpose"`, `mode: "bypassPermissions"`, `run_in_background: true`.
-Il prompt deve includere il testo della ISTRUZIONE CRITICA con i placeholder risolti.
+Vedi [TEMPLATES.md](TEMPLATES.md) sezioni "Template Dispatch Subagent", "Istruzione Critica Subagent", "Scheda Evidenza YAML" e "Protocollo Bias da Conferma" per template dispatch, istruzione critica verbatim, formato scheda evidenza YAML e protocollo bias.
 
-**FULL RUN SEMPRE** — non chiedere mai all'utente se fare campione o run completa.
+**FULL RUN SEMPRE** -- non chiedere mai all'utente se fare campione o run completa.
 Tutti i repo enumerati devono essere processati. Nessuna eccezione.
-
-**Token budget per subagent: 50.000 token** (margine sicuro per file evidenza mirati).
-I file di evidenza sono piccoli (pom.xml, application.yml, feign client); 50k è abbondante
-per leggere 5-10 file per repo. Se un singolo file supera il budget → tronca e nota il gap.
-
 **Dispatcha TUTTI i subagent in un singolo blocco parallelo** (1 per repo).
-
-Ogni subagent riceve i file pre-fetchati del suo repo inline nel prompt e produce una **scheda evidenza strutturata**.
-
-**⚠️ ISTRUZIONE CRITICA DA INCLUDERE IN OGNI SUBAGENT (copia verbatim):**
-
-```
-Hai già tutti i dati necessari nel prompt. NON usare Bash. NON usare gh api. Usa SOLO il Write tool.
-
-  1. Analizza i dati forniti e compila la scheda evidenza YAML (formato sotto).
-  2. Applica il protocollo bias da conferma per ogni edge: quale file? quale riga?
-     Se non puoi rispondere → confidence: INFERRED o UNVERIFIED.
-  3. Scrivi la scheda in: {OUTPUT_DIR}/{repo-name}.yaml  (usa il Write tool)
-  4. Rispondi con UNA SOLA RIGA: "✅ {repo-name} salvato in {OUTPUT_DIR}/{repo-name}.yaml"
-  5. NON includere il contenuto YAML nel tuo output testuale.
-     Il YAML va SOLO nel file — mai nel corpo della risposta.
-```
-
-Il parent non ingestisce l'analisi: riceve solo la riga di conferma (~50 token).
-Con 42 agenti: 42 × 50 token = 2.1k token nel parent (invece di ~210k → context overflow).
-
-```yaml
-repo: sport-anagrafe
-stack: java-spring-boot        # rilevato da manifest
-confidence: CONFIRMED          # almeno Tier 1 trovato, oppure INFERRED/FILE_NOT_FOUND
-
-exposes:
-  - path: /api/v1/autori
-    method: GET
-    source: openapi.yaml:12    # SEMPRE file:riga
-
-calls:
-  - target_url: "http://sport-diritti/api/v1/diritti"
-    type: REST
-    client: FeignClient
-    source: src/main/java/.../DirittiClient.java:8
-    confidence: CONFIRMED
-  - target_url: "${sport.gestione.url}/eventi"
-    type: REST
-    client: RestTemplate
-    source: application.yml:sport.gestione.url
-    confidence: INFERRED       # URL in variabile, non hardcoded
-
-events:
-  publishes:
-    - topic: autori.creato
-      source: AutoreService.java:45
-      confidence: CONFIRMED
-  consumes:
-    - topic: diritti.aggiornato
-      source: application.yml:spring.kafka.consumer.topics
-      confidence: CONFIRMED
-
-databases:
-  - type: PostgreSQL
-    name: sport_anagrafe_db
-    source: application.yml:spring.datasource.url
-    confidence: INFERRED
-
-gaps:
-  - "Nessun file k8s trovato — deployment topology sconosciuta"
-  - "application-prod.yml non accessibile — config prod non verificata"
-```
-
-**Protocollo bias da conferma** — ogni subagent DEVE rispondere prima di scrivere un edge:
-1. Quale file contiene questa evidenza?
-2. Ho letto quel file, o sto assumendo che esista?
-3. L'evidenza e' diretta (codice) o indiretta (config → URL)?
-
-Se non si risponde alla domanda 1 con un path preciso → `[UNVERIFIED]`.
 
 ---
 
@@ -383,17 +271,7 @@ Aggrega tutte le schede evidenza:
 
 Struttura del file output → vedi [reference/system-map-template.md](reference/system-map-template.md)
 
-Sezioni obbligatorie:
-- Frontmatter YAML (metadata: data, org, pattern, repo count, unverified count)
-- Warning anti-hallucination visibile in cima
-- C4 System Context (Mermaid)
-- C4 Container Diagram con confidence tag su ogni `Rel()`
-- Dependency Graph tabellare (From | To | Tipo | Confidence | Fonte)
-- Kafka Topic Map
-- Database Inventory
-- Service Inventory
-- **Gap Report** — relazioni non verificate, obbligatorio anche se vuoto
-- Evidence Index — path file sorgente per ogni relazione confermata
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Sezioni Obbligatorie SYSTEM_MAP.md" per la lista completa delle sezioni richieste.
 
 ---
 
@@ -466,5 +344,4 @@ mappato, costruendo il catalogo L1+L2+L3 a partire dal `SYSTEM_MAP.md` prodotto 
 ## Risorse Aggiuntive
 
 - [reference/system-map-template.md](reference/system-map-template.md) — Template completo SYSTEM_MAP.md
-- [reference/evidence-patterns.md](reference/evidence-patterns.md) — Pattern per stack Java/Spring Boot, Node.js, Python
-- Design doc: `docs/plans/2026-03-07-microservices-map-design.md`
+- [reference/evidence-patterns.md](reference/evidence-patterns.md) — Pattern per stack Java/Spring, Node.js, Python

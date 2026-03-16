@@ -1,9 +1,10 @@
 ---
 name: siae-finops
 description: >
-  Review costi AWS, stima impatto PR, ottimizzazione risorse,
-  tag compliance, budget analysis, /forge-cost, /forge-finops,
-  Infracost, Steampipe, Cloud Custodian, risorse idle, sprechi.
+  Analizza costi AWS, stima impatto PR, verifica tag compliance e identifica sprechi.
+  Trigger: review costi AWS, stima impatto PR, ottimizzazione risorse,
+  tag compliance, budget analysis, /forge-cost, /forge-finops, Infracost,
+  Steampipe, Cloud Custodian, risorse idle, sprechi.
 ---
 
 # SIAE FinOps — Cost Visibility & Governance

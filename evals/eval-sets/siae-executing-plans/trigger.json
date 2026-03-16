@@ -1,0 +1,22 @@
+[
+  {"query": "esegui il piano in docs/plans/ per il refactoring del servizio ripartizioni", "should_trigger": true},
+  {"query": "apro una nuova sessione per implementare il piano di migrazione DynamoDB", "should_trigger": true},
+  {"query": "batch execution del piano di implementazione del modulo SPORT", "should_trigger": true},
+  {"query": "carica il piano docs/plans/2026-03-05-migrazione-licenze.md e implementa", "should_trigger": true},
+  {"query": "continua l'implementazione dal piano, ero rimasto al task 4 del servizio mandati", "should_trigger": true},
+  {"query": "riprendi l'esecuzione del piano per le API diritti d'autore in una sessione dedicata", "should_trigger": true},
+  {"query": "ho il piano pronto in docs/plans/, avvia l'implementazione in sessione separata", "should_trigger": true},
+  {"query": "esegui step-by-step il piano per il nuovo Glue job di importazione opere ISWC", "should_trigger": true},
+  {"query": "nuova sessione: implementa il piano di setup infrastruttura Terraform per SPORT", "should_trigger": true},
+  {"query": "carica il piano dal file e procedi con l'implementazione batch delle ripartizioni", "should_trigger": true},
+  {"query": "scrivi il piano implementativo per il nuovo servizio di gestione licenze", "should_trigger": false},
+  {"query": "facciamo brainstorming su come migrare il database delle opere", "should_trigger": false},
+  {"query": "implementa direttamente qui il refactoring del modulo Spring Boot mandati", "should_trigger": false},
+  {"query": "debugga il Glue job che fallisce sull'importazione CSV delle opere", "should_trigger": false},
+  {"query": "scrivi i test per il servizio ripartizioni SIAE", "should_trigger": false},
+  {"query": "genera la documentazione del piano di migrazione DynamoDB", "should_trigger": false},
+  {"query": "fai un'analisi architetturale del sistema SPORT prima di pianificare", "should_trigger": false},
+  {"query": "crea il design doc per la nuova feature di calcolo royalties", "should_trigger": false},
+  {"query": "review del codice del microservizio diritti d'autore", "should_trigger": false},
+  {"query": "dispatcha i task del piano agli implementer in parallelo", "should_trigger": false}
+]

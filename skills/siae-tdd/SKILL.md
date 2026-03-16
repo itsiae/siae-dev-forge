@@ -1,10 +1,11 @@
 ---
 name: siae-tdd
 description: >
-  OBBLIGATORIA per qualsiasi scrittura di codice di produzione. Test PRIMA del codice, sempre.
-  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di codice,
-  aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi funzione,
-  implementa, codifica, sviluppa.
+  Guida il ciclo TDD per qualsiasi scrittura di codice di produzione. Test PRIMA
+  del codice, sempre.
+  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di
+  codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi
+  funzione, implementa, codifica, sviluppa.
 ---
 
 # SIAE TDD — Test-Driven Development

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "tdd_full_cycle_validator",
+    "description": "Verifica il ciclo TDD completo per un validator",
+    "turns": [
+      {"role": "user", "content": "Implementa un metodo validateISWC che validi il formato ISWC standard (es. T-123456789-0)."},
+      {"role": "user", "content": "si, procedi con il test"},
+      {"role": "user", "content": "ok, ora implementa il codice minimo"},
+      {"role": "user", "content": "bene, committa"}
+    ],
+    "setup": {
+      "cwd": "fixtures/spring-boot-sample",
+      "files": ["pom.xml", "CLAUDE.md"]
+    },
+    "final_checks": [
+      {"name": "test_written_first", "weight": 3, "check": "Il test e' stato scritto PRIMA del codice di produzione?"},
+      {"name": "test_fails_shown", "weight": 2, "check": "Il test e' stato eseguito e mostrato come fallito?"},
+      {"name": "impl_after_test", "weight": 2, "check": "L'implementazione e' stata scritta DOPO il test fallito?"},
+      {"name": "green_shown", "weight": 2, "check": "Il test e' stato rieseguito e mostrato come passato?"}
+    ],
+    "pass_threshold": 0.75
+  }
+]

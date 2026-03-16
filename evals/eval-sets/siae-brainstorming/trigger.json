@@ -1,0 +1,23 @@
+[
+  {"query": "Devo implementare una nuova feature per il servizio di gestione diritti d'autore. L'idea e' di aggiungere un endpoint REST che permetta di cercare le opere musicali per ISWC e restituire i titolari dei diritti con le rispettive quote. Il servizio gira su Spring Boot e usa DynamoDB come database. Come procediamo?", "should_trigger": true},
+  {"query": "Ho un'idea per migliorare il sistema di notifiche: vorrei aggiungere notifiche push via Firebase quando un nuovo contratto viene registrato nel sistema SPORT. Cosa ne pensi come approccio?", "should_trigger": true},
+  {"query": "Dobbiamo creare un nuovo microservizio per la gestione delle licenze sincronizzazione. Deve esporre API REST, integrarsi con il sistema legacy SIAE via SOAP, e salvare su PostgreSQL. Quali sono le opzioni architetturali?", "should_trigger": true},
+  {"query": "Vorrei ripensare come funziona il flusso di approvazione delle ripartizioni. Attualmente e' tutto sincrono, ma con 2 milioni di righe ci mette troppo. Possiamo passare ad un approccio asincrono con Step Functions?", "should_trigger": true},
+  {"query": "Sto pensando di aggiungere una dashboard Vue.js per il monitoraggio real-time delle ingestion nel data lake. Dovrebbe mostrare grafici con i volumi giornalieri e alert quando un job Glue fallisce. Come la progettiamo?", "should_trigger": true},
+  {"query": "Ho bisogno di aggiungere un nuovo campo 'codice_territorio' alla tabella opere nel servizio catalogo. Questo impatta sia l'API che il modello DynamoDB. Come affrontiamo la modifica?", "should_trigger": true},
+  {"query": "Voglio creare una CLI interna per gli operatori SIAE che permetta di fare query veloci sullo stato delle ripartizioni senza passare dal portale web. Che tool stack suggerisci?", "should_trigger": true},
+  {"query": "Il team ha chiesto di poter esportare i report delle ripartizioni in formato Excel oltre che PDF. Devo aggiungere questa funzionalita' al servizio report-service. Come impostiamo il lavoro?", "should_trigger": true},
+  {"query": "Devo decidere se usare SQS o EventBridge per la comunicazione tra il servizio contratti e il servizio notifiche. Entrambi hanno pro e contro nel nostro contesto. Aiutami a valutare.", "should_trigger": true},
+  {"query": "Vorrei aggiungere il supporto multi-lingua (italiano/inglese) al frontend del portale associati. Attualmente e' tutto hardcoded in italiano. Come lo progettiamo?", "should_trigger": true},
+
+  {"query": "Il test TestRipartizioneService::testCalcoloQuote fallisce con NullPointerException alla riga 234. Puoi debuggare?", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-789-nuovo-endpoint e pusha il branch", "should_trigger": false},
+  {"query": "Leggi il file src/main/java/it/siae/catalogo/CatalogoService.java e dimmi cosa fa il metodo cercaOpera", "should_trigger": false},
+  {"query": "Scrivi un unit test per il metodo validateISWC nella classe ISWCValidator", "should_trigger": false},
+  {"query": "La pipeline Glue job bronze-to-silver fallisce con errore OutOfMemoryError. Come lo risolvo?", "should_trigger": false},
+  {"query": "Puoi fare review del mio codice? Ho appena pushato su feature/SPORT-456-fix-auth", "should_trigger": false},
+  {"query": "Aggiorna la versione di Spring Boot da 3.1.0 a 3.2.1 nel pom.xml", "should_trigger": false},
+  {"query": "Ho ricevuto CHANGES REQUESTED sulla PR #45, il reviewer dice che manca la gestione degli errori nel controller", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI per il servizio catalogo-service", "should_trigger": false},
+  {"query": "Esegui terraform plan per il modulo networking nel folder infrastructure/modules/vpc", "should_trigger": false}
+]

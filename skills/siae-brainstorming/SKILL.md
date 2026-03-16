@@ -1,10 +1,11 @@
 ---
 name: siae-brainstorming
 description: >
-  OBBLIGATORIA prima di qualsiasi implementazione non banale. NON per task di implementazione diretta.
+  Guida il processo di design da idea a design doc approvato, prima di qualsiasi
+  implementazione non banale.
   Trigger: feature nuova, design, come procediamo, come progettiamo, quale approccio,
-  valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature, costruisci,
-  crea componente, nuovo servizio, refactoring architetturale, migrazione.
+  valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature,
+  costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione.
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato

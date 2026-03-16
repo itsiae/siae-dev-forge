@@ -1,0 +1,23 @@
+[
+  {"query": "Quale pattern architetturale dovremmo adottare per il nuovo servizio di gestione contratti SIAE? Abbiamo bisogno di alta scalabilita' con picchi durante le ripartizioni trimestrali.", "should_trigger": true},
+  {"query": "Valutiamo microservizi vs monolite per il sistema SPORT. Attualmente e' un monolite Spring Boot ma stiamo avendo problemi di deploy indipendente tra i team.", "should_trigger": true},
+  {"query": "Devo preparare l'HLD (High Level Design) per il nuovo sistema di ingestion diritti d'autore. Deve gestire file CSV da societa' estere con milioni di righe e alimentare il data lake.", "should_trigger": true},
+  {"query": "Puoi aiutarmi a creare il C4 model del servizio catalogo-opere? Devo presentarlo all'architettura review board SIAE la prossima settimana.", "should_trigger": true},
+  {"query": "Devo scegliere tra CQRS e CRUD per il servizio ripartizioni. Le letture sono 100x le scritture e abbiamo bisogno di proiezioni diverse per operatori e associati.", "should_trigger": true},
+  {"query": "Come strutturiamo la comunicazione tra il servizio contratti e il servizio notifiche? Sto valutando event-driven con EventBridge vs coreografia con SQS nel contesto SIAE.", "should_trigger": true},
+  {"query": "Devo definire i bounded context per il dominio diritti d'autore SIAE. Abbiamo opere, titolari, contratti, ripartizioni e licenze. Come li separiamo in DDD?", "should_trigger": true},
+  {"query": "Stiamo valutando se usare API Gateway + Lambda o ALB + ECS Fargate per il nuovo servizio di consultazione ISWC. Quali sono i trade-off nel nostro contesto?", "should_trigger": true},
+  {"query": "Il servizio report-service ha problemi di accoppiamento con catalogo-service e ripartizioni-service. Serve un refactoring architetturale per disaccoppiare le dipendenze.", "should_trigger": true},
+  {"query": "Devo progettare l'architettura di resilienza per il sistema di ingestion SIAE. Se il servizio legacy SOAP va giu' non possiamo perdere dati. Serve un pattern di retry e dead letter queue.", "should_trigger": true},
+
+  {"query": "Ho un'idea per migliorare il flusso di approvazione delle ripartizioni. Potremmo aggiungere uno step intermedio di validazione automatica. Cosa ne pensi?", "should_trigger": false},
+  {"query": "Scrivi il codice del controller Spring Boot per l'endpoint GET /api/v1/opere/{iswc} con validazione e gestione errori.", "should_trigger": false},
+  {"query": "Il test TestRipartizioneService fallisce con timeout dopo 30 secondi. Come debuggo il problema?", "should_trigger": false},
+  {"query": "Scrivi il modulo Terraform per creare il VPC con 3 subnet private e 3 pubbliche per l'ambiente di staging.", "should_trigger": false},
+  {"query": "Fai code review della PR #67 sul servizio notifiche-service. Il reviewer ha chiesto di verificare la gestione degli errori.", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI 3.0 per il servizio catalogo-service partendo dai controller Spring Boot.", "should_trigger": false},
+  {"query": "Crea un componente Vue.js per la tabella di visualizzazione delle ripartizioni con paginazione e filtri.", "should_trigger": false},
+  {"query": "Il Glue job bronze-to-silver per le opere musicali fallisce con OutOfMemoryError. Come aumento la memoria del job?", "should_trigger": false},
+  {"query": "Aggiungi la validazione del codice ISWC nel servizio catalogo seguendo lo standard ISO 15707.", "should_trigger": false},
+  {"query": "Fai git checkout -b feature/SPORT-123-nuovo-servizio e crea la struttura base del progetto Maven.", "should_trigger": false}
+]

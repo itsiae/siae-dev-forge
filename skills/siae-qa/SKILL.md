@@ -1,8 +1,9 @@
 ---
 name: siae-qa
 description: >
-  Use when implementation is complete and formal test documentation for Xray is needed.
-  Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5), /forge-qa.
+  Genera documentazione test formale per Xray a completamento implementazione.
+  Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5),
+  /forge-qa.
 ---
 
 # SIAE QA — Orchestrazione Xray
@@ -112,39 +113,14 @@ Prima di leggere AC o interrogare Jira, inferisci il tipo di requisito.
 ### 0a — Inferisci il tipo
 
 Leggi in ordine: summary della story, AC/description, commenti, label Jira, stack del progetto.
-Cerca i segnali della tabella seguente:
-
-| Tipo | Segnali (summary, AC, description, label, stack) |
-|------|--------------------------------------------------|
-| **Frontend (FE)** | "componente", "pagina", "form", "UI", "Vue", "Angular", "React", "click", "visualizza", "render", "responsive" |
-| **Backend Microservice (BE)** | "API", "endpoint", "service", "REST", "controller", "Spring", "Lambda", "validazione", "business rule" |
-| **ETL / Data Pipeline** | "Glue", "PySpark", "pipeline", "trasformazione", "bronze", "silver", "gold", "job", "ETL", "medallion" |
-| **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase" |
-| **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
-| **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
-
-**Confidence:**
-- **HIGH (≥ 90%):** 2+ segnali forti convergenti
-- **MEDIUM (60-89%):** 1 segnale forte o 2+ deboli
-- **LOW (< 60%):** segnali ambigui o assenti
+Cerca i segnali nella tabella req typing. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tabella Segnali Req Typing" per la tabella completa con segnali e livelli di confidence.
 
 ### 0b — Mostra Req Typing Card
 
-Mostra sempre la card con il tipo inferito:
+Mostra la Req Profile Card. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Template Req Profile Card" per il formato.
 
-```
-REQ PROFILE:
-  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration]
-  Confidence: [HIGH / MEDIUM / LOW]
-  Segnali:    [elenco segnali usati dall'inferenza]
-  Stack:      [tecnologie rilevate]
-```
-
-- **Se HIGH:** mostra la card e procedi con le domande del tree (0c).
-  L'utente può correggere il tipo prima che il tree parta rispondendo con il tipo corretto
-  (es. "in realtà è Auth"). In assenza di correzione, il tree parte immediatamente.
-- **Se MEDIUM/LOW:** chiedi conferma con scelta multipla:
-  "Il requisito mi sembra [tipo inferito]. Confermi? (si / altro tipo: FE / BE / ETL / DB / Auth / Integration)"
+- **Se HIGH:** mostra la card e procedi con le domande del tree (0c). L'utente puo' correggere il tipo.
+- **Se MEDIUM/LOW:** chiedi conferma con scelta multipla.
 
 ### 0c — Lancia le domande del tree contestuale
 
@@ -155,17 +131,8 @@ Usa le domande in `reference/question-trees.md` per il tipo confermato.
 **Regola fondamentale:** salta ogni domanda già rispondibile dagli AC/description esistenti.
 Fai UNA domanda alla volta. Aspetta la risposta prima di procedere alla successiva.
 
-Al termine delle domande, aggiorna la Req Profile Card con gli scenari raccolti:
-
-```
-REQ PROFILE (aggiornato):
-  Tipo:       [tipo]
-  Scenari L1: [lista scenari flusso principale]
-  Scenari L2: [lista edge case contestuali]
-  Scenari L3: [lista scenari integrazione/dipendenze]
-```
-
-Questa card è l'input aggiuntivo per Phase 4a (matrice scenari).
+Al termine delle domande, aggiorna la Req Profile Card con gli scenari raccolti (formato aggiornato in [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md)).
+Questa card e' l'input aggiuntivo per Phase 4a (matrice scenari).
 
 ---
 
@@ -262,59 +229,19 @@ Utenti diversi con permessi o dati diversi. Se la Story tocca autorizzazioni o r
 - "Il comportamento cambia in base al profilo? (es. autore vs editore, admin vs operatore)"
 - "Ci sono dati sensibili che solo alcuni ruoli possono vedere?"
 
-**Output atteso 4a:** matrice scenari compilata prima della generazione:
-
-```
-Categoria              | Scenari identificati
------------------------|-----------------------------------------------
-Positivi (happy path)  | [lista da AC + eventuali varianti]
-Edge case              | [lista da domande o da AC]
-Alternativi/negativi   | [lista da domande o da AC]
-Profilazioni/ruoli     | [lista da domande, o "N/A - nessun controllo ruolo"]
-```
-
-Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A — confermato dal developer" e procedi.
+Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A -- confermato dal developer" e procedi.
 **Non puoi procedere alla generazione con categorie non valutate.**
+
+Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) per template Matrice Scenari e formato output.
 
 ---
 
 #### 4b — Generazione Test Case
 
-Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
-
-| Campo | Contenuto |
-|-------|-----------|
-| ID | Numero sequenziale (1, 2, 3...) |
-| Test Type | `Manual` |
-| Team Competenza | `QA` |
-| ID JIRA Story | `{PROJ-XXX}` — **obbligatorio** |
-| User Story Description | Summary della Story Jira |
-| Scenario (descrizione) | Titolo del Test Case — includi la categoria: es. `[EDGE] ...`, `[NEG] ...`, `[PROFILO] ...` |
-| Step scenario | Numero step (1, 2, 3...) |
-| Action | Cosa fa l'utente/sistema in questo step |
-| Expected Result | Risultato atteso per questo step — **nel CSV il nome colonna e' `Expceted Result`** (typo storico del template importatore Xray SIAE) |
-| Data | Dati di test specifici (vuoto se non necessario) |
-| Automazione | `Y` se esiste test automatizzato per questo TC, `N` altrimenti |
-| NRT | `Y` (default — il TC e' un Non-Regression Test) |
-
-**Prefissi di categoria nel titolo Scenario:**
-- Nessun prefisso = scenario positivo (happy path)
-- `[EDGE]` = edge case (limite, vuoto, volume estremo)
-- `[NEG]` = scenario negativo / alternativo (errore, input non valido, dipendenza assente)
-- `[PROFILO]` = scenario specifico di ruolo / profilazione
-
-**Regola multi-step:** stesso ID = stesso Test Case con step multipli. I metadati (tipo, team, Jira, descrizione scenario) si ripetono **solo nella prima riga**. Le righe successive dello stesso TC hanno solo: ID, step numero, Action, Expected Result.
+Per ogni scenario della matrice (4a), genera 1+ Test Case step-based.
+Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step" e "Riepilogo Copertura" per formato completo, prefissi e template riepilogo.
 
 **Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.
-
-```
-Riepilogo copertura:
-  Positivi:    N TC
-  Edge case:   N TC
-  Negativi:    N TC
-  Profilazioni: N TC
-  TOTALE:      N TC
-```
 
 ---
 
@@ -326,32 +253,11 @@ Riepilogo copertura:
 3. Dopo l'esecuzione dei test, aggiorna il Test Execution con i risultati
 
 **Tier 3 (CSV):**
-- Genera il file CSV con separatore `;` (semicolon) — **mai virgola**
-- Formato esatto: vedi `reference/xray-csv-template.md`
-- Header obbligatorio in prima riga
-- Mostra il CSV all'utente e spiega come importarlo: Xray → Test → Import CSV
+Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni import.
 
-**Passo post-export — Mappatura ID sequenziali → chiavi Jira Xray [OBBLIGATORIO se si usa siae-automation]**
-
-Dopo l'import del CSV (o la creazione MCP), Xray assegna a ogni TC una chiave Jira propria (`PROJ-XXX`).
-Questa chiave è diversa dall'ID sequenziale usato nel CSV (`1`, `2`, `3`).
-
-Se prevedi di usare `siae-automation` per generare test Cypress o Appium, **devi raccogliere questa mappatura** prima di chiudere la skill:
-
-```
-Mappatura TC — {STORY_ID}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ID CSV  →  Chiave Xray   Scenario
-  1       →  PROJ-456      Verifica login credenziali valide
-  2       →  PROJ-457      [EDGE] Login con campo vuoto
-  3       →  PROJ-458      [NEG] Login con password errata
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-**Tier 1 (MCP):** la chiave viene restituita dalla risposta del tool di creazione — raccoglila automaticamente.
-**Tier 3 (CSV):** chiedi al developer di aprire Xray dopo l'import e comunicare le chiavi assegnate. Non procedere con siae-automation finché non hai questa mappatura.
-
-Salva la mappatura come output della skill: sarà l'input di Fase 1 di siae-automation.
+**Passo post-export — Mappatura ID sequenziali -> chiavi Jira Xray [OBBLIGATORIO se si usa siae-automation]**
+Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Mappatura ID Sequenziali e Chiavi Jira Xray" per procedura e template mappatura.
+Salva la mappatura come output della skill: sara' l'input di Fase 1 di siae-automation.
 
 ---
 
@@ -398,28 +304,7 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 
 ## CHECKLIST DI VERIFICA
 
-Prima di dichiarare la skill completata:
-
-- [ ] Phase 0 eseguita: tipo requisito inferito e Req Profile Card mostrata
-- [ ] Confidence HIGH → tree lanciato senza conferma tipo | MEDIUM/LOW → conferma ricevuta
-- [ ] Domande del tree skippate se risposta gia' presente in AC/description
-- [ ] Req Profile Card aggiornata con scenari L1/L2/L3 prima di procedere a Phase 4a
-- [ ] AC letti da Jira (o forniti esplicitamente dal developer)
-- [ ] Test Strategy Confluence cercata (trovata o WARNING registrato)
-- [ ] Test Plan generato/creato con campi obbligatori
-- [ ] Matrice scenari compilata (4 categorie valutate: positivi, edge, negativi, profilazioni)
-- [ ] Ogni categoria ha scenari identificati o "N/A — confermato dal developer"
-- [ ] Ogni AC ha almeno 1 Test Case step-based
-- [ ] Presenti TC per scenari positivi, edge case, negativi e profilazioni (se applicabili)
-- [ ] I titoli Scenario usano i prefissi `[EDGE]`, `[NEG]`, `[PROFILO]` dove appropriato
-- [ ] Ogni step ha sia `Action` che `Expected Result` (nel CSV usa la colonna `Expceted Result` — typo template)
-- [ ] Il campo `ID JIRA Story` e' presente in tutti i Test Case
-- [ ] Riepilogo copertura per categoria mostrato al developer prima dell'export
-- [ ] Campi `Automazione` e `NRT` verificati con il developer
-- [ ] Export effettuato (MCP / CSV) o spiegato come farlo
-- [ ] Mappatura ID sequenziali → chiavi Jira Xray raccolta (se si prevede di usare siae-automation)
-- [ ] Tier usato annunciato nella pre-flight card di apertura
-
+Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per la checklist completa.
 **Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla fase bloccata.**
 
 ---

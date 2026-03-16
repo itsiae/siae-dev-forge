@@ -1,9 +1,9 @@
 ---
 name: siae-code-standards
 description: >
-  Standard di codifica SIAE multi-stack. Trigger: scrittura codice Java,
-  TypeScript, Python, HCL/Terraform. Naming conventions, struttura progetto,
-  logging, error handling basati su pattern reali da 816 repo itsiae.
+  Applica standard di codifica SIAE multi-stack (Java, TypeScript, Python, HCL).
+  Trigger: scrittura codice Java, TypeScript, Python, HCL/Terraform, naming
+  conventions, struttura progetto, logging, error handling.
 ---
 
 ```

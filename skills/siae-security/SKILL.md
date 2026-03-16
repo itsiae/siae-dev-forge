@@ -1,9 +1,9 @@
 ---
 name: siae-security
 description: >
-  Sicurezza SIAE: OWASP Top 10, AWS security, PII dominio copyright.
-  Trigger: codice security-sensitive, gestione credenziali, IAM policy,
-  encryption, dati personali autori/artisti, codici ISWC/ISRC.
+  Applica policy di sicurezza SIAE (OWASP Top 10, AWS security, PII copyright).
+  Trigger: codice security-sensitive, gestione credenziali, IAM policy, encryption,
+  dati personali autori/artisti, codici ISWC/ISRC.
 ---
 
 ```

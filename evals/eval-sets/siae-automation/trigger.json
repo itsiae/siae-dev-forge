@@ -1,0 +1,22 @@
+[
+  {"query": "automatizza i test E2E per il servizio ripartizioni SIAE", "should_trigger": true},
+  {"query": "setup Playwright per testare il flusso di registrazione opere ISWC", "should_trigger": true},
+  {"query": "CI/CD pipeline per i test automatici del microservizio SPORT", "should_trigger": true},
+  {"query": "automazione test di regressione sulla gestione diritti d'autore", "should_trigger": true},
+  {"query": "/forge-automate", "should_trigger": true},
+  {"query": "configura i test automatici nel workflow GitHub Actions per il repo glue-jobs", "should_trigger": true},
+  {"query": "voglio automatizzare i test di integrazione con DynamoDB per il servizio mandati", "should_trigger": true},
+  {"query": "setup Cypress per il portale autori SIAE", "should_trigger": true},
+  {"query": "crea la suite di regression test automatica per le API Spring Boot delle ripartizioni", "should_trigger": true},
+  {"query": "configura il runner di test automatici per la pipeline di deploy del servizio licenze", "should_trigger": true},
+  {"query": "scrivi un unit test per la funzione di calcolo ripartizioni", "should_trigger": false},
+  {"query": "prepara il piano di test QA per il rilascio del modulo SPORT", "should_trigger": false},
+  {"query": "debugga il NullPointerException nel servizio mandati Spring Boot", "should_trigger": false},
+  {"query": "implementa l'endpoint REST per la ricerca opere per codice ISWC", "should_trigger": false},
+  {"query": "genera la documentazione OpenAPI per le API ripartizioni", "should_trigger": false},
+  {"query": "fai code review del PR sul modulo diritti d'autore", "should_trigger": false},
+  {"query": "scrivi i test unitari TDD per il calcolo delle royalties", "should_trigger": false},
+  {"query": "analizza l'architettura del sistema di gestione licenze SIAE", "should_trigger": false},
+  {"query": "crea il piano di test manuale per la nuova feature SPORT", "should_trigger": false},
+  {"query": "refactoring del modulo di importazione dati da file CSV delle opere", "should_trigger": false}
+]

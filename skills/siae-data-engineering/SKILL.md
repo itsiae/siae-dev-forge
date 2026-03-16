@@ -1,12 +1,13 @@
 ---
 name: siae-data-engineering
 description: >
-  Use when building, migrating, orchestrating, or debugging data pipelines and ETL jobs —
-  NOT for Terraform modules (use siae-iac), REST endpoints, or frontend components.
-  Trigger: Glue job, PySpark, ETL, pipeline di ingestion, trasformazione dati, Step Functions,
-  data lake, Medallion architecture, bronze-to-silver, silver-to-gold, data quality, crawler,
-  batch notturno, Iceberg, CDC, delta window, migrare dati da legacy, costruire pipeline,
-  orchestrazione batch, implementa Medallion, ingestion file CSV.
+  Guida la costruzione, migrazione e debug di data pipeline ed ETL job su AWS.
+  NON per Terraform (usa siae-iac), REST endpoint o frontend.
+  Trigger: Glue job, PySpark, ETL, pipeline di ingestion, trasformazione dati,
+  Step Functions, data lake, Medallion architecture, bronze-to-silver,
+  silver-to-gold, data quality, crawler, batch notturno, Iceberg, CDC,
+  delta window, migrare dati da legacy, costruire pipeline, orchestrazione batch,
+  implementa Medallion, ingestion file CSV.
 ---
 
 # SIAE Data Engineering
@@ -55,6 +56,17 @@ EventBridge, Iceberg, CDC, bronze-to-silver, delta window, data quality.
 | `reference/repo-structure.md` | Struttura directory repo ETL, IaC integration, ambienti |
 
 ---
+
+Copia questa checklist e traccia il progresso:
+
+```
+Pipeline Progress:
+- [ ] Step 1: Identifica sorgente e schema input
+- [ ] Step 2: Definisci trasformazione (mapping campi)
+- [ ] Step 3: Implementa Glue job con test locale
+- [ ] Step 4: Valida output (data quality checks)
+- [ ] Step 5: Configura orchestrazione (Step Functions/EventBridge)
+```
 
 ## 1. Medallion Architecture
 
@@ -254,7 +266,7 @@ RetrieveTablesToUpdate (Lambda)
 s3://{bronze-bucket}/bronze/{domain}/{table}/year=YYYY/month=MM/day=DD/
 ```
 
-Esempio: `s3://siae-datalake-prod/bronze/anagrafica-dipendenti/dipendenti/year=2026/month=03/day=12/`
+Esempio: `s3://siae-datalake-prod/bronze/anagrafica-dipendenti/dipendenti/year=YYYY/month=MM/day=DD/`
 
 - Partizione obbligatoria: `year`, `month`, `day`
 - Formato: Parquet

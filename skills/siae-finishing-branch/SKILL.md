@@ -1,7 +1,7 @@
 ---
 name: siae-finishing-branch
 description: >
-  OBBLIGATORIA prima di aprire qualsiasi PR. Chiusura sicura di un branch.
+  Chiude un branch in sicurezza prima di aprire qualsiasi PR.
   Trigger: "pronto per PR", "finisco il branch", "ready to merge", "apro la PR",
   gh pr create, git push + PR, apertura pull request, branch completato,
   implementazione finita, lavoro completato su branch, pre-merge checklist.

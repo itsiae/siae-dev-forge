@@ -1,0 +1,23 @@
+[
+  {"query": "Mappa questo codebase, non ho idea di come sia strutturato il progetto sport-catalogo-service", "should_trigger": true},
+  {"query": "Crea la CODEBASE_MAP.md per questo repository, ha piu' di 200 file e non c'e' documentazione della struttura", "should_trigger": true},
+  {"query": "Documenta la struttura del progetto sport-auth-service, devo fare onboarding di un nuovo collega", "should_trigger": true},
+  {"query": "Analizza l'architettura di questo repo Spring Boot e genera la mappa dei moduli e package principali", "should_trigger": true},
+  {"query": "/forge-map", "should_trigger": true},
+  {"query": "Aggiorna la mappa del codebase, ho aggiunto tre nuovi package per la gestione delle licenze sincronizzazione", "should_trigger": true},
+  {"query": "Questo repo ha 120 file e nessuna docs/CODEBASE_MAP.md, serve una mappa per orientarsi tra controller, service e repository", "should_trigger": true},
+  {"query": "Fammi capire com'e' organizzato il codice sorgente del servizio ripartizioni, voglio una mappa chiara dei layer", "should_trigger": true},
+  {"query": "Ho clonato sport-notifiche-service e non capisco nulla della struttura. Puoi mapparmi il progetto?", "should_trigger": true},
+  {"query": "Genera un overview dell'architettura interna di questo codebase: package, dipendenze tra moduli, entry point principali", "should_trigger": true},
+
+  {"query": "Mappa il sistema SPORT con tutti i microservizi e le dipendenze tra di loro, chi chiama chi", "should_trigger": false},
+  {"query": "Scrivi la documentazione tecnica del servizio catalogo con diagrammi di sequenza e API reference", "should_trigger": false},
+  {"query": "Devo progettare un nuovo servizio per la gestione dei diritti connessi, come lo architettiamo?", "should_trigger": false},
+  {"query": "Il test TestCatalogoService fallisce con timeout sulla connessione DynamoDB, puoi debuggare?", "should_trigger": false},
+  {"query": "Fai review del codice nel package it.siae.catalogo.controller, controlla error handling e naming", "should_trigger": false},
+  {"query": "Quali microservizi compongono la piattaforma SPORT e come comunicano tra loro via EventBridge?", "should_trigger": false},
+  {"query": "Genera la documentazione OpenAPI per gli endpoint REST del servizio ripartizioni", "should_trigger": false},
+  {"query": "Cosa fa il metodo calcolaQuoteRipartizione nel RipartizioneService? Leggi il codice e spiegami", "should_trigger": false},
+  {"query": "Ho un'idea per ristrutturare il layer di persistenza usando il pattern repository. Come procediamo?", "should_trigger": false},
+  {"query": "Scrivi un unit test per il ContrattoController che verifichi la validazione dell'input ISWC", "should_trigger": false}
+]

@@ -1,10 +1,10 @@
 ---
 name: siae-debugging
 description: >
-  OBBLIGATORIA prima di proporre qualsiasi fix. Root cause investigation PRIMA di tentare soluzioni.
-  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso, eccezione,
-  stacktrace, crash, errore di compilazione, build failure, 500, timeout, NullPointerException,
-  TypeError, non funziona, rotto, fallisce, non va.
+  Esegue root cause investigation prima di proporre qualsiasi fix.
+  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso,
+  eccezione, stacktrace, crash, errore di compilazione, build failure, 500,
+  timeout, NullPointerException, TypeError, non funziona, rotto, fallisce, non va.
 ---
 
 # SIAE Debugging Sistematico
@@ -86,6 +86,16 @@ Usa per QUALSIASI problema tecnico:
 ## Le 4 Fasi Obbligatorie
 
 Devi completare ogni fase PRIMA di procedere alla successiva.
+
+Copia questa checklist e traccia il progresso:
+
+```
+Debug Progress:
+- [ ] Fase 1: Root Cause Investigation (reproduci + raccogli contesto)
+- [ ] Fase 2: Formula ipotesi di root cause
+- [ ] Fase 3: Verifica ipotesi (test mirato)
+- [ ] Fase 4: Applica fix + regression test
+```
 
 ### Fase 1: Root Cause Investigation (HARD-GATE)
 

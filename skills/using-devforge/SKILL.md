@@ -1,9 +1,9 @@
 ---
 name: using-devforge
 description: >
-  Usa all'inizio di ogni conversazione. Stabilisce come trovare e usare le
-  skill siae-devforge, richiedendo l'invocazione dello Skill tool PRIMA di
-  qualsiasi risposta incluse domande di chiarimento.
+  Stabilisce il framework di discovery e invocazione skill DevForge all'inizio
+  di ogni conversazione.
+  Trigger: inizio sessione, apertura nuovo progetto, prima interazione.
 ---
 
 ## ISTRUZIONE OBBLIGATORIA — ESEGUI PRIMA DI TUTTO
@@ -164,8 +164,17 @@ Quando piu' skill potrebbero applicarsi, usa questo ordine:
 1. **Skill di processo prima** (brainstorming, debugging, git-workflow) — determinano COME affrontare il task
 2. **Skill di implementazione dopo** (code-standards, frontend, iac, data-engineering) — guidano l'esecuzione
 
+**Eccezione — skill specializzate con keyword esplicite:**
+Se la query contiene keyword esplicite di una skill specializzata, quella skill ha priorita' ANCHE su brainstorming. Invoca ENTRAMBE se necessario (la specializzata prima, brainstorming dopo se serve design):
+
+- "C4 model", "HLD", "bounded context", "CQRS", "microservizi vs monolite" → invoca `siae-architecture` (puo' invocare anche brainstorming dopo)
+- "Playwright", "Cypress", "test E2E", "CI/CD pipeline", "GitHub Actions" → invoca `siae-automation`
+- "Glue job", "PySpark", "ETL", "Medallion", "pipeline ingestion" → invoca `siae-data-engineering`
+- "Terraform", "terragrunt", "VPC", "ECS", "Lambda" → invoca `siae-iac`
+
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
+"Valutiamo CQRS vs CRUD" → architecture (keyword esplicita).
 
 ## Gerarchia Istruzioni
 

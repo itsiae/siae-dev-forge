@@ -1,0 +1,46 @@
+[
+  {
+    "name": "brainstorming_rest_endpoint",
+    "description": "Verifica che brainstorming produca design doc per endpoint REST",
+    "turns": [
+      {"role": "user", "content": "Devo aggiungere un endpoint REST per cercare opere per ISWC. Il servizio gira su Spring Boot con DynamoDB. Come procediamo?"},
+      {"role": "user", "content": "si, confermo il contesto inferito"},
+      {"role": "user", "content": "preferisco l'approccio B, procedi"},
+      {"role": "user", "content": "si, la sezione e' corretta"},
+      {"role": "user", "content": "approvo il design, scrivi il doc"}
+    ],
+    "setup": {
+      "cwd": "fixtures/spring-boot-sample",
+      "files": ["pom.xml", "CLAUDE.md"]
+    },
+    "final_checks": [
+      {"name": "design_doc_created", "weight": 3, "check": "Ha scritto o proposto un file docs/plans/ con il design?"},
+      {"name": "criteria_present", "weight": 2, "check": "Il design contiene criteri di accettazione?"},
+      {"name": "transition_offered", "weight": 2, "check": "Ha offerto la transizione a siae-writing-plans o piano implementativo?"},
+      {"name": "no_code_written", "weight": 2, "check": "NON ha scritto codice di produzione Java/Python/etc?"}
+    ],
+    "pass_threshold": 0.75
+  },
+  {
+    "name": "brainstorming_async_migration",
+    "description": "Verifica brainstorming per migrazione da sincrono ad asincrono",
+    "turns": [
+      {"role": "user", "content": "Vorrei ripensare il flusso di approvazione delle ripartizioni. Attualmente sincrono, con 2 milioni di righe ci mette troppo. Step Functions?"},
+      {"role": "user", "content": "confermo, il servizio usa Spring Boot e DynamoDB"},
+      {"role": "user", "content": "approvo l'approccio con Step Functions, procedi col design"},
+      {"role": "user", "content": "ok la sezione architettura, vai avanti"},
+      {"role": "user", "content": "tutto ok, scrivi il design doc"}
+    ],
+    "setup": {
+      "cwd": "fixtures/spring-boot-sample",
+      "files": ["pom.xml", "CLAUDE.md"]
+    },
+    "final_checks": [
+      {"name": "design_doc_created", "weight": 3, "check": "Ha prodotto un design doc strutturato?"},
+      {"name": "criteria_present", "weight": 2, "check": "Il design ha criteri di accettazione?"},
+      {"name": "transition_offered", "weight": 2, "check": "Ha proposto il passo successivo (piano implementativo)?"},
+      {"name": "no_code_written", "weight": 2, "check": "Nessun codice di produzione scritto?"}
+    ],
+    "pass_threshold": 0.75
+  }
+]

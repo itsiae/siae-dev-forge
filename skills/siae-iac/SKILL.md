@@ -1,8 +1,10 @@
 ---
 name: siae-iac
 description: >
-  ALWAYS use when writing or modifying Terraform modules, terragrunt.hcl files, or AWS infrastructure code.
-  Trigger: modulo Terraform, terragrunt, file .tf, .hcl, VPC, ECS, Lambda, DynamoDB table, S3 bucket, security group, API Gateway, infrastruttura AWS.
+  Guida la scrittura e modifica di moduli Terraform, file terragrunt.hcl e
+  infrastruttura AWS.
+  Trigger: modulo Terraform, terragrunt, file .tf, .hcl, VPC, ECS, Lambda,
+  DynamoDB table, S3 bucket, security group, API Gateway, infrastruttura AWS.
 ---
 
 # SIAE Infrastructure as Code
@@ -33,6 +35,17 @@ Pattern IaC da 44 repo HCL itsiae (enterpriseplatform-core-iaac, dataplatform-da
 **Trigger**: file .tf/.hcl, terragrunt.hcl, modifica infrastruttura AWS, nuovi moduli TF, setup ambienti.
 
 ---
+
+Copia questa checklist e traccia il progresso:
+
+```
+IaC Progress:
+- [ ] Step 1: Definisci risorse in _input.tf / _local.tf
+- [ ] Step 2: Implementa modulo (.tf)
+- [ ] Step 3: Configura live/ (terragrunt.hcl)
+- [ ] Step 4: terraform plan — verifica diff
+- [ ] Step 5: Security review (IAM least privilege, encryption)
+```
 
 ## 1. Terragrunt Pattern
 
