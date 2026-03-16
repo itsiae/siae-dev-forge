@@ -1,0 +1,23 @@
+[
+  {"query": "Devo creare un componente Vue.js per la tabella di visualizzazione dei diritti d'autore. Deve supportare paginazione, ordinamento per colonna e filtro per ISWC o titolo opera.", "should_trigger": true},
+  {"query": "Scrivi i test Vitest per il form di registrazione nuovo associato SIAE. Deve validare codice fiscale, IBAN e campi obbligatori.", "should_trigger": true},
+  {"query": "Devo fare il deploy del portale associati su S3 con CloudFront. Come configuro il bucket policy e la distribution per il dominio custom portale.siae.it?", "should_trigger": true},
+  {"query": "Configura Firebase Authentication per il login degli associati SIAE. Serve supporto email/password e Google OAuth con redirect sul portale Vue.js.", "should_trigger": true},
+  {"query": "Il brand SIAE deve essere applicato al frontend del portale operatori. Servono i colori corporate, il logo SVG nel header e il font istituzionale.", "should_trigger": true},
+  {"query": "Crea il componente Vue.js per la ricerca opere musicali con autocomplete. Deve chiamare l'API catalogo-service e mostrare risultati con ISWC, titolo e autori.", "should_trigger": true},
+  {"query": "Devo implementare il responsive design del portale ripartizioni SIAE. La tabella delle quote deve funzionare su mobile con card layout sotto i 768px.", "should_trigger": true},
+  {"query": "Aggiungi la gestione dello stato con Pinia nel frontend del portale contratti. Serve uno store per i contratti in lavorazione con persistenza su localStorage.", "should_trigger": true},
+  {"query": "Il componente di upload file nel portale opere SIAE deve gestire drag & drop di file CSV fino a 50MB con progress bar e validazione del formato.", "should_trigger": true},
+  {"query": "Implementa il routing Vue Router per il portale associati con guard di autenticazione. Le rotte protette devono redirectare al login se il token JWT e' scaduto.", "should_trigger": true},
+
+  {"query": "Scrivi l'endpoint REST Spring Boot per la ricerca opere per ISWC con paginazione. Deve restituire titolo, autori e quote.", "should_trigger": false},
+  {"query": "Crea il modulo Terraform per la distribuzione CloudFront con WAF e certificato ACM per il dominio siae.it.", "should_trigger": false},
+  {"query": "Scrivi la query DynamoDB per recuperare le ripartizioni di un titolare filtrando per anno e trimestre.", "should_trigger": false},
+  {"query": "Il Glue job di trasformazione delle opere musicali ha un bug nel parsing del campo ISWC. Come lo risolvo?", "should_trigger": false},
+  {"query": "Quale pattern architetturale dovremmo adottare per il sistema di notifiche? Event-driven o request-response?", "should_trigger": false},
+  {"query": "Fai code review del servizio contratti-service. Verifica la gestione transazionale e i test di integrazione.", "should_trigger": false},
+  {"query": "Genera la documentazione API per il servizio ripartizioni-service con gli esempi di request/response.", "should_trigger": false},
+  {"query": "Il test di integrazione del servizio catalogo fallisce perche' il container DynamoDB Local non parte. Come debuggo?", "should_trigger": false},
+  {"query": "Scrivi la IAM policy per il ruolo Lambda che deve leggere da DynamoDB e scrivere su S3 nel data lake.", "should_trigger": false},
+  {"query": "Ho un'idea per migliorare il processo di approvazione delle ripartizioni. Possiamo aggiungere un workflow con Step Functions?", "should_trigger": false}
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "query": "Ho finito di implementare l'endpoint REST per cercare opere per ISWC. Funziona tutto.",
+    "setup": {},
+    "criteria": [
+      {"name": "evidence_cited", "weight": 3, "check": "Ha chiesto o prodotto evidenza concreta (output test, log, screenshot)?"},
+      {"name": "command_executed", "weight": 3, "check": "Ha eseguito almeno un comando di verifica (test, curl, build)?"},
+      {"name": "output_read", "weight": 2, "check": "Ha letto e analizzato l'output del comando?"},
+      {"name": "no_false_claim", "weight": 2, "check": "NON ha dichiarato successo senza evidenza?"},
+      {"name": "citation_format", "weight": 1, "check": "Ha citato file:riga o output specifico?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "I test passano tutti, il bug e' fixato.",
+    "setup": {},
+    "criteria": [
+      {"name": "evidence_cited", "weight": 3, "check": "Ha chiesto quale test suite o ha eseguito i test?"},
+      {"name": "command_executed", "weight": 3, "check": "Ha eseguito un comando test?"},
+      {"name": "output_read", "weight": 2, "check": "Ha verificato l'output dei test?"},
+      {"name": "no_false_claim", "weight": 2, "check": "Non ha accettato il claim senza verifica?"},
+      {"name": "citation_format", "weight": 1, "check": "Ha citato output specifico?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "La migrazione del database e' completata con successo.",
+    "setup": {},
+    "criteria": [
+      {"name": "evidence_cited", "weight": 3, "check": "Ha chiesto evidenza della migrazione?"},
+      {"name": "command_executed", "weight": 3, "check": "Ha proposto/eseguito verifica (count records, schema check)?"},
+      {"name": "output_read", "weight": 2, "check": "Ha analizzato il risultato?"},
+      {"name": "no_false_claim", "weight": 2, "check": "Non ha confermato senza evidenza?"},
+      {"name": "citation_format", "weight": 1, "check": "Ha citato dati specifici?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Ho deployato il servizio in ambiente di collaudo, tutto ok.",
+    "setup": {},
+    "criteria": [
+      {"name": "evidence_cited", "weight": 3, "check": "Ha chiesto log di deploy o health check?"},
+      {"name": "command_executed", "weight": 3, "check": "Ha proposto verifica (curl health, log tail)?"},
+      {"name": "output_read", "weight": 2, "check": "Ha analizzato la risposta?"},
+      {"name": "no_false_claim", "weight": 2, "check": "Non ha confermato il deploy senza verifica?"},
+      {"name": "citation_format", "weight": 1, "check": "Ha citato URL o output specifico?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Il refactoring del modulo auth e' fatto, non ho rotto niente.",
+    "setup": {},
+    "criteria": [
+      {"name": "evidence_cited", "weight": 3, "check": "Ha chiesto/eseguito test suite?"},
+      {"name": "command_executed", "weight": 3, "check": "Ha eseguito test o build?"},
+      {"name": "output_read", "weight": 2, "check": "Ha verificato l'output?"},
+      {"name": "no_false_claim", "weight": 2, "check": "Non ha accettato 'non ho rotto niente' senza test?"},
+      {"name": "citation_format", "weight": 1, "check": "Ha citato risultati specifici?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]

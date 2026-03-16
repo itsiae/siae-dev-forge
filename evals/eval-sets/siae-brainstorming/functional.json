@@ -1,0 +1,62 @@
+[
+  {
+    "query": "Devo aggiungere un endpoint REST per cercare opere per ISWC. Il servizio gira su Spring Boot con DynamoDB. Come procediamo?",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "smart_intake", "weight": 2, "check": "Ha inferito stack/pattern dal codebase PRIMA di fare domande?"},
+      {"name": "approaches", "weight": 3, "check": "Ha proposto 2-3 approcci distinti con pro/contro?"},
+      {"name": "no_code", "weight": 2, "check": "NON ha scritto codice di implementazione?"},
+      {"name": "sp_estimate", "weight": 1, "check": "Ha fornito stima SP (Umano/Augmented)?"},
+      {"name": "approval_gate", "weight": 2, "check": "Ha chiesto approvazione prima di procedere?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Dobbiamo creare un nuovo microservizio per la gestione delle licenze sincronizzazione. Deve esporre API REST, integrarsi con il sistema legacy SIAE via SOAP, e salvare su PostgreSQL.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "smart_intake", "weight": 2, "check": "Ha inferito lo stack dal pom.xml/CLAUDE.md?"},
+      {"name": "approaches", "weight": 3, "check": "Ha proposto almeno 2 approcci architetturali?"},
+      {"name": "no_code", "weight": 2, "check": "NON ha iniziato a scrivere codice?"},
+      {"name": "sp_estimate", "weight": 1, "check": "Ha fornito stima SP?"},
+      {"name": "approval_gate", "weight": 2, "check": "Ha chiesto conferma del contesto e/o approvazione?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Vorrei ripensare il flusso di approvazione delle ripartizioni. Attualmente e' sincrono ma con 2 milioni di righe ci mette troppo. Possiamo passare ad asincrono con Step Functions?",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "smart_intake", "weight": 2, "check": "Ha letto il contesto del progetto prima di rispondere?"},
+      {"name": "approaches", "weight": 3, "check": "Ha valutato pro/contro di SQS vs Step Functions vs EventBridge?"},
+      {"name": "no_code", "weight": 2, "check": "Non ha scritto codice di produzione?"},
+      {"name": "sp_estimate", "weight": 1, "check": "Ha fornito stima effort?"},
+      {"name": "approval_gate", "weight": 2, "check": "Ha chiesto conferma prima di procedere al design dettagliato?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Ho bisogno di aggiungere un campo 'codice_territorio' alla tabella opere nel catalogo. Impatta API e modello DynamoDB.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["pom.xml", "CLAUDE.md"]},
+    "criteria": [
+      {"name": "smart_intake", "weight": 2, "check": "Ha verificato lo stack DynamoDB dal progetto?"},
+      {"name": "approaches", "weight": 3, "check": "Ha proposto almeno 2 approcci per la migrazione dati?"},
+      {"name": "no_code", "weight": 2, "check": "Non ha scritto codice?"},
+      {"name": "sp_estimate", "weight": 1, "check": "Ha stimato l'effort?"},
+      {"name": "approval_gate", "weight": 2, "check": "Ha chiesto conferma?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Voglio creare una dashboard Vue.js per monitorare le ingestion nel data lake. Grafici volumi giornalieri e alert quando un Glue job fallisce.",
+    "setup": {"cwd": "fixtures/spring-boot-sample", "files": ["CLAUDE.md"]},
+    "criteria": [
+      {"name": "smart_intake", "weight": 2, "check": "Ha letto il CLAUDE.md del progetto?"},
+      {"name": "approaches", "weight": 3, "check": "Ha proposto opzioni frontend (Vue vs React vs altro)?"},
+      {"name": "no_code", "weight": 2, "check": "Non ha iniziato ad implementare?"},
+      {"name": "sp_estimate", "weight": 1, "check": "Ha fornito stima SP?"},
+      {"name": "approval_gate", "weight": 2, "check": "Ha chiesto approvazione del design?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]
