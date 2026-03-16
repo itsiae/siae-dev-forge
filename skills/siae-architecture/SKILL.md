@@ -1,10 +1,12 @@
 ---
 name: siae-architecture
 description: >
-  Valuta pattern architetturali, crea diagrammi C4 e guida scelte di design
-  (microservizi vs monolite, CQRS, event-driven).
-  Trigger: pattern architetturale, C4 model, HLD, bounded context, CQRS,
-  microservizi vs monolite, scelta architetturale, resilienza.
+  Analizza architettura di sistemi software: C4 model, HLD, bounded context,
+  CQRS, event-driven, microservizi vs monolite, resilienza, accoppiamento tra servizi.
+  Invoca quando l'utente chiede di VALUTARE, SCEGLIERE o ANALIZZARE pattern architetturali
+  per un sistema esistente o nuovo.
+  Esempi: "valutiamo CQRS", "microservizi o monolite?", "crea il C4",
+  "definisci i bounded context", "HLD per il sistema X".
 ---
 
 ```
