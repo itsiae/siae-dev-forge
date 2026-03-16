@@ -114,8 +114,7 @@ done
 echo ""
 
 if [[ -n "$POLLUTER" ]]; then
-    echo -e "| 🔴 ALTO — 🔨 DevForge · POLLUTER IDENTIFICATO |"
-    echo -e "|:---|"
+    echo -e "${RED}💥 POLLUTER IDENTIFICATO${NC}"
     echo ""
     echo "  File:    $POLLUTER"
     echo "  Pattern: $POLLUTION_PATTERN"

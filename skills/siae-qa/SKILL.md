@@ -98,6 +98,7 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 | 📡 Tier attivo: `Tier 1 MCP / Tier 3 CSV` · 🎫 Story Jira: `PROJ-XXX` |
 | ✅ AC disponibili: `Si / No` · 📚 Confluence: `Spazio QA trovato / Non configurato` |
 | **▼ Azione** |
+| 1. 📋 Lettura AC da Jira + avvio workflow QA → `PROJ-XXX` |
 | 💡 Perche': Il tier determina come vengono sincronizzati i TC |
 | 🚫 Se NO: Se Tier 3: esporto CSV importabile manualmente in Xray |
 
