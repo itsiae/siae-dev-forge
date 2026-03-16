@@ -1,8 +1,10 @@
 ---
 name: siae-architecture
 description: >
-  ALWAYS use when evaluating architectural patterns, creating C4 diagrams, or choosing between design approaches (microservizi vs monolite, CQRS, event-driven).
-  Trigger: pattern architetturale, C4 model, HLD, bounded context, CQRS, microservizi vs monolite, scelta architetturale, resilienza.
+  Valuta pattern architetturali, crea diagrammi C4 e guida scelte di design
+  (microservizi vs monolite, CQRS, event-driven).
+  Trigger: pattern architetturale, C4 model, HLD, bounded context, CQRS,
+  microservizi vs monolite, scelta architetturale, resilienza.
 ---
 
 ```

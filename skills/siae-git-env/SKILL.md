@@ -1,9 +1,8 @@
 ---
 name: siae-git-env
 description: >
-  Micro-skill di utility per la detection di GitHub CLI (gh).
+  Rileva la disponibilita' di GitHub CLI (gh) e stabilisce GH_MODE o FALLBACK_MODE.
   Trigger: REQUIRED SUB-SKILL da siae-git-workflow e siae-finishing-branch.
-  Stabilisce GH_MODE o FALLBACK_MODE per la sessione corrente.
 ---
 
 # siae-git-env — GitHub CLI Environment Check

@@ -1,11 +1,11 @@
 ---
 name: siae-service-logic-map
 description: >
-  Use when profiling what microservices do: domain, entities, workflows, business
-  rules, clusters. Trigger: "cosa fa {servizio}", "lanciamo su {pattern}",
-  "analizziamo {sistema}", "mappa la logica", "build catalogo L1/L2/L3",
-  "regole business di", "Drools in", "quali servizi gestiscono X",
-  impact analysis, /forge-logic-build, /forge-logic-search.
+  Profila microservizi: dominio, entita', workflow, regole business, cluster.
+  Trigger: "cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}",
+  "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
+  "quali servizi gestiscono X", impact analysis, /forge-logic-build,
+  /forge-logic-search.
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map
@@ -126,29 +126,9 @@ Identifica i repo target per il dominio richiesto.
 
 ### 2a — Disambiguazione Pattern (se l'utente usa un nome semantico)
 
-Se l'utente ha descritto il sistema con un nome semantico (es. "filiera del credito",
-"sistema abbonamenti") invece di un prefisso tecnico, prova SEMPRE multiple varianti
-prima di dichiarare "nessun repo trovato":
-
-```bash
-# Testa varianti: nome esteso, acronimo, abbreviazione
-# Es. "filiera del credito" → credito, fdc, filiera
-for PATTERN in "{variante1}" "{variante2}" "{acronimo}"; do
-  echo -n "$PATTERN: "
-  gh repo list itsiae --limit 500 --json name \
-    --jq "[.[] | .name | select(test(\"$PATTERN\"))] | length"
-done
-```
-
-**Regola:** zero risultati su una variante NON significa "nessun repo".
-Prova almeno 3 varianti prima di chiedere conferma all'utente.
-
-Mostra i candidati trovati e chiedi conferma:
-```
-Repo trovati per "{dominio}":
-  sport-fdc-evidenza-service, sport-fdc-fascicolo-service, sport-fdc-documento-service
-Sono questi i repo target? (si / aggiungi altri / rimuovi)
-```
+Se l'utente usa un nome semantico (es. "filiera del credito") invece di un prefisso tecnico,
+prova SEMPRE almeno 3 varianti (nome esteso, acronimo, abbreviazione) con `gh repo list` prima
+di dichiarare "nessun repo trovato". Mostra i candidati trovati e chiedi conferma.
 
 ### 2b — Fetch Lista Confermata
 
@@ -191,31 +171,9 @@ MAI inferire cluster dal nome del servizio o dal dominio percepito.
 
 ### 3b — Proponi Cluster all'Utente
 
-Presenta i cluster proposti prima di procedere:
-
-```
-Cluster proposti da docs/SYSTEM_MAP.md:
-
-  cluster-abbonamenti (3 servizi):
-    sport-gestione-abbonamento, sport-contabilita, sport-pagamenti
-    [CONFIRMED] da SYSTEM_MAP.md: dipendenze reciproche
-
-  cluster-iscrizioni (2 servizi):
-    sport-iscrizioni, sport-atleti
-    [CONFIRMED] da SYSTEM_MAP.md: sport-iscrizioni --> sport-atleti
-
-  cluster-standalone (1 servizio):
-    sport-notifiche
-    [CONFIRMED] da SYSTEM_MAP.md: nessuna dipendenza rilevata
-
-Confermi questi cluster prima del build? (si / no / modifica)
-```
-
-🟡 MEDIO — Attendere conferma utente prima di procedere al Step 4.
-
-**Se l'utente modifica i cluster:**
-- Aggiorna la mappa manualmente e documenta la modifica come `[INFERRED]`
-- Motivo della modifica va documentato in `clusters.yaml`
+Presenta i cluster proposti (nome, servizi, evidenza SYSTEM_MAP.md) e chiedi conferma.
+🟡 MEDIO -- Attendere conferma utente prima di procedere al Step 4.
+Se l'utente modifica i cluster, documenta la modifica come `[INFERRED]` in `clusters.yaml`.
 
 ---
 
@@ -231,79 +189,24 @@ echo "Logic catalog dir: $OUTPUT_DIR"
 
 ### 4b — Pre-fetch Dati per Cluster (Parent via Bash)
 
-Per ogni cluster, pre-fetcha i dati di TUTTI i repo del cluster prima di dispatchar l'agente:
-
-```bash
-# Per ogni repo nel cluster:
-
-# 1. File tree per trovare *Service.java, *Entity.java, openapi*.yaml
-gh api "/repos/itsiae/{repo}/git/trees/HEAD?recursive=1" \
-  --jq '[.tree[].path | select(test("Service\\.java$|Entity\\.java$|Controller\\.java$|openapi.*\\.ya?ml$|Scheduler\\.java$"))] | .[0:20]'
-
-# 2. Per ogni *Service.java: solo metodi public (firme, non body)
-gh api /repos/itsiae/{repo}/contents/{path} --jq '.content' | base64 -d \
-  | grep -E "^\s+(public|@Transactional|@Scheduled|@KafkaListener)"
-
-# 3. openapi*.yaml (se esiste): prime 100 righe
-gh api /repos/itsiae/{repo}/contents/{openapi-path} --jq '.content' | base64 -d | head -100
-
-# 4. Pre-fetch L3 — Business Rules (per ogni *Service.java)
-#    Grep snippet: KieSession/Drools, condizioni dominio, @Query
-gh api /repos/itsiae/{repo}/contents/{ServiceFile} --jq '.content' | base64 -d \
-  | grep -n "KieSession\|fireAllRules\|@Query\|@NamedQuery\|if.*[Ss]tato\|if.*[Tt]ipo\|if.*[Cc]ategoria" -A3 -B1
-
-# 5. Pre-fetch L3 — Repository e DRL files (se esistono nel tree scan)
-gh api /repos/itsiae/{repo}/contents/{RepositoryFile} --jq '.content' | base64 -d \
-  | grep -n "@Query\|@NamedQuery\|@EntityGraph" -A2
-```
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Pre-fetch Dati per Cluster" per i comandi di pre-fetch completi.
 
 **Regola critica:** il parent pre-fetcha SEMPRE via Bash. Gli agenti ricevono i dati inline — non hanno permesso di usare Bash autonomamente.
 
 ### 4c — Pilot Test (OBBLIGATORIO su sistemi con 3+ cluster)
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
-|:---|
-| 🔬 Pilot test: `1 cluster su N totali` |
-| 📦 Dati pre-fetchati: `Service.java + Entity.java + openapi` |
-| 1. 🤖 Dispatch 1 agente pilot (cluster piu piccolo): `docs/logic-catalog/` |
-| 2. 📄 Scrittura 1 file cluster: `docs/logic-catalog/cluster-{nome}.md` |
-| 💡 Perche': Validazione pipeline prima del full run |
-| 🚫 Se NO: Pilot annullato, full run non garantito senza validazione |
-
-Procedura pilot:
-1. Pre-fetcha dati per il cluster piu' piccolo (meno repo)
+🟡 MEDIO — Pilot: 1 cluster su N totali. Validazione pipeline prima del full run.
+1. Pre-fetcha dati per il cluster piu' piccolo
 2. Dispatcha 1 agente con dati inline nel prompt
-3. Verifica output: `ls docs/logic-catalog/cluster-*.md | wc -l` → deve essere `1`
-4. Se OK → procedi con full run (Step 4d)
-5. Se file mancante → STOP, diagnostica istruzioni agente prima di continuare
+3. Verifica: `ls docs/logic-catalog/cluster-*.md | wc -l` deve essere `1`
+4. Se OK → Step 4d. Se file mancante → STOP, diagnostica.
 
 ### 4d — Dispatch Agenti per Cluster (Full Run)
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
-|:---|
-| 🤖 Agenti: `K agenti (1 per cluster) in parallelo` |
-| 📦 Cluster: `lista cluster confermati al Step 3` |
-| ✅ Pilot: `1/1 file verificato` |
-| 1. ⚡ Dispatch tutti gli agenti in parallelo: `docs/logic-catalog/` |
-| 2. 📄 Scrittura K file cluster: `docs/logic-catalog/cluster-*.md` |
-| 💡 Perche': Pilot OK, full run pronto |
-| 🚫 Se NO: Full run annullato, catalogo parziale |
-
+🟡 MEDIO — K agenti (1 per cluster) in parallelo.
 Dispatcha TUTTI i cluster in un blocco parallelo (1 agente per cluster).
 
-**ISTRUZIONE CRITICA DA INCLUDERE IN OGNI AGENTE:**
-
-```
-Hai tutti i dati nel prompt per il cluster {nome} ({lista servizi}).
-NON usare Bash. Usa SOLO il Write tool.
-1. Analizza i dati e compila la doc L1+L2+L3 per ogni servizio del cluster
-   - L3 usa i snippet grep ricevuti inline: sezione "Business Rules"
-   - Se snippet grep vuoto per un repo → [UNVERIFIED] nessun pattern L3 trovato
-   (formato: reference/logic-catalog-template.yaml)
-2. Scrivi in: docs/logic-catalog/cluster-{nome}.md
-3. Rispondi con UNA SOLA RIGA: "OK cluster-{nome} salvato"
-4. NON includere Markdown nel corpo della risposta
-```
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Istruzione Critica Agenti" per il testo da includere verbatim in ogni agente.
 
 ### 4e — Genera clusters.yaml (Parent)
 
@@ -314,19 +217,8 @@ Dopo che tutti gli agenti hanno scritto i file cluster, il parent genera il file
 ls docs/logic-catalog/cluster-*.md | wc -l   # deve == K cluster
 ```
 
-Il parent scrive `docs/logic-catalog/clusters.yaml`:
-
-```yaml
-generated_at: YYYY-MM-DDTHH:MM:SSZ
-source: docs/SYSTEM_MAP.md
-clusters:
-  - name: "{cluster-name}"
-    services: ["{repo1}", "{repo2}"]
-    domain: "{dominio funzionale — da cluster-{nome}.md}"
-    confidence: CONFIRMED | INFERRED
-```
-
-E `docs/logic-catalog/system-overview.md` con la visione d'insieme di tutti i cluster.
+Il parent scrive `docs/logic-catalog/clusters.yaml` e `docs/logic-catalog/system-overview.md`.
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Template clusters.yaml" per il formato esatto.
 
 ### 4f — Collect: Verifica File Scritti
 
@@ -379,48 +271,14 @@ grep -ri "{keyword}" docs/logic-catalog/clusters.yaml
 grep -ri "{keyword}" docs/logic-catalog/{file} -B2 -A2
 ```
 
-**Output atteso:** tabella con colonne `cluster | servizio | layer | campo | valore | source`
-
-Esempio:
-| cluster | servizio | layer | campo | valore | source |
-|---------|----------|-------|-------|--------|--------|
-| cluster-abbonamenti | sport-gestione-abbonamento | l2.workflow | name | calcolaPreventivo | `[CONFIRMED]` GestioneAbbonamentoService.java:45 |
-| cluster-abbonamenti | sport-contabilita | l2.workflow | name | elaboraPreventivo | `[CONFIRMED]` ContabilitaService.java:12 |
+**Output atteso:** tabella con colonne `cluster | servizio | layer | campo | valore | source`.
+Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Esempio Query Output" per un esempio completo.
 
 ---
 
-## Formato Output per Cluster
+## Template e Esempi Output
 
-**`docs/logic-catalog/cluster-{nome}.md`** — documento tecnico-funzionale del cluster:
-
-```markdown
-# Cluster: {nome}
-
-Servizi: {lista repo}
-Dominio: {dominio funzionale} [CONFIRMED] docs/SYSTEM_MAP.md
-
-## {repo-1}
-
-### L1 — Domain Profile
-- Domain: {nome dominio} [CONFIRMED] {Entity.java:riga}
-- Entities: {ClassName1}, {ClassName2} [CONFIRMED] {Entity.java:riga}
-- Exposes: {/api/v1/...} [CONFIRMED] {openapi.yaml:riga}
-
-### L2 — Workflow Map
-- {nomeMetodo}(): trigger=REST [CONFIRMED] {Service.java:riga}
-- {nomeScheduled}(): trigger=SCHEDULED [CONFIRMED] {Scheduler.java:riga}
-
-### L3 — Business Rules
-- {nomeMetodo}(): regola={condizione dominio} [CONFIRMED] {Service.java:riga}
-- Drools: KieSession.fireAllRules() [CONFIRMED] {Service.java:riga} → {rules.drl}
-- {NomeRepository}: @Query("...") [CONFIRMED] {Repository.java:riga}
-
-## {repo-2}
-...
-
-## Gap Report
-- [FILE_NOT_FOUND] {repo}: Service.java non trovato
-```
+Vedi [TEMPLATES.md](TEMPLATES.md) per template completi L1/L2/L3 e esempi output.
 
 ---
 

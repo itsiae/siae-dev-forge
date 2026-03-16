@@ -1,9 +1,9 @@
 ---
 name: using-devforge
 description: >
-  Usa all'inizio di ogni conversazione. Stabilisce come trovare e usare le
-  skill siae-devforge, richiedendo l'invocazione dello Skill tool PRIMA di
-  qualsiasi risposta incluse domande di chiarimento.
+  Stabilisce il framework di discovery e invocazione skill DevForge all'inizio
+  di ogni conversazione.
+  Trigger: inizio sessione, apertura nuovo progetto, prima interazione.
 ---
 
 ## ISTRUZIONE OBBLIGATORIA — ESEGUI PRIMA DI TUTTO
