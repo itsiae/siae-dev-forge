@@ -195,7 +195,28 @@ Opzioni:
 3. Solo quando tutti [DONE] → procedi con Step 6
 ```
 
-**Se tutti [DONE]:** procedi con Step 6.
+**Se tutti [DONE]:** procedi con Step 5c.
+
+### Step 5c — Fresh-Eyes Review (Cross-Task)
+
+🟢 SICURO
+
+Dopo che tutti i task sono [DONE], lancia un subagent fresh-eyes-reviewer
+con il prompt definito in [fresh-eyes-reviewer-prompt.md](fresh-eyes-reviewer-prompt.md).
+
+**Il subagent fresh-eyes-reviewer:**
+1. Usa `git diff $(git merge-base HEAD origin/main)..HEAD` per TUTTI i cambiamenti
+2. Si concentra SOLO su problemi cross-task (6 categorie)
+3. NON ri-revisa problemi per-task (gia' approvati da spec + quality reviewer)
+4. Produce report con issue count + ready to merge assessment
+
+**Se issue trovate:**
+- L'orchestratore comunica le issue all'implementer appropriato
+- L'implementer fixa
+- Re-dispatch del fresh-eyes-reviewer
+- Max 2 iterazioni, poi escalation all'utente
+
+**Se zero issue:** procedi con Step 6 (Final Review).
 
 ---
 
@@ -267,6 +288,7 @@ IMPLEMENTAZIONE COMPLETATA:
 | Dispatch subagent implementer | 🟡 Medio | Si |
 | Dispatch subagent spec-reviewer | 🟢 Sicuro | No |
 | Dispatch subagent code-quality-reviewer | 🟢 Sicuro | No |
+| Dispatch subagent fresh-eyes-reviewer | 🟢 Sicuro | No |
 | Esecuzione test suite finale | 🟡 Medio | Si |
 | Report di completamento | 🟢 Sicuro | No |
 
@@ -307,6 +329,7 @@ Se i permessi sono negati:
 6. **PRE-FLIGHT OBBLIGATORIA** per dispatch implementer e test suite
 7. **NON** modificare file se non attraverso subagent
 8. **NON** dichiarare completamento senza verdetto PASS da entrambi i reviewer
+9. **REQUIRED** fresh-eyes review dopo completamento tutti i task — nessuna eccezione
 
 ---
 
@@ -315,3 +338,4 @@ Se i permessi sono negati:
 - [implementer-prompt.md](implementer-prompt.md) — Prompt per subagent implementer
 - [spec-reviewer-prompt.md](spec-reviewer-prompt.md) — Prompt per subagent spec reviewer
 - [code-quality-reviewer-prompt.md](code-quality-reviewer-prompt.md) — Prompt per subagent code quality reviewer
+- [fresh-eyes-reviewer-prompt.md](fresh-eyes-reviewer-prompt.md) — Prompt per subagent fresh-eyes reviewer
