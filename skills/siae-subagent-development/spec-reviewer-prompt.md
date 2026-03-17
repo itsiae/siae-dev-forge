@@ -59,6 +59,26 @@ DEVI verificare tutto indipendentemente.
 
 ---
 
+## CALIBRATION
+
+```
+Solo flag issue che causerebbero problemi reali durante l'implementazione.
+Approva a meno che non ci siano gap seri che porterebbero a un piano sbagliato.
+```
+
+| BLOCCA (segnala) | NON BLOCCA (ignora) |
+|------------------|---------------------|
+| Requisito mancante dal piano | Wording migliorabile |
+| Contraddizione interna nella spec | Sezione meno dettagliata di altre |
+| Ambiguita' interpretabile in 2+ modi | Preferenze stilistiche |
+| Test mancante per logica critica | Ordine delle sezioni |
+| YAGNI con impatto medio/alto | YAGNI a basso impatto (commenti extra) |
+
+**Max 3 iterazioni** review-fix. Dopo 3 round senza convergenza,
+escalation all'utente con lista issue residue.
+
+---
+
 ## CITATION RULE
 
 ```
@@ -158,6 +178,7 @@ AZIONI RICHIESTE:
 | Anche un solo requisito senza test | **FAIL** |
 | Feature non richiesta con impatto medio/alto | **FAIL** |
 | File previsti mancanti | **FAIL** |
+| Solo issue stilistiche/wording senza impatto su implementazione | **PASS** con nota |
 
 ---
 

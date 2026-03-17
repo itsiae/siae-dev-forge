@@ -41,7 +41,7 @@ non hai presentato il design e l'utente lo ha approvato. Questo si applica a OGN
 progetto, indipendentemente dalla semplicita' percepita.
 
 Stai per scrivere codice, creare file, o invocare siae-tdd/siae-code-standards?
-Hai completato TUTTI e 6 i punti della checklist brainstorming?
+Hai completato TUTTI e 7 i punti della checklist brainstorming?
 - NO → FERMATI. Torna al punto mancante. Nessun codice senza design approvato.
 - SI → Procedi con siae-writing-plans.
 
@@ -66,7 +66,7 @@ DEVI presentarlo e ottenere l'approvazione.
 
 ---
 
-## Checklist — 6 Punti Obbligatori
+## Checklist — 7 Punti Obbligatori
 
 DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
@@ -107,6 +107,37 @@ Pattern:   REST microservice [HIGH]  src/main/java/it/siae/catalogo/controller/:
 Test fw:   JUnit 5           [HIGH]  pom.xml:42 — junit-jupiter 5.9.3
 Deploy:    ECS               [MEDIUM] .github/workflows/deploy.yml:15 — ecs-deploy action
 ```
+
+### 1b. Scope Assessment — Valuta se decomporre
+
+Prima di procedere alle domande di dettaglio, valuta lo scope della richiesta.
+
+**Test:** il task descrive un unico dominio coeso, o piu' sottosistemi indipendenti?
+
+**Segnali di scope troppo ampio:**
+- 3+ domini diversi nella stessa richiesta
+- Componenti che potrebbero vivere come progetti/repo separati
+- Stack diversi per parti diverse (es. "frontend Vue + pipeline Glue + IaC Terraform")
+- Piu' team/factory coinvolti
+
+**Se scope troppo ampio:**
+
+```
+SCOPE ASSESSMENT: DECOMPOSIZIONE NECESSARIA
+
+La richiesta copre N sottosistemi indipendenti:
+1. [sottosistema A] — [breve descrizione]
+2. [sottosistema B] — [breve descrizione]
+3. [sottosistema C] — [breve descrizione]
+
+Ogni sottosistema merita il suo ciclo spec → plan → implementation.
+Quale vuoi affrontare per primo?
+```
+
+Dopo la scelta dell'utente, procedi con il brainstorming normale per quel
+sotto-progetto. Gli altri restano nel backlog.
+
+**Se scope ok:** procedi a Step 2 (Presenta inferenze).
 
 ### 2. Presenta inferenze + domande mirate
 
@@ -185,6 +216,7 @@ rileggi il documento e conferma:
 - I criteri di accettazione coprono tutti i casi?
 - Le decisioni architetturali sono corrette?
 - Le stime SP sono realistiche?
+- La spec e' focalizzata su un singolo dominio? Non copre troppi sottosistemi?
 
 Se tutto e' corretto, procedo con siae-writing-plans.
 Se qualcosa non torna, dimmi cosa modificare.
@@ -222,6 +254,8 @@ digraph brainstorming {
     edge [fontname="Helvetica", fontsize=10];
 
     intake [label="1. Smart Intake\nleggi codebase, inferisci"];
+    scope [label="1b. Scope Assessment\ndominio singolo?", shape=diamond, fillcolor="#fff3cd"];
+    decompose [label="Decomposizione\nin sub-progetti"];
     confirm [label="2. Presenta inferenze\nconferma rapida"];
     need_questions [label="Campi LOW\no mancanti?", shape=diamond, fillcolor="#fff3cd"];
     ask [label="Domande mirate\n(solo cio' che manca)"];
@@ -232,7 +266,10 @@ digraph brainstorming {
     spec_gate [label="5b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
     transition [label="6. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
 
-    intake -> confirm;
+    intake -> scope;
+    scope -> decompose [label="troppo ampio"];
+    scope -> confirm [label="scope ok"];
+    decompose -> intake [label="utente sceglie\nsub-progetto"];
     confirm -> need_questions;
     need_questions -> ask [label="si"];
     need_questions -> approaches [label="no, tutto HIGH"];
@@ -389,7 +426,7 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | Vincolo | Limite | Se superato |
 |---------|--------|-------------|
 | Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
-| Step totali del brainstorming | 6 | Se ne servono di piu', il task e' troppo grande. Decomponi. |
+| Step totali del brainstorming | 7 | Se ne servono di piu', il task e' troppo grande. Decomponi. |
 | Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
 ---
@@ -406,6 +443,7 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | "Il design blocca la velocita'" | Il refactoring da design mancato blocca di piu'. |
 | "L'utente approva dopo" | L'approvazione post-hoc non e' approvazione. |
 | "Ho letto il pom.xml, basta cosi'" | Un file non basta. Smart Intake legge manifest, struttura, log, e docs/plans/ prima di procedere. |
+| "Mettiamo tutto in un'unica spec, e' piu' veloce" | Spec ampie producono piani ingestibili. Decomponi. |
 
 ## Classificazione Rischio Operazioni
 

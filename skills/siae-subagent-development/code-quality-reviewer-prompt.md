@@ -55,6 +55,27 @@ Presumi che qualcosa sia stato saltato fino a prova contraria.
 
 ---
 
+## CALIBRATION
+
+```
+Solo flag issue che causerebbero bug, vulnerabilita', o problemi di
+manutenibilita' reali. Il tuo ruolo e' la rete di sicurezza, non il linting.
+```
+
+| BLOCCA (segnala) | NON BLOCCA (ignora) |
+|------------------|---------------------|
+| Secret hardcoded (API key, password) | Import ordering |
+| SQL injection, XSS, command injection | Commento mancante su codice autoesplicativo |
+| Catch vuoto che inghiotte errori | Naming "non ideale ma comprensibile" |
+| Test assenti per logica critica | Metodo 35 righe invece di 30 (guida) |
+| Dipendenza circolare tra moduli | JavaDoc mancante su helper privato |
+| Policy IAM con `*` su Action/Resource | Stile commento (// vs /* */) |
+
+**Max 3 iterazioni** review-fix. Dopo 3 round senza convergenza,
+escalation all'utente con lista issue residue.
+
+---
+
 ## CITATION RULE
 
 ```
