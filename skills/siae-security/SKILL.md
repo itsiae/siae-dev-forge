@@ -311,9 +311,9 @@ Verdetto finale: ⚠️ BASSO — non raggiungibile dall'esterno, ma igiene da c
 Nota: il CIDR corretto era commentato, qualcuno ha usato 0.0.0.0/0 come workaround
 ```
 
-**Esempio 3 — Fallback password funzionale solo in dev**
+**Esempio 3 — Fallback credenziale funzionale solo in dev**
 ```
-Pattern trovato: if not secret_name: return {"password": "password"}
+Pattern trovato: if not secret_name: return {"username": "user", "pwd": "***"}
 Verdetto iniziale: 🚨 Credenziale di fallback in produzione
 Contesto: secret_name viene sempre da env var in AWS Batch. Il fallback punta a localhost:5432
 Verdetto finale: ⚠️ BASSO — non funziona in ambiente AWS, serve solo per dev locale
