@@ -108,7 +108,7 @@ Test fw:   JUnit 5           [HIGH]  pom.xml:42 — junit-jupiter 5.9.3
 Deploy:    ECS               [MEDIUM] .github/workflows/deploy.yml:15 — ecs-deploy action
 ```
 
-### 1b. Scope Assessment — Valuta se decomporre
+### 2. Scope Assessment — Valuta se decomporre
 
 Prima di procedere alle domande di dettaglio, valuta lo scope della richiesta.
 
@@ -137,9 +137,9 @@ Quale vuoi affrontare per primo?
 Dopo la scelta dell'utente, procedi con il brainstorming normale per quel
 sotto-progetto. Gli altri restano nel backlog.
 
-**Se scope ok:** procedi a Step 2 (Presenta inferenze).
+**Se scope ok:** procedi a Step 3 (Presenta inferenze).
 
-### 2. Presenta inferenze + domande mirate
+### 3. Presenta inferenze + domande mirate
 
 **Presenta le inferenze in tabella compatta per conferma rapida:**
 
@@ -162,24 +162,24 @@ Confermi? (si / correggi specifici)
 - Preferisci domande a scelta multipla quando possibile
 - Focus residuo su: **scopo del task**, vincoli, criteri di successo
 
-**Se tutto e' HIGH e l'utente conferma**, procedi direttamente a Step 3 (Approcci).
+**Se tutto e' HIGH e l'utente conferma**, procedi direttamente a Step 4 (Approcci).
 Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
 
-### 3. Proponi 2-3 approcci con trade-off e raccomandazione
+### 4. Proponi 2-3 approcci con trade-off e raccomandazione
 
 - Presenta le opzioni in modo conversazionale
 - Ogni approccio include: descrizione, pro, contro, complessita' stimata
 - Guida con la tua raccomandazione e spiega perche'
 - Includi stima Story Points per ogni approccio (doppia scala: SP-Umano / SP-Augmented)
 
-### 4. Presenta design per sezioni, approvazione dopo ciascuna
+### 5. Presenta design per sezioni, approvazione dopo ciascuna
 
 - Scala ogni sezione in base alla complessita': poche frasi se lineare, fino a 200-300 parole se articolato
 - Chiedi dopo ogni sezione se e' corretto finora
 - Copri: architettura, componenti, flusso dati, gestione errori, testing
 - Sii pronto a tornare indietro e chiarire
 
-### 5. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
+### 6. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
 
 Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
@@ -203,7 +203,7 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 | 💡 Perche': Registra il design approvato nella history del repository |
 | 🚫 Se NO: Il file esiste ma non è committato — invisibile in git history |
 
-### 5b. Spec Review Gate
+### 6b. Spec Review Gate
 
 Prima di procedere al piano implementativo, presenta all'utente il design doc
 completo e chiedi conferma esplicita:
@@ -225,7 +225,7 @@ Se qualcosa non torna, dimmi cosa modificare.
 NON invocare siae-writing-plans senza conferma esplicita a questo gate.
 Se l'utente chiede modifiche, aggiorna il design doc e ripresenta il gate.
 
-### 6. REQUIRED: Transizione al piano implementativo
+### 7. REQUIRED: Transizione al piano implementativo
 
 Design approvato? Il design doc e' committato? L'utente ha confermato il Spec Review Gate?
 
@@ -254,17 +254,17 @@ digraph brainstorming {
     edge [fontname="Helvetica", fontsize=10];
 
     intake [label="1. Smart Intake\nleggi codebase, inferisci"];
-    scope [label="1b. Scope Assessment\ndominio singolo?", shape=diamond, fillcolor="#fff3cd"];
+    scope [label="2. Scope Assessment\ndominio singolo?", shape=diamond, fillcolor="#fff3cd"];
     decompose [label="Decomposizione\nin sub-progetti"];
-    confirm [label="2. Presenta inferenze\nconferma rapida"];
+    confirm [label="3. Presenta inferenze\nconferma rapida"];
     need_questions [label="Campi LOW\no mancanti?", shape=diamond, fillcolor="#fff3cd"];
     ask [label="Domande mirate\n(solo cio' che manca)"];
-    approaches [label="3. Proponi 2-3\napprocci + SP"];
-    design [label="4. Presenta design\nper sezioni"];
+    approaches [label="4. Proponi 2-3\napprocci + SP"];
+    design [label="5. Presenta design\nper sezioni"];
     approve [label="Utente approva\nsezione?", shape=diamond, fillcolor="#fff3cd"];
-    doc [label="5. Scrivi design doc\ndocs/plans/"];
-    spec_gate [label="5b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
-    transition [label="6. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
+    doc [label="6. Scrivi design doc\ndocs/plans/"];
+    spec_gate [label="6b. Spec Review Gate\nUtente conferma spec?", shape=diamond, fillcolor="#fff3cd"];
+    transition [label="7. Piano impl.\n→ siae-writing-plans", shape=doublecircle, fillcolor="#d4edda"];
 
     intake -> scope;
     scope -> decompose [label="troppo ampio"];

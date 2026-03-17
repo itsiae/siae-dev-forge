@@ -99,6 +99,14 @@ Determina il diff completo della feature:
 - Costruisci una mappa mentale delle dipendenze tra file
 - Nota: i per-task reviewer hanno letto ogni file isolatamente. Tu li leggi TUTTI insieme.
 
+**NOTA:** A differenza dei per-task reviewer (che analizzano solo il diff), il fresh-eyes
+reviewer legge i file completi perche' cerca problemi di integrazione cross-task che
+richiedono contesto pieno. Inconsistenze tra moduli non sono visibili dal solo diff.
+
+**NOTA:** A differenza dei per-task reviewer (che analizzano solo il diff), il fresh-eyes
+reviewer legge i file completi perche' cerca problemi di integrazione cross-task che
+richiedono contesto pieno. Inconsistenze tra moduli non sono visibili dal solo diff.
+
 ### 3. Analizza Secondo le 6 Categorie
 
 Per ogni categoria (vedi sotto), analizza il codice cercando problemi che emergono
