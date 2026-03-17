@@ -209,6 +209,118 @@ process\.env\.\w+\s*\|\|\s*["'][^"']+["']
 
 ---
 
+## 5. Context-Aware Triage
+
+<EXTREMELY-IMPORTANT>
+NON classificare la gravita' di un finding basandoti solo sul pattern.
+Il contesto infrastrutturale e applicativo cambia TUTTO.
+
+Un Security Group 0.0.0.0/0 in subnet privata senza IGW = igiene, non emergenza.
+Lo stesso SG in subnet pubblica = CRITICO.
+
+Il pattern da solo non basta. Verifica SEMPRE il contesto prima di classificare.
+</EXTREMELY-IMPORTANT>
+
+### 5.1 Framework di Verifica — 5 Step
+
+Applica questi 5 step a QUALSIASI finding di sicurezza, in ordine:
+
+```
+FINDING RILEVATO
+  |
+  STEP 1: FALSO POSITIVO?
+  |    Il valore e' richiesto dal protocollo/API esterna?
+  |    Il pattern matcha ma il contesto semantico e' diverso?
+  |    (es. campo "password" che e' un label UI, non una credenziale)
+  |    (es. "securitypassword" che e' un parametro fisso dell'API)
+  |    → SI' = NON VULNERABILITA' — documenta il perche'
+  |
+  STEP 2: REACHABILITY
+  |    Il componente e' raggiungibile dall'esterno?
+  |    Verifica: subnet pubblica/privata, IGW, NAT, VPN-only,
+  |    publicly_accessible flag, routing table, VPC peering
+  |    → NO = gravita' ridotta (igiene da correggere, non emergenza)
+  |
+  STEP 3: MITIGAZIONI COMPENSATIVE
+  |    Ci sono controlli che riducono il rischio reale?
+  |    Verifica: auth (JWT, API key, Cognito), WAF, SG restrittivi,
+  |    network isolation, encryption layer, cookie vs header auth
+  |    → SI' = gravita' ridotta proporzionalmente alle mitigazioni
+  |
+  STEP 4: ENVIRONMENT
+  |    Il codice/config e' attivo in produzione?
+  |    Verifica: feature flag, env var, log level (debug vs info),
+  |    build condition, dead code analysis, VITE_* flags
+  |    → NO = gravita' ridotta (pulire comunque, non e' emergenza)
+  |
+  STEP 5: SELF-VERIFICATION (pattern Anthropic)
+       "Tenta di dimostrare che NON e' grave."
+       Cerca attivamente prove che il finding sia benigno:
+       - Leggi la configurazione VPC/subnet
+       - Verifica se l'env var e' sempre settata in prod
+       - Controlla se il feature flag e' spento in prod
+       Solo se NON trovi prove di benignita' → classifica come grave.
+```
+
+### 5.2 Matrice Gravita' Contestuale
+
+La gravita' finale e' funzione del contesto verificato, NON del pattern trovato:
+
+| Raggiungibile? | Mitigato? | Attivo in prod? | Gravita' finale | Azione |
+|----------------|-----------|-----------------|-----------------|--------|
+| No | - | - | BASSO | Backlog: igiene da correggere |
+| Si | Si | No | BASSO | Backlog: pulire codice morto |
+| Si | Si | Si | MEDIO | Prossimo sprint: ridurre superficie |
+| Si | No | No | MEDIO | Prossimo sprint: aggiungere mitigazione |
+| Si | No | Si | ALTO/CRITICO | Immediato: fix o mitigazione urgente |
+
+---
+
+## 6. Come Riconoscere un Falso Positivo
+
+Non tutti i match di pattern sono vulnerabilita'. Prima di segnalare, verifica:
+
+### 6.1 Criteri Generici
+
+| Criterio | Domanda da porsi | Se SI' |
+|----------|------------------|--------|
+| **Valore di protocollo** | Il valore e' richiesto dall'API esterna come campo fisso? | Non vulnerabilita' |
+| **Codice morto / dev-only** | Il codice e' raggiungibile solo in condizioni che non esistono in prod? | Gravita' ridotta |
+| **Pattern semanticamente diverso** | La regex matcha "password" ma il contesto e' un label UI, un nome colonna, un placeholder doc? | Non vulnerabilita' |
+| **Mitigazione completa** | Il finding e' completamente mitigato da controlli compensativi? | Gravita' ridotta |
+| **Fallback non funzionale** | Il fallback punta a localhost/mock che non esiste in ambiente AWS? | Gravita' ridotta |
+
+### 6.2 Esempi da Audit Reali
+
+Questi esempi illustrano come il contesto cambia il verdetto:
+
+**Esempio 1 — Valore di protocollo scambiato per secret**
+```
+Pattern trovato: securitypassword = "@webservizi@"
+Verdetto iniziale: 🚨 Credenziale hardcoded
+Contesto: campo fisso richiesto dall'API SIAE Portali per il flusso cambio password
+Verdetto finale: ✅ NON VULNERABILITA' — valore di protocollo, non credenziale
+```
+
+**Esempio 2 — Security Group 0.0.0.0/0 in subnet privata**
+```
+Pattern trovato: cidr_blocks = ["0.0.0.0/0"] su SG Aurora
+Verdetto iniziale: 🚨 Database esposto a Internet
+Contesto: Aurora in subnet data privata, no IGW, publicly_accessible = false
+Verdetto finale: ⚠️ BASSO — non raggiungibile dall'esterno, ma igiene da correggere
+Nota: il CIDR corretto era commentato, qualcuno ha usato 0.0.0.0/0 come workaround
+```
+
+**Esempio 3 — Fallback password funzionale solo in dev**
+```
+Pattern trovato: if not secret_name: return {"password": "password"}
+Verdetto iniziale: 🚨 Credenziale di fallback in produzione
+Contesto: secret_name viene sempre da env var in AWS Batch. Il fallback punta a localhost:5432
+Verdetto finale: ⚠️ BASSO — non funziona in ambiente AWS, serve solo per dev locale
+```
+
+---
+
 ## Operazioni Attive — Rotazione Credenziali
 
 Quando Claude gestisce direttamente la rotazione di credenziali o l'aggiornamento di secret:
@@ -240,7 +352,7 @@ causare downtime immediato su tutti i servizi dipendenti.
 
 ---
 
-## 5. Vincoli Non Negoziabili
+## 7. Vincoli Non Negoziabili
 
 Queste regole non ammettono eccezioni, in **nessun** ambiente.
 
@@ -255,7 +367,7 @@ Queste regole non ammettono eccezioni, in **nessun** ambiente.
 
 ---
 
-## 6. Anti-Razionalizzazione
+## 8. Anti-Razionalizzazione
 
 Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 
@@ -266,6 +378,9 @@ Risposte a giustificazioni comuni per bypassare le regole di sicurezza:
 | "E' un progetto interno, nessuno lo vede" | Il 60% delle violazioni viene dall'interno. Stesse regole. |
 | "La policy IAM `*` e' temporanea" | Le policy temporanee diventano permanenti. Least privilege da subito. |
 | "Il bucket S3 deve essere pubblico per il frontend" | Usa CloudFront + OAI. Mai bucket pubblici diretti. |
+| "Il Security Group 0.0.0.0/0 e' sempre critico" | Dipende dalla subnet. In subnet privata senza IGW non e' raggiungibile. Verifica il contesto. |
+| "CORS * e' sempre una vulnerabilita'" | Con API key + JWT obbligatori e niente cookie auth, il rischio reale e' basso. Verifica le mitigazioni. |
+| "Ho trovato 'password' nel codice, e' un secret" | Potrebbe essere un label UI, un nome colonna, o un valore di protocollo. Verifica il contesto semantico. |
 
 ---
 
@@ -299,6 +414,9 @@ Invoca `siae-verification` prima di dichiarare il codice sicuro.
 | "Questo dato autore non e' sensibile" | Dati SIAE = identita' autori + dati finanziari. Tratta tutto come PII per default. |
 | "Ho verificato manualmente che non ci sono secret" | La review manuale fallisce. Usa il Secret Scan automatico del quality gate. |
 | "L'endpoint e' protetto da Cognito, basta cosi'" | Autenticazione != Autorizzazione. Verifica anche i permessi sull'azione, non solo l'identita'. |
+| "Il pattern matcha, quindi e' grave" | Il pattern trova candidati. Il contesto determina la gravita'. Applica i 5 step del triage. |
+| "Meglio segnalare troppo che troppo poco" | I falsi positivi diluiscono l'attenzione. Un report con 17 finding di cui 8 falsi e' peggio di uno con 9 veri. |
+| "Non ho tempo di verificare il contesto" | Verificare il contesto richiede 2-5 minuti. Ritrattare un falso positivo escalato richiede ore. |
 
 ---
 
