@@ -159,11 +159,10 @@ git worktree remove .worktrees/{branch-name}
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-worktrees |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 📁 Worktree: `<path worktree>` |
-| 🌿 Branch: `<branch-name>` |
-| 1. 🗑️ Azione: Rimozione forzata worktree (file non committati persi) |
-| 📂 `<path worktree>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 📁 Worktree: `<path worktree>` · 🌿 Branch: `<branch-name>` |
+| **▼ Azione** |
+| 1. 🗑️ Azione: Rimozione forzata worktree (file non committati persi) → `<path worktree>` |
 | 💡 Perche': Worktree non rimovibile normalmente (file non committati presenti) |
 | 🚫 Se NO: Il worktree resta attivo, commit o stash prima di rimuovere |
 
@@ -191,12 +190,10 @@ per gli altri developer che hanno gia' basato il loro lavoro su questo branch.
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-worktrees |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🌿 Branch: `<branch-name>` |
-| 🎯 Target rebase: `<base-branch>` |
-| 👥 Condiviso: Si — altri developer usano questo branch |
-| 1. ⚠️ Azione: Rebase interattivo su branch condiviso (riscrive history) |
-| 📂 `<branch-name>` |
+| **⚠️ STOP — Rebase su branch condiviso riscrive history per tutti i developer** |
+| 🌿 Branch: `<branch-name>` · 🎯 Target rebase: `<base-branch>` · 👥 Condiviso: `Si — altri developer usano questo branch` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Rebase interattivo su branch condiviso (riscrive history) → `<branch-name>` |
 | 💡 Perche': Rebase necessario per allineare al branch base |
 | 🚫 Se NO: STOP — usa merge invece di rebase su branch condivisi |
 

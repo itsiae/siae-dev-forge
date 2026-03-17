@@ -109,11 +109,9 @@ Una volta che la PR esiste, assegna il reviewer corretto:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-requesting-review |
 |:---|
-| 🌿 Branch: `<branch-name>` |
-| 🎯 Target: `sviluppo` |
-| 📝 Commit: `<N> commit` |
-| 1. 🚀 Azione: Assegnazione reviewer alla PR |
-| 📂 `PR #<number>` |
+| 🌿 Branch: `<branch-name>` · 🎯 Target: `sviluppo` · 📝 Commit: `<N> commit` |
+| **▼ Azione** |
+| 1. 🚀 Azione: Assegnazione reviewer alla PR → `PR #<number>` |
 | 💡 Perche': PR pronta, reviewer da assegnare |
 | 🚫 Se NO: La PR resta senza reviewer assegnato |
 

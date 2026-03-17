@@ -86,12 +86,11 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-frontend |
 |:---|
-| ⚠️ WARNING — operazione CRITICA |
-| 🏗️ Ambiente: `<dev\|collaudo\|produzione>` |
-| 🏷️ Tag rc-*: `<rc-YYYY-MM-DD-N>` |
-| ✅ Build locale: `OK / Fallita` |
-| 🧪 Test suite: `N passed, 0 failed` |
-| 1. ⚠️ S3 sync + CloudFront invalidation: `<bucket-name>` |
+| **⚠️ STOP — Deploy sovrascrive assets in produzione, CloudFront invalidata** |
+| 🏗️ Ambiente: `<dev\|collaudo\|produzione>` · 🏷️ Tag rc-*: `<rc-YYYY-MM-DD-N>` |
+| ✅ Build locale: `OK / Fallita` · 🧪 Test suite: `N passed, 0 failed` |
+| **▼ Azione** |
+| 1. ⚠️ S3 sync + CloudFront invalidation → `<bucket-name>` |
 | 💡 Perche': Deploy frontend — assets sovrascritta, CloudFront invalidata |
 | 🚫 Se NO: STOP — nessun deploy eseguito |
 

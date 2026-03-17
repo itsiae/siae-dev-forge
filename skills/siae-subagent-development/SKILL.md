@@ -91,9 +91,9 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
 |:---|
-| 🤖 Task: `<nome task dal piano>` |
-| 📋 Piano: `docs/plans/<file>.md` |
-| 1. 🚀 Dispatch subagent implementer: `docs/plans/<file>.md` |
+| 🤖 Task: `<nome task dal piano>` · 📋 Piano: `docs/plans/<file>.md` |
+| **▼ Azione** |
+| 1. 🚀 Dispatch subagent implementer → `docs/plans/<file>.md` |
 | 💡 Perche': Subagent con contesto fresco modifichera file reali |
 | 🚫 Se NO: Il task non viene implementato, piano resta in attesa |
 
@@ -205,9 +205,9 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-subagent-development |
 |:---|
-| 🧪 Suite: `Test suite completa progetto` |
-| ✅ Task completati: `N/N` |
-| 1. ▶️ Esecuzione test suite finale: `tests/` |
+| 🧪 Suite: `Test suite completa progetto` · ✅ Task completati: `N/N` |
+| **▼ Azione** |
+| 1. ▶️ Esecuzione test suite finale → `tests/` |
 | 💡 Perche': Verifica integrazione post-implementazione |
 | 🚫 Se NO: Completamento dichiarato senza verifica test suite |
 

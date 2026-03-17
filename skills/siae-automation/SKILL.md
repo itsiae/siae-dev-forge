@@ -88,13 +88,10 @@ Se nessun segnale, chiedi: "Stai automatizzando una app mobile (iOS/Android) o u
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-automation |
 |:---|
-| 📱 Canale: Mobile iOS / Mobile Android / Web |
-| 📡 Tier: Tier 1 / 2 / 3 |
-| 🎫 TL Xray: Trovata `XP-XXX` / Non trovata / Da CSV |
-| 🔢 TC totali TL: N TC nella Test List |
-| 🤖 appium-mcp: Disponibile / Non disponibile |
-| ☁️ BrowserStack: Configurato / Mancante |
-| 🔄 Xray sync: MCP / CSV |
+| 📱 Canale: `Mobile iOS / Mobile Android / Web` · 📡 Tier: `Tier 1 / 2 / 3` |
+| 🎫 TL Xray: `XP-XXX / Non trovata / Da CSV` · 🔢 TC totali TL: `N TC` |
+| 🤖 appium-mcp: `Disponibile / Non disponibile` · ☁️ BrowserStack: `Configurato / Mancante` · 🔄 Xray sync: `MCP / CSV` |
+| **▼ Azione** |
 | 💡 Perche': Leggo prima la TL, poi propongo il piano automation |
 | 🚫 Se NO: Workflow automation non inizia |
 
@@ -362,13 +359,9 @@ Se il sync non è avvenuto: usa il fallback JUnit XML (vedi `reference/cypress-x
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-automation |
 |:---|
-| 🎫 Story: `PROJ-XXX` |
-| 🧪 Test Exec: `XE-456` [nuova / aggiornata] |
-| 📱 Canale: Mobile Android / Web |
-| ✅ PASS: N TC |
-| ❌ FAIL: N TC |
-| ⏭️ SKIP: N TC |
-| 🔄 Xray sync: Completato / CSV generato |
+| 🎫 Story: `PROJ-XXX` · 🧪 Test Exec: `XE-456` [nuova / aggiornata] · 📱 Canale: `Mobile Android / Web` |
+| ✅ PASS: `N TC` · ❌ FAIL: `N TC` · ⏭️ SKIP: `N TC` · 🔄 Xray sync: `Completato / CSV generato` |
+| **▼ Azione** |
 | 💡 Perche': Report finale esecuzione automation test |
 | 🚫 Se NO: Nessun report generato |
 

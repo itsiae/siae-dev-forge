@@ -124,8 +124,8 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-documentation |
 |:---|
 | 📝 Documento: `<tipo: HLD / LLD / API doc>` |
-| 1. ✏️ Azione: Scrittura file Markdown |
-| 📂 `docs/<nome-file>.md` |
+| **▼ Azione** |
+| 1. ✏️ Azione: Scrittura file Markdown → `docs/<nome-file>.md` |
 | 💡 Perche': Crea o sovrascrive il file di documentazione su disco |
 | 🚫 Se NO: Il documento resta solo in chat — non salvato su disco |
 
@@ -133,11 +133,10 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-documentation |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 📚 Space: `{space}` |
-| 📄 Parent: `{parent-page}` |
-| 1. 📤 Azione: Pubblicazione pagina su Confluence |
-| 📂 `Space/{space} Parent/{parent-page}` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 📚 Space: `{space}` · 📄 Parent: `{parent-page}` |
+| **▼ Azione** |
+| 1. 📤 Azione: Pubblicazione pagina su Confluence → `Space/{space} Parent/{parent-page}` |
 | 💡 Perche': Crea/aggiorna pagina visibile a tutto il team |
 | 🚫 Se NO: Il documento resta solo in locale (Markdown) |
 

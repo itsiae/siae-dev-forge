@@ -160,9 +160,9 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-tdd |
 |:---|
-| 🔬 Ciclo: `RED-GREEN-REFACTOR` |
-| 📁 File: `<file target>` |
-| 1. 🔀 Refactor codice: `<path file>` |
+| 🔬 Ciclo: `RED-GREEN-REFACTOR` · 📁 File: `<file target>` |
+| **▼ Azione** |
+| 1. 🔀 Refactor codice → `<path file>` |
 | 💡 Perche': Si sta modificando codice funzionante (test GREEN). Il rischio e' rompere il comportamento esistente. |
 | 🚫 Se NO: Il refactoring non viene eseguito. Il codice rimane funzionante ma non ottimizzato. |
 
@@ -180,10 +180,10 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-tdd |
 |:---|
-| 🔬 Ciclo: `RED-GREEN-REFACTOR` |
-| 📁 File: `<file target>` |
-| 1. 🔀 Git commit ciclo TDD: `<path file>` |
-| 💡 Perche': Si sta committando il ciclo completo RED-GREEN-REFACTOR. Un commit errato o incompleto registra codice non verificato nella storia del repo. |
+| 🔬 Ciclo: `RED-GREEN-REFACTOR` · 📁 File: `<file target>` |
+| **▼ Azione** |
+| 1. 🔀 Git commit ciclo TDD → `<path file>` |
+| 💡 Perche': Si sta committando il ciclo completo RED-GREEN-REFACTOR. Un commit errato registra codice non verificato nella storia del repo. |
 | 🚫 Se NO: Il commit non viene eseguito. Le modifiche rimangono staged e il ciclo non viene chiuso. |
 
 Ogni commit contiene sia il test che l'implementazione. Nessun commit senza test.

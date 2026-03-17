@@ -22,13 +22,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║  🔨 DevForge — TEST RUNNER                                      ║"
-echo "╠══════════════════════════════════════════════════════════════════╣"
-echo "║  Plugin:  siae-devforge                                          ║"
-echo "║  Root:    ${PLUGIN_ROOT}                                         "
-echo "║  Data:    $(date +%Y-%m-%d)                                      "
-echo "╚══════════════════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · TEST RUNNER |"
+echo "|:---|"
+echo "| 🔌 Plugin: \`siae-devforge\` |"
+echo "| 📂 Root: \`${PLUGIN_ROOT}\` |"
+echo "| 📅 Data: \`$(date +%Y-%m-%d)\` |"
 echo ""
 
 TOTAL_PASS=0
@@ -846,13 +844,11 @@ fi
 
 # --- Report Finale ---
 echo ""
-echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║  REPORT FINALE                                                   ║"
-echo "╠══════════════════════════════════════════════════════════════════╣"
-echo "║  PASS: ${TOTAL_PASS}                                            "
-echo "║  FAIL: ${TOTAL_FAIL}                                            "
-echo "║  SKIP: ${TOTAL_SKIP}                                            "
-echo "╚══════════════════════════════════════════════════════════════════╝"
+echo "| 🟢 SICURO — 🔨 DevForge · REPORT FINALE |"
+echo "|:---|"
+echo "| ✅ PASS: \`${TOTAL_PASS}\` |"
+echo "| ❌ FAIL: \`${TOTAL_FAIL}\` |"
+echo "| ⏭️  SKIP: \`${TOTAL_SKIP}\` |"
 echo ""
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then

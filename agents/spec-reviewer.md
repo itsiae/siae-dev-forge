@@ -140,15 +140,11 @@ sproporzionati rispetto allo scope.
 
 ## Formato Output
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  🔨 DevForge — Spec Review Report                                ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Piano:     [nome del design doc]                                ║
-║  Verdetto:  [PASS | FAIL]                                        ║
-║  Data:      [YYYY-MM-DD]                                         ║
-╚══════════════════════════════════════════════════════════════════╝
-```
+| 🟢 SICURO — 🔨 DevForge · Spec Review Report |
+|:---|
+| 📋 Piano: `[nome del design doc]` |
+| ✅ Verdetto: `[PASS | FAIL]` |
+| 📅 Data: `[YYYY-MM-DD]` |
 
 ### Sezione 1: Requisiti Implementati
 

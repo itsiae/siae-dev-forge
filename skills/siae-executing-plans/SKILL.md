@@ -111,10 +111,9 @@ Domande/problemi: [nessuno | lista]
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-executing-plans |
 |:---|
-| 📋 Piano: `<filename>.md` |
-| 🔢 Batch: Task `<N>-<M>` di `<totale>` |
-| 1. ✏️ Azione: Implementazione batch con TDD |
-| 📂 `<file coinvolti>` |
+| 📋 Piano: `<filename>.md` · 🔢 Batch: Task `<N>-<M>` di `<totale>` |
+| **▼ Azione** |
+| 1. ✏️ Azione: Implementazione batch con TDD → `<file coinvolti>` |
 | 💡 Perche': Batch pronto, piano validato |
 | 🚫 Se NO: Il batch non viene eseguito, attende feedback |
 

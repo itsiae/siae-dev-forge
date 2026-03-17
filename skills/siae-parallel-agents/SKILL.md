@@ -121,10 +121,9 @@ Output:  .tf aggiornato + terraform plan pulito
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-parallel-agents |
 |:---|
-| 🤖 Agenti: `<N> agenti paralleli` |
-| 🔢 Domini: `<lista domini>` |
-| 1. ⚡ Azione: Dispatch agenti in parallelo |
-| 📂 `<scope per agente>` |
+| 🤖 Agenti: `<N> agenti paralleli` · 🔢 Domini: `<lista domini>` |
+| **▼ Azione** |
+| 1. ⚡ Azione: Dispatch agenti in parallelo → `<scope per agente>` |
 | 💡 Perche': Task indipendenti confermati, nessuno stato condiviso |
 | 🚫 Se NO: Dispatch annullato, esecuzione sequenziale |
 
@@ -141,11 +140,10 @@ Ogni agente riceve:
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-parallel-agents |
 |:---|
-| ⚠️ OPERAZIONE DIFFICILE DA ANNULLARE |
-| 🤖 Agenti completati: `<N>/<N>` |
-| 📁 File modificati: `<lista file>` |
-| 1. 🔀 Azione: Integrazione output agenti + risoluzione conflitti |
-| 📂 `<file coinvolti>` |
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🤖 Agenti completati: `<N>/<N>` · 📁 File modificati: `<lista file>` |
+| **▼ Azione** |
+| 1. 🔀 Azione: Integrazione output agenti + risoluzione conflitti → `<file coinvolti>` |
 | 💡 Perche': Tutti gli agenti completati, integrazione necessaria |
 | 🚫 Se NO: Output agenti non integrati, verifiche manuali necessarie |
 

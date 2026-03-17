@@ -148,12 +148,10 @@ Ogni modulo ha: `_input.tf`, `_local.tf`, `_output.tf` + resource file specifici
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-iac |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🔐 Risorsa IAM: `<role/policy name>` |
-| 🌍 Ambiente: `<ambiente>` |
-| 📦 Servizi impattati: `<lista servizi>` |
-| 1. ⚠️ Azione: Modifica policy IAM (impatta accesso risorse) |
-| 📂 `<file .tf>` |
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🔐 Risorsa IAM: `<role/policy name>` · 🌍 Ambiente: `<ambiente>` · 📦 Servizi impattati: `<lista servizi>` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Modifica policy IAM (impatta accesso risorse) → `<file .tf>` |
 | 💡 Perche': Modifica necessaria per `<motivazione>` |
 | 🚫 Se NO: STOP — policy invariata, accessi non modificati |
 
@@ -190,12 +188,10 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 
 | 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-iac |
 |:---|
-| ⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA |
-| 🏗️ Ambiente: `<dev|collaudo|produzione>` |
-| 📋 Plan output: `<N> to add, <N> to change, <N> to destroy` |
-| 🎫 Ticket: `<PROJ-NNN>` |
-| 1. ⚠️ Azione: Applicazione modifiche infrastruttura AWS |
-| 📂 `<modulo terraform>` |
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🏗️ Ambiente: `<dev|collaudo|produzione>` · 📋 Plan: `<N> to add, <N> to change, <N> to destroy` · 🎫 Ticket: `<PROJ-NNN>` |
+| **▼ Azione** |
+| 1. ⚠️ Azione: Applicazione modifiche infrastruttura AWS → `<modulo terraform>` |
 | 💡 Perche': Plan verificato, risorse da creare/modificare |
 | 🚫 Se NO: STOP — nessuna modifica applicata all'infrastruttura |
 

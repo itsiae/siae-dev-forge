@@ -195,15 +195,32 @@ Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Pre-fetch Dati per Cluster" per i com
 
 ### 4c — Pilot Test (OBBLIGATORIO su sistemi con 3+ cluster)
 
-🟡 MEDIO — Pilot: 1 cluster su N totali. Validazione pipeline prima del full run.
-1. Pre-fetcha dati per il cluster piu' piccolo
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
+|:---|
+| 🔬 Pilot test: `1 cluster su N totali` · 📦 Dati pre-fetchati: `Service.java + Entity.java + openapi` |
+| **▼ Azioni** |
+| 1. 🤖 Dispatch 1 agente pilot (cluster piu piccolo) → `docs/logic-catalog/` |
+| 2. 📄 Scrittura 1 file cluster → `docs/logic-catalog/cluster-{nome}.md` |
+| 💡 Perche': Validazione pipeline prima del full run |
+| 🚫 Se NO: Pilot annullato, full run non garantito senza validazione |
+
+Procedura pilot:
+1. Pre-fetcha dati per il cluster piu' piccolo (meno repo)
 2. Dispatcha 1 agente con dati inline nel prompt
 3. Verifica: `ls docs/logic-catalog/cluster-*.md | wc -l` deve essere `1`
 4. Se OK → Step 4d. Se file mancante → STOP, diagnostica.
 
 ### 4d — Dispatch Agenti per Cluster (Full Run)
 
-🟡 MEDIO — K agenti (1 per cluster) in parallelo.
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
+|:---|
+| 🤖 Agenti: `K agenti (1 per cluster) in parallelo` · 📦 Cluster: `lista cluster confermati al Step 3` · ✅ Pilot: `1/1 file verificato` |
+| **▼ Azioni** |
+| 1. ⚡ Dispatch tutti gli agenti in parallelo → `docs/logic-catalog/` |
+| 2. 📄 Scrittura K file cluster → `docs/logic-catalog/cluster-*.md` |
+| 💡 Perche': Pilot OK, full run pronto |
+| 🚫 Se NO: Full run annullato, catalogo parziale |
+
 Dispatcha TUTTI i cluster in un blocco parallelo (1 agente per cluster).
 
 Vedi [TEMPLATES.md](TEMPLATES.md) sezione "Istruzione Critica Agenti" per il testo da includere verbatim in ogni agente.
@@ -236,9 +253,9 @@ Se mancano file → re-dispatcha solo i cluster mancanti (non tutto il batch).
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-service-logic-map |
 |:---|
-| 📚 Input: `docs/logic-catalog/cluster-*.md + clusters.yaml` |
-| 🏗️ Scope: `Documentazione formale catalogo L1+L2+L3` |
-| 1. 📄 Esecuzione siae-documentation su cluster generati: `docs/logic-catalog/` |
+| 📚 Input: `docs/logic-catalog/cluster-*.md + clusters.yaml` · 🏗️ Scope: `Documentazione formale catalogo L1+L2+L3` |
+| **▼ Azioni** |
+| 1. 📄 Esecuzione siae-documentation su cluster generati → `docs/logic-catalog/` |
 | 💡 Perche': POST-BUILD obbligatorio — genera doc navigabile dal team |
 | 🚫 Se NO: Il catalogo resta senza documentazione formale |
 

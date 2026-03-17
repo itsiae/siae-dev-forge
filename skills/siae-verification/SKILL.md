@@ -117,10 +117,9 @@ Se il lavoro copre piu' categorie, identifica TUTTE le verifiche necessarie.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-verification |
 |:---|
-| 🔧 Comandi: `<lista comandi identificati in Step 1>` |
-| 📁 Working dir: `<directory>` |
-| 1. 🧪 Azione: Esecuzione suite di verifica |
-| 📂 `<comandi>` |
+| 🔧 Comandi: `<lista comandi identificati in Step 1>` · 📁 Working dir: `<directory>` |
+| **▼ Azione** |
+| 1. 🧪 Azione: Esecuzione suite di verifica → `<comandi>` |
 | 💡 Perche': Verifica necessaria prima di qualsiasi claim di completamento |
 | 🚫 Se NO: Nessuna verifica eseguita — non puoi dichiarare completamento |
 
