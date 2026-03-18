@@ -205,7 +205,7 @@ ACTUAL_COMMANDS=$(find "${PLUGIN_ROOT}/commands" -name "*.md" -maxdepth 1 | wc -
 # Count actual agents (.md files in agents/)
 ACTUAL_AGENTS=$(find "${PLUGIN_ROOT}/agents" -name "*.md" -maxdepth 1 | wc -l | tr -d ' ')
 # Count actual hook events in hooks.json
-ACTUAL_HOOKS=$(grep -oE '"(SessionStart|PreToolUse|PostToolUse|Stop)"' "${PLUGIN_ROOT}/hooks/hooks.json" | sort -u | wc -l | tr -d ' ')
+ACTUAL_HOOKS=$(grep -oE '"(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)"' "${PLUGIN_ROOT}/hooks/hooks.json" | sort -u | wc -l | tr -d ' ')
 
 # Extract declared counts from description
 DECLARED_SKILLS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ skill' | grep -oE '[0-9]+')
@@ -461,6 +461,114 @@ if [ "$plan_with_skill" = "{}" ]; then
   hook_ok=$((hook_ok + 1))
 else
   echo "  FAIL  hooks/plan-gate: non silenzioso con siae-brainstorming"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context esiste ed è eseguibile
+if [ -x "${PLUGIN_ROOT}/hooks/user-prompt-context" ]; then
+  echo "  PASS  hooks/user-prompt-context: esiste ed è eseguibile"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: mancante o non eseguibile"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context silenzioso senza sentinel files
+TEST_DIR=$(mktemp -d)
+upc_silent_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_silent_output" | grep -q 'exit:0' && ! echo "$upc_silent_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: silenzioso senza sentinel files"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non silenzioso senza sentinel files"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context inietta contesto con sentinel file presente
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
+upc_inject_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_inject_output" | grep -q 'additional_context' && echo "$upc_inject_output" | grep -q 'TDD' && echo "$upc_inject_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/user-prompt-context: inietta contesto con sentinel TDD"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non inietta contesto con sentinel TDD"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: devforge_set_mode/clear_mode helpers
+TEST_DIR=$(mktemp -d)
+source "${PLUGIN_ROOT}/lib/logger.sh"
+(cd "$TEST_DIR" && devforge_set_mode "test" "hello-world")
+if [ -f "${TEST_DIR}/.devforge-active-test" ] && grep -q "hello-world" "${TEST_DIR}/.devforge-active-test"; then
+  echo "  PASS  logger.sh: devforge_set_mode crea sentinel file"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  logger.sh: devforge_set_mode non crea sentinel file"
+  hook_fail=$((hook_fail + 1))
+fi
+(cd "$TEST_DIR" && devforge_clear_mode "test")
+if [ ! -f "${TEST_DIR}/.devforge-active-test" ]; then
+  echo "  PASS  logger.sh: devforge_clear_mode rimuove sentinel file"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  logger.sh: devforge_clear_mode non rimuove sentinel file"
+  hook_fail=$((hook_fail + 1))
+fi
+rm -rf "$TEST_DIR"
+
+# Check: user-prompt-context emette JSON valido con sentinel
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
+upc_json_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+rm -rf "$TEST_DIR"
+if echo "$upc_json_output" | python3 -m json.tool >/dev/null 2>&1; then
+  echo "  PASS  hooks/user-prompt-context: output JSON valido"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: output JSON non valido"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context silenzioso con sentinel vuoto
+TEST_DIR=$(mktemp -d)
+touch "${TEST_DIR}/.devforge-active-tdd"
+upc_empty_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_empty_output" | grep -q 'exit:0' && ! echo "$upc_empty_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: silenzioso con sentinel vuoto"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non silenzioso con sentinel vuoto"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context ignora mode non in whitelist
+TEST_DIR=$(mktemp -d)
+echo "some-content" > "${TEST_DIR}/.devforge-active-unknown-mode"
+upc_unknown_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_unknown_output" | grep -q 'exit:0' && ! echo "$upc_unknown_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: ignora mode non in whitelist"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non ignora mode sconosciuto"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context gestisce sentinel multipli
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testX" > "${TEST_DIR}/.devforge-active-tdd"
+echo "docs/plans/my-plan.md" > "${TEST_DIR}/.devforge-active-plan"
+upc_multi_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+rm -rf "$TEST_DIR"
+if echo "$upc_multi_output" | grep -q 'TDD' && echo "$upc_multi_output" | grep -q 'Piano attivo'; then
+  echo "  PASS  hooks/user-prompt-context: gestisce sentinel multipli"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non gestisce sentinel multipli"
   hook_fail=$((hook_fail + 1))
 fi
 

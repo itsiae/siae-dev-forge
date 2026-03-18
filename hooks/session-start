@@ -183,4 +183,17 @@ echo "" > "${HOME}/.claude/.devforge-session-skills"
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 
+# Cleanup stale sentinel files (older than 24h) in working directory
+STALE_AGE=86400
+NOW=$(date +%s)
+shopt -s nullglob
+for sentinel in .devforge-active-*; do
+    MTIME=$(stat -f%m "$sentinel" 2>/dev/null || stat -c%Y "$sentinel" 2>/dev/null || echo "0")
+    if [ $((NOW - MTIME)) -gt "$STALE_AGE" ]; then
+        devforge_log "session_start_cleanup" "info" "{\"file\":\"${sentinel}\",\"age_hours\":$(( (NOW - MTIME) / 3600 ))}"
+        rm -f "$sentinel"
+    fi
+done
+shopt -u nullglob
+
 exit 0
