@@ -181,6 +181,25 @@ Se trovi problemi durante il self-review, FIXALI ORA prima di dichiarare il task
 
 ---
 
+## Project Discoveries — Cosa Riportare
+
+Dopo ogni task, riporta le scoperte utili per i task successivi.
+
+**Riporta:**
+
+- Quirk del codebase (es. "L'ORM wrappa errori DB in tipo custom XyzException")
+- Pattern non documentati che hai scoperto implementando
+- Gotcha di configurazione o dipendenze inattese
+- Workaround necessari non previsti dal piano
+
+**NON riportare:**
+
+- Cose ovvie dal piano o dalla documentazione
+- Best practice generiche (es. "usare try-catch")
+- Dettagli specifici del tuo task che non impattano gli altri
+
+---
+
 ## Report di Completamento
 
 Quando hai finito, produci questo report:
@@ -197,6 +216,10 @@ IMPLEMENTER REPORT:
   Commit:         [hash — message]
   Self-review:    [checklist completa: SI/NO]
   Note:           [eventuali deviazioni dal piano, con motivazione]
+  Project Discoveries:
+    - [quirk/gotcha 1 scoperto durante l'implementazione]
+    - [quirk/gotcha 2 ...]
+    - [nessuna: se non hai scoperto nulla di rilevante]
 ```
 
 ---

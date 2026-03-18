@@ -99,24 +99,6 @@ Suddividi il lavoro in task indipendenti (o con dipendenze esplicite).
 
 ### Step 3 — Scrivi il Piano Bite-Sized
 
-**Header obbligatorio** — copia esattamente:
-
-```markdown
-# [Nome Feature] — Piano Implementativo
-
-> **Per Claude:** REQUIRED SUB-SKILL: Usa `siae-subagent-development`
-> per implementare questo piano task per task.
-
-**Goal:** [Una frase su cosa costruisce questo piano]
-**Architettura:** [2-3 frasi sull'approccio tecnico]
-**Stack:** [Tecnologie e framework coinvolti]
-**SP:** [Stima story points totale]
-
----
-```
-
-**Template per ogni task:**
-
 **Stato task:** Ogni task nasce con `[PENDING]`. Lo stato viene aggiornato
 durante l'esecuzione da `siae-executing-plans` o `siae-subagent-development`.
 NON scrivere task senza marker — un task senza marker e' un bug nel piano.
@@ -128,63 +110,53 @@ Tre stati possibili:
 
 **Regola:** un piano e' "completo" se e solo se **tutti** i task sono `[DONE]`.
 
-````markdown
-### Task N: [Nome Componente / Modulo] [PENDING]
+**Il piano viene scritto come directory:**
 
-**File coinvolti:**
-- Crea: `path/esatto/al/file.py`
-- Modifica: `path/esatto/al/file.java` (righe 45-67)
-- Test: `tests/path/esatto/test_file.py`
-
-**Step 1: Scrivi il test fallente**
-
-```java
-@Test
-void should_[comportamento]_when_[condizione]() {
-    // Arrange
-    var input = new MyClass("valore");
-
-    // Act
-    var result = myService.process(input);
-
-    // Assert
-    assertThat(result.getStatus()).isEqualTo("ATTESO");
-}
+```
+docs/plans/<topic>/
+  overview.md          # header + indice task con stato
+  task-01-<nome>.md    # task completo
+  task-02-<nome>.md
+  ...
+  task-NN-<nome>.md
 ```
 
-**Step 2: Esegui il test e verifica che fallisce**
+**`overview.md` — template:**
 
-```bash
-mvn test -pl modulo -Dtest=MyClassTest#should_[comportamento]
+```markdown
+# [Nome Feature] — Piano Implementativo
+
+> **Per Claude:** REQUIRED SUB-SKILL: Usa `siae-subagent-development`
+> per implementare questo piano task per task.
+
+**Goal:** [Una frase]
+**Architettura:** [2-3 frasi]
+**Stack:** [Tecnologie]
+**SP:** [Stima]
+**Design doc:** [path al design doc]
+
+---
+
+## Indice Task
+
+| # | Task | File | Stato |
+|---|------|------|-------|
+| 1 | [Nome task 1] | `task-01-<nome>.md` | [PENDING] |
+| 2 | [Nome task 2] | `task-02-<nome>.md` | [PENDING] |
+| N | [Nome task N] | `task-NN-<nome>.md` | [PENDING] |
+
+## Dipendenze
+
+- Task 2 dipende da Task 1
+- Task 3-4 sono indipendenti
 ```
-Output atteso: `FAIL — MyService: method not found`
 
-**Step 3: Implementazione minimale**
-
-```java
-public Result process(MyClass input) {
-    return Result.of("ATTESO");
-}
-```
-
-**Step 4: Esegui il test e verifica che passa**
-
-```bash
-mvn test -pl modulo -Dtest=MyClassTest#should_[comportamento]
-```
-Output atteso: `BUILD SUCCESS — Tests run: 1, Failures: 0`
-
-**Step 5: Commit**
-
-```bash
-git add path/esatto/al/file.java tests/path/esatto/test_file.java
-git commit -m "feat(modulo): aggiungi [comportamento]"
-```
-````
+**Ogni `task-NN-<nome>.md`** contiene il task completo con il template TDD
+(file coinvolti, step 1-5: test fallente, run, implementazione, run, commit).
 
 ### Step 4 — Salva il Piano
 
-Salva in `docs/plans/YYYY-MM-DD-<topic>-plan.md` (distinto dal design doc).
+Salva la directory in `docs/plans/<topic>/` con `overview.md` e i file `task-NN-<nome>.md`.
 
 Se il design doc gia' include una sezione piano, aggiungila li' come sezione separata.
 
@@ -201,9 +173,20 @@ Committa il file piano:
 | 🚫 Se NO: Il piano resta non committato |
 
 ```bash
-git add docs/plans/YYYY-MM-DD-<topic>-plan.md
+git add docs/plans/<topic>/
 git commit -m "docs(plans): aggiungi piano implementativo per [feature]"
 ```
+
+### Retrocompatibilita'
+
+I piani esistenti in formato file unico (`docs/plans/*-plan.md`) restano validi.
+Le skill di esecuzione (`siae-subagent-development`, `siae-executing-plans`)
+detectano automaticamente il formato:
+
+- **Directory** (`docs/plans/<topic>/overview.md` esiste) → formato split
+- **File** (`docs/plans/*-plan.md`) → formato legacy monolitico
+
+Nessun piano esistente richiede migrazione.
 
 ### Step 5 — Execution Handoff
 
