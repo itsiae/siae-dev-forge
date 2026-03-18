@@ -3,6 +3,9 @@
 *.swo
 *~
 
+# DevForge sentinel files (session context, never committed)
+.devforge-active-*
+
 # Eval workspace (risultati temporanei skill-creator)
 evals/workspace/*
 !evals/workspace/.gitkeep

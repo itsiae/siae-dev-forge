@@ -519,6 +519,59 @@ else
 fi
 rm -rf "$TEST_DIR"
 
+# Check: user-prompt-context emette JSON valido con sentinel
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
+upc_json_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+rm -rf "$TEST_DIR"
+if echo "$upc_json_output" | python3 -m json.tool >/dev/null 2>&1; then
+  echo "  PASS  hooks/user-prompt-context: output JSON valido"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: output JSON non valido"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context silenzioso con sentinel vuoto
+TEST_DIR=$(mktemp -d)
+touch "${TEST_DIR}/.devforge-active-tdd"
+upc_empty_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_empty_output" | grep -q 'exit:0' && ! echo "$upc_empty_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: silenzioso con sentinel vuoto"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non silenzioso con sentinel vuoto"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context ignora mode non in whitelist
+TEST_DIR=$(mktemp -d)
+echo "some-content" > "${TEST_DIR}/.devforge-active-unknown-mode"
+upc_unknown_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_unknown_output" | grep -q 'exit:0' && ! echo "$upc_unknown_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: ignora mode non in whitelist"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non ignora mode sconosciuto"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context gestisce sentinel multipli
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testX" > "${TEST_DIR}/.devforge-active-tdd"
+echo "docs/plans/my-plan.md" > "${TEST_DIR}/.devforge-active-plan"
+upc_multi_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+rm -rf "$TEST_DIR"
+if echo "$upc_multi_output" | grep -q 'TDD' && echo "$upc_multi_output" | grep -q 'Piano attivo'; then
+  echo "  PASS  hooks/user-prompt-context: gestisce sentinel multipli"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non gestisce sentinel multipli"
+  hook_fail=$((hook_fail + 1))
+fi
+
 # Check 13: pre-commit tool counter incrementa e reset da session-start
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 echo '{"command":"ls"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" >/dev/null 2>&1

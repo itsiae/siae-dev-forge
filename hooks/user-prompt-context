@@ -10,16 +10,20 @@
 # Inspired by: https://github.com/obra/autoresearch-claude-code
 
 set -euo pipefail
+shopt -s nullglob
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
+# Max bytes to read from a sentinel file
+MAX_SENTINEL_SIZE=200
+
+# Whitelist of recognized mode names
+VALID_MODES="tdd|plan|brainstorming"
+
 # Find active sentinel files in working directory
-SENTINEL_FILES=()
-for f in .devforge-active-*; do
-    [ -f "$f" ] && SENTINEL_FILES+=("$f")
-done
+SENTINEL_FILES=(.devforge-active-*)
 
 # No active modes → exit silently (zero overhead)
 if [ ${#SENTINEL_FILES[@]} -eq 0 ]; then
@@ -28,15 +32,26 @@ fi
 
 # Build context message from sentinel files
 CONTEXT_LINES="DevForge Session Context:"
+MODES_FOUND=0
 
 for sentinel in "${SENTINEL_FILES[@]}"; do
     mode_name="${sentinel#.devforge-active-}"
-    content=$(head -c 200 "$sentinel" 2>/dev/null || echo "")
+
+    # Skip unrecognized modes (whitelist only)
+    if ! echo "$mode_name" | grep -qE "^(${VALID_MODES})$"; then
+        devforge_log "user_prompt_context" "warning" "{\"mode\":\"$(devforge_sanitize_json_str "$mode_name")\",\"reason\":\"unknown_mode\"}"
+        continue
+    fi
+
+    # Read and sanitize content: strip control chars, limit size
+    content=$(head -c "$MAX_SENTINEL_SIZE" "$sentinel" 2>/dev/null | tr -cd '[:print:]' || echo "")
 
     if [ -z "$content" ]; then
         devforge_log "user_prompt_context" "warning" "{\"mode\":\"${mode_name}\",\"reason\":\"empty_sentinel\"}"
         continue
     fi
+
+    MODES_FOUND=$((MODES_FOUND + 1))
 
     case "$mode_name" in
         tdd)
@@ -53,11 +68,13 @@ for sentinel in "${SENTINEL_FILES[@]}"; do
         brainstorming)
             CONTEXT_LINES="${CONTEXT_LINES}\n- Brainstorming attivo: ${content}"
             ;;
-        *)
-            CONTEXT_LINES="${CONTEXT_LINES}\n- Modo attivo: ${mode_name} — ${content}"
-            ;;
     esac
 done
+
+# No valid modes processed → exit silently
+if [ "$MODES_FOUND" -eq 0 ]; then
+    exit 0
+fi
 
 CONTEXT_LINES="${CONTEXT_LINES}\nContinua da dove eri rimasto. Non chiedere conferma, prosegui."
 
