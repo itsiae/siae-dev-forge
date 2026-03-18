@@ -19,6 +19,9 @@ source "${PLUGIN_ROOT}/lib/logger.sh"
 # Max bytes to read from a sentinel file
 MAX_SENTINEL_SIZE=200
 
+# Max age in seconds before a sentinel is considered stale (24h)
+MAX_SENTINEL_AGE=86400
+
 # Whitelist of recognized mode names
 VALID_MODES="tdd|plan|brainstorming"
 
@@ -40,6 +43,16 @@ for sentinel in "${SENTINEL_FILES[@]}"; do
     # Skip unrecognized modes (whitelist only)
     if ! echo "$mode_name" | grep -qE "^(${VALID_MODES})$"; then
         devforge_log "user_prompt_context" "warning" "{\"mode\":\"$(devforge_sanitize_json_str "$mode_name")\",\"reason\":\"unknown_mode\"}"
+        continue
+    fi
+
+    # Skip stale sentinels (older than MAX_SENTINEL_AGE)
+    file_mtime=$(stat -f%m "$sentinel" 2>/dev/null || stat -c%Y "$sentinel" 2>/dev/null || echo "0")
+    now=$(date +%s)
+    age=$((now - file_mtime))
+    if [ "$age" -gt "$MAX_SENTINEL_AGE" ]; then
+        devforge_log "user_prompt_context" "warning" "{\"mode\":\"${mode_name}\",\"reason\":\"stale_sentinel\",\"age_hours\":$((age / 3600))}"
+        rm -f "$sentinel"
         continue
     fi
 
