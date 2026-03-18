@@ -11,7 +11,7 @@
 
 ---
 
-## Task 1: Aggiungere Project Discoveries al report implementer [PENDING]
+## Task 1: Aggiungere Project Discoveries al report implementer [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-subagent-development/implementer-prompt.md` (righe 186-200, report di completamento)
@@ -64,7 +64,7 @@ git commit -m "feat(subagent): add Project Discoveries section to implementer re
 
 ---
 
-## Task 2: Aggiungere accumulo discoveries nell'orchestratore [PENDING]
+## Task 2: Aggiungere accumulo discoveries nell'orchestratore [DONE]
 
 **Dipende da:** Task 1
 
@@ -143,7 +143,7 @@ git commit -m "feat(subagent): accumulate and inject project discoveries across 
 
 ---
 
-## Task 3: Convertire siae-writing-plans a formato directory [PENDING]
+## Task 3: Convertire siae-writing-plans a formato directory [DONE]
 
 **File coinvolti:**
 - Modifica: `skills/siae-writing-plans/SKILL.md` (Step 3, Step 4)
@@ -244,7 +244,7 @@ git commit -m "feat(writing-plans): output split directory format with overview 
 
 ---
 
-## Task 4: Aggiornare orchestratori per detect formato split [PENDING]
+## Task 4: Aggiornare orchestratori per detect formato split [DONE]
 
 **Dipende da:** Task 3
 
