@@ -97,9 +97,17 @@ REQUIRED SUB-SKILL: siae-git-worktrees (opzionale)
 3. **Se hai dubbi:** Solleva PRIMA di iniziare. Non procedere alla cieca.
 4. **Se nessun dubbio:** Crea task per ogni item e procedi
 
+**Detect formato piano:**
+
+1. Cerca directory in `docs/plans/` che contiene `overview.md`
+   → formato split. Leggi `overview.md` per lista task e stato.
+2. Se non trovata: cerca file `*-plan.md` in `docs/plans/`
+   → formato legacy monolitico.
+
 **Annuncia:**
 ```
-PIANO CARICATO: docs/plans/<filename>.md
+PIANO CARICATO: docs/plans/<topic>/overview.md (formato split)
+               oppure docs/plans/<filename>.md (formato legacy)
 Task totali: N
 Primo batch: Task 1-3
 Domande/problemi: [nessuno | lista]
@@ -116,6 +124,11 @@ Domande/problemi: [nessuno | lista]
 | 1. ✏️ Azione: Implementazione batch con TDD → `<file coinvolti>` |
 | 💡 Perche': Batch pronto, piano validato |
 | 🚫 Se NO: Il batch non viene eseguito, attende feedback |
+
+**Formato split:** per ogni task nel batch, leggi solo
+`docs/plans/<topic>/task-NN-<nome>.md`. Non rileggere overview o altri task.
+
+**Formato legacy:** estrai la sezione task dal file monolitico.
 
 Per ogni task nel batch:
 1. Segna come in_progress
@@ -167,6 +180,13 @@ Prossimo batch: Task [N+1]-[N+3]
 Pronto per feedback.
 ```
 
+**Aggiornamento stato (formato split):**
+Aggiorna la colonna `Stato` nella tabella indice di `overview.md`:
+`[PENDING]` → `[DONE]` o `[BLOCKED]`
+
+**Aggiornamento stato (formato legacy):**
+Aggiorna il marker nel file monolitico come prima.
+
 **Attendi** risposta dell'utente prima di procedere.
 
 ### Step 4 — Continua o Correggi
@@ -185,6 +205,9 @@ grep -c "\[PENDING\]" docs/plans/<filename>.md
 grep -c "\[BLOCKED\]" docs/plans/<filename>.md
 grep -c "\[DONE\]" docs/plans/<filename>.md
 ```
+
+**Nota formato split:** i marker `[PENDING]`/`[DONE]`/`[BLOCKED]` si trovano
+nella tabella indice di `overview.md`, non nei file task singoli.
 
 **Se PENDING > 0 o BLOCKED > 0:** STOP. Il piano non e' completo.
 

@@ -77,6 +77,22 @@ FERMATI. Nessun completamento senza spec-review + code-quality-review.
 3. Determina l'ordine di esecuzione (rispetta le dipendenze)
 4. Presenta il piano all'utente per conferma
 
+**Detect formato piano:**
+
+1. Cerca directory in `docs/plans/` che contiene `overview.md`
+   → se trovata: formato split. Leggi `overview.md` per lista task.
+2. Se non trovata: cerca file `*-plan.md` in `docs/plans/`
+   → formato legacy monolitico. Procedi come prima.
+
+```
+# Formato split
+Piano:    docs/plans/<topic>/overview.md
+Task:     docs/plans/<topic>/task-01-*.md ... task-NN-*.md
+
+# Formato legacy
+Piano:    docs/plans/<topic>-plan.md (file unico)
+```
+
 **Output:**
 ```
 PIANO DI IMPLEMENTAZIONE:
@@ -84,6 +100,18 @@ PIANO DI IMPLEMENTAZIONE:
   Task totali: N
   Ordine:      [lista ordinata dei task]
 ```
+
+**Inizializza Accumulated Discoveries:**
+
+Crea un blocco vuoto che verra' popolato durante l'esecuzione:
+
+```
+ACCUMULATED DISCOVERIES:
+(nessuna — primo task)
+```
+
+Questo blocco si azzera ogni volta che viene caricato un nuovo piano.
+Non persiste tra sessioni o tra piani diversi.
 
 ### Step 2 — Per Ogni Task: Dispatch Implementer
 
@@ -109,6 +137,33 @@ in [implementer-prompt.md](implementer-prompt.md).
 
 **Contesto del subagent:** fresco. Nessun bagaglio dalla sessione corrente.
 Questo previene bias e assunzioni accumulate.
+
+**Contesto arricchito:** oltre al task description e al contesto progetto,
+inietta nel prompt del subagent il blocco accumulated discoveries:
+
+```
+**Discoveries dai task precedenti (usale, non riscoprirle):**
+
+{accumulated_discoveries}
+```
+
+Per il primo task il blocco e' vuoto. Per i task successivi contiene
+le scoperte accumulate dai task precedenti.
+
+**Contesto per il subagent (formato split):**
+
+Il subagent riceve SOLO:
+- `overview.md` — per contesto generale (goal, architettura, stack)
+- `task-NN-<nome>.md` — il task specifico da implementare
+- Accumulated discoveries (se presenti)
+
+NON passare gli altri file task. Il subagent non ha bisogno di leggere task
+che non gli competono → risparmio token significativo.
+
+**Contesto per il subagent (formato legacy):**
+
+Estrai dal file monolitico la sezione del task corrente e passala al subagent
+insieme all'header del piano.
 
 ### Step 3 — Dispatch Spec-Reviewer
 
@@ -164,6 +219,20 @@ Dopo il PASS di entrambi i reviewer:
 git add docs/plans/<filename>.md
 git commit -m "docs(plans): mark task N as DONE in <piano>"
 ```
+
+**Aggiorna Accumulated Discoveries:**
+
+Dopo che l'implementer produce il report, estrai la sezione `Project Discoveries`.
+Se contiene discoveries (non solo "nessuna"), aggiungile al blocco accumulato:
+
+```
+ACCUMULATED DISCOVERIES:
+- [Task 1] Drizzle ORM wrappa PostgresError dentro DrizzleQueryError
+- [Task 2] Il config loader ignora .env.local in test environment
+- [Task 3] (nessuna nuova discovery)
+```
+
+Ogni discovery e' prefissata con `[Task N]` per tracciabilita'.
 
 ```
 REQUIRED SUB-SKILL: siae-verification
