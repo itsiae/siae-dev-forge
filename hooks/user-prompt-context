@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# UserPromptSubmit hook — injects active session context into every user message
+# ─────────────────────────────────────────────────────────────────
+# Hook:     user-prompt-context
+# Evento:   UserPromptSubmit
+# Matcher:  * (ogni messaggio utente)
+# Timeout:  5s
+# Formato:  additional_context (standard DevForge)
+# ─────────────────────────────────────────────────────────────────
+# Inspired by: https://github.com/obra/autoresearch-claude-code
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+
+# Find active sentinel files in working directory
+SENTINEL_FILES=()
+for f in .devforge-active-*; do
+    [ -f "$f" ] && SENTINEL_FILES+=("$f")
+done
+
+# No active modes → exit silently (zero overhead)
+if [ ${#SENTINEL_FILES[@]} -eq 0 ]; then
+    exit 0
+fi
+
+# Build context message from sentinel files
+CONTEXT_LINES="DevForge Session Context:"
+
+for sentinel in "${SENTINEL_FILES[@]}"; do
+    mode_name="${sentinel#.devforge-active-}"
+    content=$(head -c 200 "$sentinel" 2>/dev/null || echo "")
+
+    if [ -z "$content" ]; then
+        devforge_log "user_prompt_context" "warning" "{\"mode\":\"${mode_name}\",\"reason\":\"empty_sentinel\"}"
+        continue
+    fi
+
+    case "$mode_name" in
+        tdd)
+            phase=$(echo "$content" | cut -d'|' -f1)
+            target=$(echo "$content" | cut -d'|' -f2)
+            test_name=$(echo "$content" | cut -d'|' -f3)
+            CONTEXT_LINES="${CONTEXT_LINES}\n- Modo attivo: TDD (fase ${phase})"
+            [ -n "$target" ] && CONTEXT_LINES="${CONTEXT_LINES}\n- Target: ${target}"
+            [ -n "$test_name" ] && CONTEXT_LINES="${CONTEXT_LINES}\n- Test: ${test_name}"
+            ;;
+        plan)
+            CONTEXT_LINES="${CONTEXT_LINES}\n- Piano attivo: ${content}"
+            ;;
+        brainstorming)
+            CONTEXT_LINES="${CONTEXT_LINES}\n- Brainstorming attivo: ${content}"
+            ;;
+        *)
+            CONTEXT_LINES="${CONTEXT_LINES}\n- Modo attivo: ${mode_name} — ${content}"
+            ;;
+    esac
+done
+
+CONTEXT_LINES="${CONTEXT_LINES}\nContinua da dove eri rimasto. Non chiedere conferma, prosegui."
+
+# Escape for JSON
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+context_escaped=$(escape_for_json "$CONTEXT_LINES")
+session_context="<EXTREMELY_IMPORTANT>\n${context_escaped}\n</EXTREMELY_IMPORTANT>"
+
+cat <<EOF
+{
+  "additional_context": "${session_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "${session_context}"
+  }
+}
+EOF
+
+exit 0

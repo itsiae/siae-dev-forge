@@ -205,7 +205,7 @@ ACTUAL_COMMANDS=$(find "${PLUGIN_ROOT}/commands" -name "*.md" -maxdepth 1 | wc -
 # Count actual agents (.md files in agents/)
 ACTUAL_AGENTS=$(find "${PLUGIN_ROOT}/agents" -name "*.md" -maxdepth 1 | wc -l | tr -d ' ')
 # Count actual hook events in hooks.json
-ACTUAL_HOOKS=$(grep -oE '"(SessionStart|PreToolUse|PostToolUse|Stop)"' "${PLUGIN_ROOT}/hooks/hooks.json" | sort -u | wc -l | tr -d ' ')
+ACTUAL_HOOKS=$(grep -oE '"(SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop)"' "${PLUGIN_ROOT}/hooks/hooks.json" | sort -u | wc -l | tr -d ' ')
 
 # Extract declared counts from description
 DECLARED_SKILLS=$(echo "$PLUGIN_DESC" | grep -oE '[0-9]+ skill' | grep -oE '[0-9]+')
@@ -463,6 +463,61 @@ else
   echo "  FAIL  hooks/plan-gate: non silenzioso con siae-brainstorming"
   hook_fail=$((hook_fail + 1))
 fi
+
+# Check: user-prompt-context esiste ed è eseguibile
+if [ -x "${PLUGIN_ROOT}/hooks/user-prompt-context" ]; then
+  echo "  PASS  hooks/user-prompt-context: esiste ed è eseguibile"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: mancante o non eseguibile"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context silenzioso senza sentinel files
+TEST_DIR=$(mktemp -d)
+upc_silent_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_silent_output" | grep -q 'exit:0' && ! echo "$upc_silent_output" | grep -q 'additional_context'; then
+  echo "  PASS  hooks/user-prompt-context: silenzioso senza sentinel files"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non silenzioso senza sentinel files"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: user-prompt-context inietta contesto con sentinel file presente
+TEST_DIR=$(mktemp -d)
+echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
+upc_inject_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+rm -rf "$TEST_DIR"
+if echo "$upc_inject_output" | grep -q 'additional_context' && echo "$upc_inject_output" | grep -q 'TDD' && echo "$upc_inject_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/user-prompt-context: inietta contesto con sentinel TDD"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/user-prompt-context: non inietta contesto con sentinel TDD"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check: devforge_set_mode/clear_mode helpers
+TEST_DIR=$(mktemp -d)
+source "${PLUGIN_ROOT}/lib/logger.sh"
+(cd "$TEST_DIR" && devforge_set_mode "test" "hello-world")
+if [ -f "${TEST_DIR}/.devforge-active-test" ] && grep -q "hello-world" "${TEST_DIR}/.devforge-active-test"; then
+  echo "  PASS  logger.sh: devforge_set_mode crea sentinel file"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  logger.sh: devforge_set_mode non crea sentinel file"
+  hook_fail=$((hook_fail + 1))
+fi
+(cd "$TEST_DIR" && devforge_clear_mode "test")
+if [ ! -f "${TEST_DIR}/.devforge-active-test" ]; then
+  echo "  PASS  logger.sh: devforge_clear_mode rimuove sentinel file"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  logger.sh: devforge_clear_mode non rimuove sentinel file"
+  hook_fail=$((hook_fail + 1))
+fi
+rm -rf "$TEST_DIR"
 
 # Check 13: pre-commit tool counter incrementa e reset da session-start
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"

@@ -159,3 +159,20 @@ devforge_log_timed() {
     printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
         "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
+
+# Set an active mode sentinel in the current working directory
+# Usage: devforge_set_mode <mode_name> <context_string>
+# Example: devforge_set_mode "tdd" "RED|src/MyService.java|testShouldReturnEmpty"
+devforge_set_mode() {
+    local mode="$1"
+    local context="$2"
+    echo "$context" > "$(pwd)/.devforge-active-${mode}"
+}
+
+# Clear an active mode sentinel from the current working directory
+# Usage: devforge_clear_mode <mode_name>
+# Example: devforge_clear_mode "tdd"
+devforge_clear_mode() {
+    local mode="$1"
+    rm -f "$(pwd)/.devforge-active-${mode}"
+}
