@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# PostToolUse hook — captures test results from Bash commands
+# ─────────────────────────────────────────────────────────────────
+# Hook:     capture-test-result
+# Evento:   PostToolUse
+# Matcher:  Bash
+# Timeout:  5s
+# ─────────────────────────────────────────────────────────────────
+# Detects test-related commands and saves a summary of results
+# to ~/.claude/.devforge-last-test-result for context injection.
+
+set -euo pipefail
+
+STATE_DIR="${HOME}/.claude"
+RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
+
+# Read tool input from stdin (Claude passes JSON with tool_input)
+INPUT=$(cat)
+
+# Extract the command that was run
+COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | head -1 | sed 's/"command":"//;s/"$//' || echo "")
+
+# Only care about test-related commands
+if ! echo "$COMMAND" | grep -qiE '(test|jest|vitest|pytest|mvn.*test|gradle.*test|npm.*test|yarn.*test|go test|cargo test|run-all\.sh|\.spec\.|\.test\.)'; then
+    exit 0
+fi
+
+# Extract exit code and stdout summary
+EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code":[0-9]*' | head -1 | cut -d: -f2 || echo "?")
+STDOUT=$(echo "$INPUT" | grep -o '"stdout":"[^"]*"' | head -1 | sed 's/"stdout":"//;s/"$//' || echo "")
+
+# Build summary
+NOW=$(date '+%H:%M')
+if [ "$EXIT_CODE" = "0" ]; then
+    STATUS="PASS"
+else
+    STATUS="FAIL (exit ${EXIT_CODE})"
+fi
+
+# Extract key lines from output (pass/fail counts, errors)
+SUMMARY_LINES=""
+if [ -n "$STDOUT" ]; then
+    # Common test framework patterns
+    SUMMARY_LINES=$(echo "$STDOUT" | grep -iE '(passed|failed|error|Tests run|test suites|FAIL|OK|SUCCESS|assertions)' | tail -5 || echo "")
+fi
+
+{
+    echo "${STATUS} at ${NOW} — cmd: ${COMMAND}"
+    [ -n "$SUMMARY_LINES" ] && echo "$SUMMARY_LINES"
+} > "$RESULT_FILE"
+
+exit 0
