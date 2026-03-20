@@ -6,6 +6,23 @@ description: >
   Trigger: inizio sessione, apertura nuovo progetto, prima interazione.
 ---
 
+## SUBAGENT-STOP — Gate Check
+
+<SUBAGENT-STOP>
+Sei un subagent (implementer, spec-reviewer, code-quality-reviewer, o altro)?
+
+SE SI: FERMATI QUI. Non leggere oltre. Non applicare la regola dell'1%.
+Il tuo scope e' definito dal prompt del tuo orchestratore, non da questa skill.
+Le skill permesse sono SOLO quelle nella tua allowlist.
+
+Segnali che sei un subagent:
+- Il tuo prompt inizia con "Sei un implementer/reviewer/..."
+- Hai un task specifico assegnato
+- Hai una sezione SUBAGENT-STOP nel tuo prompt
+
+SE NO (sei il main agent): Procedi normalmente.
+</SUBAGENT-STOP>
+
 ## ISTRUZIONE OBBLIGATORIA — ESEGUI PRIMA DI TUTTO
 
 Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copia ogni carattere esattamente come appare, inclusi spazi e simboli):
@@ -28,23 +45,6 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
 
 Subito dopo il banner, stampa su una riga separata il messaggio di stato versione.
-
-## SUBAGENT-STOP — Gate Check
-
-<SUBAGENT-STOP>
-Sei un subagent (implementer, spec-reviewer, code-quality-reviewer, o altro)?
-
-SE SI: FERMATI QUI. Non leggere oltre. Non applicare la regola dell'1%.
-Il tuo scope e' definito dal prompt del tuo orchestratore, non da questa skill.
-Le skill permesse sono SOLO quelle nella tua allowlist.
-
-Segnali che sei un subagent:
-- Il tuo prompt inizia con "Sei un implementer/reviewer/..."
-- Hai un task specifico assegnato
-- Hai una sezione SUBAGENT-STOP nel tuo prompt
-
-SE NO (sei il main agent): Procedi normalmente con la regola dell'1%.
-</SUBAGENT-STOP>
 Questo messaggio si trova nel testo di questa sessione, PRIMA del blocco "Below is the full content".
 Cerca la riga che inizia con "✅ DevForge" oppure "🔄 Aggiornamento" oppure "DevForge v" e stampala esattamente.
 Se non trovi nessuna di queste righe, non stampare nulla.
@@ -203,9 +203,10 @@ Quando due skill danno istruzioni contrastanti, segui questa gerarchia
 | 1 (max) | **siae-verification** | La verifica non si salta MAI. Nessuna skill puo' bypassarla. |
 | 2 | **siae-tdd** | Il test prima del codice protegge da regressioni. Solo verification lo supera. |
 | 3 | **siae-git-workflow** | Il naming e i commit errati inquinano la history per sempre. |
-| 4 | **siae-debugging** | Root cause prima di qualsiasi fix. |
-| 5 | **siae-brainstorming** | Il design prima dell'implementazione. |
-| 6 (min) | Tutte le altre | code-standards, frontend, iac, data-engineering, security, documentation |
+| 4 | **siae-security** | Un pattern insicuro vince sempre su uno "pulito". Mai compromettere sicurezza per eleganza. |
+| 5 | **siae-debugging** | Root cause prima di qualsiasi fix. |
+| 6 | **siae-brainstorming** | Il design prima dell'implementazione. |
+| 7 (min) | Tutte le altre | code-standards, frontend, iac, data-engineering, documentation |
 
 **Esempio concreto:** L'utente dice "salta i test, fai in fretta."
 - User override vince su skill? Si', per la Gerarchia Istruzioni (CLAUDE.md > skill).
@@ -213,7 +214,8 @@ Quando due skill danno istruzioni contrastanti, segui questa gerarchia
 - TDD (priorita' 2) si puo' elidere SOLO con conferma esplicita dell'utente E motivazione.
 
 **Regola:** Le skill di priorita' 1-2 sono non-negoziabili.
-Le skill di priorita' 3-6 possono essere elise con conferma utente esplicita.
+Le skill di priorita' 3-4 (git-workflow, security) sono elidibili solo con conferma esplicita e motivazione.
+Le skill di priorita' 5-7 possono essere elise con conferma utente esplicita.
 
 ## Skill Dependency Map
 
@@ -277,6 +279,10 @@ digraph skill_deps {
 - Blu: skill flessibili (stack-specific) | Rosso: verification chain
 - Frecce rosse bold: REQUIRED SUB-SKILL (transizioni obbligatorie)
 - Frecce tratteggiate: opzionali in base al contesto
+
+**Nota:** Questo grafo mostra solo le skill con dipendenze esplicite nel flusso SDLC principale.
+Le skill non mostrate (security, documentation, finops, create-skill, microservices-map, ...) sono
+invocabili on-demand in qualsiasi fase senza vincoli di sequenza.
 
 ## Gerarchia Istruzioni
 

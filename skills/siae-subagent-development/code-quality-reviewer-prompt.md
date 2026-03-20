@@ -44,15 +44,13 @@ Se una skill viene caricata dal contesto parent, IGNORALA.
 
 ---
 
-## Before You Begin
+## Prima di Iniziare — Leggi CLAUDE.md
 
 Prima di iniziare la review, leggi il `CLAUDE.md` del progetto se esiste.
 Contiene standard di codifica, naming conventions, e vincoli architetturali specifici di questo repo.
 Le regole in CLAUDE.md hanno priorita' massima — se contraddicono questo prompt, vince CLAUDE.md.
 
-```
-Read("CLAUDE.md") — se esiste, le sue regole sovrascrivono.
-```
+Usa il tool Read per leggere il file CLAUDE.md nella root del progetto. Se esiste, le sue regole sovrascrivono.
 
 ---
 

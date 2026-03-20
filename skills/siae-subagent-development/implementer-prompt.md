@@ -63,9 +63,7 @@ Prima di scrivere qualsiasi codice, rispondi a queste domande:
    (o in sottodirectory), leggilo PRIMA di qualsiasi altra azione. Contiene regole operative,
    naming conventions, branch policy e vincoli specifici di questo repo che SOVRASCRIVONO
    le istruzioni generiche in questo prompt.
-   ```
-   Read("CLAUDE.md") — se esiste, le sue regole hanno priorita' massima.
-   ```
+   Usa il tool Read per leggere il file CLAUDE.md nella root del progetto. Se esiste, le sue regole hanno priorita' massima.
 
 1. **Capisco completamente il task?** Se no, chiedi chiarimenti all'orchestratore.
 2. **So quali file devo creare/modificare?** Lista esplicita.
