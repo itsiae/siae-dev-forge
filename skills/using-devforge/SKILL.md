@@ -281,7 +281,7 @@ digraph skill_deps {
 - Frecce tratteggiate: opzionali in base al contesto
 
 **Nota:** Questo grafo mostra solo le skill con dipendenze esplicite nel flusso SDLC principale.
-Le skill non mostrate (security, documentation, finops, create-skill, microservices-map, ...) sono
+Le skill non mostrate (documentation, finops, create-skill, microservices-map, ...) sono
 invocabili on-demand in qualsiasi fase senza vincoli di sequenza.
 
 ## Gerarchia Istruzioni
