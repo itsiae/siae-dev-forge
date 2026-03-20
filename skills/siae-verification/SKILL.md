@@ -62,6 +62,24 @@ Se stai per dire una di queste cose, **FERMATI** e segui i 5 step.
 
 ---
 
+## Scaling — Verifica Proporzionata al Task
+
+GATE: La verifica e' SEMPRE obbligatoria, ma la profondita' scala con il rischio.
+
+| Complessita' task | Verifica richiesta |
+|------------------|--------------------|
+| **Banale** (config, typo, docs) | Step 1 (IDENTIFICA) + Step 2 (ESEGUI: `git diff` + test esistenti) + Step 5 (AFFERMA breve) |
+| **Basso** (fix isolato, < 3 file) | Step 1-2-3-5. Step 4 (checklist completa) puo' essere inline. |
+| **Medio-Alto** (feature, cross-module) | Tutti e 5 gli step completi. Nessuno shortcut. |
+
+**Regola:** la verifica non si salta MAI. Si scala la profondita', non l'esistenza.
+Per task banali, il formato AFFERMA puo' essere su una riga:
+`VERIFICA: git diff OK, test suite passed (N test, 0 fail). Fatto.`
+
+Per task medio-alti, il formato completo con citazioni file:riga resta obbligatorio.
+
+---
+
 ## I 5 Step della Verifica
 
 ### Step 0 — PLAN CHECK (se applicabile)

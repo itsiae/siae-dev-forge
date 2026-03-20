@@ -28,6 +28,23 @@ Stampa ADESSO, LETTERALMENTE, senza modifiche, il seguente blocco di testo (copi
 Non riassumere. Non parafrasare. Non sostituire con un messaggio diverso. Stampa il banner sopra, poi procedi.
 
 Subito dopo il banner, stampa su una riga separata il messaggio di stato versione.
+
+## SUBAGENT-STOP — Gate Check
+
+<SUBAGENT-STOP>
+Sei un subagent (implementer, spec-reviewer, code-quality-reviewer, o altro)?
+
+SE SI: FERMATI QUI. Non leggere oltre. Non applicare la regola dell'1%.
+Il tuo scope e' definito dal prompt del tuo orchestratore, non da questa skill.
+Le skill permesse sono SOLO quelle nella tua allowlist.
+
+Segnali che sei un subagent:
+- Il tuo prompt inizia con "Sei un implementer/reviewer/..."
+- Hai un task specifico assegnato
+- Hai una sezione SUBAGENT-STOP nel tuo prompt
+
+SE NO (sei il main agent): Procedi normalmente con la regola dell'1%.
+</SUBAGENT-STOP>
 Questo messaggio si trova nel testo di questa sessione, PRIMA del blocco "Below is the full content".
 Cerca la riga che inizia con "✅ DevForge" oppure "🔄 Aggiornamento" oppure "DevForge v" e stampala esattamente.
 Se non trovi nessuna di queste righe, non stampare nulla.
@@ -175,6 +192,91 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
 "Valutiamo CQRS vs CRUD" → architecture (keyword esplicita).
+
+## Rule Priority — Quando le Skill Confliggono
+
+Quando due skill danno istruzioni contrastanti, segui questa gerarchia
+(la piu' alta vince):
+
+| Priorita' | Skill | Perche' |
+|-----------|-------|---------|
+| 1 (max) | **siae-verification** | La verifica non si salta MAI. Nessuna skill puo' bypassarla. |
+| 2 | **siae-tdd** | Il test prima del codice protegge da regressioni. Solo verification lo supera. |
+| 3 | **siae-git-workflow** | Il naming e i commit errati inquinano la history per sempre. |
+| 4 | **siae-debugging** | Root cause prima di qualsiasi fix. |
+| 5 | **siae-brainstorming** | Il design prima dell'implementazione. |
+| 6 (min) | Tutte le altre | code-standards, frontend, iac, data-engineering, security, documentation |
+
+**Esempio concreto:** L'utente dice "salta i test, fai in fretta."
+- User override vince su skill? Si', per la Gerarchia Istruzioni (CLAUDE.md > skill).
+- MA verification (priorita' 1) e' NON NEGOZIABILE — non si salta nemmeno su richiesta.
+- TDD (priorita' 2) si puo' elidere SOLO con conferma esplicita dell'utente E motivazione.
+
+**Regola:** Le skill di priorita' 1-2 sono non-negoziabili.
+Le skill di priorita' 3-6 possono essere elise con conferma utente esplicita.
+
+## Skill Dependency Map
+
+Come le skill si collegano nel ciclo SDLC. Segui le frecce per sapere
+quale skill invocare dopo.
+
+```dot
+digraph skill_deps {
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];
+
+    // Entry points (verde)
+    onboarding [label="siae-onboarding", fillcolor="#d4edda"];
+    debugging [label="siae-debugging", fillcolor="#d4edda"];
+    git_wf [label="siae-git-workflow", fillcolor="#d4edda"];
+
+    // Design chain (giallo)
+    brainstorming [label="siae-brainstorming", fillcolor="#fff3cd"];
+    writing_plans [label="siae-writing-plans", fillcolor="#fff3cd"];
+    architecture [label="siae-architecture", fillcolor="#cce5ff"];
+
+    // Implementation chain (grigio)
+    git_worktrees [label="siae-git-worktrees", fillcolor="#f0f0f0"];
+    subagent_dev [label="siae-subagent-dev", fillcolor="#f0f0f0"];
+    tdd [label="siae-tdd", fillcolor="#f0f0f0"];
+    code_standards [label="siae-code-standards", fillcolor="#cce5ff"];
+    frontend [label="siae-frontend", fillcolor="#cce5ff"];
+    iac [label="siae-iac", fillcolor="#cce5ff"];
+    data_eng [label="siae-data-engineering", fillcolor="#cce5ff"];
+
+    // Verification chain (rosso)
+    verification [label="siae-verification", fillcolor="#f8d7da"];
+    finishing [label="siae-finishing-branch", fillcolor="#f8d7da"];
+
+    // Sequential chains
+    onboarding -> brainstorming [label="nuovo task"];
+    brainstorming -> writing_plans [label="design approvato", style=bold, color=red];
+    brainstorming -> architecture [label="keyword architettura", style=dashed];
+    writing_plans -> git_worktrees [label="piano pronto"];
+    git_worktrees -> subagent_dev [label="worktree creato"];
+    subagent_dev -> tdd [label="per ogni task"];
+
+    // Stack-specific skills
+    tdd -> code_standards [style=dashed];
+    tdd -> frontend [label="se frontend", style=dashed];
+    tdd -> iac [label="se IaC", style=dashed];
+    tdd -> data_eng [label="se ETL", style=dashed];
+
+    // Completion chain
+    tdd -> verification [label="task fatto", style=bold, color=red];
+    verification -> finishing [label="branch pronto"];
+    finishing -> git_wf [label="PR"];
+
+    // Debugging entry
+    debugging -> tdd [label="fix via TDD"];
+}
+```
+
+**Legenda:**
+- Verde: entry point | Giallo: design chain | Grigio: implementation chain
+- Blu: skill flessibili (stack-specific) | Rosso: verification chain
+- Frecce rosse bold: REQUIRED SUB-SKILL (transizioni obbligatorie)
+- Frecce tratteggiate: opzionali in base al contesto
 
 ## Gerarchia Istruzioni
 

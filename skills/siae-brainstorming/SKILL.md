@@ -66,6 +66,24 @@ DEVI presentarlo e ottenere l'approvazione.
 
 ---
 
+## Scaling — Adatta il Processo alla Complessita'
+
+GATE: Prima di iniziare la checklist, valuta la complessita' del task.
+
+| Complessita' | Segnali | Processo |
+|-------------|---------|----------|
+| **Banale** | Config change, typo, rename, bump versione | Presenta 2 frasi di design inline nella chat. Chiedi "Procedo?". Se si', salta a Step 7 (writing-plans). |
+| **Bassa** | CRUD singolo, fix isolato, modifica < 3 file | Smart Intake + design breve (1 paragrafo). Salta Step 4 (approcci multipli). |
+| **Media-Alta** | Feature nuova, cross-module, integrazione | Checklist completa a 7 punti. Nessuno shortcut. |
+
+**Come decidere:** se il task tocca un unico file senza cambiare comportamento,
+e' banale. Se introduce logica nuova o tocca 3+ file, e' medio-alto.
+
+NON decidere autonomamente di elidere step per task medio-alti.
+In caso di dubbio, chiedi: "Questo task sembra [banale/basso]. Vuoi il processo completo o abbreviato?"
+
+---
+
 ## Checklist — 7 Punti Obbligatori
 
 DEVI creare un task per ciascuno di questi punti e completarli in ordine:

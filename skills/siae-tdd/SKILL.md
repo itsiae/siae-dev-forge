@@ -83,6 +83,25 @@ Stai pensando "salto il TDD solo questa volta"? Fermati. Quella e' razionalizzaz
 
 ---
 
+## Scaling — Quando il TDD Completo Non Si Applica
+
+GATE: Valuta se il task modifica comportamento eseguibile.
+
+| Tipo di modifica | TDD richiesto? | Perche' |
+|-----------------|----------------|---------|
+| Logica, endpoint, business rule | **SI — ciclo completo** | Modifica comportamento → serve test |
+| Refactoring con test esistenti | **SI — run test prima e dopo** | I test esistenti sono la rete |
+| Config pura (.env, .yml, terraform vars) | **NO — validate/plan basta** | Nessun comportamento da testare con unit test |
+| Documentazione (.md, commenti, changelog) | **NO** | Nessun codice eseguibile |
+| Rename/typo senza cambio di comportamento | **NO — run test esistenti per conferma** | Verifica che nulla si rompa |
+
+Per config e rename, esegui comunque i test esistenti come verifica di non-regressione.
+Il ciclo RED-GREEN-REFACTOR si applica solo a codice che ha comportamento testabile.
+
+Se hai dubbi: "Questa modifica cambia comportamento osservabile?" SI → TDD. NO → run test esistenti.
+
+---
+
 ## Rilevamento Tipo Codice
 
 **Prima del ciclo RED-GREEN-REFACTOR**, identifica il tipo di codice. Il tipo determina il framework di test e i pattern da applicare.

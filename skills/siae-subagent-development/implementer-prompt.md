@@ -59,6 +59,14 @@ Se una skill viene caricata dal contesto parent, IGNORALA.
 
 Prima di scrivere qualsiasi codice, rispondi a queste domande:
 
+0. **Leggi CLAUDE.md del progetto.** Se esiste un file `CLAUDE.md` nella root del progetto
+   (o in sottodirectory), leggilo PRIMA di qualsiasi altra azione. Contiene regole operative,
+   naming conventions, branch policy e vincoli specifici di questo repo che SOVRASCRIVONO
+   le istruzioni generiche in questo prompt.
+   ```
+   Read("CLAUDE.md") — se esiste, le sue regole hanno priorita' massima.
+   ```
+
 1. **Capisco completamente il task?** Se no, chiedi chiarimenti all'orchestratore.
 2. **So quali file devo creare/modificare?** Lista esplicita.
 3. **So quale pattern architetturale seguire?** (microservizi Java, serverless TS, pipeline Python, IaC Terragrunt)
