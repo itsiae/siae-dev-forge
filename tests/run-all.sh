@@ -632,6 +632,80 @@ fi
 # Cleanup batch state
 rm -f "${HOME}/.claude/.devforge-batch-checkpoint" "${HOME}/.claude/.devforge-batch-counter"
 
+# Check 27: capture-test-result estrae coverage da Jest/Vitest output
+echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
+rm -f "${HOME}/.claude/.devforge-last-coverage"
+echo '{"command":"npx vitest run --coverage","exit_code":0,"stdout":"All files | 85.71 | 100 | 75 | 85.71"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+COV_VITEST=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+if [ "$COV_VITEST" = "85.71" ]; then
+  echo "  PASS  hooks/capture-test-result: estrae coverage 85.71% da Vitest output"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: coverage Vitest non estratta (got: ${COV_VITEST})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 28: capture-test-result estrae coverage da pytest-cov output
+rm -f "${HOME}/.claude/.devforge-last-coverage"
+echo '{"command":"pytest --cov","exit_code":0,"stdout":"TOTAL    150     30    80%"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+COV_PYTEST=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+if [ "$COV_PYTEST" = "80" ]; then
+  echo "  PASS  hooks/capture-test-result: estrae coverage 80% da pytest-cov"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: coverage pytest non estratta (got: ${COV_PYTEST})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 29: capture-test-result estrae coverage da Go test output
+rm -f "${HOME}/.claude/.devforge-last-coverage"
+echo '{"command":"go test -cover","exit_code":0,"stdout":"coverage: 72.5% of statements"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+COV_GO=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+if [ "$COV_GO" = "72.5" ]; then
+  echo "  PASS  hooks/capture-test-result: estrae coverage 72.5% da Go test"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: coverage Go non estratta (got: ${COV_GO})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 30: pre-commit BLOCCA se coverage < 70%
+echo "siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
+echo "65|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
+cov_block_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
+if echo "$cov_block_output" | grep -q '"decision"' && echo "$cov_block_output" | grep -q '"block"' && echo "$cov_block_output" | grep -q '65%'; then
+  echo "  PASS  hooks/pre-commit: BLOCCA commit con coverage 65% < 70%"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: non blocca commit con coverage bassa"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 31: pre-commit consente commit se coverage >= soglia (85% > 80% feature, > 70% altro)
+echo "85|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
+cov_allow_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
+if echo "$cov_allow_output" | grep -q "additional_context" && ! echo "$cov_allow_output" | grep -q '"block"'; then
+  echo "  PASS  hooks/pre-commit: consente commit con coverage 85% >= soglia"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: non consente commit con coverage sufficiente"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 32: pre-commit consente commit senza coverage file (graceful)
+rm -f "${HOME}/.claude/.devforge-last-coverage"
+cov_nocov_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
+if echo "$cov_nocov_output" | grep -q "additional_context" && ! echo "$cov_nocov_output" | grep -q '"block"'; then
+  echo "  PASS  hooks/pre-commit: consente commit senza coverage data (graceful)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: blocca commit senza coverage data"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Cleanup coverage state
+rm -f "${HOME}/.claude/.devforge-last-coverage"
+
 # Check: user-prompt-context esiste ed è eseguibile
 if [ -x "${PLUGIN_ROOT}/hooks/user-prompt-context" ]; then
   echo "  PASS  hooks/user-prompt-context: esiste ed è eseguibile"

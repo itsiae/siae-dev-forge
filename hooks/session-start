@@ -183,8 +183,9 @@ echo "" > "${HOME}/.claude/.devforge-session-skills"
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 echo "0" > "${HOME}/.claude/.devforge-message-counter"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
-# Reset TDD state machine for new session
+# Reset TDD state machine and coverage for new session
 rm -f "${HOME}/.claude/.devforge-tdd-state"
+rm -f "${HOME}/.claude/.devforge-last-coverage"
 
 # Cleanup stale sentinel files (older than 24h) in working directory
 STALE_AGE=86400
