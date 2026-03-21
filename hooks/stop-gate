@@ -131,13 +131,26 @@ if echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-verification"; then
     exit 0
 fi
 
-# Completion claim WITHOUT verification — BLOCK stop (hard gate)
-devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\"}"
+# Escape hatch: after 2 consecutive blocks, allow stop with strong warning
+STOP_BLOCK_COUNTER_FILE="${HOME}/.claude/.devforge-stop-block-count"
+STOP_BLOCK_COUNT=$(cat "$STOP_BLOCK_COUNTER_FILE" 2>/dev/null || echo "0")
+STOP_BLOCK_COUNT=$((STOP_BLOCK_COUNT + 1))
+echo "$STOP_BLOCK_COUNT" > "$STOP_BLOCK_COUNTER_FILE"
+
+if [ "$STOP_BLOCK_COUNT" -ge 2 ]; then
+    # Escape hatch: allow stop but log as violation
+    devforge_log "stop_gate" "escaped" "{\"reason\":\"escape_hatch_after_${STOP_BLOCK_COUNT}_blocks\"}"
+    rm -f "$STOP_BLOCK_COUNTER_FILE"
+    exit 0
+fi
+
+# First block: hard gate
+devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\",\"block_count\":${STOP_BLOCK_COUNT}}"
 
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON hai invocato siae-verification in questa sessione. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Solo dopo potrai fermarti."
+  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON hai invocato siae-verification in questa sessione. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Solo dopo potrai fermarti. (Tentativo ${STOP_BLOCK_COUNT}/2 — al secondo tentativo lo stop verra' permesso con warning)"
 }
 EOF
 

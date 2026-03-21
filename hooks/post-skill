@@ -84,7 +84,7 @@ if [ -n "$SKILL_NAME" ]; then
         CURRENT_TDD_PHASE=$(echo "$CURRENT_TDD" | cut -d'|' -f1)
         # Only initialize if no active TDD cycle (avoid resetting mid-cycle)
         if [ -z "$CURRENT_TDD_PHASE" ] || [ "$CURRENT_TDD_PHASE" = "NONE" ]; then
-            echo "RED|pending|init|$(date +%s)" > "$TDD_STATE_FILE"
+            echo "INIT|pending|awaiting-test|$(date +%s)" > "$TDD_STATE_FILE"
         fi
     fi
 fi

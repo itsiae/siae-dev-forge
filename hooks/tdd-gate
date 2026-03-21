@@ -45,26 +45,31 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     TDD_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
     TDD_PHASE=$(echo "$TDD_STATE" | cut -d'|' -f1)
 
-    if [ "$TDD_PHASE" = "RED" ]; then
-        # In RED phase: only test files allowed, NOT production code
-        # (production code is already excluded from EXCLUDED_PATHS above,
-        #  so if we're here, it IS production code being edited in RED phase)
+    # TDD Phase State Machine:
+    #   INIT = siae-tdd invocata, nessun test scritto/eseguito → BLOCCA codice prod
+    #   RED  = test scritto e FALLITO (confermato) → PERMETTI codice prod (è il passo GREEN)
+    #   GREEN = test passa → PERMETTI (refactor o nuovo ciclo)
+    #   REFACTOR = refactor in corso → PERMETTI
+    #   empty/unknown = nessuno stato → PERMETTI (graceful)
+    if [ "$TDD_PHASE" = "INIT" ]; then
+        # INIT phase: siae-tdd invocata ma nessun test fallente ancora
+        # BLOCCA codice produzione — prima devi scrivere un test e vederlo fallire
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
         PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
         source "${PLUGIN_ROOT}/lib/logger.sh"
         BASENAME=$(basename "$FILE_PATH")
-        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"phase\":\"RED\",\"violation\":\"prod_code_in_red\"}"
+        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
 
         cat <<PHASE_EOF
 {
   "decision": "block",
-  "reason": "DevForge TDD Phase Gate — BLOCCATO. Sei in fase RED (test fallente). NON puoi modificare codice di produzione (${BASENAME}) finche' non hai un test fallente che lo giustifica. Scrivi PRIMA il test, eseguilo (deve fallire), poi potrai scrivere il codice di produzione nella fase GREEN."
+  "reason": "DevForge TDD Phase Gate — BLOCCATO. Hai invocato siae-tdd ma non hai ancora un test fallente. Scrivi PRIMA il test per ${BASENAME}, eseguilo (deve fallire → fase RED), poi potrai scrivere il codice di produzione."
 }
 PHASE_EOF
         exit 0
     fi
 
-    # GREEN or REFACTOR or no state — allow production code edits
+    # RED (test fallente confermato), GREEN, REFACTOR, empty → allow production code edits
     echo '{}'
     exit 0
 fi

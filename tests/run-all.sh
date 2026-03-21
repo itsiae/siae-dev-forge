@@ -519,15 +519,26 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 18: tdd-gate BLOCCA codice produzione in fase RED
+# Check 18: tdd-gate BLOCCA codice produzione in fase INIT (nessun test fallente)
 echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
-tdd_red_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
-if echo "$tdd_red_output" | grep -q '"decision"' && echo "$tdd_red_output" | grep -q '"block"' && echo "$tdd_red_output" | grep -q 'RED'; then
-  echo "  PASS  hooks/tdd-gate: BLOCCA codice produzione in fase RED (state machine)"
+echo "INIT|pending|awaiting-test|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+tdd_init_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
+if echo "$tdd_init_output" | grep -q '"decision"' && echo "$tdd_init_output" | grep -q '"block"' && echo "$tdd_init_output" | grep -q 'test fallente'; then
+  echo "  PASS  hooks/tdd-gate: BLOCCA codice produzione in fase INIT (state machine)"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/tdd-gate: non blocca codice produzione in fase RED"
+  echo "  FAIL  hooks/tdd-gate: non blocca codice produzione in fase INIT"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 18b: tdd-gate CONSENTE codice produzione in fase RED (test fallente confermato)
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+tdd_red_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_red_output" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: consente codice produzione in fase RED (test fallente confermato)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: blocca codice produzione in fase RED (deadlock!)"
   hook_fail=$((hook_fail + 1))
 fi
 
@@ -539,6 +550,19 @@ if [ "$tdd_green_output" = "{}" ]; then
   hook_ok=$((hook_ok + 1))
 else
   echo "  FAIL  hooks/tdd-gate: non consente codice produzione in fase GREEN"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 19b: capture-test-result avanza INIT→RED su test FAIL (test fallente confermato)
+echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
+echo "INIT|pending|awaiting-test|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo '{"command":"npm test","exit_code":1,"stdout":"Tests: 1 failed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+TDD_INIT_TO_RED=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+if [ "$TDD_INIT_TO_RED" = "RED" ]; then
+  echo "  PASS  hooks/capture-test-result: avanza INIT→RED su test FAIL"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: non avanza INIT→RED (got: ${TDD_INIT_TO_RED})"
   hook_fail=$((hook_fail + 1))
 fi
 
@@ -619,7 +643,9 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 26: batch-reset sblocca dopo feedback utente
+# Check 26: batch-reset sblocca dopo feedback utente (bypass age check with old mtime)
+# Set checkpoint mtime to 30 seconds ago to bypass the 10-second minimum age
+touch -t "$(date -v-30S '+%Y%m%d%H%M.%S' 2>/dev/null || date -d '30 seconds ago' '+%Y%m%d%H%M.%S' 2>/dev/null)" "${HOME}/.claude/.devforge-batch-checkpoint" 2>/dev/null || true
 batch_reset_output=$(bash "${PLUGIN_ROOT}/hooks/batch-reset" 2>/dev/null)
 if [ ! -f "${HOME}/.claude/.devforge-batch-checkpoint" ]; then
   echo "  PASS  hooks/batch-reset: sblocca checkpoint dopo feedback utente"

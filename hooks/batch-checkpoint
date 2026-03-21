@@ -24,8 +24,9 @@ HOOK_INPUT=$(cat)
 # Extract command
 TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
-# Only care about git commits on plan files
-if ! echo "$TOOL_COMMAND" | grep -qE 'git[[:space:]]+commit' || ! echo "$TOOL_COMMAND" | grep -qiE '(plans|task.*DONE|mark.*task)'; then
+# Only care about git commits that mark plan tasks as DONE
+# Pattern: "docs(plans)" in conventional commit or "docs/plans/" in file path or "task.*DONE" in message
+if ! echo "$TOOL_COMMAND" | grep -qE 'git[[:space:]]+commit' || ! echo "$TOOL_COMMAND" | grep -qiE '(docs\(plans\)|docs/plans/|task[[:space:]]+[0-9]+.*DONE|mark.*task.*DONE)'; then
     echo '{}'
     exit 0
 fi

@@ -81,11 +81,12 @@ BLOCK_EOF
         COVERAGE_PCT=$(echo "$COVERAGE_DATA" | cut -d'|' -f1)
         COVERAGE_TS=$(echo "$COVERAGE_DATA" | cut -d'|' -f2)
 
-        if [ -n "$COVERAGE_PCT" ]; then
-            # Determine threshold: 80% for feature branches, 70% otherwise
+        # Validate coverage is numeric before comparing
+        if [ -n "$COVERAGE_PCT" ] && echo "$COVERAGE_PCT" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+            # Determine threshold: 80% for feature branches (case-insensitive), 70% otherwise
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
             THRESHOLD=70
-            if echo "$CURRENT_BRANCH" | grep -qE '^feature/'; then
+            if echo "$CURRENT_BRANCH" | grep -qiE '^feature/'; then
                 THRESHOLD=80
             fi
 

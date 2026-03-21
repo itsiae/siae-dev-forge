@@ -97,6 +97,10 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     if [ "$EXIT_CODE" = "0" ]; then
         # Test PASS
         case "$CURRENT_PHASE" in
+            INIT)
+                # INIT + PASS = test passed immediately → not TDD (test existed already)
+                # Stay INIT — user needs to write a NEW failing test
+                ;;
             RED)
                 # RED + PASS = transition to GREEN (implementation code made test pass)
                 echo "GREEN|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|$(echo "$CURRENT_STATE" | cut -d'|' -f3)|$(date +%s)" > "$TDD_STATE_FILE"
@@ -111,9 +115,9 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     else
         # Test FAIL
         case "$CURRENT_PHASE" in
-            ""|NONE)
-                # No state + FAIL = auto-enter RED (first failing test)
-                echo "RED|unknown|unknown|$(date +%s)" > "$TDD_STATE_FILE"
+            ""|NONE|INIT)
+                # INIT/empty + FAIL = first failing test confirmed → enter RED
+                echo "RED|unknown|test-confirmed|$(date +%s)" > "$TDD_STATE_FILE"
                 ;;
             GREEN)
                 # GREEN + FAIL = regression! Back to RED

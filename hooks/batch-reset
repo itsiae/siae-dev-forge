@@ -22,7 +22,16 @@ if [ ! -f "$BATCH_CHECKPOINT_FILE" ]; then
     exit 0
 fi
 
-# User message received = feedback provided → reset checkpoint
+# Checkpoint must be at least 10 seconds old (give Claude time to show report)
+# This prevents premature reset from quick follow-up messages
+CHECKPOINT_MTIME=$(stat -f%m "$BATCH_CHECKPOINT_FILE" 2>/dev/null || stat -c%Y "$BATCH_CHECKPOINT_FILE" 2>/dev/null || echo "0")
+NOW_S=$(date +%s)
+CHECKPOINT_AGE=$((NOW_S - CHECKPOINT_MTIME))
+if [ "$CHECKPOINT_AGE" -lt 10 ]; then
+    exit 0
+fi
+
+# User message received after report shown = feedback provided → reset checkpoint
 rm -f "$BATCH_CHECKPOINT_FILE"
 echo "0" > "$BATCH_COUNTER_FILE"
 
