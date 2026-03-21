@@ -30,6 +30,11 @@
             "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-context-always",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-reset",
+            "timeout": 5
           }
         ]
       }
@@ -79,6 +84,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' sub-skill-gate",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [
@@ -115,6 +130,11 @@
           {
             "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' capture-test-result",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-checkpoint",
             "timeout": 5
           }
         ]

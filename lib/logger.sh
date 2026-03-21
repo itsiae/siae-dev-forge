@@ -176,3 +176,26 @@ devforge_clear_mode() {
     local mode="$1"
     rm -f "$(pwd)/.devforge-active-${mode}"
 }
+
+# TDD State Machine — set phase explicitly
+# Usage: devforge_tdd_set_phase <phase> <target_file> <test_name>
+# Phases: NONE, RED, GREEN, REFACTOR
+devforge_tdd_set_phase() {
+    local phase="$1"
+    local target="${2:-unknown}"
+    local test_name="${3:-unknown}"
+    local state_file="${HOME}/.claude/.devforge-tdd-state"
+    echo "${phase}|${target}|${test_name}|$(date +%s)" > "$state_file"
+}
+
+# TDD State Machine — get current phase
+# Returns: RED, GREEN, REFACTOR, or empty string
+devforge_tdd_get_phase() {
+    local state_file="${HOME}/.claude/.devforge-tdd-state"
+    cat "$state_file" 2>/dev/null | cut -d'|' -f1
+}
+
+# TDD State Machine — reset (end of cycle or session)
+devforge_tdd_reset() {
+    rm -f "${HOME}/.claude/.devforge-tdd-state"
+}

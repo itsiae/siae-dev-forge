@@ -263,6 +263,54 @@ NON scrivere il piano direttamente in questa skill. Delega a `siae-writing-plans
 
 ---
 
+## Output Strutturato Obbligatorio — Checkpoint
+
+<EXTREMELY-IMPORTANT>
+Per OGNI step del brainstorming, DEVI emettere il checkpoint strutturato corrispondente.
+Non parafrasare. Non omettere campi. Questo rende il processo tracciabile e deterministico.
+</EXTREMELY-IMPORTANT>
+
+**Dopo Smart Intake (Step 1):**
+```
+[BRAINSTORM:INTAKE] Analisi completata
+  Stack: {linguaggio/framework rilevato}
+  Pattern: {architettura rilevata}
+  Confidence: {HIGH/MEDIUM/LOW per ogni inferenza}
+  File analizzati: {N file letti}
+  Lacune: {cosa manca, cosa ha confidence LOW}
+```
+
+**Dopo Scope Assessment (Step 2):**
+```
+[BRAINSTORM:SCOPE] Valutazione complessita'
+  Livello: {Banale/Basso/Medio/Alto}
+  Dominio: {singolo/multiplo}
+  Decomposizione: {necessaria SI/NO}
+  Rischi: {lista rischi identificati}
+```
+
+**Dopo Design (Step 5):**
+```
+[BRAINSTORM:DESIGN] Design doc prodotto
+  File: {path design doc}
+  Approcci valutati: {N}
+  Approccio scelto: {nome}
+  ADR: {decisioni chiave}
+  SP: {N SP-Umano / M SP-Augmented}
+```
+
+**Spec Review Gate (Step 6):**
+```
+[BRAINSTORM:GATE] Review checkpoint
+  Requisiti completi: {SI/NO}
+  Criteri accettazione: {N criteri}
+  Stime realistiche: {SI/NO}
+  Dominio focalizzato: {SI/NO}
+  DECISIONE: {PROCEDI / MODIFICA NECESSARIA}
+```
+
+---
+
 ## Flusso del Processo
 
 ```dot

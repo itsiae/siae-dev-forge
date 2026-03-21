@@ -400,14 +400,14 @@ fi
 rm -f "$TEST_LOG" "$SKILL_TS_FILE"
 [ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
 
-# Check 7: tdd-gate inietta reminder per file .java senza siae-tdd
+# Check 7: tdd-gate BLOCCA per file .java senza siae-tdd (hard gate v1.4.0)
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 tdd_java_output=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
-if echo "$tdd_java_output" | grep -q "EXTREMELY_IMPORTANT" && echo "$tdd_java_output" | grep -q 'exit:0'; then
-  echo "  PASS  hooks/tdd-gate: inietta reminder per .java senza siae-tdd"
+if echo "$tdd_java_output" | grep -q '"decision"' && echo "$tdd_java_output" | grep -q '"block"' && echo "$tdd_java_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/tdd-gate: BLOCCA per .java senza siae-tdd (hard gate)"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/tdd-gate: non inietta reminder per .java"
+  echo "  FAIL  hooks/tdd-gate: non blocca per .java"
   hook_fail=$((hook_fail + 1))
 fi
 
@@ -442,14 +442,14 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 11: plan-gate inietta reminder senza siae-brainstorming
+# Check 11: plan-gate BLOCCA senza siae-brainstorming (hard gate v1.4.0)
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 plan_output=$(echo '{"tool_name":"EnterPlanMode"}' | bash "${PLUGIN_ROOT}/hooks/plan-gate" 2>/dev/null; echo "exit:$?")
-if echo "$plan_output" | grep -q "EXTREMELY_IMPORTANT" && echo "$plan_output" | grep -q 'exit:0'; then
-  echo "  PASS  hooks/plan-gate: inietta reminder senza siae-brainstorming"
+if echo "$plan_output" | grep -q '"decision"' && echo "$plan_output" | grep -q '"block"' && echo "$plan_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/plan-gate: BLOCCA senza siae-brainstorming (hard gate)"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/plan-gate: non inietta reminder"
+  echo "  FAIL  hooks/plan-gate: non blocca senza brainstorming"
   hook_fail=$((hook_fail + 1))
 fi
 
@@ -463,6 +463,174 @@ else
   echo "  FAIL  hooks/plan-gate: non silenzioso con siae-brainstorming"
   hook_fail=$((hook_fail + 1))
 fi
+
+# Check 13: pre-commit BLOCCA git commit senza siae-git-workflow (hard gate v1.4.0)
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+precommit_block_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
+if echo "$precommit_block_output" | grep -q '"decision"' && echo "$precommit_block_output" | grep -q '"block"' && echo "$precommit_block_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/pre-commit: BLOCCA git commit senza siae-git-workflow (hard gate)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: non blocca git commit senza siae-git-workflow"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 14: pre-commit consente git commit con siae-git-workflow invocata
+echo "siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
+precommit_allow_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
+if echo "$precommit_allow_output" | grep -q "additional_context" && echo "$precommit_allow_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/pre-commit: consente git commit con siae-git-workflow"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: non consente git commit con siae-git-workflow"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 15: sub-skill-gate BLOCCA skill con prerequisiti mancanti
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+subskill_block_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null; echo "exit:$?")
+if echo "$subskill_block_output" | grep -q '"decision"' && echo "$subskill_block_output" | grep -q '"block"' && echo "$subskill_block_output" | grep -q 'exit:0'; then
+  echo "  PASS  hooks/sub-skill-gate: BLOCCA siae-finishing-branch senza prerequisiti"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/sub-skill-gate: non blocca senza prerequisiti"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 16: sub-skill-gate consente skill con prerequisiti soddisfatti
+echo "siae-git-env,siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
+subskill_allow_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
+if [ "$subskill_allow_output" = "{}" ]; then
+  echo "  PASS  hooks/sub-skill-gate: consente con prerequisiti soddisfatti"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/sub-skill-gate: non consente con prerequisiti soddisfatti"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 17: sub-skill-gate silenzioso per skill senza prerequisiti
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-tdd"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
+if [ "$subskill_noreq_output" = "{}" ]; then
+  echo "  PASS  hooks/sub-skill-gate: silenzioso per skill senza prerequisiti"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/sub-skill-gate: non silenzioso per skill senza prerequisiti"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 18: tdd-gate BLOCCA codice produzione in fase RED
+echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+tdd_red_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
+if echo "$tdd_red_output" | grep -q '"decision"' && echo "$tdd_red_output" | grep -q '"block"' && echo "$tdd_red_output" | grep -q 'RED'; then
+  echo "  PASS  hooks/tdd-gate: BLOCCA codice produzione in fase RED (state machine)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non blocca codice produzione in fase RED"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 19: tdd-gate consente codice produzione in fase GREEN
+echo "GREEN|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+tdd_green_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_green_output" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: consente codice produzione in fase GREEN"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non consente codice produzione in fase GREEN"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 20: capture-test-result avanza RED→GREEN su test PASS
+echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo '{"command":"npm test","exit_code":0,"stdout":"Tests: 1 passed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+TDD_AFTER_PASS=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+if [ "$TDD_AFTER_PASS" = "GREEN" ]; then
+  echo "  PASS  hooks/capture-test-result: avanza RED→GREEN su test PASS"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: non avanza RED→GREEN (got: ${TDD_AFTER_PASS})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 21: capture-test-result mantiene RED su test FAIL
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo '{"command":"npm test","exit_code":1,"stdout":"Tests: 1 failed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
+TDD_AFTER_FAIL=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+if [ "$TDD_AFTER_FAIL" = "RED" ]; then
+  echo "  PASS  hooks/capture-test-result: mantiene RED su test FAIL (atteso)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/capture-test-result: non mantiene RED su FAIL (got: ${TDD_AFTER_FAIL})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 22: session-start resetta TDD state
+echo "RED|test|test|0" > "${HOME}/.claude/.devforge-tdd-state"
+# Cleanup: remove state
+rm -f "${HOME}/.claude/.devforge-tdd-state"
+
+# Check 23: batch-checkpoint silenzioso senza siae-executing-plans
+echo "" > "${HOME}/.claude/.devforge-session-skills"
+rm -f "${HOME}/.claude/.devforge-batch-checkpoint" "${HOME}/.claude/.devforge-batch-counter"
+batch_noskill=$(echo '{"command":"git commit -m docs(plans): mark task 1 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null)
+if [ "$batch_noskill" = "{}" ]; then
+  echo "  PASS  hooks/batch-checkpoint: silenzioso senza siae-executing-plans"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/batch-checkpoint: non silenzioso senza siae-executing-plans"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 24: batch-checkpoint incrementa contatore con siae-executing-plans
+echo "siae-executing-plans" > "${HOME}/.claude/.devforge-session-skills"
+echo "0" > "${HOME}/.claude/.devforge-batch-counter"
+rm -f "${HOME}/.claude/.devforge-batch-checkpoint"
+echo '{"command":"git commit -m docs(plans): mark task 1 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null
+BATCH_COUNT=$(cat "${HOME}/.claude/.devforge-batch-counter" 2>/dev/null || echo "0")
+if [ "$BATCH_COUNT" = "1" ]; then
+  echo "  PASS  hooks/batch-checkpoint: incrementa contatore task (0→1)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/batch-checkpoint: contatore non incrementato (got: ${BATCH_COUNT})"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 25: batch-checkpoint BLOCCA dopo 3 task
+echo "2" > "${HOME}/.claude/.devforge-batch-counter"
+rm -f "${HOME}/.claude/.devforge-batch-checkpoint"
+# This commit is task 3 → triggers checkpoint
+echo '{"command":"git commit -m docs(plans): mark task 3 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null
+# Now checkpoint file should exist
+if [ -f "${HOME}/.claude/.devforge-batch-checkpoint" ]; then
+  # Next commit should be blocked
+  batch_blocked=$(echo '{"command":"git commit -m docs(plans): mark task 4 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null)
+  if echo "$batch_blocked" | grep -q '"decision"' && echo "$batch_blocked" | grep -q '"block"'; then
+    echo "  PASS  hooks/batch-checkpoint: BLOCCA dopo batch di 3 task"
+    hook_ok=$((hook_ok + 1))
+  else
+    echo "  FAIL  hooks/batch-checkpoint: non blocca dopo batch completo"
+    hook_fail=$((hook_fail + 1))
+  fi
+else
+  echo "  FAIL  hooks/batch-checkpoint: checkpoint file non creato dopo 3 task"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 26: batch-reset sblocca dopo feedback utente
+batch_reset_output=$(bash "${PLUGIN_ROOT}/hooks/batch-reset" 2>/dev/null)
+if [ ! -f "${HOME}/.claude/.devforge-batch-checkpoint" ]; then
+  echo "  PASS  hooks/batch-reset: sblocca checkpoint dopo feedback utente"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/batch-reset: non sblocca checkpoint"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Cleanup batch state
+rm -f "${HOME}/.claude/.devforge-batch-checkpoint" "${HOME}/.claude/.devforge-batch-counter"
 
 # Check: user-prompt-context esiste ed è eseguibile
 if [ -x "${PLUGIN_ROOT}/hooks/user-prompt-context" ]; then

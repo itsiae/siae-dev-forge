@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# PostToolUse hook: enforce batch checkpoint in siae-executing-plans
+# ─────────────────────────────────────────────────────────────────
+# Hook:     batch-checkpoint
+# Evento:   PostToolUse
+# Matcher:  Bash
+# Timeout:  5s
+# Formato:  decision:"block" se batch completato senza report
+# History:  v1.4.0 NEW (determinismo SDLC — batch execution checkpoint)
+# ─────────────────────────────────────────────────────────────────
+# Intercepts git commit on plan files (docs/plans/) and counts
+# completed tasks. After BATCH_SIZE tasks, blocks further commits
+# until the batch report sentinel is cleared.
+
+set -euo pipefail
+
+BATCH_SIZE=3
+STATE_DIR="${HOME}/.claude"
+BATCH_COUNTER_FILE="${STATE_DIR}/.devforge-batch-counter"
+BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"
+
+HOOK_INPUT=$(cat)
+
+# Extract command
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+# Only care about git commits on plan files
+if ! echo "$TOOL_COMMAND" | grep -qE 'git[[:space:]]+commit' || ! echo "$TOOL_COMMAND" | grep -qiE '(plans|task.*DONE|mark.*task)'; then
+    echo '{}'
+    exit 0
+fi
+
+# Check if siae-executing-plans is active
+SESSION_SKILLS_FILE="${STATE_DIR}/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if ! echo "$SESSION_SKILLS" | grep -qF "siae-executing-plans"; then
+    echo '{}'
+    exit 0
+fi
+
+# Check if checkpoint is pending (batch already full, awaiting report)
+if [ -f "$BATCH_CHECKPOINT_FILE" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+    PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    source "${PLUGIN_ROOT}/lib/logger.sh"
+    COMPLETED=$(cat "$BATCH_COUNTER_FILE" 2>/dev/null || echo "0")
+    devforge_log "batch_checkpoint" "blocked" "{\"completed_tasks\":${COMPLETED},\"batch_size\":${BATCH_SIZE}}"
+
+    cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge Batch Checkpoint — BLOCCATO. Hai completato ${COMPLETED} task (batch di ${BATCH_SIZE}). DEVI presentare il report post-batch e attendere feedback dall'utente PRIMA di procedere con il prossimo batch. Formato report: BATCH COMPLETATO: Task [N]-[M] + Implementato + Stato piano + Verifica + Prossimo batch."
+}
+EOF
+    exit 0
+fi
+
+# Increment task counter
+CURRENT=$(cat "$BATCH_COUNTER_FILE" 2>/dev/null || echo "0")
+CURRENT=$((CURRENT + 1))
+echo "$CURRENT" > "$BATCH_COUNTER_FILE"
+
+# Check if batch is now full
+if [ "$CURRENT" -ge "$BATCH_SIZE" ]; then
+    # Set checkpoint flag — next commit will be blocked until cleared
+    echo "checkpoint_at=$(date +%s)|tasks=${CURRENT}" > "$BATCH_CHECKPOINT_FILE"
+
+    # Inject reminder to present batch report
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+    PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    source "${PLUGIN_ROOT}/lib/logger.sh"
+    devforge_log "batch_checkpoint" "triggered" "{\"completed_tasks\":${CURRENT},\"batch_size\":${BATCH_SIZE}}"
+
+    escape_for_json() {
+        local s="$1"
+        s="${s//\\/\\\\}"
+        s="${s//\"/\\\"}"
+        s="${s//$'\n'/\\n}"
+        s="${s//$'\r'/\\r}"
+        s="${s//$'\t'/\\t}"
+        printf '%s' "$s"
+    }
+
+    CHECKPOINT_MSG="BATCH COMPLETATO (${CURRENT} task). DEVI: 1) Presentare il report post-batch 2) Attendere feedback utente 3) Solo dopo il feedback, puoi procedere col prossimo batch. Per sbloccare il prossimo batch, l'utente deve dare conferma esplicita."
+    checkpoint_escaped=$(escape_for_json "$CHECKPOINT_MSG")
+
+    cat <<EOF
+{
+  "additional_context": "<EXTREMELY_IMPORTANT>\nDevForge Batch Checkpoint: ${checkpoint_escaped}\n</EXTREMELY_IMPORTANT>"
+}
+EOF
+    exit 0
+fi
+
+echo '{}'
+exit 0

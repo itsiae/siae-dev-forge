@@ -68,12 +68,33 @@ for sentinel in "${SENTINEL_FILES[@]}"; do
 
     case "$mode_name" in
         tdd)
-            phase=$(echo "$content" | cut -d'|' -f1)
-            target=$(echo "$content" | cut -d'|' -f2)
-            test_name=$(echo "$content" | cut -d'|' -f3)
+            # Prefer global TDD state file (updated by capture-test-result state machine)
+            TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
+            if [ -f "$TDD_STATE_FILE" ]; then
+                tdd_state=$(cat "$TDD_STATE_FILE")
+                phase=$(echo "$tdd_state" | cut -d'|' -f1)
+                target=$(echo "$tdd_state" | cut -d'|' -f2)
+                test_name=$(echo "$tdd_state" | cut -d'|' -f3)
+            else
+                phase=$(echo "$content" | cut -d'|' -f1)
+                target=$(echo "$content" | cut -d'|' -f2)
+                test_name=$(echo "$content" | cut -d'|' -f3)
+            fi
             CONTEXT_LINES="${CONTEXT_LINES}\n- Modo attivo: TDD (fase ${phase})"
             [ -n "$target" ] && CONTEXT_LINES="${CONTEXT_LINES}\n- Target: ${target}"
             [ -n "$test_name" ] && CONTEXT_LINES="${CONTEXT_LINES}\n- Test: ${test_name}"
+            # Phase-specific guidance
+            case "$phase" in
+                RED)
+                    CONTEXT_LINES="${CONTEXT_LINES}\n- AZIONE: Scrivi il test. NON toccare codice produzione."
+                    ;;
+                GREEN)
+                    CONTEXT_LINES="${CONTEXT_LINES}\n- AZIONE: Scrivi il MINIMO codice produzione per far passare il test."
+                    ;;
+                REFACTOR)
+                    CONTEXT_LINES="${CONTEXT_LINES}\n- AZIONE: Migliora il codice. I test DEVONO restare verdi."
+                    ;;
+            esac
             ;;
         plan)
             CONTEXT_LINES="${CONTEXT_LINES}\n- Piano attivo: ${content}"

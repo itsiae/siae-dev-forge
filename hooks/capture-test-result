@@ -49,4 +49,50 @@ fi
     [ -n "$SUMMARY_LINES" ] && echo "$SUMMARY_LINES"
 } > "$RESULT_FILE"
 
+# --- TDD State Machine: auto-advance phase based on test result ---
+# Only if siae-tdd is active in this session
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+    TDD_STATE_FILE="${STATE_DIR}/.devforge-tdd-state"
+    CURRENT_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
+    CURRENT_PHASE=$(echo "$CURRENT_STATE" | cut -d'|' -f1)
+
+    if [ "$EXIT_CODE" = "0" ]; then
+        # Test PASS
+        case "$CURRENT_PHASE" in
+            RED)
+                # RED + PASS = transition to GREEN (implementation code made test pass)
+                echo "GREEN|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|$(echo "$CURRENT_STATE" | cut -d'|' -f3)|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + PASS = stay GREEN (refactor safe, tests still passing)
+                ;;
+            REFACTOR)
+                # REFACTOR + PASS = stay REFACTOR (refactor safe)
+                ;;
+        esac
+    else
+        # Test FAIL
+        case "$CURRENT_PHASE" in
+            ""|NONE)
+                # No state + FAIL = auto-enter RED (first failing test)
+                echo "RED|unknown|unknown|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + FAIL = regression! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            REFACTOR)
+                # REFACTOR + FAIL = regression during refactor! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|refactor-regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            RED)
+                # RED + FAIL = expected, stay RED
+                ;;
+        esac
+    fi
+fi
+
 exit 0
