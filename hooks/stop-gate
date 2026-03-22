@@ -127,7 +127,29 @@ SESSION_SKILLS_FILE_CHECK="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS_CHECK=$(cat "$SESSION_SKILLS_FILE_CHECK" 2>/dev/null || echo "")
 
 if echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-verification"; then
-    # Verification was invoked — allow stop
+    # Verification was invoked — check retrospective for productive sessions
+    RETRO_REMINDED_FILE="${HOME}/.claude/.devforge-retro-reminded"
+    if [ "$COMMITS_COUNT" -gt 0 ] && ! echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-retrospective"; then
+        # Productive session without retrospective — soft block (1 attempt)
+        if [ -f "$RETRO_REMINDED_FILE" ]; then
+            # Second attempt — allow stop with warning
+            devforge_log "stop_gate" "escaped" '{"reason":"retrospective_skipped","commits":'${COMMITS_COUNT}'}'
+            rm -f "$RETRO_REMINDED_FILE"
+            exit 0
+        fi
+        # First attempt — block and remind
+        touch "$RETRO_REMINDED_FILE"
+        devforge_log "stop_gate" "reminder" '{"reason":"retrospective_missing","commits":'${COMMITS_COUNT}'}'
+        cat <<RETRO_EOF
+{
+  "decision": "block",
+  "reason": "DevForge Retrospective Reminder — Hai ${COMMITS_COUNT} commit in questa sessione ma non hai eseguito siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti. (Tentativo 1/1 — al prossimo tentativo lo stop verra' permesso)"
+}
+RETRO_EOF
+        exit 0
+    fi
+    # All checks passed — cleanup and allow
+    rm -f "$RETRO_REMINDED_FILE" 2>/dev/null
     exit 0
 fi
 

@@ -198,6 +198,7 @@ rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 # Reset TDD state machine and coverage for new session
 rm -f "${HOME}/.claude/.devforge-tdd-state"
 rm -f "${HOME}/.claude/.devforge-last-coverage"
+rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
 
 # Cleanup stale sentinel files (older than 24h) in working directory
 STALE_AGE=86400
