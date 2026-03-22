@@ -193,6 +193,11 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
 "Valutiamo CQRS vs CRUD" → architecture (keyword esplicita).
 
+**Disambiguazione skill (quando piu' skill matchano):**
+
+- Query su blind review, review cieca, audit spec, spec vs codice → `siae-blind-review` (NON code-reviewer)
+- Query su retrospettiva, lezioni apprese, cosa ho imparato, fine sessione → `siae-retrospective` (NON brainstorming)
+
 ## Rule Priority — Quando le Skill Confliggono
 
 Quando due skill danno istruzioni contrastanti, segui questa gerarchia
@@ -249,6 +254,8 @@ digraph skill_deps {
     // Verification chain (rosso)
     verification [label="siae-verification", fillcolor="#f8d7da"];
     finishing [label="siae-finishing-branch", fillcolor="#f8d7da"];
+    blind_review [label="siae-blind-review", fillcolor="#f8d7da"];
+    retrospective [label="siae-retrospective", fillcolor="#f8d7da"];
 
     // Sequential chains
     onboarding -> brainstorming [label="nuovo task"];
@@ -267,7 +274,12 @@ digraph skill_deps {
     // Completion chain
     tdd -> verification [label="task fatto", style=bold, color=red];
     verification -> finishing [label="branch pronto"];
+    verification -> blind_review [label="spec audit", style=dashed];
+    blind_review -> finishing [label="PASS"];
     finishing -> git_wf [label="PR"];
+
+    // retrospective e' invocata da stop-gate, non dal flusso sequenziale
+    finishing -> retrospective [label="fine sessione", style=dashed];
 
     // Debugging entry
     debugging -> tdd [label="fix via TDD"];
@@ -317,6 +329,8 @@ L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si app
 | Skill | Trigger / quando usarla | Tipo | Fase SDLC |
 |-------|------------------------|------|-----------|
 | siae-nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
+| siae-blind-review | "blind review", "review cieca", "audit spec", "verifica spec vs codice", "review senza diff", /forge-blind-review | Rigid | 6. QA Gate |
+| siae-retrospective | fine sessione, lezioni apprese, cosa ho imparato, retrospettiva, salva per la prossima volta, /forge-retro, stop-gate hook | Rigid | Cross-cutting |
 
 ## DevForge Visual Design System
 
