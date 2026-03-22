@@ -108,7 +108,8 @@ Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato 
 | 3 | Struttura directory (`src/`, `lib/`, `skills/`, `commands/`) | Glob | Pattern architetturale, moduli |
 | 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
 | 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
-| 6 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
+| 6 | Auto-memory (`~/.claude/projects/<project>/memory/`) | Read MEMORY.md | Lezioni apprese, feedback, contesto cross-sessione |
+| 7 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
 
 **Campi da inferire:**
 

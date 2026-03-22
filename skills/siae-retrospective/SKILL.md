@@ -120,7 +120,8 @@ type: <feedback|project|user|reference>
 **How to apply:** <quando e come applicarla in futuro>
 ```
 
-3. Aggiorna `MEMORY.md` con il puntatore al nuovo file
+3. Aggiorna `MEMORY.md` con il puntatore al nuovo file.
+   **Se `MEMORY.md` non esiste**, crealo con header `# <Project Name> — Memory Index` e una sezione per tipo.
 4. Se esiste gia' una memory sullo stesso tema, **aggiornala** invece di duplicare
 
 **NON salvare in CLAUDE.md. NON salvare nel repo. NON creare file fuori da memory/.**
