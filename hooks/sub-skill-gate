@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# PreToolUse hook: BLOCCA invocazione skill se prerequisiti non soddisfatti
+# ─────────────────────────────────────────────────────────────────
+# Hook:     sub-skill-gate
+# Evento:   PreToolUse
+# Matcher:  Skill
+# Timeout:  5s — Check prerequisiti da mappa statica
+# Formato:  decision:"block" se REQUIRED SUB-SKILL prerequisite non invocate
+# History:  v1.4.0 NEW (determinismo SDLC — enforcement catena skill)
+# ─────────────────────────────────────────────────────────────────
+#
+# Mappa prerequisiti: skill che DEVONO essere invocate PRIMA di quella corrente.
+# Derivata dall'analisi delle dichiarazioni REQUIRED SUB-SKILL nelle SKILL.md.
+# Solo prerequisiti sequenziali (non dipendenze "durante esecuzione" come
+# siae-verification che e' gestita da stop-gate).
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+HOOK_INPUT=$(cat)
+
+# Extract skill name from tool input
+SKILL_NAME=$(echo "$HOOK_INPUT" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+if [ -z "$SKILL_NAME" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Strip plugin prefix if present (e.g., "siae-devforge:siae-tdd" → "siae-tdd")
+SKILL_NAME="${SKILL_NAME##*:}"
+
+# ─── Prerequisite Map ───
+# Format: "skill_name=prereq1,prereq2"
+# Only hard prerequisites (must be invoked BEFORE), not during-execution deps.
+PREREQ_MAP=(
+    "siae-git-workflow=siae-git-env"
+    "siae-finishing-branch=siae-git-env,siae-git-workflow"
+    "siae-git-worktrees=siae-git-env"
+    "siae-service-logic-map=siae-microservices-map"
+    "siae-writing-plans=siae-brainstorming"
+    "siae-executing-plans=siae-writing-plans"
+    "siae-requesting-review=siae-finishing-branch"
+)
+
+# Find prerequisites for current skill
+REQUIRED_PREREQS=""
+for entry in "${PREREQ_MAP[@]}"; do
+    MAP_SKILL="${entry%%=*}"
+    MAP_PREREQS="${entry#*=}"
+    if [ "$MAP_SKILL" = "$SKILL_NAME" ]; then
+        REQUIRED_PREREQS="$MAP_PREREQS"
+        break
+    fi
+done
+
+# No prerequisites defined — allow
+if [ -z "$REQUIRED_PREREQS" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Check session skills
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+# Check each prerequisite
+MISSING_PREREQS=""
+IFS=',' read -ra PREREQS <<< "$REQUIRED_PREREQS"
+for prereq in "${PREREQS[@]}"; do
+    if ! echo "$SESSION_SKILLS" | grep -qF "$prereq"; then
+        if [ -z "$MISSING_PREREQS" ]; then
+            MISSING_PREREQS="$prereq"
+        else
+            MISSING_PREREQS="${MISSING_PREREQS}, ${prereq}"
+        fi
+    fi
+done
+
+# All prerequisites met — allow
+if [ -z "$MISSING_PREREQS" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Prerequisites missing — BLOCK
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "sub_skill_gate" "blocked" "{\"skill\":\"${SKILL_NAME}\",\"missing_prereqs\":\"${MISSING_PREREQS}\"}"
+
+cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge Sub-Skill Gate — BLOCCATO. La skill ${SKILL_NAME} richiede come prerequisito: ${MISSING_PREREQS}. Invoca prima le skill mancanti, poi riprova ${SKILL_NAME}."
+}
+EOF
+exit 0

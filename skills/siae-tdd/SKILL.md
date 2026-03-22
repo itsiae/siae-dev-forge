@@ -416,6 +416,55 @@ Il test garantisce che il bug non tornera' mai.
 
 ---
 
+## Output Strutturato Obbligatorio
+
+<EXTREMELY-IMPORTANT>
+Per OGNI transizione di fase TDD, DEVI emettere il seguente blocco strutturato.
+Non parafrasare. Non omettere campi. Copia il formato esattamente.
+</EXTREMELY-IMPORTANT>
+
+**Transizione RED (scrivi test):**
+```
+[TDD:RED] Test: {nome_test}
+  File: {path_file_test}
+  Assert: {cosa verifica il test}
+  Atteso: FAIL (il test DEVE fallire)
+  Comando: {comando per eseguire il test}
+```
+
+**Transizione GREEN (implementa):**
+```
+[TDD:GREEN] Implementazione: {descrizione minima}
+  File: {path_file_produzione}
+  Test: {nome_test che deve passare}
+  Atteso: PASS (tutti i test DEVONO passare)
+  Comando: {comando per eseguire tutti i test}
+```
+
+**Transizione REFACTOR:**
+```
+[TDD:REFACTOR] Refactor: {descrizione}
+  File: {path_file_modificati}
+  Invariante: tutti i test DEVONO restare verdi
+  Comando: {comando per eseguire tutti i test}
+```
+
+**Chiusura ciclo:**
+```
+[TDD:COMMIT] Ciclo completato
+  Test: {nome_test}
+  Impl: {path_file_produzione}
+  Copertura: {N test aggiunti, M esistenti passano}
+  Commit: {tipo}({scope}): {descrizione}
+```
+
+Questo formato serve a:
+1. Rendere tracciabile ogni transizione
+2. Forzare la dichiarazione del comando di test PRIMA dell'esecuzione
+3. Impedire skip di fasi (ogni blocco e' un checkpoint)
+
+---
+
 ## Checklist di Verifica
 
 Prima di dichiarare il lavoro completato:

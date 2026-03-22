@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# PreToolUse hook: reminder siae-tdd quando si modifica codice di produzione
+# PreToolUse hook: BLOCCA Edit/Write su codice produzione senza siae-tdd
 # ─────────────────────────────────────────────────────────────────
 # Hook:     tdd-gate
 # Evento:   PreToolUse
 # Matcher:  Edit, Write
 # Timeout:  5s — Solo check file flat + estensione
-# Formato:  additional_context (standard DevForge)
+# Formato:  decision:"block" se siae-tdd non invocata (HARD GATE)
+# History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -39,39 +40,52 @@ SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+    # siae-tdd invoked — check TDD phase state machine
+    TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
+    TDD_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
+    TDD_PHASE=$(echo "$TDD_STATE" | cut -d'|' -f1)
+
+    # TDD Phase State Machine:
+    #   INIT = siae-tdd invocata, nessun test scritto/eseguito → BLOCCA codice prod
+    #   RED  = test scritto e FALLITO (confermato) → PERMETTI codice prod (è il passo GREEN)
+    #   GREEN = test passa → PERMETTI (refactor o nuovo ciclo)
+    #   REFACTOR = refactor in corso → PERMETTI
+    #   empty/unknown = nessuno stato → PERMETTI (graceful)
+    if [ "$TDD_PHASE" = "INIT" ]; then
+        # INIT phase: siae-tdd invocata ma nessun test fallente ancora
+        # BLOCCA codice produzione — prima devi scrivere un test e vederlo fallire
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+        PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+        source "${PLUGIN_ROOT}/lib/logger.sh"
+        BASENAME=$(basename "$FILE_PATH")
+        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
+
+        cat <<PHASE_EOF
+{
+  "decision": "block",
+  "reason": "DevForge TDD Phase Gate — BLOCCATO. Hai invocato siae-tdd ma non hai ancora un test fallente. Scrivi PRIMA il test per ${BASENAME}, eseguilo (deve fallire → fase RED), poi potrai scrivere il codice di produzione."
+}
+PHASE_EOF
+        exit 0
+    fi
+
+    # RED (test fallente confermato), GREEN, REFACTOR, empty → allow production code edits
     echo '{}'
     exit 0
 fi
 
-# siae-tdd NOT invoked — inject reminder
+# siae-tdd NOT invoked — BLOCK operation (hard gate)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log "tdd_gate" "warning" "{\"file_path\":\"${FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
-
-# Escape for JSON
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
 
 BASENAME=$(basename "$FILE_PATH")
-TDD_MSG="STOP — Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd"
-tdd_escaped=$(escape_for_json "$TDD_MSG")
-tdd_context="<EXTREMELY_IMPORTANT>\nDevForge TDD Gate: ${tdd_escaped}\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {
-  "additional_context": "${tdd_context}",
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "additionalContext": "${tdd_context}"
-  }
+  "decision": "block",
+  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere con la modifica."
 }
 EOF
 exit 0

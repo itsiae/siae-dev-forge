@@ -49,4 +49,89 @@ fi
     [ -n "$SUMMARY_LINES" ] && echo "$SUMMARY_LINES"
 } > "$RESULT_FILE"
 
+# --- Coverage Extraction: parse coverage % from test output ---
+COVERAGE_FILE="${STATE_DIR}/.devforge-last-coverage"
+COVERAGE_PCT=""
+
+if [ -n "$STDOUT" ]; then
+    # Jest/Vitest: "All files | 85.71 | 100 | 75 | 85.71"
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oE 'All files[[:space:]]*\|[[:space:]]*[0-9]+(\.[0-9]+)?' | head -1 | grep -oE '[0-9]+(\.[0-9]+)?$' || true)
+    fi
+    # Jest/Vitest/Istanbul: "Statements   : 85.71%"
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oiE 'Statements[[:space:]]*:?[[:space:]]*[0-9]+(\.[0-9]+)?%' | head -1 | grep -oE '[0-9]+(\.[0-9]+)?' || true)
+    fi
+    # pytest-cov: "TOTAL    150     30    80%"
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oE 'TOTAL[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+%' | head -1 | grep -oE '[0-9]+%' | tr -d '%' || true)
+    fi
+    # Go: "coverage: 82.3% of statements"
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oE 'coverage:[[:space:]]*[0-9]+(\.[0-9]+)?%' | head -1 | grep -oE '[0-9]+(\.[0-9]+)?' || true)
+    fi
+    # JaCoCo summary: "Total coverage: 75%" or "Coverage: 75.5%"
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oiE '[Cc]overage:?[[:space:]]*[0-9]+(\.[0-9]+)?%' | head -1 | grep -oE '[0-9]+(\.[0-9]+)?' || true)
+    fi
+    # Vitest v8: "% Lines" header followed by data — "  85.71" in the All files row
+    if [ -z "$COVERAGE_PCT" ]; then
+        COVERAGE_PCT=$(echo "$STDOUT" | grep -oE '^\s*[0-9]+(\.[0-9]+)?\s*\|' | head -1 | grep -oE '[0-9]+(\.[0-9]+)?' || true)
+    fi
+fi
+
+if [ -n "$COVERAGE_PCT" ]; then
+    echo "${COVERAGE_PCT}|$(date +%s)|${COMMAND}" > "$COVERAGE_FILE"
+fi
+
+# --- TDD State Machine: auto-advance phase based on test result ---
+# Only if siae-tdd is active in this session
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+    TDD_STATE_FILE="${STATE_DIR}/.devforge-tdd-state"
+    CURRENT_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
+    CURRENT_PHASE=$(echo "$CURRENT_STATE" | cut -d'|' -f1)
+
+    if [ "$EXIT_CODE" = "0" ]; then
+        # Test PASS
+        case "$CURRENT_PHASE" in
+            INIT)
+                # INIT + PASS = test passed immediately → not TDD (test existed already)
+                # Stay INIT — user needs to write a NEW failing test
+                ;;
+            RED)
+                # RED + PASS = transition to GREEN (implementation code made test pass)
+                echo "GREEN|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|$(echo "$CURRENT_STATE" | cut -d'|' -f3)|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + PASS = stay GREEN (refactor safe, tests still passing)
+                ;;
+            REFACTOR)
+                # REFACTOR + PASS = stay REFACTOR (refactor safe)
+                ;;
+        esac
+    else
+        # Test FAIL
+        case "$CURRENT_PHASE" in
+            ""|NONE|INIT)
+                # INIT/empty + FAIL = first failing test confirmed → enter RED
+                echo "RED|unknown|test-confirmed|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + FAIL = regression! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            REFACTOR)
+                # REFACTOR + FAIL = regression during refactor! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|refactor-regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            RED)
+                # RED + FAIL = expected, stay RED
+                ;;
+        esac
+    fi
+fi
+
 exit 0

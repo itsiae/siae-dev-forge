@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# PreToolUse hook: reminder siae-brainstorming prima di EnterPlanMode
+# PreToolUse hook: BLOCCA EnterPlanMode senza siae-brainstorming
 # ─────────────────────────────────────────────────────────────────
 # Hook:     plan-gate
 # Evento:   PreToolUse
 # Matcher:  EnterPlanMode
 # Timeout:  5s — Solo check file flat
-# Formato:  additional_context (standard DevForge)
+# Formato:  decision:"block" se siae-brainstorming non invocata (HARD GATE)
+# History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -19,33 +20,16 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-brainstorming"; then
     exit 0
 fi
 
-# siae-brainstorming NOT invoked — inject reminder
+# siae-brainstorming NOT invoked — BLOCK operation (hard gate)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log "plan_gate" "warning" "{\"skill_missing\":\"siae-brainstorming\"}"
-
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
-
-PLAN_MSG="STOP — Stai per entrare in PlanMode ma NON hai invocato siae-brainstorming in questa sessione. NESSUNA IMPLEMENTAZIONE SENZA DESIGN APPROVATO. Invoca siae-brainstorming PRIMA di procedere: Skill tool -> siae-devforge:siae-brainstorming"
-plan_escaped=$(escape_for_json "$PLAN_MSG")
-plan_context="<EXTREMELY_IMPORTANT>\nDevForge Plan Gate: ${plan_escaped}\n</EXTREMELY_IMPORTANT>"
+devforge_log "plan_gate" "blocked" "{\"skill_missing\":\"siae-brainstorming\"}"
 
 cat <<EOF
 {
-  "additional_context": "${plan_context}",
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "additionalContext": "${plan_context}"
-  }
+  "decision": "block",
+  "reason": "DevForge Plan Gate — BLOCCATO. Stai per entrare in PlanMode ma NON hai invocato siae-brainstorming in questa sessione. NESSUNA IMPLEMENTAZIONE SENZA DESIGN APPROVATO. Invoca siae-brainstorming PRIMA di procedere: Skill tool -> siae-devforge:siae-brainstorming. Dopo il brainstorming, potrai usare EnterPlanMode."
 }
 EOF
 exit 0

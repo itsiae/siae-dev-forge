@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# UserPromptSubmit hook: reset batch checkpoint when user provides feedback
+# ─────────────────────────────────────────────────────────────────
+# Hook:     batch-reset
+# Evento:   UserPromptSubmit
+# Matcher:  * (ogni messaggio utente)
+# Timeout:  5s
+# History:  v1.4.0 NEW (determinismo SDLC — batch checkpoint reset)
+# ─────────────────────────────────────────────────────────────────
+# When a batch checkpoint is active and the user sends a message,
+# reset the counter and remove the checkpoint flag.
+# The user's message IS the feedback that unblocks the next batch.
+
+set -euo pipefail
+
+STATE_DIR="${HOME}/.claude"
+BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"
+BATCH_COUNTER_FILE="${STATE_DIR}/.devforge-batch-counter"
+
+# Only act if a checkpoint is pending
+if [ ! -f "$BATCH_CHECKPOINT_FILE" ]; then
+    exit 0
+fi
+
+# Checkpoint must be at least 10 seconds old (give Claude time to show report)
+# This prevents premature reset from quick follow-up messages
+CHECKPOINT_MTIME=$(stat -f%m "$BATCH_CHECKPOINT_FILE" 2>/dev/null || stat -c%Y "$BATCH_CHECKPOINT_FILE" 2>/dev/null || echo "0")
+NOW_S=$(date +%s)
+CHECKPOINT_AGE=$((NOW_S - CHECKPOINT_MTIME))
+if [ "$CHECKPOINT_AGE" -lt 10 ]; then
+    exit 0
+fi
+
+# User message received after report shown = feedback provided → reset checkpoint
+rm -f "$BATCH_CHECKPOINT_FILE"
+echo "0" > "$BATCH_COUNTER_FILE"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "batch_checkpoint" "reset" "{\"reason\":\"user_feedback_received\"}"
+
+exit 0

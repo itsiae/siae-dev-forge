@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# PreToolUse hook for siae-devforge plugin (intercepts git commit via Bash tool)
-# Quality gate checks injected as additionalContext before every commit.
+# PreToolUse hook: BLOCCA git commit senza siae-git-workflow + quality gate
 # ─────────────────────────────────────────────────────────────────
 # Hook:     pre-commit
 # Evento:   PreToolUse
 # Matcher:  Bash
 # Timeout:  10s — Check branch + design doc rapido
-# Formato:  additional_context (standard DevForge)
+# Formato:  decision:"block" se siae-git-workflow non invocata (HARD GATE)
+#           additional_context per quality gate (se skill presente)
+# History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK per git commit (determinismo SDLC)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -60,11 +61,55 @@ escape_for_json() {
 
 # Route to appropriate check based on command
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
-    # Check if siae-git-workflow was invoked this session
-    SKILL_REMINDER=""
+    # Check if siae-git-workflow was invoked this session — HARD GATE
     if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
-        SKILL_REMINDER="<EXTREMELY_IMPORTANT>\\nDevForge Skill Gate: NON hai invocato siae-git-workflow in questa sessione.\\nDEVI invocarla PRIMA di procedere con il commit.\\nLa skill stabilisce naming convention, conventional commits, e pre-flight checks.\\nInvoca ora: Skill tool -> siae-devforge:siae-git-workflow\\n</EXTREMELY_IMPORTANT>\\n\\n"
+        devforge_log "pre_commit" "blocked" "{\"command\":\"${TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
+        cat <<BLOCK_EOF
+{
+  "decision": "block",
+  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere."
+}
+BLOCK_EOF
+        exit 0
     fi
+    SKILL_REMINDER=""
+
+    # Coverage Gate — HARD BLOCK if coverage below threshold
+    COVERAGE_FILE="${HOME}/.claude/.devforge-last-coverage"
+    if [ -f "$COVERAGE_FILE" ]; then
+        COVERAGE_DATA=$(cat "$COVERAGE_FILE" 2>/dev/null || echo "")
+        COVERAGE_PCT=$(echo "$COVERAGE_DATA" | cut -d'|' -f1)
+        COVERAGE_TS=$(echo "$COVERAGE_DATA" | cut -d'|' -f2)
+
+        # Validate coverage is numeric before comparing
+        if [ -n "$COVERAGE_PCT" ] && echo "$COVERAGE_PCT" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+            # Determine threshold: 80% for feature branches (case-insensitive), 70% otherwise
+            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+            THRESHOLD=70
+            if echo "$CURRENT_BRANCH" | grep -qiE '^feature/'; then
+                THRESHOLD=80
+            fi
+
+            # Integer comparison (truncate decimals)
+            COVERAGE_INT=${COVERAGE_PCT%%.*}
+            if [ "$COVERAGE_INT" -lt "$THRESHOLD" ] 2>/dev/null; then
+                # Check coverage is fresh (< 30 min old)
+                NOW_S=$(date +%s)
+                COVERAGE_AGE=$(( NOW_S - ${COVERAGE_TS:-0} ))
+                if [ "$COVERAGE_AGE" -lt 1800 ]; then
+                    devforge_log "coverage_gate" "blocked" "{\"coverage\":${COVERAGE_PCT},\"threshold\":${THRESHOLD},\"branch\":\"${CURRENT_BRANCH}\"}"
+                    cat <<COV_BLOCK_EOF
+{
+  "decision": "block",
+  "reason": "DevForge Coverage Gate — BLOCCATO. Coverage attuale: ${COVERAGE_PCT}% (soglia minima: ${THRESHOLD}%). Aggiungi test per raggiungere almeno ${THRESHOLD}% di copertura prima di committare. Branch: ${CURRENT_BRANCH} (feature = 80%, altro = 70%)."
+}
+COV_BLOCK_EOF
+                    exit 0
+                fi
+            fi
+        fi
+    fi
+
     : # proceed to quality gate below
 elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
     # Branch check: warn if feature branch without design doc
