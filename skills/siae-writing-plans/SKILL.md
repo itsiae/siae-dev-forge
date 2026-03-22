@@ -103,6 +103,9 @@ Suddividi il lavoro in task indipendenti (o con dipendenze esplicite).
 durante l'esecuzione da `siae-executing-plans` o `siae-subagent-development`.
 NON scrivere task senza marker — un task senza marker e' un bug nel piano.
 
+**Formato stato task:** usa `[PENDING]`/`[DONE]`/`[BLOCKED]` come formato primario.
+Se il piano contiene checkbox markdown (`- [ ]`), mantienili sincronizzati.
+
 Tre stati possibili:
 - `[PENDING]` — non ancora iniziato (default)
 - `[DONE]` — completato e verificato
