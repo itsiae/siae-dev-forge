@@ -143,7 +143,7 @@ if echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-verification"; then
         cat <<RETRO_EOF
 {
   "decision": "block",
-  "reason": "DevForge Retrospective Reminder — Hai ${COMMITS_COUNT} commit in questa sessione ma non hai eseguito siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti. (Tentativo 1/1 — al prossimo tentativo lo stop verra' permesso)"
+  "reason": "DevForge Retrospective Reminder — Hai ${COMMITS_COUNT} commit in questa sessione ma non hai eseguito siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti. (Tentativo 1/2 — al prossimo tentativo lo stop verra' permesso)"
 }
 RETRO_EOF
         exit 0

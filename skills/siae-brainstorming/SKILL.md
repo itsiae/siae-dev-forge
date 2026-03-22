@@ -392,6 +392,7 @@ digraph brainstorming {
     need_questions -> option_zero [label="no, tutto HIGH"];
     ask -> option_zero;
     option_zero -> approaches [label="no, serve codice"];
+    option_zero -> transition [label="si, config/infra\nbasta", style=dashed];
     approaches -> design;
     design -> approve;
     approve -> design [label="no, rivedi"];

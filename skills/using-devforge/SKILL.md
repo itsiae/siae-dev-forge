@@ -117,7 +117,7 @@ STOP. Prima verifica:
 Stai per aprire una PR o dichiarare un branch "pronto"?
 - Hai invocato `siae-finishing-branch` in questa sessione?
   - NO → Invoca PRIMA siae-finishing-branch. NON aprire la PR.
-  - SI → Procedi seguendo il processo a 5 step gia' caricato.
+  - SI → Procedi seguendo il processo a 6 step gia' caricato.
 
 **Ogni operazione git senza la skill caricata = branch naming sbagliato, commit non-conventional, push senza pre-flight, PR senza review.**
 
@@ -274,9 +274,8 @@ digraph skill_deps {
     // Completion chain
     tdd -> verification [label="task fatto", style=bold, color=red];
     verification -> finishing [label="branch pronto"];
-    verification -> blind_review [label="spec audit", style=dashed];
-    blind_review -> finishing [label="PASS"];
-    finishing -> git_wf [label="PR"];
+    finishing -> blind_review [label="Step 4c\nREQUIRED", style=bold, color=red];
+    blind_review -> git_wf [label="PASS → PR"];
 
     // retrospective e' invocata da stop-gate, non dal flusso sequenziale
     finishing -> retrospective [label="fine sessione", style=dashed];
