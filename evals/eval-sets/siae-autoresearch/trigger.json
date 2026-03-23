@@ -1,0 +1,23 @@
+[
+  {"query": "Voglio ottimizzare la description della skill siae-brainstorming, ha troppi falsi positivi. Puoi aiutarmi a migliorarla?", "should_trigger": true},
+  {"query": "La skill siae-debugging non triggera quando dovrebbe. Come posso migliorare il suo trigger?", "should_trigger": true},
+  {"query": "Vorrei fare autoresearch sulla skill siae-tdd per migliorarne precision e recall", "should_trigger": true},
+  {"query": "La description di siae-verification e' troppo generica e cattura query che non dovrebbe. Ottimizziamola.", "should_trigger": true},
+  {"query": "Ho notato che siae-git-workflow triggera su menzioni casuali di git. Come posso restringere il trigger?", "should_trigger": true},
+  {"query": "Puoi fare un'analisi delle performance di trigger della skill siae-architecture e proporre miglioramenti?", "should_trigger": true},
+  {"query": "Vorrei migliorare iterativamente il prompt della skill siae-documentation, un cambio alla volta", "should_trigger": true},
+  {"query": "La precision della skill siae-frontend e' sotto 0.80, devo ottimizzare la description", "should_trigger": true},
+  {"query": "Esegui un loop di autoresearch sulla skill siae-security per portarla sopra 90% di accuracy", "should_trigger": true},
+  {"query": "Ho i risultati degli eval e la skill siae-qa ha recall basso. Come miglioriamo la description?", "should_trigger": true},
+
+  {"query": "Voglio creare una nuova skill per gestire il deployment su AWS ECS", "should_trigger": false},
+  {"query": "Esegui i test strutturali del plugin con run-all.sh", "should_trigger": false},
+  {"query": "Fai code review della mia PR su feature/SPORT-123", "should_trigger": false},
+  {"query": "Ho un bug nel servizio di autenticazione, il token JWT scade troppo presto", "should_trigger": false},
+  {"query": "Genera la documentazione per il modulo catalogo-service", "should_trigger": false},
+  {"query": "Esegui python3 evals/runner.py --skill siae-brainstorming --level L1", "should_trigger": false},
+  {"query": "Scrivi un unit test per il metodo calculateRoyalties", "should_trigger": false},
+  {"query": "Fammi un brainstorming su come implementare il nuovo servizio notifiche", "should_trigger": false},
+  {"query": "Il pipeline Terraform fallisce sul modulo VPC, aiutami a debuggare", "should_trigger": false},
+  {"query": "Verifica che tutti i criteri di accettazione della story SPORT-456 siano soddisfatti", "should_trigger": false}
+]
