@@ -20,6 +20,7 @@ STATE_DIR="${HOME}/.claude"
 # ── Git State ───────────────────────────────────────────────────
 # Only if we're in a git repo
 GIT_SECTION=""
+PR_SECTION=""
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
     GIT_LAST_COMMIT=$(git log --oneline -1 2>/dev/null || echo "no commits")
