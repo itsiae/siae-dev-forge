@@ -135,8 +135,12 @@ Per ogni task nel batch:
 2. Segui ogni step esattamente come scritto nel piano
 3. Esegui le verifiche specificate nel piano
 4. Segna come completato
-5. Aggiorna il marker nel piano: `[PENDING]` → `[DONE]`
-6. Se bloccato: `[PENDING]` → `[BLOCKED]` — motivo
+5. Aggiorna il marker nel piano — **dual format:**
+   - Formato marker: `[PENDING]` → `[DONE]` (o `[BLOCKED]`)
+   - Formato checkbox: `- [ ] Task description` → `- [x] Task description`
+   - Rileva quale formato usa il piano e aggiorna di conseguenza
+   - Se il piano usa entrambi i formati, aggiorna entrambi
+6. Se bloccato: `[PENDING]` → `[BLOCKED]` — motivo (e `- [ ]` resta invariato)
 7. Committa il piano aggiornato:
 
 ```bash

@@ -113,6 +113,13 @@ Se non c'e' un piano associato (lavoro ad-hoc), salta questo step e procedi dire
 
 ### Step 1 — IDENTIFICA
 
+### Context-First Rule
+
+Prima di leggere file, eseguire comandi, o fare domande all'utente,
+verifica se l'informazione e' gia' presente nella conversazione corrente
+(messaggi precedenti, output di tool, skill gia' invocate).
+Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato letto.
+
 Determina il modo corretto per verificare il lavoro svolto.
 
 | Tipo di lavoro | Verifica richiesta |
