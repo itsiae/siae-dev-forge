@@ -188,6 +188,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 - "Playwright", "Cypress", "test E2E", "CI/CD pipeline", "GitHub Actions" → invoca `siae-automation`
 - "Glue job", "PySpark", "ETL", "Medallion", "pipeline ingestion" → invoca `siae-data-engineering`
 - "Terraform", "terragrunt", "VPC", "ECS", "Lambda" → invoca `siae-iac`
+- "Flutter", "Dart", "Riverpod", "ObjectBox", "Get_it", "Amplify", "app mobile", "widget Flutter" → invoca `siae-flutter`
 
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
@@ -197,6 +198,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 
 - Query su blind review, review cieca, audit spec, spec vs codice → `siae-blind-review` (NON code-reviewer)
 - Query su retrospettiva, lezioni apprese, cosa ho imparato, fine sessione → `siae-retrospective` (NON brainstorming)
+- Query su Flutter, Dart, Riverpod, ObjectBox, Get_it, Amplify Cognito, Dio, app mobile → `siae-flutter` (NON brainstorming, NON siae-frontend)
 
 ## Rule Priority — Quando le Skill Confliggono
 
@@ -248,6 +250,7 @@ digraph skill_deps {
     tdd [label="siae-tdd", fillcolor="#f0f0f0"];
     code_standards [label="siae-code-standards", fillcolor="#cce5ff"];
     frontend [label="siae-frontend", fillcolor="#cce5ff"];
+    flutter [label="siae-flutter", fillcolor="#cce5ff"];
     iac [label="siae-iac", fillcolor="#cce5ff"];
     data_eng [label="siae-data-engineering", fillcolor="#cce5ff"];
 
@@ -267,7 +270,8 @@ digraph skill_deps {
 
     // Stack-specific skills
     tdd -> code_standards [style=dashed];
-    tdd -> frontend [label="se frontend", style=dashed];
+    tdd -> frontend [label="se frontend web", style=dashed];
+    tdd -> flutter [label="se Flutter", style=dashed];
     tdd -> iac [label="se IaC", style=dashed];
     tdd -> data_eng [label="se ETL", style=dashed];
 
