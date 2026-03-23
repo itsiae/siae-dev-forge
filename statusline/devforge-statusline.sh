@@ -15,7 +15,7 @@ GREEN='\033[32m'
 YELLOW='\033[33m'
 RESET='\033[0m'
 
-# --- 2. JSON parsing from stdin (single jq invocation) ---
+# --- 2. JSON parsing from stdin (no eval — safe from injection) ---
 DEVFORGE_DIR="${HOME}/.claude"
 CACHE_FILE="${DEVFORGE_DIR}/.devforge-git-cache"
 
@@ -30,11 +30,9 @@ fi
 
 if [ -n "$STDIN_JSON" ]; then
   if command -v jq >/dev/null 2>&1; then
-    eval "$(printf '%s' "$STDIN_JSON" | jq -r '
-      "CTX_USED=\(.context_window.used_percentage // 0)",
-      "QUOTA_5H=\(.rate_limits.five_hour.used_percentage // "")",
-      "AGENT_NAME=\(.agent.name // "")"
-    ' 2>/dev/null)" 2>/dev/null || true
+    CTX_USED="$(printf '%s' "$STDIN_JSON" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)" || CTX_USED="0"
+    QUOTA_5H="$(printf '%s' "$STDIN_JSON" | jq -r '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null)" || QUOTA_5H=""
+    AGENT_NAME="$(printf '%s' "$STDIN_JSON" | jq -r '.agent.name // empty' 2>/dev/null)" || AGENT_NAME=""
   else
     # Fallback without jq: extract numeric values via tr+sed (macOS compatible)
     CTX_USED="$(printf '%s' "$STDIN_JSON" | tr ',' '\n' | sed -n 's/.*"used_percentage"[[:space:]]*:[[:space:]]*\([0-9.]*\).*/\1/p' | head -1)" || CTX_USED="0"
@@ -103,10 +101,13 @@ get_git_branch() {
   branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch="no-repo"
   [ -z "$branch" ] && branch="no-repo"
   printf '%s\n%s\n' "$now" "$branch" > "$CACHE_FILE" 2>/dev/null || true
+  chmod 600 "$CACHE_FILE" 2>/dev/null || true
   printf '%s' "$branch"
 }
 
 GIT_BRANCH="$(get_git_branch)"
+# Sanitize branch name: keep only safe chars for printf %b
+GIT_BRANCH="${GIT_BRANCH//[^a-zA-Z0-9\/_.\-]/}"
 
 # --- 5. Helper functions ---
 
@@ -195,7 +196,7 @@ if [ "$BATCH_CHECKPOINT" -eq 1 ]; then
   WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b⏸️ Batch completo — serve report%b' "$YELLOW" "$RESET")"
 fi
 
-if [ "$SESSION_COMMITS" -gt 0 ] 2>/dev/null; then
+if [ "$SESSION_COMMITS" -gt 0 ]; then
   if ! has_skill "siae-verification"; then
     WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b⚠️ Verification non invocata%b' "$YELLOW" "$RESET")"
   fi
