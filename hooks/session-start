@@ -20,6 +20,9 @@ START_NS=$(date +%s%N 2>/dev/null || echo "0")
 DEVFORGE_SID=$(devforge_new_sid)
 PLUGIN_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "unknown")
 
+# Auto-install status line (idempotente)
+bash "${PLUGIN_ROOT}/statusline/install.sh" 2>/dev/null || true
+
 # Print brand banner to stderr (visible in terminal at startup)
 cat >&2 <<'BANNER'
 
