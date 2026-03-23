@@ -102,6 +102,13 @@ Debug Progress:
 > **HARD-GATE**: Questa fase DEVE completarsi prima di qualsiasi tentativo di fix.
 > Non esistono eccezioni. Nemmeno per P1 in produzione.
 
+### Context-First Rule
+
+Prima di leggere file, eseguire comandi, o fare domande all'utente,
+verifica se l'informazione e' gia' presente nella conversazione corrente
+(messaggi precedenti, output di tool, skill gia' invocate).
+Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato letto.
+
 **PRIMA di tentare QUALSIASI fix:**
 
 1. **Leggi i Messaggi di Errore con Attenzione**

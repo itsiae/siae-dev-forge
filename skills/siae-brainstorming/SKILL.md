@@ -92,6 +92,13 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 
 **NON chiedere cio' che il codice sa gia'.** Leggi prima, chiedi dopo.
 
+### Context-First Rule
+
+Prima di leggere file, eseguire comandi, o fare domande all'utente,
+verifica se l'informazione e' gia' presente nella conversazione corrente
+(messaggi precedenti, output di tool, skill gia' invocate).
+Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato letto.
+
 **Fonti da leggere (in ordine):**
 
 | # | Fonte | Tool | Cosa cercare |
@@ -101,7 +108,8 @@ DEVI creare un task per ciascuno di questi punti e completarli in ordine:
 | 3 | Struttura directory (`src/`, `lib/`, `skills/`, `commands/`) | Glob | Pattern architetturale, moduli |
 | 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
 | 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
-| 6 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
+| 6 | Auto-memory (`~/.claude/projects/<project>/memory/`) | Read MEMORY.md | Lezioni apprese, feedback, contesto cross-sessione |
+| 7 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
 
 **Campi da inferire:**
 
@@ -182,6 +190,41 @@ Confermi? (si / correggi specifici)
 
 **Se tutto e' HIGH e l'utente conferma**, procedi direttamente a Step 4 (Approcci).
 Questo elimina le 5-10 domande ripetitive sui dati gia' nel codice.
+
+### 3b. Option Zero Gate
+
+Prima di proporre soluzioni che richiedono codice, verifica se il problema
+si risolve con una modifica di configurazione, infrastruttura, o processo.
+
+**Checklist Option Zero:**
+
+| # | Verifica | Esempio SIAE |
+|---|----------|-------------|
+| 1 | AWS Parameter Store / SSM | Cambiare un valore in parameter store risolve? |
+| 2 | Terraform variables / tfvars | Basta un tfvar diverso per ambiente? |
+| 3 | Feature flag esistente | C'e' gia' un flag che abilita/disabilita questo? |
+| 4 | Environment variable | Una env var risolve senza toccare codice? |
+| 5 | Ticket DevOps / infra | Basta chiedere al team DevOps un cambio infra? |
+| 6 | Servizio/libreria esistente | Un altro repo SIAE fa gia' questo? Riusalo. |
+| 7 | Config applicativa | application.yml, .env, config file risolvono? |
+
+**Se Option Zero si applica:**
+
+Presenta la soluzione config/infra, chiedi conferma, e chiudi il brainstorming
+senza design doc. Non serve piano implementativo per un cambio config.
+
+Emetti checkpoint:
+```
+[BRAINSTORM:OPTION-ZERO] Soluzione senza codice identificata
+  Tipo: {config/infra/processo}
+  Azione: {descrizione}
+  Motivo: {perche' non serve codice}
+```
+
+**Se Option Zero non si applica:**
+
+Documenta brevemente perche' ("Verificato: non esiste parameter store per X,
+il comportamento richiede logica nuova") e procedi a Step 4.
 
 ### 4. Proponi 2-3 approcci con trade-off e raccomandazione
 
@@ -289,6 +332,14 @@ Non parafrasare. Non omettere campi. Questo rende il processo tracciabile e dete
   Rischi: {lista rischi identificati}
 ```
 
+**Dopo Option Zero Gate (Step 3b):**
+```
+[BRAINSTORM:OPTION-ZERO] Valutazione senza codice
+  Applicabile: {SI/NO}
+  Se SI — Tipo: {config/infra/processo}
+  Se NO — Motivo: {perche' serve codice}
+```
+
 **Dopo Design (Step 5):**
 ```
 [BRAINSTORM:DESIGN] Design doc prodotto
@@ -325,6 +376,7 @@ digraph brainstorming {
     confirm [label="3. Presenta inferenze\nconferma rapida"];
     need_questions [label="Campi LOW\no mancanti?", shape=diamond, fillcolor="#fff3cd"];
     ask [label="Domande mirate\n(solo cio' che manca)"];
+    option_zero [label="3b. Option Zero?\nconfig/infra basta?", shape=diamond, fillcolor="#fff3cd"];
     approaches [label="4. Proponi 2-3\napprocci + SP"];
     design [label="5. Presenta design\nper sezioni"];
     approve [label="Utente approva\nsezione?", shape=diamond, fillcolor="#fff3cd"];
@@ -338,8 +390,10 @@ digraph brainstorming {
     decompose -> intake [label="utente sceglie\nsub-progetto"];
     confirm -> need_questions;
     need_questions -> ask [label="si"];
-    need_questions -> approaches [label="no, tutto HIGH"];
-    ask -> approaches;
+    need_questions -> option_zero [label="no, tutto HIGH"];
+    ask -> option_zero;
+    option_zero -> approaches [label="no, serve codice"];
+    option_zero -> transition [label="si, config/infra\nbasta", style=dashed];
     approaches -> design;
     design -> approve;
     approve -> design [label="no, rivedi"];
@@ -510,6 +564,7 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | "L'utente approva dopo" | L'approvazione post-hoc non e' approvazione. |
 | "Ho letto il pom.xml, basta cosi'" | Un file non basta. Smart Intake legge manifest, struttura, log, e docs/plans/ prima di procedere. |
 | "Mettiamo tutto in un'unica spec, e' piu' veloce" | Spec ampie producono piani ingestibili. Decomponi. |
+| "Serve per forza codice nuovo" | Nel 30% dei casi, una config change basta. Verifica Option Zero prima. |
 
 ## Classificazione Rischio Operazioni
 

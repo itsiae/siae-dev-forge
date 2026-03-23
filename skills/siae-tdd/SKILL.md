@@ -104,6 +104,13 @@ Se hai dubbi: "Questa modifica cambia comportamento osservabile?" SI → TDD. NO
 
 ## Rilevamento Tipo Codice
 
+### Context-First Rule
+
+Prima di leggere file, eseguire comandi, o fare domande all'utente,
+verifica se l'informazione e' gia' presente nella conversazione corrente
+(messaggi precedenti, output di tool, skill gia' invocate).
+Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato letto.
+
 **Prima del ciclo RED-GREEN-REFACTOR**, identifica il tipo di codice. Il tipo determina il framework di test e i pattern da applicare.
 
 ### Detection — Segnali e Mapping

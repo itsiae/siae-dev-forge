@@ -211,7 +211,10 @@ Dopo il PASS di entrambi i reviewer:
 
 **Aggiorna il piano:**
 1. Apri `docs/plans/<filename>.md`
-2. Aggiorna il marker del task: `[PENDING]` → `[DONE]`
+2. Aggiorna il marker del task — **dual format:**
+   - Formato marker: `[PENDING]` → `[DONE]` (o `[BLOCKED]`)
+   - Formato checkbox: `- [ ] Task description` → `- [x] Task description`
+   - Rileva quale formato usa il piano e aggiorna di conseguenza
 3. Se il subagent ha fallito dopo 2 retry: `[PENDING]` → `[BLOCKED]` — motivo del fallimento
 4. Committa:
 

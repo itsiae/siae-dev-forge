@@ -37,7 +37,7 @@ Aprire una PR e' un atto pubblico che coinvolge i reviewer. Rispetta il loro tem
 Un branch non verificato e' un'interruzione mascherata da contributo.
 
 Stai per eseguire `git push` + `gh pr create` o suggerire all'utente di aprire una PR?
-Hai completato TUTTI e 5 gli step di questa skill?
+Hai completato TUTTI e 6 gli step di questa skill? (incluso Blind Review Gate)
 - NO → NON procedere. Torna allo step mancante.
 - SI → Procedi con la pre-flight card 🔴 ALTO.
 
@@ -74,7 +74,7 @@ Se gia' eseguita nella sessione, usa il contesto esistente senza ripetere il che
 
 ---
 
-## Processo in 5 Step
+## Processo in 6 Step
 
 ### Step 1 — Verifica Stato del Branch
 
@@ -245,6 +245,30 @@ Opzioni:
 Senza questa autorizzazione esplicita, NON procedere con Step 5.
 
 **Se non ci sono piani o tutti i task sono [DONE]:** procedi con Step 5.
+
+---
+
+### Step 4c — Blind Review Gate (pre-PR)
+
+🟡 MEDIO
+
+```
+REQUIRED SUB-SKILL: siae-blind-review
+```
+
+Esegui una blind review prima di aprire la PR. Il reviewer parte SOLO dal design doc
+e trova il codice autonomamente.
+
+**Se il design doc esiste in `docs/plans/`:**
+Invoca `siae-blind-review`. Attendi il verdetto.
+
+- **Verdetto PASS:** procedi con Step 5
+- **Verdetto FAIL:** riporta i finding. NON aprire la PR finche' non sono risolti
+  o l'utente autorizza esplicitamente: `"procedi senza blind review — motivo: ..."`
+
+**Se non esiste un design doc:**
+La blind review non puo' procedere. Segnala e procedi con Step 5.
+Questo e' un gap nel processo — il lavoro e' stato fatto senza spec scritta.
 
 ---
 
