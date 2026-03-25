@@ -1,6 +1,6 @@
-# C4 Diagram Templates — Mermaid
+# C4 Diagram Templates — PlantUML
 
-Template Mermaid per ciascun livello del modello C4.
+Template PlantUML per ciascun livello del modello C4.
 Sostituire i placeholder `[...]` con i dati reali del progetto.
 
 ---
@@ -9,28 +9,26 @@ Sostituire i placeholder `[...]` con i dati reali del progetto.
 
 Mostra il sistema nel suo contesto: attori umani e sistemi esterni con cui interagisce.
 
-```mermaid
-graph TB
-    User["[Persona]<br/>[Ruolo/Descrizione]"]
-    ExtSystem["[Sistema Esterno]<br/>[Descrizione breve]"]
+```plantuml
+@startuml C4_Context
+!include <C4_Context>
 
-    System["[Nome Sistema]<br/>[Descrizione breve]"]
+Person(user, "[Persona]", "[Ruolo/Descrizione]")
+System(system, "[Nome Sistema]", "[Descrizione breve]")
+System_Ext(extSystem, "[Sistema Esterno]", "[Descrizione breve]")
 
-    User -->|"[Azione/Relazione]"| System
-    System -->|"[Azione/Relazione]"| ExtSystem
-
-    style User fill:#08427b,color:#fff
-    style System fill:#1168bd,color:#fff
-    style ExtSystem fill:#999999,color:#fff
+Rel(user, system, "[Azione/Relazione]")
+Rel(system, extSystem, "[Azione/Relazione]")
+@enduml
 ```
 
 ### Legenda colori Context
 
-| Colore   | Significato                |
-|----------|----------------------------|
-| `#08427b`| Persona / Attore            |
-| `#1168bd`| Sistema in scope            |
-| `#999999`| Sistema esterno (fuori scope)|
+| Elemento         | Significato                |
+|------------------|----------------------------|
+| Person (blue)    | Persona / Attore            |
+| System (blue)    | Sistema in scope            |
+| System_Ext (gray)| Sistema esterno (fuori scope)|
 
 ---
 
@@ -38,40 +36,36 @@ graph TB
 
 Mostra i container (applicazioni, database, code unit deployabili) dentro il sistema.
 
-```mermaid
-graph TB
-    User["[Persona]<br/>[Ruolo]"]
+```plantuml
+@startuml C4_Container
+!include <C4_Container>
 
-    subgraph System ["[Nome Sistema]"]
-        WebApp["[Web App]<br/>[Vue.js 3, S3+CloudFront]"]
-        API["[API Service]<br/>[Spring Boot / Lambda]"]
-        DB[("[Database]<br/>[PostgreSQL RDS]")]
-        Queue["[Message Queue]<br/>[SQS]"]
-    end
+Person(user, "[Persona]", "[Ruolo]")
 
-    ExtSystem["[Sistema Esterno]"]
+System_Boundary(system, "[Nome Sistema]") {
+    Container(webApp, "[Web App]", "Vue.js 3, S3+CloudFront", "SPA frontend")
+    Container(api, "[API Service]", "Spring Boot / Lambda", "REST API")
+    ContainerDb(db, "[Database]", "PostgreSQL RDS", "Persistenza dati")
+    Container(queue, "[Message Queue]", "SQS", "Messaggistica asincrona")
+}
 
-    User -->|"HTTPS"| WebApp
-    WebApp -->|"REST/JSON"| API
-    API -->|"SQL"| DB
-    API -->|"Publish"| Queue
-    Queue -->|"Consume"| ExtSystem
+System_Ext(extSystem, "[Sistema Esterno]", "")
 
-    style User fill:#08427b,color:#fff
-    style WebApp fill:#438dd5,color:#fff
-    style API fill:#438dd5,color:#fff
-    style DB fill:#438dd5,color:#fff
-    style Queue fill:#438dd5,color:#fff
-    style ExtSystem fill:#999999,color:#fff
+Rel(user, webApp, "Usa", "HTTPS")
+Rel(webApp, api, "Chiama", "REST/JSON")
+Rel(api, db, "Legge/Scrive", "SQL")
+Rel(api, queue, "Pubblica", "SQS")
+Rel(queue, extSystem, "Consuma", "SQS")
+@enduml
 ```
 
 ### Legenda colori Container
 
-| Colore   | Significato                |
-|----------|----------------------------|
-| `#08427b`| Persona / Attore            |
-| `#438dd5`| Container dentro il sistema |
-| `#999999`| Sistema esterno             |
+| Elemento           | Significato                |
+|--------------------|----------------------------|
+| Person (blue)      | Persona / Attore            |
+| Container (blue)   | Container dentro il sistema |
+| System_Ext (gray)  | Sistema esterno             |
 
 ---
 
@@ -79,94 +73,93 @@ graph TB
 
 Mostra i componenti interni di un singolo container.
 
-```mermaid
-graph TB
-    subgraph Container ["[Nome Container] — Componenti"]
-        Controller["[Controller Layer]<br/>REST endpoints, validation"]
-        Service["[Service Layer]<br/>Business logic, orchestration"]
-        Repository["[Repository Layer]<br/>Data access, ORM"]
-        Client["[External Client]<br/>HTTP client per sistemi esterni"]
-    end
+```plantuml
+@startuml C4_Component
+!include <C4_Component>
+!include <C4_Container>
 
-    DB[("[Database]")]
-    ExtAPI["[API Esterna]"]
+Container_Boundary(container, "[Nome Container] — Componenti") {
+    Component(controller, "[Controller Layer]", "", "REST endpoints, validation")
+    Component(service, "[Service Layer]", "", "Business logic, orchestration")
+    Component(repository, "[Repository Layer]", "", "Data access, ORM")
+    Component(client, "[External Client]", "", "HTTP client per sistemi esterni")
+}
 
-    Controller -->|"Chiama"| Service
-    Service -->|"Chiama"| Repository
-    Service -->|"Chiama"| Client
-    Repository -->|"SQL"| DB
-    Client -->|"HTTPS"| ExtAPI
+ContainerDb(db, "[Database]", "PostgreSQL")
+System_Ext(extApi, "[API Esterna]", "")
 
-    style Controller fill:#85bbf0,color:#000
-    style Service fill:#85bbf0,color:#000
-    style Repository fill:#85bbf0,color:#000
-    style Client fill:#85bbf0,color:#000
-    style DB fill:#438dd5,color:#fff
-    style ExtAPI fill:#999999,color:#fff
+Rel(controller, service, "Chiama")
+Rel(service, repository, "Chiama")
+Rel(service, client, "Chiama")
+Rel(repository, db, "SQL")
+Rel(client, extApi, "HTTPS")
+@enduml
 ```
 
 ### Legenda colori Component
 
-| Colore   | Significato                      |
-|----------|-----------------------------------|
-| `#85bbf0`| Componente dentro il container    |
-| `#438dd5`| Altro container dello stesso sistema|
-| `#999999`| Sistema/servizio esterno          |
+| Elemento            | Significato                      |
+|---------------------|-----------------------------------|
+| Component (light)   | Componente dentro il container    |
+| Container (blue)    | Altro container dello stesso sistema|
+| System_Ext (gray)   | Sistema/servizio esterno          |
 
 ---
 
 ## Livello 4 — Code
 
 Mostra classi, interfacce e relazioni all'interno di un componente.
-Usare class diagram Mermaid.
+Usare class diagram PlantUML.
 
-```mermaid
-classDiagram
-    class IServiceInterface {
-        <<interface>>
-        +execute(request: Request) Response
-        +validate(input: Input) boolean
-    }
+```plantuml
+@startuml C4_Code
+skinparam defaultFontName Arial
+skinparam shadowing false
 
-    class ServiceImpl {
-        -repository: IRepository
-        -client: IExternalClient
-        +execute(request: Request) Response
-        +validate(input: Input) boolean
-        -transformData(raw: RawData) ProcessedData
-    }
+interface IServiceInterface {
+    +execute(request: Request): Response
+    +validate(input: Input): boolean
+}
 
-    class IRepository {
-        <<interface>>
-        +findById(id: String) Entity
-        +save(entity: Entity) void
-        +findAll(filter: Filter) List~Entity~
-    }
+class ServiceImpl {
+    -repository: IRepository
+    -client: IExternalClient
+    +execute(request: Request): Response
+    +validate(input: Input): boolean
+    -transformData(raw: RawData): ProcessedData
+}
 
-    class RepositoryImpl {
-        -dataSource: DataSource
-        +findById(id: String) Entity
-        +save(entity: Entity) void
-        +findAll(filter: Filter) List~Entity~
-    }
+interface IRepository {
+    +findById(id: String): Entity
+    +save(entity: Entity): void
+    +findAll(filter: Filter): List<Entity>
+}
 
-    class RequestDTO {
-        +id: String
-        +payload: Map
-        +timestamp: DateTime
-    }
+class RepositoryImpl {
+    -dataSource: DataSource
+    +findById(id: String): Entity
+    +save(entity: Entity): void
+    +findAll(filter: Filter): List<Entity>
+}
 
-    class ResponseDTO {
-        +status: String
-        +data: Object
-        +errors: List~Error~
-    }
+class RequestDTO {
+    +id: String
+    +payload: Map
+    +timestamp: DateTime
+}
 
-    IServiceInterface <|.. ServiceImpl : implements
-    IRepository <|.. RepositoryImpl : implements
-    ServiceImpl --> IRepository : uses
-    ServiceImpl ..> RequestDTO : receives
-    ServiceImpl ..> ResponseDTO : returns
+class ResponseDTO {
+    +status: String
+    +data: Object
+    +errors: List<Error>
+}
+
+IServiceInterface <|.. ServiceImpl : implements
+IRepository <|.. RepositoryImpl : implements
+ServiceImpl --> IRepository : uses
+ServiceImpl ..> RequestDTO : receives
+ServiceImpl ..> ResponseDTO : returns
+@enduml
 ```
 
 ### Quando usare il Livello 4

@@ -26,27 +26,40 @@ generated_by: siae-microservices-map
 
 ## C4 — System Context
 
-```mermaid
-C4Context
-  title System Context — {SYSTEM_NAME}
-  System({system_id}, "{SYSTEM_NAME}", "{descrizione sistema}")
-  System_Ext({ext_1}, "{Sistema Esterno 1}", "{descrizione}")
-  Rel({system_id}, {ext_1}, "{relazione}", "{protocollo}")
+```plantuml
+@startuml C4_SystemContext
+!include <C4_Context>
+
+title System Context — SYSTEM_NAME
+
+System(system_id, "SYSTEM_NAME", "descrizione sistema")
+System_Ext(ext_1, "Sistema Esterno 1", "descrizione")
+Rel(system_id, ext_1, "relazione", "protocollo")
+@enduml
 ```
+
+> **Nota:** sostituire `SYSTEM_NAME`, `system_id`, `ext_1` e le descrizioni con i valori reali del progetto prima del rendering.
 
 ## C4 — Container Diagram
 
-```mermaid
-C4Container
-  title Container Diagram — {SYSTEM_NAME}
+```plantuml
+@startuml C4_ContainerDiagram
+!include <C4_Container>
 
-  Container({svc_1}, "{nome-repo-1}", "{Stack}", "{Scopo}")
-  Container({svc_2}, "{nome-repo-2}", "{Stack}", "{Scopo}")
+title Container Diagram — SYSTEM_NAME
 
-  Rel({svc_1}, {svc_2}, "{path chiamata}", "REST [CONFIRMED — DirittiClient.java:8]")
-  Rel({svc_1}, {svc_2}, "{topic}", "Kafka [CONFIRMED — AutoreService.java:45]")
-  Rel({svc_X}, {svc_Y}, "{path}", "REST [UNVERIFIED]")
+Container(svc_1, "nome-repo-1", "Stack", "Scopo")
+Container(svc_2, "nome-repo-2", "Stack", "Scopo")
+Container(svc_X, "nome-repo-X", "Stack", "Scopo")
+Container(svc_Y, "nome-repo-Y", "Stack", "Scopo")
+
+Rel(svc_1, svc_2, "path chiamata", "REST [CONFIRMED — DirittiClient.java:8]")
+Rel(svc_1, svc_2, "topic", "Kafka [CONFIRMED — AutoreService.java:45]")
+Rel(svc_X, svc_Y, "path", "REST [UNVERIFIED]")
+@enduml
 ```
+
+> **Nota:** sostituire `svc_1`, `svc_2`, `svc_X`, `svc_Y` e le descrizioni con i valori reali. Aggiungere `Container()` per ogni servizio prima di usarlo nelle `Rel()`.
 
 ## Dependency Graph
 

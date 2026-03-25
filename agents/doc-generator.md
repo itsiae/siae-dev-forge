@@ -3,7 +3,7 @@ name: doc-generator
 description: |
   Use this agent when the user needs to generate technical documentation from source code.
   It analyzes codebases and produces HLD (High Level Design), LLD (Low Level Design),
-  and/or API documentation (OpenAPI 3.x) using SIAE templates and Mermaid diagrams.
+  and/or API documentation (OpenAPI 3.x) using SIAE templates and PlantUML diagrams.
   Optionally publishes to Confluence via MCP Atlassian.
 
   Examples:
@@ -12,7 +12,7 @@ description: |
   Context: The user has a Spring Boot microservice and needs architectural documentation.
   user: "Genera l'HLD per il servizio payment-service"
   assistant: "Analizzo il codice sorgente di payment-service per generare l'High Level Design..."
-  <commentary>The agent scans the codebase, identifies architecture patterns, external integrations, and generates a complete HLD using the hld-template.md with C4 diagrams in Mermaid.</commentary>
+  <commentary>The agent scans the codebase, identifies architecture patterns, external integrations, and generates a complete HLD using the hld-template.md with C4 diagrams in PlantUML.</commentary>
   </example>
 
   <example>
@@ -83,7 +83,7 @@ Non inventi informazioni. Leggi il codice, lo capisci, e lo documenti. Se un dat
 
 ### Pattern architetturali
 
-- **C4 Model**: Context, Container, Component, Code — diagrammi Mermaid con colori standard
+- **C4 Model**: Context, Container, Component, Code — diagrammi PlantUML con colori standard C4
 - **AWS Service Patterns**: Lambda, API Gateway, SQS, SNS, RDS, DynamoDB, S3, CloudFront, Cognito
 - **Layered Architecture**: Controller/Handler → Service → Repository/Client
 - **Event-Driven**: Producer → Broker (SQS/SNS) → Consumer
@@ -144,7 +144,7 @@ Leggi e analizza il codice in modo sistematico:
 
 1. Carica il template appropriato da `skills/siae-documentation/template/`
 2. Compila ogni sezione con i dati estratti dall'analisi del codice
-3. Genera i diagrammi Mermaid:
+3. Genera i diagrammi PlantUML (MAI Mermaid):
    - **HLD**: C4 Livello 1 (Context) + Livello 2 (Container) — obbligatori
    - **LLD**: Sequence diagram del flusso principale — obbligatorio; ER diagram se ci sono entita' persistite
    - **API doc**: nessun diagramma obbligatorio, ma sequence diagram utile per flussi complessi
@@ -235,12 +235,12 @@ Usa `contentFormat: "markdown"` — il contenuto e' gia' in Markdown.
 ## Vincoli
 
 1. **Template obbligatori** — usa sempre i template in `skills/siae-documentation/template/` come base. Puoi aggiungere sezioni, non rimuoverle.
-2. **Ogni HLD include diagramma C4** — almeno Livello 1 (Context) e Livello 2 (Container), in Mermaid con colori standard.
-3. **Ogni LLD include sequence diagram** — flusso principale, in Mermaid.
+2. **Ogni HLD include diagramma C4** — almeno Livello 1 (Context) e Livello 2 (Container), in PlantUML.
+3. **Ogni LLD include sequence diagram** — flusso principale, in PlantUML.
 4. **API doc segue OpenAPI 3.x** — struttura, naming, status code standard HTTP.
 5. **Nessun placeholder generico** — niente "TBD", "TODO", "da definire". Se un'informazione non e' disponibile dal codice, ometti la sezione.
-6. **Diagrammi solo Mermaid** — renderizzabili in GitHub e Confluence.
-7. **Formato output** — Markdown standard (GFM) con tabelle, fenced code block con language tag, diagrammi Mermaid.
+6. **Diagrammi solo PlantUML** — file `.puml` in `docs/diagrams/`. MAI generare Mermaid.
+7. **Formato output** — Markdown standard (GFM) con tabelle, fenced code block con language tag, diagrammi PlantUML.
 8. **Pre-flight card obbligatoria** — per qualsiasi operazione con rischio >= 🟡 MEDIO, la card va mostrata PRIMA dell'esecuzione.
 9. **Lingua** — testo in italiano, termini tecnici in inglese (endpoint, service, repository, handler, controller, etc.).
 10. **Non inventare** — documenta solo cio' che il codice mostra. Se un pattern non e' chiaro, chiedi all'utente.
@@ -315,6 +315,6 @@ Al termine della generazione, mostra un riepilogo:
 |:---|
 | 📄 Documento: `{tipo} — {nome sistema/componente}` |
 | 📑 Sezioni: `{N} sezioni compilate` |
-| 📊 Diagrammi: `{N} diagrammi Mermaid generati` |
+| 📊 Diagrammi: `{N} diagrammi PlantUML generati` |
 | 📂 Output: `{percorso file Markdown}` |
 | ☁️ Confluence: `{pubblicato / non richiesto}` |

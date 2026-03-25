@@ -15,17 +15,25 @@
 |-------|-----------|-----------|
 
 ## 3. Architettura — C4 Livello 1 (Context)
-[Diagramma Mermaid: il sistema e le sue interazioni esterne]
+[Diagramma PlantUML: il sistema e le sue interazioni esterne]
 
-```mermaid
-graph TB
-    User[Utente SIAE] --> System[Nome Sistema]
-    System --> ExtService[Servizio Esterno]
-    System --> DB[(Database)]
+```plantuml
+@startuml C4_Context_HLD
+!include <C4_Context>
+
+Person(user, "Utente SIAE", "")
+System(system, "Nome Sistema", "")
+System_Ext(extService, "Servizio Esterno", "")
+SystemDb(db, "Database", "")
+
+Rel(user, system, "Usa")
+Rel(system, extService, "Chiama")
+Rel(system, db, "Legge/Scrive")
+@enduml
 ```
 
 ## 4. Architettura — C4 Livello 2 (Container)
-[Diagramma Mermaid: i container del sistema]
+[Diagramma PlantUML: i container del sistema]
 
 ## 5. Decisioni Architetturali
 | # | Decisione | Motivazione | Alternative Scartate |
