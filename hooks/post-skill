@@ -38,10 +38,24 @@ fi
 
 # Only proceed if we could extract a valid skill name
 if [ -n "$SKILL_NAME" ]; then
-    # Sanitize skill name for safe JSON embedding
+    # Step 1 (CRITICAL): Write SESSION_SKILLS_FILE first.
+    # This file is read by tdd-gate and other PreToolUse gates to verify skill
+    # invocation. It MUST be written before any logging call that can fail:
+    # with set -euo pipefail, a failing devforge_log* would exit the script
+    # before reaching this write, leaving the gate unable to detect the skill.
+    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+    EXISTING_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+    if [ -z "$EXISTING_SKILLS" ]; then
+        echo "$SKILL_NAME" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
+    elif ! echo "$EXISTING_SKILLS" | grep -qF "$SKILL_NAME"; then
+        echo "${EXISTING_SKILLS},${SKILL_NAME}" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
+    fi
+
+    # Step 2: Logging (non-critical — || true prevents set -euo pipefail from
+    # aborting the script if the JSONL log write fails).
     SAFE_SKILL_NAME=$(devforge_sanitize_json_str "$SKILL_NAME")
 
-    # Step 1: If a previous skill timestamp exists, close it with skill_completed
+    # Close the previous skill cycle before overwriting SKILL_TS_FILE
     if [ -f "$SKILL_TS_FILE" ]; then
         PREV_DATA=$(cat "$SKILL_TS_FILE")
         PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
@@ -52,27 +66,19 @@ if [ -n "$SKILL_NAME" ]; then
 
         if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
             devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
-                "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\"}"
+                "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\"}" || true
         fi
     fi
 
-    # Step 2: Log skill_invoked for the CURRENT skill and save its timestamp
     SDLC_PHASE=$(devforge_get_sdlc_phase "$SKILL_NAME")
     SAFE_SDLC_PHASE=$(devforge_sanitize_json_str "$SDLC_PHASE")
-    devforge_log "skill_invoked" "success" "{\"skill_name\":\"${SAFE_SKILL_NAME}\",\"sdlc_phase\":\"${SAFE_SDLC_PHASE}\"}"
+    devforge_log "skill_invoked" "success" "{\"skill_name\":\"${SAFE_SKILL_NAME}\",\"sdlc_phase\":\"${SAFE_SDLC_PHASE}\"}" || true
 
-    # Step 3: Save raw (unsanitized) values; JSON-escaping happens at log time
+    # Step 3 (CRITICAL): Save skill start timestamp for duration tracking.
+    # Written after logging so we don't overwrite the previous skill's data
+    # before devforge_log_timed has read it above.
     NOW_NS=$(date +%s%N 2>/dev/null || echo "0")
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
-
-    # Track skill names for session_end aggregation (atomic write via temp file)
-    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
-    EXISTING_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
-    if [ -z "$EXISTING_SKILLS" ]; then
-        echo "$SKILL_NAME" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
-    elif ! echo "$EXISTING_SKILLS" | grep -qF "$SKILL_NAME"; then
-        echo "${EXISTING_SKILLS},${SKILL_NAME}" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
-    fi
 fi
 
 # --- TDD State Machine: initialize state when siae-tdd is invoked ---
