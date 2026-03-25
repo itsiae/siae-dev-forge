@@ -153,7 +153,7 @@ Struttura del file output → vedi [reference/system-map-template.md](reference/
 Sezioni obbligatorie:
 - Frontmatter YAML (metadata: data, org, pattern, repo count, unverified count)
 - Warning anti-hallucination visibile in cima
-- C4 System Context (Mermaid)
+- C4 System Context (PlantUML)
 - C4 Container Diagram con confidence tag su ogni `Rel()`
 - Dependency Graph tabellare (From | To | Tipo | Confidence | Fonte)
 - Kafka Topic Map

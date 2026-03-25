@@ -117,6 +117,9 @@ Identifica anche:
 - Entry point e flusso dati
 - Dipendenze da config/environment SIAE
 
+NON generare diagrammi. Rispondi SOLO con testo Markdown e tabelle.
+Il parent sintetizzera' i diagrammi separatamente in PlantUML.
+
 Rispondi in markdown con header chiari per file/modulo.
 ```
 
@@ -127,7 +130,7 @@ Rispondi in markdown con header chiari per file/modulo.
 1. **Merge** tutti i report dei subagent
 2. **Deduplicazione** analisi sovrapposte
 3. **Cross-cutting concerns** (pattern trasversali, gotcha comuni)
-4. **Diagramma architetturale** con relazioni tra moduli (Mermaid)
+4. **Diagramma architetturale** con relazioni tra moduli (PlantUML)
 5. **Navigation paths** per task comuni SIAE
 
 ---
@@ -165,7 +168,7 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 ## Panoramica Sistema
 
-[Diagramma Mermaid architettura ad alto livello]
+[Diagramma PlantUML architettura ad alto livello]
 
 ## Struttura Directory
 
@@ -186,7 +189,7 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 ## Flusso Dati
 
-[Sequence diagram Mermaid per flussi principali]
+[Sequence diagram PlantUML per flussi principali]
 
 ## Convenzioni SIAE Osservate
 

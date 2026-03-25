@@ -40,7 +40,7 @@ Ogni livello aggiunge dettaglio progressivo; usa il livello minimo necessario pe
 | **3**   | Component   | Moduli interni di un singolo container            | Design dettagliato, code review di modulo          |
 | **4**   | Code        | Classi, interfacce, strutture dati                | Documentazione tecnica, onboarding sviluppatori    |
 
-> Riferimento template Mermaid: `reference/c4-template.md`
+> Riferimento template PlantUML: `reference/c4-template.md`
 
 ---
 
@@ -164,8 +164,9 @@ Servizi AWS approvati e in uso nei repository SIAE.
 | 💡 Perche': Librerie esterne introducono rischi di licenza, CVE e debito tecnico. |
 | 🚫 Se NO: Non aggiungere la dipendenza. Rivalutare se esiste un servizio AWS o modulo interno equivalente. |
 
-5. **Diagrammi in Mermaid** — tutti i diagrammi architetturali devono essere in sintassi Mermaid,
-   renderizzabili in GitHub e Confluence.
+5. **Diagrammi in PlantUML** — tutti i diagrammi architetturali devono essere in sintassi PlantUML.
+   Nei documenti Markdown: blocchi ` ```plantuml ` inline. Per rendering standalone: file `.puml` in `docs/diagrams/`.
+   **MAI usare Mermaid. MAI usare ASCII art.**
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-architecture |
 |:---|

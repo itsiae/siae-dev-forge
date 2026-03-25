@@ -49,7 +49,7 @@ Dettaglio implementativo di un componente o feature. Risponde a: "come si implem
 
 | Contenuto            | Dettaglio                                              |
 |----------------------|--------------------------------------------------------|
-| Data model           | Entita', relazioni, schema DB (diagramma ER Mermaid)   |
+| Data model           | Entita', relazioni, schema DB (diagramma ER PlantUML)  |
 | Sequence diagram     | Flusso principale e flussi alternativi                 |
 | API contract         | Endpoint, request/response, status code                |
 | Error handling       | Scenari di errore, codici, messaggi, azioni            |
@@ -96,12 +96,12 @@ Regola pratica:
 
 ## 3. Formato Output
 
-Tutto l'output e' in **Markdown** con diagrammi **Mermaid**.
+Tutto l'output e' in **Markdown** con diagrammi **PlantUML**.
 
 | Elemento             | Formato                                                |
 |----------------------|--------------------------------------------------------|
 | Testo                | Markdown standard (GFM)                                |
-| Diagrammi            | Mermaid (renderizzabile in GitHub e Confluence)        |
+| Diagrammi            | PlantUML (file .puml in docs/diagrams/)                |
 | Tabelle              | Markdown table con header                              |
 | Code snippet         | Fenced code block con language tag                     |
 
@@ -192,7 +192,7 @@ Invoca `siae-verification` prima di dichiarare la documentazione completa.
 3. L'utente puo' copiare il contenuto manualmente nel file
 4. Se anche la pubblicazione Confluence e' richiesta, fornisci il contenuto pronto per copia
 
-**Fasi completabili senza permessi:** generazione documento (analisi codebase con Read/Grep), diagrammi Mermaid
+**Fasi completabili senza permessi:** generazione documento (analisi codebase con Read/Grep), diagrammi PlantUML
 **Fasi che richiedono permessi:** Write (salvataggio file), MCP Atlassian (pubblicazione Confluence)
 
 Se i permessi sono negati:
@@ -205,11 +205,12 @@ Se i permessi sono negati:
 
 ## 6. Vincoli
 
-1. **Ogni HLD include diagramma C4** — almeno Livello 1 (Context), in Mermaid
-2. **Ogni LLD include sequence diagram** — flusso principale, in Mermaid
+1. **Ogni HLD include diagramma C4** — almeno Livello 1 (Context), in PlantUML
+2. **Ogni LLD include sequence diagram** — flusso principale, in PlantUML
 3. **API doc segue OpenAPI 3.x** — struttura, naming, status code standard
 4. **Nessun placeholder generico** — niente "TBD", "TODO", "da definire".
    Se un'informazione non e' disponibile, ometti la sezione. Non inventare.
-5. **Diagrammi solo Mermaid** — renderizzabili in GitHub e Confluence
+5. **Diagrammi solo PlantUML** — nei documenti Markdown: blocchi ` ```plantuml ` inline.
+   Per rendering standalone: file `.puml` in `docs/diagrams/`. **MAI usare Mermaid.**
 6. **Template obbligatori** — usa i template in `template/` come base.
    Puoi aggiungere sezioni, non rimuoverle.

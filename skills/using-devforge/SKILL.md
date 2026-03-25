@@ -151,6 +151,19 @@ Non bypassarlo mai, nemmeno per task "semplici".
 
 ---
 
+## Formato Diagrammi — Regola Inviolabile
+
+<EXTREMELY-IMPORTANT>
+OGNI diagramma generato da DevForge DEVE usare sintassi PlantUML (@startuml/@enduml).
+MAI generare Mermaid (```mermaid). MAI generare ASCII art per diagrammi architetturali.
+Questo vale SEMPRE: con o senza skill invocata, per qualsiasi output visivo
+(architettura, flussi, ER, sequence, C4, deployment, class diagram).
+
+Template C4 PlantUML: skills/siae-architecture/reference/c4-template.md
+</EXTREMELY-IMPORTANT>
+
+---
+
 ## Red Flags
 
 Questi pensieri significano STOP — stai razionalizzando:

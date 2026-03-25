@@ -154,7 +154,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-test`      | Genera suite test TDD seguendo RED-GREEN-REFACTOR                                               | `siae-tdd`                 |
 | `/forge-automate`  | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web)              | `siae-automation`          |
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality)                       | `siae-subagent-development` |
-| `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e Mermaid                        | `siae-documentation`       |
+| `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e PlantUML                       | `siae-documentation`       |
 | `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per microservizi | `siae-service-logic-map`   |
 
 > **Nota:** Le funzionalita' precedentemente disponibili come comandi dedicati (`/forge-map`, `/forge-sysmap`, `/forge-plan`, `/forge-qa`, `/forge-review`, `/forge-rca`, `/forge-logic-search`) sono ora invocabili direttamente come skill via `using-devforge` (auto-discovery).
@@ -174,7 +174,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 # Dispatcha subagent freschi per ogni task del piano, con review spec + quality
 
 > /forge-doc HLD
-# Claude genera un High Level Design doc con diagrammi C4 in Mermaid
+# Claude genera un High Level Design doc con diagrammi C4 in PlantUML
 
 > /forge-logic-build sport-fdc-*
 # Costruisce catalogo L1+L2+L3 per cluster di microservizi
@@ -275,7 +275,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   2. Scansione con `scripts/scan-codebase.py` (tiktoken) — albero file con conteggio token
   3. Pianifica i subagent raggruppando per modulo/layer (budget: 150k token ciascuno)
   4. Dispatcha TUTTI i subagent Sonnet in parallelo (singolo messaggio con chiamate Task)
-  5. Sintetizza i report: merge, deduplicazione, cross-cutting concerns, diagramma Mermaid
+  5. Sintetizza i report: merge, deduplicazione, cross-cutting concerns, diagramma PlantUML
   6. Scrive `docs/CODEBASE_MAP.md` con frontmatter `last_mapped`, `total_files`, `total_tokens`
   7. Aggiorna `CLAUDE.md` con sezione architettura
 - **Strategia per stack SIAE:** Java per modulo Maven, TS per layer (handlers/services/repositories), Python/Glue per job, IaC per ambiente, Vue per feature/dominio
@@ -463,7 +463,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   1. **HLD (High Level Design):** Visione sistema, C4 livello 1-2, decisioni architetturali, NFR
   2. **LLD (Low Level Design):** Dettaglio componenti, sequence diagram, data model, API contract
   3. **API Documentation:** OpenAPI/Swagger spec, endpoint reference, auth, error codes
-- **Output:** Markdown con diagrammi Mermaid, pubblicabile su Confluence via MCP
+- **Output:** Markdown con diagrammi PlantUML, pubblicabile su Confluence via MCP
 - **Template files:** `template/hld-template.md`, `template/lld-template.md`, `template/api-doc-template.md`
 - **Tipo:** Flexible
 
@@ -660,7 +660,7 @@ Verifica che l'implementazione corrisponda al design doc:
 
 Analizza il codice sorgente e genera documentazione:
 
-- HLD da template (diagrammi C4 in Mermaid)
+- HLD da template (diagrammi C4 in PlantUML)
 - LLD da template (sequence diagram, data model)
 - API doc OpenAPI/Swagger
 

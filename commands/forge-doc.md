@@ -1,6 +1,6 @@
 ---
 name: forge-doc
-description: "Genera documentazione tecnica SIAE: HLD, LLD, API doc con template e diagrammi Mermaid"
+description: "Genera documentazione tecnica SIAE: HLD, LLD, API doc con template e diagrammi PlantUML"
 disable-model-invocation: true
 ---
 

@@ -161,7 +161,7 @@ Legge `docs/SYSTEM_MAP.md` ed estrae i cluster dal grafo delle dipendenze.
 cat docs/SYSTEM_MAP.md
 ```
 
-Analizza il blocco Mermaid in SYSTEM_MAP.md:
+Analizza il blocco PlantUML in SYSTEM_MAP.md:
 1. Estrai le edge `A --> B` (dipendenze dirette tra servizi)
 2. Raggruppa per connettivita': servizi con dipendenze reciproche o path condivisi = stesso cluster
 3. Servizi isolati (nessuna edge) = cluster singleton

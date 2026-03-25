@@ -12,14 +12,26 @@
 ## 2. Data Model
 [Entita', relazioni, schema DB]
 
-```mermaid
-erDiagram
-    ENTITY_A ||--o{ ENTITY_B : has
-    ENTITY_A {
-        string id PK
-        string name
-        datetime created_at
-    }
+```plantuml
+@startuml DataModel
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+entity "ENTITY_A" as A {
+    *id : STRING <<PK>>
+    --
+    name : STRING
+    created_at : DATETIME
+}
+
+entity "ENTITY_B" as B {
+    *id : STRING <<PK>>
+    --
+    entity_a_id : STRING <<FK>>
+}
+
+A ||--o{ B : has
+@enduml
 ```
 
 ## 3. API Contract
@@ -27,12 +39,24 @@ erDiagram
 
 ## 4. Sequence Diagram — Flusso Principale
 
-```mermaid
-sequenceDiagram
-    Client->>+API: POST /resource
-    API->>+DB: INSERT
-    DB-->>-API: OK
-    API-->>-Client: 201 Created
+```plantuml
+@startuml SequenceFlusso
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+actor Client
+participant API
+database DB
+
+Client -> API : POST /resource
+activate API
+API -> DB : INSERT
+activate DB
+DB --> API : OK
+deactivate DB
+API --> Client : 201 Created
+deactivate API
+@enduml
 ```
 
 ## 5. Error Handling

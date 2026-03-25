@@ -1,6 +1,6 @@
 # AWS Architecture Patterns — SIAE
 
-Pattern architetturali AWS dettagliati con diagrammi Mermaid.
+Pattern architetturali AWS dettagliati con diagrammi PlantUML.
 Estratti dai repository reali dell'organizzazione `itsiae`.
 
 ---
@@ -11,22 +11,28 @@ Pattern per API serverless (TypeScript/Node.js).
 
 ### Architettura
 
-```mermaid
-graph LR
-    Client[Client / SPA] -->|HTTPS| APIGW[API Gateway]
-    APIGW -->|Proxy| Lambda[Lambda Function]
-    Lambda -->|Query| RDS[(PostgreSQL RDS)]
-    Lambda -->|Cache / Session| DDB[(DynamoDB)]
-    Lambda -->|Secrets| SM[Secrets Manager]
-    APIGW -->|Auth| Cognito[Cognito User Pool]
+```plantuml
+@startuml Lambda_APIGateway
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style Client fill:#e1f5fe
-    style APIGW fill:#fff3e0
-    style Lambda fill:#fff3e0
-    style RDS fill:#e8f5e9
-    style DDB fill:#e8f5e9
-    style SM fill:#fce4ec
-    style Cognito fill:#fce4ec
+actor "Client / SPA" as Client
+rectangle "API Gateway" as APIGW
+rectangle "Lambda Function" as Lambda
+database "PostgreSQL RDS" as RDS
+database "DynamoDB" as DDB
+rectangle "Secrets Manager" as SM
+rectangle "Cognito User Pool" as Cognito
+
+Client --> APIGW : HTTPS
+APIGW --> Lambda : Proxy
+Lambda --> RDS : Query
+Lambda --> DDB : Cache / Session
+Lambda --> SM : Secrets
+APIGW --> Cognito : Auth
+@enduml
 ```
 
 ### Componenti
@@ -42,18 +48,24 @@ graph LR
 
 ### Flusso di deploy
 
-```mermaid
-graph LR
-    GH[GitHub Push] -->|Actions| Build[esbuild Bundle]
-    Build --> Zip[ZIP Artifact]
-    Zip --> Deploy[aws lambda update-function-code]
-    Deploy --> APIGW[API Gateway Stage]
+```plantuml
+@startuml Lambda_Deploy
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style GH fill:#f3e5f5
-    style Build fill:#fff3e0
-    style Zip fill:#fff3e0
-    style Deploy fill:#e8f5e9
-    style APIGW fill:#e8f5e9
+rectangle "GitHub Push" as GH
+rectangle "esbuild Bundle" as Build
+rectangle "ZIP Artifact" as Zip
+rectangle "aws lambda\nupdate-function-code" as Deploy
+rectangle "API Gateway Stage" as APIGW
+
+GH --> Build : Actions
+Build --> Zip
+Zip --> Deploy
+Deploy --> APIGW
+@enduml
 ```
 
 ---
@@ -64,25 +76,31 @@ Pattern per pipeline dati con architettura Medallion.
 
 ### Architettura
 
-```mermaid
-graph TD
-    EB[EventBridge Rule] -->|Trigger| SF[Step Functions]
-    SF -->|Step 1| Ingest[Glue Job: Ingest]
-    SF -->|Step 2| Transform[Glue Job: Transform]
-    Ingest -->|Write| Bronze[S3: bronze/]
-    Transform -->|Read| Bronze
-    Transform -->|Write| Silver[S3: silver/]
-    Silver -->|Catalog| GC[Glue Data Catalog]
-    GC -->|Query| Athena[Athena]
+```plantuml
+@startuml Glue_ETL
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+top to bottom direction
 
-    style EB fill:#fff3e0
-    style SF fill:#fff3e0
-    style Ingest fill:#e1f5fe
-    style Transform fill:#e1f5fe
-    style Bronze fill:#e8f5e9
-    style Silver fill:#e8f5e9
-    style GC fill:#f3e5f5
-    style Athena fill:#f3e5f5
+rectangle "EventBridge Rule" as EB
+rectangle "Step Functions" as SF
+rectangle "Glue Job: Ingest" as Ingest
+rectangle "Glue Job: Transform" as Transform
+database "S3: bronze/" as Bronze
+database "S3: silver/" as Silver
+rectangle "Glue Data Catalog" as GC
+rectangle "Athena" as Athena
+
+EB --> SF : Trigger
+SF --> Ingest : Step 1
+SF --> Transform : Step 2
+Ingest --> Bronze : Write
+Transform --> Bronze : Read
+Transform --> Silver : Write
+Silver --> GC : Catalog
+GC --> Athena : Query
+@enduml
 ```
 
 ### Componenti
@@ -117,29 +135,35 @@ Pattern per microservizi Java su OpenShift.
 
 ### Architettura
 
-```mermaid
-graph LR
-    LB[OpenShift Route / Ingress] -->|HTTPS| SVC[Service]
-    SVC --> Pod1[Pod: Spring Boot]
-    SVC --> Pod2[Pod: Spring Boot]
-    Pod1 -->|JDBC| RDS[(PostgreSQL RDS)]
-    Pod2 -->|JDBC| RDS
-    Pod1 -->|Publish| SNS[SNS Topic]
-    SNS -->|Subscribe| SQS[SQS Queue]
-    SQS -->|Consume| OtherSvc[Other Microservice]
-    Pod1 -->|Metrics| Prom[Prometheus]
-    Prom --> Graf[Grafana]
+```plantuml
+@startuml OpenShift_Microservice
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style LB fill:#e1f5fe
-    style SVC fill:#e1f5fe
-    style Pod1 fill:#fff3e0
-    style Pod2 fill:#fff3e0
-    style RDS fill:#e8f5e9
-    style SNS fill:#f3e5f5
-    style SQS fill:#f3e5f5
-    style OtherSvc fill:#fff3e0
-    style Prom fill:#fce4ec
-    style Graf fill:#fce4ec
+rectangle "OpenShift Route\n/ Ingress" as LB
+rectangle "Service" as SVC
+rectangle "Pod: Spring Boot" as Pod1
+rectangle "Pod: Spring Boot" as Pod2
+database "PostgreSQL RDS" as RDS
+rectangle "SNS Topic" as SNS
+rectangle "SQS Queue" as SQS
+rectangle "Other Microservice" as OtherSvc
+rectangle "Prometheus" as Prom
+rectangle "Grafana" as Graf
+
+LB --> SVC : HTTPS
+SVC --> Pod1
+SVC --> Pod2
+Pod1 --> RDS : JDBC
+Pod2 --> RDS : JDBC
+Pod1 --> SNS : Publish
+SNS --> SQS : Subscribe
+SQS --> OtherSvc : Consume
+Pod1 --> Prom : Metrics
+Prom --> Graf
+@enduml
 ```
 
 ### Componenti
@@ -156,20 +180,26 @@ graph LR
 
 ### Flusso di deploy
 
-```mermaid
-graph LR
-    GH[GitHub Push] -->|Actions| Maven[Maven Build + Test]
-    Maven --> Docker[Docker Build]
-    Docker --> Registry[Container Registry]
-    Registry --> Helm[Helm Upgrade]
-    Helm --> OCP[OpenShift Cluster]
+```plantuml
+@startuml OpenShift_Deploy
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style GH fill:#f3e5f5
-    style Maven fill:#fff3e0
-    style Docker fill:#fff3e0
-    style Registry fill:#e8f5e9
-    style Helm fill:#e8f5e9
-    style OCP fill:#e1f5fe
+rectangle "GitHub Push" as GH
+rectangle "Maven Build + Test" as Maven
+rectangle "Docker Build" as Docker
+rectangle "Container Registry" as Registry
+rectangle "Helm Upgrade" as Helm
+rectangle "OpenShift Cluster" as OCP
+
+GH --> Maven : Actions
+Maven --> Docker
+Docker --> Registry
+Registry --> Helm
+Helm --> OCP
+@enduml
 ```
 
 ---
@@ -180,20 +210,26 @@ Pattern per applicazioni frontend Vue.js.
 
 ### Architettura
 
-```mermaid
-graph LR
-    User[Browser] -->|HTTPS| CF[CloudFront]
-    CF -->|Origin| S3[S3 Bucket - Static Assets]
-    CF -->|API Proxy| APIGW[API Gateway]
-    User -->|Auth| Cognito[Cognito]
-    User -->|Feature Flags| Firebase[Firebase Remote Config]
+```plantuml
+@startuml SPA_CloudFront
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style User fill:#e1f5fe
-    style CF fill:#fff3e0
-    style S3 fill:#e8f5e9
-    style APIGW fill:#fff3e0
-    style Cognito fill:#fce4ec
-    style Firebase fill:#f3e5f5
+actor "Browser" as User
+rectangle "CloudFront" as CF
+database "S3 Bucket\nStatic Assets" as S3
+rectangle "API Gateway" as APIGW
+rectangle "Cognito" as Cognito
+rectangle "Firebase\nRemote Config" as Firebase
+
+User --> CF : HTTPS
+CF --> S3 : Origin
+CF --> APIGW : API Proxy
+User --> Cognito : Auth
+User --> Firebase : Feature Flags
+@enduml
 ```
 
 ### Componenti
@@ -220,14 +256,20 @@ Error Pages:
 
 ### Flusso di deploy
 
-```mermaid
-graph LR
-    GH[GitHub Push] -->|Actions| Build[npm run build - Vite]
-    Build --> Sync[aws s3 sync dist/]
-    Sync --> Invalidate[CloudFront Invalidation]
+```plantuml
+@startuml SPA_Deploy
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    style GH fill:#f3e5f5
-    style Build fill:#fff3e0
-    style Sync fill:#e8f5e9
-    style Invalidate fill:#e8f5e9
+rectangle "GitHub Push" as GH
+rectangle "npm run build\nVite" as Build
+rectangle "aws s3 sync dist/" as Sync
+rectangle "CloudFront\nInvalidation" as Invalidate
+
+GH --> Build : Actions
+Build --> Sync
+Sync --> Invalidate
+@enduml
 ```

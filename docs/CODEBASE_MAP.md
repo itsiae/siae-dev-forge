@@ -99,7 +99,7 @@ siae-dev-forge/
 │   ├── siae-qa/                 # Test plan + test case Xray
 │   ├── siae-automation/         # E2E automation (Cypress, Appium, BrowserStack)
 │   ├── siae-verification/       # 5-step protocol pre-completamento
-│   ├── siae-documentation/      # HLD, LLD, API doc (template + Mermaid)
+│   ├── siae-documentation/      # HLD, LLD, API doc (template + PlantUML)
 │   └── siae-writing-skills/     # Meta: creare/migliorare skill DevForge
 ├── tests/
 │   ├── run-all.sh               # Entry point suite test (35 check)
