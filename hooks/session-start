@@ -114,7 +114,42 @@ fi
 
 version_status_escaped=$(escape_for_json "$VERSION_STATUS")
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}\n</EXTREMELY_IMPORTANT>"
+# --- Branching compliance check (repo corrente) ---
+BRANCHING_SUMMARY=""
+if command -v gh >/dev/null 2>&1; then
+    CURRENT_REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")
+    if [ -n "$CURRENT_REPO" ]; then
+        DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo "main")
+        VIOLS=0
+        VIOL_DETAILS=""
+
+        if [ "$DEFAULT_BRANCH" != "main" ]; then
+            VIOLS=$((VIOLS + 1))
+            VIOL_DETAILS="default branch is \`${DEFAULT_BRANCH}\` (atteso: \`main\`)"
+        else
+            BAD_PRS=$(gh pr list --base main --state open \
+                --json number,headRefName \
+                --jq '[.[] | select(.headRefName | test("^release/") | not) | "#\(.number) (\(.headRefName))"] | join(", ")' 2>/dev/null || echo "")
+            if [ -n "$BAD_PRS" ]; then
+                VIOLS=$((VIOLS + 1))
+                VIOL_DETAILS="PR verso main da branch non-release: ${BAD_PRS}"
+            fi
+        fi
+
+        if [ "$VIOLS" -gt 0 ]; then
+            BRANCHING_SUMMARY="⚠️ Branching compliance [${CURRENT_REPO}]: ${VIOL_DETAILS} — invoca /branching-strategy-check per dettagli."
+        fi
+    fi
+fi
+
+branching_section=""
+if [ -n "$BRANCHING_SUMMARY" ]; then
+    branching_summary_escaped=$(escape_for_json "$BRANCHING_SUMMARY")
+    branching_section="\\n\\n${branching_summary_escaped}"
+fi
+# --- End branching compliance ---
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # Keep both shapes for compatibility:
