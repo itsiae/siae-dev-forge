@@ -12,31 +12,61 @@ stack: [bash, javascript, markdown]
 
 Plugin Claude Code che standardizza il ciclo di vita software SIAE su ~816 repository, 4 factory, ~20 developer. Composto da 25 skill + 9 comandi + 3 agent + 3 hook lifecycle.
 
-```mermaid
-graph TD
-    User([Developer SIAE]) --> CC[Claude Code]
-    CC --> Plugin[siae-dev-forge Plugin]
+```plantuml
+@startuml PanoramicaSistema
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+top to bottom direction
 
-    Plugin --> Hooks[3 Hook Lifecycle]
-    Plugin --> Skills[25 Skill SDLC]
-    Plugin --> Commands[9 Comandi /forge-*]
-    Plugin --> Agents[3 Agent specializzati]
+actor "Developer SIAE" as User
+rectangle "Claude Code" as CC
+rectangle "siae-dev-forge Plugin" as Plugin
 
-    Hooks --> SessionStart[SessionStart\ninietta catalog + meta-skill]
-    Hooks --> PreCommit[PreToolUse:Bash\nquality gate pre-commit]
-    Hooks --> PostSkill[PostToolUse:Skill\nlogging JSONL]
+rectangle "3 Hook Lifecycle" as Hooks
+rectangle "25 Skill SDLC" as Skills
+rectangle "9 Comandi /forge-*" as Commands
+rectangle "3 Agent specializzati" as Agents
 
-    Skills --> SDLC1[Init: onboarding, codebase-map, git-worktrees]
-    Skills --> SDLC2[Design: brainstorming, writing-plans]
-    Skills --> SDLC3[Branching: git-workflow, finishing-branch,\nrequesting-review, receiving-review]
-    Skills --> SDLC4[Implementation: subagent-development,\ntdd, code-standards, security, iac,\ndata-engineering, frontend, architecture,\nparallel-agents]
-    Skills --> SDLC5[Testing: qa, automation, verification, debugging]
-    Skills --> SDLC7[Release: documentation]
-    Skills --> Meta[Meta: writing-skills, using-devforge]
+rectangle "SessionStart\ninietta catalog + meta-skill" as SessionStart
+rectangle "PreToolUse:Bash\nquality gate pre-commit" as PreCommit
+rectangle "PostToolUse:Skill\nlogging JSONL" as PostSkill
 
-    Agents --> CodeReviewer[code-reviewer\nreview 6 punti SIAE]
-    Agents --> SpecReviewer[spec-reviewer\nconformita al piano]
-    Agents --> DocGenerator[doc-generator\nHLD/LLD/API doc]
+rectangle "Init: onboarding,\ncodebase-map, git-worktrees" as SDLC1
+rectangle "Design: brainstorming,\nwriting-plans" as SDLC2
+rectangle "Branching: git-workflow,\nfinishing-branch" as SDLC3
+rectangle "Implementation: subagent-dev,\ntdd, code-standards, security" as SDLC4
+rectangle "Testing: qa, automation,\nverification, debugging" as SDLC5
+rectangle "Release: documentation" as SDLC7
+rectangle "Meta: writing-skills,\nusing-devforge" as Meta
+
+rectangle "code-reviewer\nreview 6 punti SIAE" as CodeReviewer
+rectangle "spec-reviewer\nconformita al piano" as SpecReviewer
+rectangle "doc-generator\nHLD/LLD/API doc" as DocGenerator
+
+User --> CC
+CC --> Plugin
+Plugin --> Hooks
+Plugin --> Skills
+Plugin --> Commands
+Plugin --> Agents
+
+Hooks --> SessionStart
+Hooks --> PreCommit
+Hooks --> PostSkill
+
+Skills --> SDLC1
+Skills --> SDLC2
+Skills --> SDLC3
+Skills --> SDLC4
+Skills --> SDLC5
+Skills --> SDLC7
+Skills --> Meta
+
+Agents --> CodeReviewer
+Agents --> SpecReviewer
+Agents --> DocGenerator
+@enduml
 ```
 
 ## Struttura Directory
@@ -167,17 +197,33 @@ siae-dev-forge/
 
 #### Catena SDLC (7 fasi)
 
-```mermaid
-graph LR
-    Init[1. Init\nonboarding\ncodebase-map\ngit-worktrees] -->
-    Design[2. Design\nbrainstorming\nwriting-plans] -->
-    Branch[3. Branching\ngit-workflow\nfinishing-branch\nrequesting-review] -->
-    Impl[4. Implementation\nsubagent-development\ntdd\ncode-standards\nsecurity\niac\ndata-engineering\nfrontend\narchitecture\nparallel-agents] -->
-    Test[5. Testing/QA\nqa\nautomation\nverification] -->
-    Gate[6. QA Gate\ndebugging\nreceiving-review] -->
-    Release[7. Release\ndocumentation]
+```plantuml
+@startuml CatenaSDLC
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
 
-    CrossCut[Cross-cutting\nusing-devforge\nverification\nwriting-skills]
+rectangle "1. Init\nonboarding\ncodebase-map\ngit-worktrees" as Init
+rectangle "2. Design\nbrainstorming\nwriting-plans" as Design
+rectangle "3. Branching\ngit-workflow\nfinishing-branch" as Branch
+rectangle "4. Implementation\nsubagent-dev, tdd\ncode-standards, security" as Impl
+rectangle "5. Testing/QA\nqa, automation\nverification" as Test
+rectangle "6. QA Gate\ndebugging\nreceiving-review" as Gate
+rectangle "7. Release\ndocumentation" as Release
+
+Init --> Design
+Design --> Branch
+Branch --> Impl
+Impl --> Test
+Test --> Gate
+Gate --> Release
+
+note bottom of Release
+  Cross-cutting: using-devforge,
+  verification, writing-skills
+end note
+@enduml
 ```
 
 #### Skill per fase
@@ -218,31 +264,35 @@ graph LR
 
 Il pattern centrale di implementazione usa subagent freschi per evitare bias:
 
-```mermaid
-sequenceDiagram
-    participant O as Orchestratore\n(siae-subagent-development)
-    participant I as Implementer\n(subagent fresco, TDD)
-    participant S as Spec-Reviewer\n(subagent fresco)
-    participant Q as Code-Quality-Reviewer\n(subagent fresco)
-    participant V as siae-verification
+```plantuml
+@startuml ControllerSubagent
+skinparam defaultFontName Arial
+skinparam shadowing false
 
-    O->>I: Task + design doc + standard SIAE
-    I->>I: RED-GREEN-REFACTOR (siae-tdd)
-    I->>O: Report completamento
-    O->>S: Design doc + file modificati
-    S->>S: DISTRUST: "finito sospettosamente in fretta"
-    S->>O: PASS/FAIL + discrepanze
-    alt FAIL
-        O->>I: Fix richiesto (max 2 iterazioni)
-    end
-    O->>Q: File modificati + task
-    Q->>Q: 6 punti SIAE (standard, security, test, arch, quality, doc)
-    Q->>O: APPROVED/CHANGES REQUESTED/BLOCKED
-    alt CHANGES/BLOCKED
-        O->>I: Fix richiesto (max 2 iterazioni)
-    end
-    O->>V: IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA
-    V->>O: VERIFICA COMPLETATA
+participant "Orchestratore\n(siae-subagent-development)" as O
+participant "Implementer\n(subagent fresco, TDD)" as I
+participant "Spec-Reviewer\n(subagent fresco)" as S
+participant "Code-Quality-Reviewer\n(subagent fresco)" as Q
+participant "siae-verification" as V
+
+O -> I : Task + design doc + standard SIAE
+I -> I : RED-GREEN-REFACTOR (siae-tdd)
+I -> O : Report completamento
+O -> S : Design doc + file modificati
+S -> S : DISTRUST: "finito sospettosamente in fretta"
+S -> O : PASS/FAIL + discrepanze
+alt FAIL
+    O -> I : Fix richiesto (max 2 iterazioni)
+end
+O -> Q : File modificati + task
+Q -> Q : 6 punti SIAE (standard, security, test, arch, quality, doc)
+Q -> O : APPROVED/CHANGES REQUESTED/BLOCKED
+alt CHANGES/BLOCKED
+    O -> I : Fix richiesto (max 2 iterazioni)
+end
+O -> V : IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA
+V -> O : VERIFICA COMPLETATA
+@enduml
 ```
 
 #### Catena REQUIRED SUB-SKILL
@@ -312,51 +362,59 @@ Le skill Rigid non ammettono eccezioni:
 
 ### Session Initialization
 
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant CC as Claude Code
-    participant Hook as session-start
-    participant SC as skills-core.js
-    participant Log as logger.sh
+```plantuml
+@startuml SessionInit
+skinparam defaultFontName Arial
+skinparam shadowing false
 
-    Dev->>CC: Avvia sessione
-    CC->>Hook: SessionStart trigger
-    Hook->>Log: devforge_new_sid()
-    Hook->>SC: node lib/skills-core.js
-    SC->>SC: Scansiona skills/ directory
-    SC->>SC: Estrae frontmatter YAML
-    SC->>Hook: Catalogo 25 skill Markdown
-    Hook->>CC: additionalContext (banner + catalog + using-devforge)
-    CC->>Dev: Claude pronto con skill catalog
+actor Developer as Dev
+participant "Claude Code" as CC
+participant "session-start" as Hook
+participant "skills-core.js" as SC
+participant "logger.sh" as Log
+
+Dev -> CC : Avvia sessione
+CC -> Hook : SessionStart trigger
+Hook -> Log : devforge_new_sid()
+Hook -> SC : node lib/skills-core.js
+SC -> SC : Scansiona skills/ directory
+SC -> SC : Estrae frontmatter YAML
+SC -> Hook : Catalogo 25 skill Markdown
+Hook -> CC : additionalContext (banner + catalog + using-devforge)
+CC -> Dev : Claude pronto con skill catalog
+@enduml
 ```
 
 ### Piano Implementativo → Codice
 
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant Brain as siae-brainstorming
-    participant Plans as siae-writing-plans
-    participant Sub as siae-subagent-development
-    participant TDD as siae-tdd (implementer)
-    participant SR as spec-reviewer
-    participant QR as code-quality-reviewer
-    participant Ver as siae-verification
+```plantuml
+@startuml PianoImplementativo
+skinparam defaultFontName Arial
+skinparam shadowing false
 
-    Dev->>Brain: Feature request
-    Brain->>Brain: 6 punti (explore, domande, approcci, design)
-    Brain->>Plans: Design doc approvato
-    Plans->>Plans: Decomposizione task bite-sized
-    Plans->>Sub: Piano in docs/plans/
-    Sub->>TDD: Task con contesto fresco
-    TDD->>TDD: RED-GREEN-REFACTOR
-    TDD->>Sub: Report completamento
-    Sub->>SR: Verifica conformita piano
-    Sub->>QR: Verifica qualita codice
-    QR->>Sub: APPROVED
-    Sub->>Ver: IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA
-    Ver->>Dev: VERIFICA COMPLETATA
+actor Developer as Dev
+participant "siae-brainstorming" as Brain
+participant "siae-writing-plans" as Plans
+participant "siae-subagent-development" as Sub
+participant "siae-tdd (implementer)" as TDD
+participant "spec-reviewer" as SR
+participant "code-quality-reviewer" as QR
+participant "siae-verification" as Ver
+
+Dev -> Brain : Feature request
+Brain -> Brain : 6 punti (explore, domande, approcci, design)
+Brain -> Plans : Design doc approvato
+Plans -> Plans : Decomposizione task bite-sized
+Plans -> Sub : Piano in docs/plans/
+Sub -> TDD : Task con contesto fresco
+TDD -> TDD : RED-GREEN-REFACTOR
+TDD -> Sub : Report completamento
+Sub -> SR : Verifica conformita piano
+Sub -> QR : Verifica qualita codice
+QR -> Sub : APPROVED
+Sub -> Ver : IDENTIFICA-ESEGUI-LEGGI-VERIFICA-AFFERMA
+Ver -> Dev : VERIFICA COMPLETATA
+@enduml
 ```
 
 ---

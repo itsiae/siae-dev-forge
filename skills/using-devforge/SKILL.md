@@ -159,6 +159,9 @@ MAI generare Mermaid (```mermaid). MAI generare ASCII art per diagrammi architet
 Questo vale SEMPRE: con o senza skill invocata, per qualsiasi output visivo
 (architettura, flussi, ER, sequence, C4, deployment, class diagram).
 
+Eccezione: i flowchart di processo interni alle skill (```dot / Graphviz) sono accettati
+per rappresentare flussi decisionali del plugin stesso — non sono output utente.
+
 Template C4 PlantUML: skills/siae-architecture/reference/c4-template.md
 </EXTREMELY-IMPORTANT>
 
