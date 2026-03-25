@@ -63,6 +63,7 @@ skill_catalog_escaped=$(escape_for_json "$skill_catalog")
 # Not the full using-devforge skill — just enough to keep Claude on track
 COMPACT_CONTEXT="<EXTREMELY_IMPORTANT>\\n\
 🔨 DevForge Context Refresh (messaggio #${COUNT})\\n\\n\
+**AZIONE IMMEDIATA:** Prima di rispondere a questo messaggio, stampa su una riga separata esattamente: '🔄 DevForge re-iniettato (msg #${COUNT})'\\n\\n\
 **OBBLIGO:** Per OGNI messaggio utente, scansiona il Dynamic Skill Catalog sotto. Se trovi un match anche parziale, invoca la skill PRIMA di rispondere.\\n\\n\
 **Git Operations Intercept:** Prima di QUALSIASI git command (checkout, commit, push, merge, tag, gh pr create), verifica di aver invocato siae-git-workflow. Prima di aprire una PR, verifica siae-finishing-branch.\\n\\n\
 **EnterPlanMode Intercept:** Prima di EnterPlanMode, verifica che il brainstorming sia stato fatto (siae-brainstorming).\\n\\n\

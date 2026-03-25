@@ -62,6 +62,11 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
 fi
 # --- End telemetry ---
 
+# --- Default values if guard did not execute (guard already existed) ---
+COMMITS_COUNT="${COMMITS_COUNT:-0}"
+SKILLS_LIST="${SKILLS_LIST:-}"
+SKILLS_USED_COUNT="${SKILLS_USED_COUNT:-0}"
+
 # --- BLOCCO 3: Verification reminder (F5: skip if stdin empty) ---
 if [ -z "$INPUT" ]; then
     exit 0
@@ -122,34 +127,27 @@ if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
     exit 0
 fi
 
-# Completion claim detected — check if siae-verification was invoked
-SESSION_SKILLS_FILE_CHECK="${HOME}/.claude/.devforge-session-skills"
-SESSION_SKILLS_CHECK=$(cat "$SESSION_SKILLS_FILE_CHECK" 2>/dev/null || echo "")
+# Completion claim detected — use in-memory SKILLS_LIST (file was cleaned in telemetry block above)
+SKILLS_LIST_CURRENT="${SKILLS_LIST:-}"
 
-if echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-verification"; then
-    # Verification was invoked — check retrospective for productive sessions
-    RETRO_REMINDED_FILE="${HOME}/.claude/.devforge-retro-reminded"
-    if [ "$COMMITS_COUNT" -gt 0 ] && ! echo "$SESSION_SKILLS_CHECK" | grep -qF "siae-retrospective"; then
-        # Productive session without retrospective — soft block (1 attempt)
-        if [ -f "$RETRO_REMINDED_FILE" ]; then
-            # Second attempt — allow stop with warning
-            devforge_log "stop_gate" "escaped" '{"reason":"retrospective_skipped","commits":'${COMMITS_COUNT}'}'
-            rm -f "$RETRO_REMINDED_FILE"
-            exit 0
-        fi
-        # First attempt — block and remind
-        touch "$RETRO_REMINDED_FILE"
-        devforge_log "stop_gate" "reminder" '{"reason":"retrospective_missing","commits":'${COMMITS_COUNT}'}'
+# --- BLOCCO 4: Retrospective gate (deterministic — no escape hatch) ---
+if [ "$SKILLS_USED_COUNT" -gt 0 ] || [ "$COMMITS_COUNT" -gt 0 ]; then
+    if ! echo "$SKILLS_LIST_CURRENT" | grep -qF "siae-retrospective"; then
+        devforge_log "stop_gate" "blocked_retro" "{\"reason\":\"retrospective_missing\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
         cat <<RETRO_EOF
 {
   "decision": "block",
-  "reason": "DevForge Retrospective Reminder — Hai ${COMMITS_COUNT} commit in questa sessione ma non hai eseguito siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti. (Tentativo 1/2 — al prossimo tentativo lo stop verra' permesso)"
+  "reason": "DevForge Retrospective Gate — Sessione produttiva (${SKILLS_USED_COUNT} skill invocate, ${COMMITS_COUNT} commit) senza siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti."
 }
 RETRO_EOF
         exit 0
     fi
-    # All checks passed — cleanup and allow
-    rm -f "$RETRO_REMINDED_FILE" 2>/dev/null
+fi
+
+# --- BLOCCO 5: Verification gate ---
+if echo "$SKILLS_LIST_CURRENT" | grep -qF "siae-verification"; then
+    # Verification invoked — all checks passed
+    rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
     exit 0
 fi
 
