@@ -25,7 +25,34 @@ AGENT_NAME=""
 
 STDIN_JSON=""
 if [ ! -t 0 ]; then
-  STDIN_JSON="$(cat)"
+  # `[ ! -t 0 ]` returns true even when stdin is open but has no data
+  # (e.g. Claude Code opens the status line command with stdin connected
+  # but does not write to it). In that case, `cat` blocks indefinitely
+  # waiting for EOF. Fix: use `read -t` with timeout — exits immediately
+  # when no data arrives within the timeout window.
+  #
+  # Assumption: JSON is written atomically (single line or rapid burst).
+  # A line arriving after the timeout is silently dropped; this is
+  # acceptable since Claude Code emits compact single-line JSON.
+  #
+  # Bash 3.2 (macOS default, GPLv2) does not support decimal read timeouts
+  # — only integers are valid. Bash 4.0+ supports decimals for lower latency.
+  # Note: 2>/dev/null intentionally suppresses "invalid timeout specification"
+  # warnings emitted by bash 3.2 when a decimal value is attempted.
+  _bash_major="${BASH_VERSINFO[0]}"
+  if [ "${_bash_major}" -ge 4 ] 2>/dev/null; then
+    _read_timeout="0.3"
+  else
+    _read_timeout="1"
+  fi
+  _stdin_buf=""
+  if IFS= read -r -t "${_read_timeout}" _stdin_buf 2>/dev/null; then
+    STDIN_JSON="$_stdin_buf"
+    while IFS= read -r -t "${_read_timeout}" _stdin_buf 2>/dev/null; do
+      STDIN_JSON="${STDIN_JSON}"$'\n'"${_stdin_buf}"
+    done
+  fi
+  unset _stdin_buf _read_timeout _bash_major
 fi
 
 if [ -n "$STDIN_JSON" ]; then
