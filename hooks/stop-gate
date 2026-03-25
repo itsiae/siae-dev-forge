@@ -128,11 +128,17 @@ if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
 fi
 
 # Completion claim detected — use in-memory SKILLS_LIST (file was cleaned in telemetry block above)
-SKILLS_LIST_CURRENT="${SKILLS_LIST:-}"
 
-# --- BLOCCO 4: Retrospective gate (deterministic — no escape hatch) ---
+# --- BLOCCO 4: Retrospective gate ---
+# DESIGN DECISION: hard-block deterministico (rimosso soft-block a 2 tentativi).
+# Il gate scatta su qualsiasi sessione produttiva (skills>0 OR commits>0).
+# Ambienti non interattivi (CI/CD, agent headless) possono bypassare via: DEVFORGE_SKIP_RETRO_GATE=1
 if [ "$SKILLS_USED_COUNT" -gt 0 ] || [ "$COMMITS_COUNT" -gt 0 ]; then
-    if ! echo "$SKILLS_LIST_CURRENT" | grep -qF "siae-retrospective"; then
+    if ! echo "$SKILLS_LIST" | grep -qF "siae-retrospective"; then
+        if [ "${DEVFORGE_SKIP_RETRO_GATE:-0}" = "1" ]; then
+            devforge_log "stop_gate" "skipped_retro" "{\"reason\":\"DEVFORGE_SKIP_RETRO_GATE=1\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
+            exit 0
+        fi
         devforge_log "stop_gate" "blocked_retro" "{\"reason\":\"retrospective_missing\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
         cat <<RETRO_EOF
 {
@@ -145,7 +151,7 @@ RETRO_EOF
 fi
 
 # --- BLOCCO 5: Verification gate ---
-if echo "$SKILLS_LIST_CURRENT" | grep -qF "siae-verification"; then
+if echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
     # Verification invoked — all checks passed
     rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
     exit 0
