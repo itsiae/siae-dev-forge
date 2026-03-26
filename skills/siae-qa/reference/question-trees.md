@@ -1,9 +1,10 @@
 # Question Trees — siae-qa Smart Req Typing
 
-Ogni albero è strutturato su 3 livelli:
+Ogni albero è strutturato su 4 livelli:
 - **L1 — Flusso principale:** verifica/completa la comprensione del happy path
 - **L2 — Edge case specifici del tipo:** scenari limite propri di quel dominio
 - **L3 — Integrazioni / dipendenze:** chi chiama? cosa chiama? dipendenze esterne?
+- **L4 — Performance / SLA:** throughput, latenza, freshness, zero-downtime
 
 Claude fa UNA domanda alla volta.
 **Salta ogni domanda già rispondibile dagli AC/description/commenti esistenti.**
@@ -48,6 +49,18 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
    con errore 500 o timeout? C'è un messaggio di errore dedicato?"
    > SKIP SE: gli AC specificano il comportamento su errore API con messaggio esplicito (es. "in caso di errore mostra 'Servizio non disponibile'")
 
+### L4 — Performance / SLA
+7. "Ci sono soglie di performance definite per questo componente?
+   (es. LCP < 2.5s, TTI < 3.5s, First Contentful Paint < 1.5s).
+   Il componente deve funzionare su connessioni lente (3G simulata, < 1 Mbps)
+   o su dispositivi low-end (Android entry-level, 2GB RAM)?"
+   > SKIP SE: gli AC specificano esplicitamente "nessun requisito di performance",
+   > "solo desktop ad alta velocità", o includono già le soglie numeriche
+
+8. "Il componente contiene logica di calcolo pesante (rendering di grandi dataset,
+   animazioni, canvas, WebGL)? Ci sono operazioni che potrebbero bloccare il main thread?"
+   > SKIP SE: il componente è puramente presentazionale senza logica di calcolo
+
 ---
 
 ## Backend Microservice (BE)
@@ -81,6 +94,16 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
 6. "Chi chiama questo endpoint (client FE, altro microservizio, scheduler)?
    Il contratto API è già definito in un file OpenAPI/Swagger?"
    > SKIP SE: gli AC indicano esplicitamente il caller (es. "chiamato dal frontend", "invocato da scheduler ogni ora") o menzionano un file OpenAPI esistente
+
+### L4 — Performance / SLA
+7. "Qual è il throughput atteso su questo endpoint in condizioni normali (req/s)?
+   Qual è il picco previsto (es. campagna, scadenza fiscale, batch notturno)?
+   Esiste un SLA di latenza definito (es. p99 < 300ms, p95 < 200ms)?"
+   > SKIP SE: gli AC specificano "nessun SLA", throughput atteso, o latenza target
+
+8. "Questo endpoint partecipa a una catena di chiamate sincrone? Se sì, qual è il
+   budget di latenza allocato a questo servizio nel contesto dell'intera chain?"
+   > SKIP SE: l'endpoint è chiamato in modo isolato senza chain di servizi
 
 ---
 
@@ -116,6 +139,16 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
    non ha prodotto dati per questa finestra temporale?"
    > SKIP SE: gli AC specificano il comportamento su dati upstream assenti (es. "se il layer bronze non ha dati → skip silenzioso", "attende fino a 2h")
 
+### L4 — SLA di completamento / Freshness
+7. "Entro quanto tempo il job deve completare l'elaborazione dell'intera finestra temporale?
+   Qual è l'impatto downstream se il job è in ritardo di 1h / 4h / 24h?
+   I consumer del layer gold hanno SLA di freshness definiti (es. 'dati disponibili entro le 8:00')?"
+   > SKIP SE: gli AC specificano la finestra di completamento e/o il SLA di freshness downstream
+
+8. "Qual è il volume massimo di record atteso per singola esecuzione?
+   Il job è stato testato su dataset di dimensione production (o stimato equivalente)?"
+   > SKIP SE: gli AC indicano volume atteso e confermano il test su dati rappresentativi
+
 ---
 
 ## Database
@@ -145,6 +178,16 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
 5. "I servizi applicativi che leggono/scrivono su questa tabella
    sono compatibili con il nuovo schema PRIMA del deploy applicativo?"
    > SKIP SE: gli AC specificano la strategia di deploy coordinato (es. "expand-contract", "backward compatible", "deploy atomico schema + applicativo")
+
+### L4 — Performance migration / Zero-downtime
+6. "La migration è stata stimata in termini di tempo di esecuzione su un dataset
+   di dimensione production? Qual è il tempo di lock stimato su tabelle live?
+   Esiste una strategia zero-downtime (expand-contract, online migration)?"
+   > SKIP SE: gli AC specificano la strategia zero-downtime approvata o la finestra di manutenzione
+
+7. "Dopo la migration, le query esistenti (incluse quelle del codice applicativo in produzione)
+   mantengono le stesse performance? Sono stati analizzati i piani di esecuzione delle query critiche?"
+   > SKIP SE: la migration è puramente additiva (aggiunge colonne nullable) senza impatto sulle query
 
 ---
 
@@ -176,6 +219,16 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
    Chi ha fatto cosa, quando, da quale IP?"
    > SKIP SE: gli AC menzionano audit log, tracciabilità, o specificano che "l'operazione non richiede tracciamento"
 
+### L4 — Rate limiting / Security SLA
+6. "L'endpoint di autenticazione è soggetto a rate limiting per prevenire
+   brute force e credential stuffing? Qual è la soglia (es. max 5 tentativi/min per IP)?
+   Cosa restituisce il sistema quando la soglia è superata (429 + Retry-After)?"
+   > SKIP SE: gli AC specificano il rate limiting con soglia e comportamento
+
+7. "Questa feature espande la superficie di attacco (nuovi endpoint pubblici,
+   nuovi dati sensibili esposti)? È inclusa nello scope del prossimo DAST / penetration test?"
+   > SKIP SE: la feature non espone nuovi endpoint pubblici e non introduce nuovi dati sensibili
+
 ---
 
 ## Integration / External
@@ -205,6 +258,12 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
 5. "Esiste un ambiente di staging o sandbox dell'esterno per i test?
    O si usa un mock/stub/WireMock in locale?"
    > SKIP SE: gli AC menzionano sandbox, staging esterno, mock, WireMock, o specificano "testabile con stub locale"
+
+### L4 — Performance / Resilience SLA
+6. "Qual è il throughput massimo di chiamate verso questa dipendenza esterna (req/s)?
+   Esiste un SLA di latenza definito dal provider? Quali sono le soglie configurate
+   per circuit breaker (es. fail-rate > 50% in 10s → open)?"
+   > SKIP SE: gli AC specificano SLA e soglie di resilience per la dipendenza esterna
 
 ---
 
