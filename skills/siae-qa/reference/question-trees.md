@@ -231,39 +231,92 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
 
 ---
 
-## Integration / External
+## Integration REST / Sync
 
-**Segnali di inferenza:** "webhook", "chiamata esterna", "API terza parte",
-"evento", "Kafka", "SQS", "SNS", "notifica", "callback", "polling"
+**Segnali di inferenza:** "chiamata esterna", "API terza parte", "REST client", "HTTP client",
+"timeout", "retry", "circuit breaker", "Feign", "RestTemplate", "WebClient", "OpenFeign",
+"Pact", "consumer-driven contract", "gRPC client", "SOAP client", "WireMock"
 
 ### L1 — Flusso principale
-1. "Cosa fa il sistema se l'API/servizio esterno non risponde entro il timeout?
-   C'è retry automatico con backoff? Quanti tentativi?"
-   > SKIP SE: gli AC specificano il comportamento su timeout con dettagli di retry (es. "retry 3 volte con backoff esponenziale", "timeout 5s — fallisce con 503")
+1. "Cosa fa il sistema se il servizio esterno non risponde entro il timeout configurato?
+   Qual è il timeout impostato? C'è un retry automatico con backoff esponenziale?
+   Quanti tentativi prima di restituire errore al caller?"
+   > SKIP SE: gli AC specificano timeout, numero di retry, e comportamento su fallimento
 
-2. "Come si gestisce un payload inatteso o un codice di errore sconosciuto
-   proveniente dall'esterno? Il sistema ignora, logga o fallisce?"
-   > SKIP SE: gli AC specificano esplicitamente la policy su payload inatteso (es. "logga e ignora", "fallisce con errore bloccante", "dead-letter")
+2. "Come si gestisce un response code inatteso dall'esterno (es. 500, 503, risposta vuota)?
+   Il sistema ignora, logga, propaga l'errore al client, o usa un fallback cached?"
+   > SKIP SE: gli AC specificano esplicitamente il comportamento per ogni codice di errore
 
-### L2 — Edge case specifici Integration
+### L2 — Edge case specifici Integration REST
 3. "Il sistema è resiliente a risposte parziali
-   (es. solo alcuni record restituiti, paginazione incompleta)?"
-   > SKIP SE: gli AC specificano la gestione di risposte parziali o paginazione (es. "riprende dalla pagina successiva", "accetta risultati parziali")
+   (es. paginazione incompleta, solo alcuni record restituiti, body truncato)?"
+   > SKIP SE: gli AC specificano il comportamento su risposte parziali
 
-4. "L'evento/messaggio può arrivare out-of-order o duplicato?
-   Il consumer è idempotente?"
-   > SKIP SE: gli AC contengono "idempotente", "idempotency key", "deduplicazione messaggi", "exactly-once", "at-least-once con dedup"
+4. "Esiste un circuit breaker configurato? In stato OPEN, cosa vede il caller?
+   (errore esplicito, dati stale cached, funzionalità degradata/disabilitata)"
+   > SKIP SE: gli AC descrivono il comportamento degradato con circuit breaker
+
+5. "Il contratto API del servizio esterno è versionato? Se il provider cambia il formato
+   della response, il sistema rileva la breaking change o fallisce silenziosamente?"
+   > SKIP SE: gli AC menzionano contract testing, Pact, o versioning esplicito dell'API esterna
 
 ### L3 — Integrazioni / dipendenze
-5. "Esiste un ambiente di staging o sandbox dell'esterno per i test?
-   O si usa un mock/stub/WireMock in locale?"
-   > SKIP SE: gli AC menzionano sandbox, staging esterno, mock, WireMock, o specificano "testabile con stub locale"
+6. "Esiste un ambiente sandbox o stub (WireMock) del servizio esterno per i test?
+   O si mockano le chiamate a livello unitario? Come si verifica il comportamento
+   con il servizio reale prima del go-live?"
+   > SKIP SE: gli AC specificano l'ambiente di test (sandbox, staging, WireMock) già configurato
 
-### L4 — Performance / Resilience SLA
-6. "Qual è il throughput massimo di chiamate verso questa dipendenza esterna (req/s)?
-   Esiste un SLA di latenza definito dal provider? Quali sono le soglie configurate
-   per circuit breaker (es. fail-rate > 50% in 10s → open)?"
-   > SKIP SE: gli AC specificano SLA e soglie di resilience per la dipendenza esterna
+### L4 — Performance / SLA
+7. "Qual è il timeout configurato per le chiamate a questo servizio?
+   C'è un SLA di risposta definito dal provider esterno (SLA contrattuale)?
+   L'endpoint è chiamato in sequenza bloccante o in modo asincrono/parallelo?"
+   > SKIP SE: gli AC specificano timeout e comportamento asincrono/parallelo
+
+---
+
+## Integration Event / Async
+
+**Segnali di inferenza:** "webhook", "evento", "Kafka", "SQS", "SNS", "notifica asincrona",
+"callback", "polling", "EventBridge", "event bus", "AMQP", "RabbitMQ", "ActiveMQ",
+"saga", "outbox pattern", "consumer", "producer", "topic", "queue", "dead letter", "DLQ",
+"message broker", "event-driven"
+
+### L1 — Flusso principale
+1. "Il consumer è idempotente? Se lo stesso messaggio/evento arriva due volte
+   (retry automatico, at-least-once delivery), il sistema processa due volte o deduplica?"
+   > SKIP SE: gli AC specificano esplicitamente "idempotente", "deduplicazione",
+   > o "exactly-once processing garantito dal broker"
+
+2. "Come si gestisce un messaggio con payload non valido o formato inatteso?
+   Il consumer: rigetta (NACK), mette in DLQ, processa parzialmente, o fallisce il consumer group?"
+   > SKIP SE: gli AC specificano la policy su messaggi malformati
+
+### L2 — Edge case specifici Integration Event
+3. "I messaggi possono arrivare out-of-order? Il consumer garantisce l'ordinamento
+   o lo ordering è gestito a livello di partition key/shard?
+   Cosa succede se un evento arriva dopo che lo stato downstream è già avanzato?"
+   > SKIP SE: gli AC specificano che l'ordinamento non è rilevante per questa feature
+
+4. "Cosa succede se il consumer group è in rebalance durante l'elaborazione di un messaggio?
+   Il messaggio può essere perso o processato due volte durante il rebalance?"
+   > SKIP SE: gli AC specificano la strategia di gestione del rebalance
+
+5. "Se un messaggio non può essere elaborato dopo N tentativi, dove va?
+   Esiste una Dead Letter Queue? Chi monitora la DLQ?
+   C'è un processo di re-processing manuale per i messaggi in DLQ?"
+   > SKIP SE: gli AC specificano la DLQ con monitoring e processo di recovery
+
+### L3 — Integrazioni / dipendenze
+6. "Il contratto del canale (topic Kafka, schema SQS, formato evento EventBridge)
+   è versionato con schema registry? Se il producer cambia il formato,
+   il consumer viene notificato in anticipo o scopre il breaking change in produzione?"
+   > SKIP SE: gli AC menzionano schema registry, AsyncAPI spec, o versioning esplicito del contratto
+
+### L4 — Throughput / Consumer lag
+7. "Qual è il throughput di messaggi atteso (msg/s in condizioni normali, picco)?
+   Qual è il consumer lag massimo tollerabile prima di considerare il consumer in ritardo?
+   C'è un alert configurato sul lag del consumer group?"
+   > SKIP SE: gli AC specificano throughput atteso e soglia di lag accettabile
 
 ---
 

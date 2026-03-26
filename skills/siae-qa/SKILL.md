@@ -115,6 +115,12 @@ Prima di leggere AC o interrogare Jira, inferisci il tipo di requisito.
 Leggi in ordine: summary della story, AC/description, commenti, label Jira, stack del progetto.
 Cerca i segnali nella tabella req typing. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tabella Segnali Req Typing" per la tabella completa con segnali e livelli di confidence.
 
+**Nota Integration split:** se la story ha segnali di "Integration REST/Sync"
+e "Integration Event/Async" contemporaneamente, assegna il tipo primario al paradigma
+dominante nel testo della story, e registra l'altro come tag secondario.
+Esempi: "chiama API esterna e pubblica evento Kafka" → PRIMARY: REST, SECONDARY: [Event]
+        "consumer Kafka che chiama API di conferma" → PRIMARY: Event, SECONDARY: [REST]
+
 ### 0b — Mostra Req Typing Card
 
 Mostra la Req Profile Card. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Template Req Profile Card" per il formato.
