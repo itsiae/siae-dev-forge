@@ -17,6 +17,38 @@ Se il pattern non è trovato letteralmente → la domanda è obbligatoria.
 
 ---
 
+## L0 — Flusso (trasversale a tutti i tipi)
+
+> Queste domande identificano le tappe del flusso utente per l'ordinamento in Fase 4c.
+> Si pongono PRIMA delle domande specifiche del tipo, ma SOLO se la struttura
+> sequenziale non è già ricavabile dagli AC (Given/When/Then multipli, elenco numerato).
+> Se il flusso è già esplicito negli AC, salta le domande L0 e procedi con L1.
+
+**L0.1 — Tappe del flusso (universale)**
+"Questa Story fa parte di un flusso utente più ampio?
+Se sì, quali sono le tappe che un utente deve completare in sequenza per raggiungere l'obiettivo?
+(es. registrazione → login → azione principale → conferma → notifica)"
+
+> SKIP SE: gli AC contengono almeno 2 step Given/When/Then in sequenza, oppure
+> un elenco numerato di passi, oppure frasi con "prima ... poi ...", "dopo aver ...",
+> "una volta che ...", "a seguito di ..."
+
+**L0.2 — Entry point del flusso (universale)**
+"Da quale stato parte l'utente/sistema prima di eseguire l'azione principale?
+(es. utente non autenticato, utente loggato con carrello vuoto, record in stato BOZZA,
+job in attesa di trigger, file non ancora caricato)"
+
+> SKIP SE: lo stato iniziale è esplicitamente descritto negli AC o nel Given della story
+
+**L0.3 — Exit condition del flusso (universale)**
+"Come sa l'utente/sistema che il flusso è completato con successo?
+Cosa cambia nello stato del sistema alla fine del flusso?
+(es. record in stato PUBBLICATO, email inviata, file in stato PROCESSED)"
+
+> SKIP SE: la condizione finale è esplicitamente descritta negli AC o nel Then della story
+
+---
+
 ## Frontend (FE)
 
 **Segnali di inferenza:** "componente", "pagina", "form", "UI", "Vue", "Angular",

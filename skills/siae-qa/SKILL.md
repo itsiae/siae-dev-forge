@@ -389,6 +389,110 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Base
 
 ---
 
+### Fase 4c — Riordinamento per flusso utente [CONDIZIONALE]
+
+> **Condizione di attivazione:** esegui questa fase solo se sono identificabili ≥ 2 tappe
+> distinte nel flusso utente (dagli AC o dalle risposte L0 del question tree).
+> Se la Story ha un singolo AC con un singolo comportamento → il riordinamento produce
+> output identico a quello per categoria: salta questa fase.
+
+#### Algoritmo di estrazione tappe
+
+**Passo 1 — Cerca pattern sequenziali negli AC:**
+- Given/When/Then multipli in sequenza → ogni blocco When/Then = una tappa
+- Elenco numerato negli AC → l'ordine numerico = ordine delle tappe
+- Frasi con "prima ... poi ...", "dopo aver ...", "una volta che ..." → sequenza esplicita
+- Verbi di azione che cambiano lo stato del sistema → potenziale tappa
+
+**Passo 2 — Se i pattern non sono trovati:**
+Usa le risposte a L0.1/L0.2/L0.3 del question tree per costruire le tappe.
+
+**Passo 3 — Default CRUD skeleton (se ancora nessuna tappa identificabile):**
+1. Tappa 1: Precondizione / Setup (autenticazione, navigazione, stato iniziale)
+2. Tappa 2: Azione principale (la funzionalità core della Story)
+3. Tappa 3: Conferma / Feedback (messaggio di successo, redirect, aggiornamento)
+4. Tappa 4: Post-condizione / Side effect (notifiche, audit, dati aggiornati)
+
+#### Varianti per tipo
+
+| Tipo | Modello di tappa |
+|------|-----------------|
+| FE | Pagine/schermate → loading → interazione → feedback → redirect |
+| BE | Auth → Request → Response → Side effect (evento, DB write) |
+| ETL | Bronze layer → Silver layer → Gold layer → Verifica downstream |
+| DB | Pre-migration state → DDL/DML apply → Integrity check → Rollback test |
+| Auth | AuthN (chi sei?) → AuthZ (puoi farlo?) → Operazione → Audit |
+| Integration REST | Setup/Auth → Request → Response → State verification |
+| Integration Event | Event production → Consumer processing → Ack/callback → State final |
+
+#### Algoritmo di associazione scenario → tappa
+
+Per ogni scenario della matrice 4a:
+1. Cerca overlap tra parole chiave del titolo scenario e parole chiave di ogni tappa
+2. Assegna alla tappa con score massimo
+3. Se score = 0 per tutte le tappe → assegna a sezione "E2E / Cross-Tappa"
+
+#### Ordinamento interno a ogni tappa
+
+Dentro ogni tappa, ordina in questo ordine fisso:
+1. Scenari positivi (happy path) — nessun prefisso
+2. Scenari `[EDGE]` — valori limite della tappa
+3. Scenari `[NEG]` — errori specifici della tappa
+4. Scenari `[PROFILO]` — solo se rilevanti per questa tappa specifica
+
+#### Formato output Fase 4c
+
+````
+═══════════════════════════════════════════════════════
+TEST PLAN — {STORY_ID}: {Story summary}
+═══════════════════════════════════════════════════════
+Flusso: {N} tappe + E2E
+Totale: {X} positivi | {Y} EDGE | {Z} NEG | {W} PROFILO
+═══════════════════════════════════════════════════════
+
+── TAPPA {N}: {Nome tappa} [{X} TC: {distribuzione}]
+─────────────────────────────────────────────────────
+TC-{NN}  {Titolo scenario positivo}
+         Automazione: {Y/N} | NRT: {Y/N} | Priority: {P1-P4}
+TC-{NN}  [EDGE] {Titolo edge case}
+         Automazione: {Y/N} | NRT: {Y/N} | Priority: {P1-P4}
+TC-{NN}  [NEG] {Titolo scenario negativo}
+         Automazione: {Y/N} | NRT: {Y/N} | Priority: {P1-P4}
+
+[... ripeti per ogni tappa ...]
+
+── PROFILAZIONI [{X} TC]
+─────────────────────────────────────────────────────
+[TC di profilazione non associabili a una tappa specifica]
+
+── E2E / CROSS-TAPPA [{X} TC]
+─────────────────────────────────────────────────────
+[TC che coprono 2+ tappe del flusso completo]
+
+═══════════════════════════════════════════════════════
+RIEPILOGO
+  Tappa 1 ({Nome}):   {N} TC
+  [...]
+  Profilazioni:       {N} TC
+  E2E:                {N} TC
+  TOTALE:             {N} TC
+═══════════════════════════════════════════════════════
+````
+
+#### Colonna Flow_Step nel CSV
+
+Aggiungere colonna facoltativa `Flow_Step` in coda al CSV (non importata da Xray,
+usata per reference interna e filtering in Excel pre-import):
+
+````
+ID;Test Type;...;NRT;Flow_Step
+1;Manual;...;Y;Tappa 1 - {Nome}
+2;Manual;...;Y;Tappa 1 - {Nome}
+3;Manual;...;Y;Tappa 2 - {Nome}
+````
+
+---
+
 ### Fase 5 — Export / Sincronizzazione
 
 **Tier 1 (MCP):**

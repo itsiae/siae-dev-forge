@@ -252,5 +252,8 @@ Prima di dichiarare la skill completata:
 - [ ] Tier usato annunciato nella pre-flight card di apertura
 - [ ] Se tipo è uno dei 5 nuovi (Notification/Batch/Report/Feature Flag/File Processing):
       question tree specifico del tipo usato (non tree generico FE/BE)
+- [ ] Fase 4c eseguita se ≥ 2 tappe identificabili, oppure skip documentato (story a singola tappa)
+- [ ] Se Fase 4c eseguita: output presentato con header di sezione per tappa
+- [ ] Se Fase 4c eseguita: riepilogo per tappa mostrato accanto al riepilogo per categoria
 
 **Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla fase bloccata.**
