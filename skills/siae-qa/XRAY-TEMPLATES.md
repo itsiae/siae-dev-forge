@@ -354,5 +354,8 @@ Prima di dichiarare la skill completata:
 - [ ] 5 campi enterprise derivati automaticamente per ogni TC (Test Level, Priority, Classification, Exec Timing, Owner)
 - [ ] Developer ha confermato o modificato i campi enterprise prima dell'export
 - [ ] Header CSV include le 5 colonne enterprise (se developer ha scelto CSV esteso)
+- [ ] RRS parziale calcolato e mostrato al developer dopo il riepilogo copertura
+- [ ] Coverage_Score e Critical_Coverage_Score mostrati con formula trasparente
+- [ ] Gate di rilascio comunicato al developer con decisione consigliata
 
 **Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla fase bloccata.**

@@ -499,6 +499,79 @@ ID;Test Type;...;NRT;Flow_Step
 
 ---
 
+### Fase 4d — Release Readiness Score (RRS) [AUTOMATICO]
+
+Dopo aver mostrato il riepilogo copertura al developer, calcola e mostra il RRS parziale.
+
+#### Formula RRS
+
+````
+RRS = (W1 × Coverage_Score) + (W2 × Critical_Coverage_Score) + (W3 × Execution_Score) + (W4 × Defect_Score)
+
+Pesi:
+  W1 = 0.25  (copertura generale)
+  W2 = 0.35  (copertura scenari critici — maggior peso)
+  W3 = 0.30  (esito esecuzione TC — disponibile post-esecuzione)
+  W4 = 0.10  (assenza bug P1 aperti)
+
+Coverage_Score = TC_generati / TC_attesi_minimi
+  dove: TC_attesi_minimi = (N_AC × 1) + minimi_per_tipo (vedi tabella cardinalità Fase 4a)
+
+Critical_Coverage_Score = TC_P1_generati / AC_critici_totali
+  dove: AC critici = AC che toccano Auth + AC del flusso principale positivo
+
+Execution_Score = TC_passed / TC_executed
+  [N/A nella fase corrente — aggiornare dopo l'esecuzione dei test]
+
+Defect_Score = 1 - (Bugs_P1_aperti / TC_totali)
+  [N/A nella fase corrente — aggiornare dopo l'esecuzione dei test]
+````
+
+#### Calcolo automatico (parziale — pre-esecuzione)
+
+Alla fine di Fase 4b, la skill conosce:
+- Numero di AC letti in Fase 1
+- Numero di TC generati per categoria e priorità
+- Tipo requisito e minimi attesi dalla tabella cardinalità
+
+Calcola e mostra:
+
+````
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RELEASE READINESS SCORE (RRS) — {STORY_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Coverage Score:          {X:.2f}  ({TC_generati}/{TC_attesi_minimi} scenari)
+Critical Coverage Score: {Y:.2f}  ({TC_P1}/{AC_critici} AC critici coperti)
+Execution Score:         N/A      (aggiornare dopo esecuzione TC)
+Defect Score:            N/A      (aggiornare dopo esecuzione TC)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RRS parziale (Coverage + Critical): {Z:.2f}
+Stato: IN PROGRESS — eseguire TC e aggiornare con Execution + Defect Score
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+````
+
+#### Gate di rilascio (RRS completo — post-esecuzione)
+
+| RRS | Decisione | Condizioni |
+|-----|-----------|-----------|
+| ≥ 0.90 | ✅ **Go** | Nessun bug P1 aperto |
+| 0.75–0.89 | ⚠️ **Go condizionale** | Richiede approvazione QA Lead + lista rischi documentata |
+| 0.60–0.74 | ❌ **No-Go raccomandato** | Possibile eccezione con approvazione Product Owner + remediation plan entro N giorni |
+| < 0.60 | 🚫 **Hard No-Go** | Blocco — nessuna eccezione senza approvazione CTO/equivalente |
+
+**Regola assoluta:** se ci sono bug P1 aperti collegati ai TC di questa Story,
+il Defect_Score = 0 e il gate è Hard No-Go indipendentemente dagli altri assi.
+
+#### Aggiornamento RRS post-esecuzione
+
+Dopo l'esecuzione dei TC in Xray (Fase 5), aggiorna il RRS con:
+- `Execution_Score` = percentuale TC passed / TC executed
+- `Defect_Score` = 1 - (Bugs_P1_aperti / TC_totali)
+
+Il RRS completo determina la decisione go/no-go per il collaudo.
+
+---
+
 ### Fase 5 — Export / Sincronizzazione
 
 **Tier 1 (MCP):**
@@ -555,6 +628,8 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "Il tipo e' ovvio, non serve inferire" | Ovvio per te. La Req Profile Card documenta il tipo e i segnali: e' evidenza, non burocrazia. Se sbagli il tipo, i TC coprono il dominio sbagliato. |
 | "Ha solo segnali BE, è chiaramente solo Backend" | La story può avere segnali Auth o Integration impliciti non evidenti dal solo titolo. Esegui 0d prima di concludere che è un tipo puro. |
 | "Il tag secondario aggiunge solo 2 domande, non vale" | Le 2 domande di triage secondario producono in media 3-4 scenari aggiuntivi. Su 20 story/sprint = 60-80 TC che altrimenti non esistono. |
+| "Il go/no-go lo decide il PM, non la skill" | Il PM decide sulla base di evidenza. Il RRS fornisce l'evidenza quantitativa. Senza RRS, la decisione è soggettiva e non difendibile davanti a un auditor. |
+| "Il RRS è basso ma rilasciamo lo stesso" | Un RRS < 0.75 senza approvazione documentata è un rischio QA non gestito. Documenta l'eccezione esplicitamente — non ignorare il valore. |
 
 ---
 
@@ -594,6 +669,8 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 | Esecuzione test su ambiente di collaudo | 🟡 Medio | Si |
 | Apertura bug su JIRA | 🟡 Medio | Si |
 | Approvazione go/no-go al rilascio | 🔴 Alto | Si |
+| Calcolo RRS (pre-esecuzione) | 🟢 Sicuro | No |
+| Decisione Go/No-Go su RRS < 0.75 | 🔴 Alto | Si |
 
 ---
 
