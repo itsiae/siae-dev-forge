@@ -20,17 +20,27 @@
 
 | Tipo | Segnali (summary, AC, description, label, stack) |
 |------|--------------------------------------------------|
-| **Frontend (FE)** | "componente", "pagina", "form", "UI", "Vue", "Angular", "React", "click", "visualizza", "render", "responsive" |
-| **Backend Microservice (BE)** | "API", "endpoint", "service", "REST", "controller", "Spring", "Lambda", "validazione", "business rule" |
-| **ETL / Data Pipeline** | "Glue", "PySpark", "pipeline", "trasformazione", "bronze", "silver", "gold", "job", "ETL", "medallion" |
-| **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase" |
-| **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
-| **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
+| **Frontend (FE)** | "componente", "pagina", "form", "UI", "Vue", "Angular", "React", "click", "visualizza", "render", "responsive", "upload", "drag", "Next.js", "Nuxt", "SSR", "hydration", "Svelte", "web component", "Ionic", "Capacitor", "PWA", "service worker", "offline", "micro-frontend", "module federation", "Storybook", "design system" |
+| **Backend Microservice (BE)** | "API", "endpoint", "service", "REST", "controller", "Spring", "Lambda", "validazione", "business rule", "handler", "mapper", "GraphQL", "resolver", "mutation", "subscription", "gRPC", "protobuf", "NestJS", "FastAPI", "Quarkus", "Micronaut", "OpenAPI", "Swagger", "contract test", "cold start", "provisioned concurrency" |
+| **ETL / Data Pipeline** | "Glue", "PySpark", "pipeline", "trasformazione", "bronze", "silver", "gold", "job", "ETL", "medallion", "crawler", "Athena", "dbt", "model dbt", "Databricks", "Delta Lake", "Delta table", "Flink", "streaming job", "Airbyte", "Fivetran", "CDC", "Debezium", "Iceberg", "Hudi" |
+| **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase", "ALTER TABLE", "stored procedure", "view", "DynamoDB", "MongoDB", "Cosmos DB", "partition key", "Alembic", "revision", "read replica", "sharding" |
+| **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT", "SSO", "autorizzazione", "profilo utente", "OAuth2", "OIDC", "refresh token", "scope", "claims", "MFA", "OTP", "TOTP", "2FA", "API key", "client credentials", "Cognito", "user pool", "SAML" |
+| **Integration REST / Sync** | "chiamata esterna", "API terza parte", "REST client", "HTTP client", "timeout", "retry", "circuit breaker", "Feign", "RestTemplate", "WebClient", "OpenFeign", "Pact", "consumer-driven contract", "gRPC client" |
+| **Integration Event / Async** | "webhook", "evento", "Kafka", "SQS", "SNS", "notifica", "callback", "polling", "EventBridge", "event bus", "AMQP", "RabbitMQ", "ActiveMQ", "saga", "outbox pattern", "consumer", "producer", "topic", "queue", "dead letter", "DLQ" |
+| **Notification / Messaging** | "email transazionale", "push notification", "SMS", "notifica in-app", "template email", "opt-out", "unsubscribe", "FCM", "APNs", "SES", "SendGrid", "Twilio", "notification center", "delivery receipt", "bounce", "webhook push" |
+| **Batch / Scheduler** | "batch", "cron", "scheduler", "Quartz", "EventBridge rule", "job periodico", "elaborazione notturna", "elaborazione massiva", "finestra temporale", "trigger scheduled", "AWS Batch", "Step Functions scheduled", "import massivo", "export massivo" |
+| **Report / Export** | "report", "export", "PDF", "Excel", "XLSX", "CSV export", "rendiconto", "estratto conto", "stampa", "download", "JasperReports", "Apache POI", "generazione documento", "template report", "BI", "dashboard export" |
+| **Feature Flag / Configuration** | "feature flag", "feature toggle", "LaunchDarkly", "Unleash", "AWS AppConfig", "canary", "rollout progressivo", "A/B test", "configurazione dinamica", "kill switch", "abilitazione per tenant", "dark launch" |
+| **File Processing / Async Upload** | "upload file", "import file", "caricamento massivo", "bulk import", "file processing", "chunked upload", "multipart", "presigned URL", "S3 upload", "file validation", "file parser", "SFTP", "FTP", "file watcher", "async processing", "polling status" |
 
 **Confidence:**
-- **HIGH (>= 90%):** 2+ segnali forti convergenti
+- **HIGH (>= 90%):** 2+ segnali forti convergenti sullo stesso tipo
 - **MEDIUM (60-89%):** 1 segnale forte o 2+ deboli
-- **LOW (< 60%):** segnali ambigui o assenti
+- **LOW (< 60%):** segnali ambigui, assenti, o convergenti su tipi diversi (→ valutare tipo composito)
+
+**Nota per Integration split:** se la story ha segnali sia di "Integration REST/Sync" che di
+"Integration Event/Async", assegna il tipo primario in base al segnale con maggiore forza contestuale
+e registra l'altro come tag secondario (vedi sezione Primary Type + Secondary Tags).
 
 ---
 
