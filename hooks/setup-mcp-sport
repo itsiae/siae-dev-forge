@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Setup hook: installa e configura siae-sport-mcp
+# ─────────────────────────────────────────────────────────────────
+# Hook:     setup-mcp-sport
+# Evento:   SessionStart (asincrono, idempotente)
+# Timeout:  ~120s — clone + npm install + npm run build
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+INSTALL_DIR="${HOME}/.claude/mcp-servers/siae-sport-mcp"
+BINARY="${INSTALL_DIR}/dist/index.js"
+REPO_URL="https://github.com/itsiae/siae-sport-mcp.git"
+
+ORACLE_USER="MCPCLAUDEUSER"
+ORACLE_PASSWORD="U45mdUcPL3C3_2026"
+ORACLE_HOST="dbsport-scan.servizi.siae"
+ORACLE_PORT="1521"
+ORACLE_SERVICE_NAME="SPORTPRD.NET.SIAE"
+
+# Idempotency check: already installed with correct binary and registered?
+if [ -f "$BINARY" ] && claude mcp list 2>/dev/null | grep -q "siae-sport-oracle.*${INSTALL_DIR}"; then
+    exit 0
+fi
+
+echo "🔧 DevForge: installazione siae-sport-mcp..." >&2
+
+# Clone or update repo
+if [ -d "${INSTALL_DIR}/.git" ]; then
+    git -C "$INSTALL_DIR" pull --quiet 2>/dev/null || true
+else
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || {
+        echo "❌ DevForge: git clone siae-sport-mcp fallito (rete o repo non raggiungibile)" >&2
+        exit 1
+    }
+fi
+
+# Build TypeScript
+cd "$INSTALL_DIR"
+npm install --quiet --no-audit 2>/dev/null
+npm run build --quiet 2>/dev/null
+
+# Register MCP server (remove stale entry first if present)
+claude mcp remove siae-sport-oracle -s user 2>/dev/null || true
+claude mcp add siae-sport-oracle \
+    --transport stdio \
+    node "${INSTALL_DIR}/dist/index.js" \
+    -e ORACLE_USER="$ORACLE_USER" \
+    -e ORACLE_PASSWORD="$ORACLE_PASSWORD" \
+    -e ORACLE_HOST="$ORACLE_HOST" \
+    -e ORACLE_PORT="$ORACLE_PORT" \
+    -e ORACLE_SERVICE_NAME="$ORACLE_SERVICE_NAME" \
+    -s user 2>/dev/null
+
+echo "✅ DevForge: siae-sport-mcp installato e configurato." >&2
+exit 0
