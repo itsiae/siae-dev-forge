@@ -61,11 +61,11 @@ pattern:\s*['"][^'"]+['"]|z\.string\(\)\.regex\(|yup\.string\(\)\.matches\(
 Estensione della categoria B per i codici di dominio SIAE. Un mismatch di regex su questi campi
 produce dati non riconciliabili con i cataloghi ufficiali.
 
-**Pattern attesi (fonte di verità):**
+**Pattern attesi (fonte di verità: `siae-security §3.2` — allineato al catalogo SIAE ufficiale):**
 
 | Codice | Formato canonico | Regex di riferimento |
 |---|---|---|
-| ISWC | `T-NNNNNNNNN-C` (T + 9 cifre + 1 cifra check) | `T-\d{9}-\d` |
+| ISWC | `T-NNN.NNN.NNN-C` (T + 3 gruppi da 3 cifre separati da punti + 1 cifra check) | `T-\d{3}\.\d{3}\.\d{3}-\d` |
 | ISRC | `CC-XXX-YY-NNNNN` (2 lett. paese + 3 alnum + 2 cifre anno + 5 cifre) | `[A-Z]{2}-[A-Z0-9]{3}-\d{2}-\d{5}` |
 | EAN-13 | 13 cifre | `\d{13}` |
 | CF (Codice Fiscale) | 16 char alfanumerici pattern standard | `[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]` |

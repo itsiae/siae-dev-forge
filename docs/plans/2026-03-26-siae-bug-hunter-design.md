@@ -164,7 +164,8 @@ Il constraint reale è il peso token (~10k caratteri), non il conteggio righe.
 
 **Variabili di sessione iniettate:**
 ```
-$PROJECT_TYPE, $STACK, $ENTRY_POINT, $CONFIDENCE_FILTER, $EXCLUDE_PATHS
+$REPOS, $STACK, $ENTRY_POINT, $CONFIDENCE, $EXCLUDE_PATHS
+(Nota post-implementazione: $PROJECT_TYPE→$REPOS, $CONFIDENCE_FILTER→$CONFIDENCE — allineati a SKILL.md)
 ```
 
 ---
@@ -251,7 +252,7 @@ Per ogni candidato dai 5 moduli:
 - L'ingresso può essere: endpoint HTTP pubblico, form utente, scheduled job, webhook
 - Se il codepath è dead code (dietro `if (false)`, dopo `return`, in test/) → scartato.
 
-**FASE 4 — Falsification (6 test)**
+**FASE 4 — Falsification (7 test)**
 
 | Test | Check | Se passa → |
 |---|---|---|
@@ -263,7 +264,7 @@ Per ogni candidato dai 5 moduli:
 | F6 | Type narrowing / type guard? | Scarta |
 
 **Promozione finale:**
-- A + B + C + tutti 6 test falliti → **CONFIRMED**
+- A + B + C + tutti 7 test falliti → **CONFIRMED**
 - A + B + C inferita + test F4 passa → **PROBABLE**
 - Solo A → **SUSPECT** (appendice only)
 

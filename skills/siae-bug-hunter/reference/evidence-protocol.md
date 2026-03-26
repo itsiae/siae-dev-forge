@@ -67,7 +67,7 @@ Tutte le 3 condizioni + tutti i falsificatori falliti + input specifico noto.
 **Criteri:**
 - A + B + C tutte verificate direttamente nel codice
 - Almeno un input specifico che triggera il bug è identificabile
-- Nessuno dei 6 falsificatori protegge questo percorso
+- Nessuno dei 7 falsificatori protegge questo percorso
 
 **Posizione nel report:** Lista principale, ordinata per severità.
 
@@ -257,7 +257,7 @@ Prima di inserire qualsiasi bug nel report finale:
 □ Ho citato il file con path relativo e il numero di riga?
 □ Il codice a quella riga contiene esattamente il pattern che descrivo?
 □ Ho tracciato il percorso utente che raggiunge quella riga?
-□ Ho testato i 6 falsificatori? Nessuno lo protegge?
+□ Ho testato i 7 falsificatori? Nessuno lo protegge?
 □ La descrizione NON contiene "potrebbe", "potenziale", "teoricamente"?
 □ Ho scelto il livello corretto (CONFIRMED/PROBABLE/SUSPECT)?
 □ Se SUSPECT, è SOLO in appendice?
