@@ -52,41 +52,28 @@ On demand: /branching-strategy-check
 
 ## Decisioni Architetturali
 
-### ADR-1: Scope org-wide (non solo PR in review)
+### ADR-1: Scope repo corrente di default, org-wide opzionale
 
-La PR originale fa `gh search prs --review-requested=@me`. Questo limita la visibilità ai repo dove si è reviewer.
+**Decisione rivista (approvata durante implementazione):** la skill controlla il **repo corrente** come Fase 1 (default). L'espansione org-wide è disponibile come Fase 2 su richiesta esplicita.
 
-**Decisione:** usare `gh search repos --owner=itsiae` per scoprire tutti i repo, poi per ciascuno controllare default branch e PR aperte verso main.
+**Motivo:** il check si applica naturalmente quando si clona o si apre un nuovo repo. Lo scan org-wide resta disponibile on-demand ma non è il comportamento di default — troppo invasivo e lento per l'avvio sessione.
 
-**Motivo:** il developer vuole sapere lo stato compliance dell'intera org, non solo dei propri repo.
+**Comportamento precedente scartato:** `gh search repos --owner=itsiae` come Fase 1 — sostituito da `gh repo view` sul repo corrente.
 
-### ADR-2: Hook asincrono + cache TTL 4h
+### ADR-2: Check sincrono sul repo corrente (no cache)
 
-Scansionare 50+ repo a ogni SessionStart bloccherebbe l'avvio.
+**Decisione rivista (approvata durante implementazione):** l'hook session-start esegue un check **sincrono** sul repo corrente. Nessun file cache, nessun background job.
 
-**Decisione:**
-- Hook scrive risultato in `~/.claude/.devforge-branching-compliance` (cache JSON)
-- TTL: 4 ore — se il file è più vecchio, refresh in background
-- session-start legge dalla cache se fresca e inietta summary; se cache assente/stale, lancia refresh in background e non blocca
-
-**Formato cache:**
-```json
-{
-  "ts": 1234567890,
-  "violations": 3,
-  "repos_checked": 47,
-  "compliant": 44
-}
-```
+**Motivo:** controllare un singolo repo è abbastanza veloce da non richiedere cache. La complessità della cache (TTL, background job, file `~/.claude/.devforge-branching-compliance`) è giustificata solo per scan org-wide, che non è più il comportamento di default.
 
 ### ADR-3: Separazione skill / hook
 
-- **Hook** → headline only: "⚠️ 3 violazioni branching strategy in itsiae — esegui /branching-strategy-check per dettagli"
-- **Skill** → report completo tabellare con repo, PR, branch, fonte
+- **Hook** → headline solo se ci sono violazioni: `⚠️ Branching compliance [{repo}]: {dettaglio}`
+- **Skill** → report completo tabellare con violazioni e repo compliant
 
 Questo mantiene l'avvio di sessione leggero e il report dettagliato disponibile on-demand.
 
-### ADR-4: Limite repo per scan
+### ADR-4: Limite repo per scan org-wide (Fase 2)
 
 `gh search repos --owner=itsiae --limit 100` — cap a 100 repo per evitare timeout.
 
@@ -98,20 +85,19 @@ Questo mantiene l'avvio di sessione leggero e il report dettagliato disponibile 
 ```yaml
 name: branching-strategy-check
 description: >
-  Verifica compliance org-wide alla branching strategy SIAE su tutti i repo itsiae.
-  Default branch deve essere main. Solo release/** può aprire PR verso main.
-disable-model-invocation: true
-allowed-tools: Bash, Read, Grep, Glob
+  Verifica compliance alla branching strategy SIAE sul repo corrente (o nuovo/clonato).
+  Default branch deve essere main. Solo release/** puo' aprire PR verso main.
+sdlc_phase: "6. QA Gate"
+skill_type: "Flexible"
 ```
 
 ### Comportamento
 
-1. Recupera tutti i repo `itsiae` (`gh search repos --owner=itsiae --limit 100`)
-2. Per ogni repo:
+1. **Fase 1 (default):** check sul repo corrente
    - Controlla default branch (deve essere `main`)
    - Lista PR aperte verso `main` e verifica che vengano da `release/**`
-3. Genera report markdown con violazioni in evidenza (struttura identica alla PR originale)
-4. Offre espansione per topic (opzionale, come Fase 2 della PR originale)
+2. **Fase 2 (opzionale):** espansione org-wide su tutti i repo itsiae su richiesta esplicita
+3. Genera report markdown con violazioni in evidenza
 
 ### Trigger
 `"branching check"`, `"compliance org"`, `"/branching-strategy-check"`, `"PR verso main"`, `"verifica branching strategy"`, `"violazioni branching"`, `"default branch"`, `"release branch"`
@@ -174,8 +160,8 @@ Il `BRANCHING_SUMMARY` viene poi incluso nel `session_context` JSON già costrui
 - [ ] Slash command `/branching-strategy-check` funzionante
 - [ ] Skill scannerizza tutti i repo `itsiae` (non solo PR in review)
 - [ ] Report mostra violazioni (default branch ≠ main, PR da non-release verso main) e repo compliant
-- [ ] session-start inietta summary compact all'avvio (da cache se fresca)
-- [ ] Cache TTL 4h: refresh asincrono in background, non blocca avvio
+- [ ] session-start inietta summary se ci sono violazioni nel repo corrente
+- [ ] Check sincrono sul repo corrente (no cache — un repo è abbastanza veloce)
 - [ ] Skill aggiunta al Dynamic Skill Catalog in `using-devforge`
 - [ ] Skill aggiunta al catalogo `skills-core.js`
 
