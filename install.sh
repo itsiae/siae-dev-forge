@@ -43,18 +43,23 @@ add_mcp_permissions() {
   local perms=("mcp__elasticsearch__*" "mcp__siae_sport_oracle__*")
   if [ -f "$settings" ] && command -v python3 &>/dev/null; then
     python3 - "$settings" "${perms[@]}" <<'PY'
-import json, sys
-path, *perms = sys.argv[1], *sys.argv[2:]
+import json, sys, os
+path = sys.argv[1]
+perms = sys.argv[2:]
 with open(path) as f:
     data = json.load(f)
 allow = data.setdefault("permissions", {}).setdefault("allow", [])
 added = [p for p in perms if p not in allow]
 if added:
     allow.extend(added)
-    with open(path, "w") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f, indent=2)
+    os.replace(tmp, path)
 PY
     info "Permission MCP configurate in settings.json"
+  else
+    warning "python3 non disponibile o settings.json assente: aggiungi manualmente mcp__siae_sport_oracle__* in ~/.claude/settings.json > permissions > allow"
   fi
 }
 
