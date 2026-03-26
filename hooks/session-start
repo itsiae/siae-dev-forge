@@ -26,6 +26,9 @@ bash "${PLUGIN_ROOT}/statusline/install.sh" 2>/dev/null || true
 # Auto-install siae-mcp-kibana (idempotente, asincrono — non blocca la sessione)
 bash "${PLUGIN_ROOT}/hooks/setup-mcp-kibana" 2>/dev/null &
 
+# Auto-install siae-sport-mcp (idempotente, asincrono — non blocca la sessione)
+bash "${PLUGIN_ROOT}/hooks/setup-mcp-sport" 2>/dev/null &
+
 # Print brand banner to stderr (visible in terminal at startup)
 cat >&2 <<'BANNER'
 
