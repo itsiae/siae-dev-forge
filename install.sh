@@ -87,8 +87,29 @@ PY
       rm -f "$tmp"
       warning "jq: errore durante la modifica di settings.json — aggiungi manualmente mcp__siae_sport_oracle__* in permissions > allow"
     fi
+  elif command -v node &>/dev/null; then
+    # node è garantito disponibile: setup-mcp-sport richiede npm/node per la build
+    node - "$settings" "${perms[@]}" <<'JS'
+const fs = require('fs');
+const [,, path, ...perms] = process.argv;
+try {
+  const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+  const allow = (data.permissions = data.permissions || {}).allow = data.permissions.allow || [];
+  const added = perms.filter(p => !allow.includes(p));
+  if (added.length) {
+    allow.push(...added);
+    const tmp = path + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+    fs.renameSync(tmp, path);
+  }
+} catch (e) {
+  process.stderr.write('Warning: ' + e.message + '\n');
+  process.exit(1);
+}
+JS
+    info "Permission MCP configurate in settings.json (node)"
   else
-    warning "né python3 né jq disponibili: aggiungi manualmente mcp__siae_sport_oracle__* in ~/.claude/settings.json > permissions > allow"
+    warning "python3, jq e node non disponibili: aggiungi manualmente mcp__siae_sport_oracle__* in ~/.claude/settings.json > permissions > allow"
   fi
 }
 
