@@ -268,6 +268,33 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) per template Matrice Scenari e forma
 #### 4b — Generazione Test Case
 
 Per ogni scenario della matrice (4a), genera 1+ Test Case step-based.
+
+**Regole di granularità step [OBBLIGATORIE]:**
+
+**Regola A — 1 step = 1 interazione atomica**
+Un step non può descrivere più di un'azione dell'utente o del sistema.
+"Compilare il form e premere Invio" → 2 step separati.
+"Aprire la pagina, inserire i dati e verificare il risultato" → 3+ step separati.
+
+**Regola B — Ogni navigazione è step distinto**
+"Aprire la pagina X" è sempre step 1 di qualsiasi TC. Non può essere fuso con step 2.
+Esempi di step di navigazione: "Navigare a /pagina", "Cliccare su tab X",
+"Aprire il form di Y", "Espandere la sezione Z".
+
+**Regola C — Expected Result verificabile senza ambiguità**
+L'Expected Result deve permettere a qualsiasi QA di rispondere "pass/fail" guardando lo schermo
+senza interpretazione soggettiva.
+❌ Non valido: "il sistema funziona correttamente", "la pagina si carica", "tutto ok"
+✅ Valido: "Il sistema mostra il messaggio 'Operazione completata con successo'"
+✅ Valido: "L'endpoint restituisce HTTP 201 con body `{id: <uuid>, status: 'CREATED'}`"
+✅ Valido: "Il campo 'amount' mostra il messaggio di errore 'Il valore deve essere maggiore di 0'"
+✅ Valido: "Il job completa con exit code 0 e scrive N record nella tabella silver.operazioni"
+
+**Regola D — Step con precondizioni implicite**
+Se uno step richiede che un'azione precedente abbia prodotto un risultato specifico
+(es. "il record deve esistere nel DB"), questo va dichiarato come precondizione nel campo `Data`,
+non come step 1. I dati di test specifici appartengono al campo `Data`, non all'`Action`.
+
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step" e "Riepilogo Copertura" per formato completo, prefissi e template riepilogo.
 
 **Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.

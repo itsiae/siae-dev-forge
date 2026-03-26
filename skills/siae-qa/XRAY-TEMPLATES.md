@@ -87,6 +87,28 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 
 ---
 
+**Regole di granularità step (vedi SKILL.md) — riepilogo rapido:**
+
+| Regola | Applicazione |
+|--------|-------------|
+| A | 1 step = 1 azione atomica. Mai combinare due azioni in un step. |
+| B | Navigazione = sempre step separato e primo della sequenza. |
+| C | Expected Result deve essere pass/fail senza interpretazione. Mai "funziona" o "ok". |
+| D | Precondizioni dati → campo `Data`, non step 1. |
+
+**Esempi di Expected Result validi:**
+
+| Tipo | Expected Result valido |
+|------|----------------------|
+| FE | "La pagina mostra la lista con N elementi visibili. Il campo totale mostra '€ X.XX'." |
+| BE | "HTTP 201. Body: `{id: '<uuid>', createdAt: '<ISO8601>'}`. Header `Location: /api/v1/resource/<id>`." |
+| ETL | "Job termina con status SUCCESS. Tabella silver.X contiene N record. 0 record in dead-letter." |
+| DB | "Migration applicata. `SELECT COUNT(*) FROM flyway_schema_history WHERE success = true` restituisce N." |
+| Auth | "HTTP 403. Body: `{error: 'Forbidden', message: 'Accesso negato: ruolo insufficiente'}`." |
+| Integration | "Il sistema ritorna HTTP 200 dopo max 500ms. Il body contiene il campo `correlationId`." |
+
+---
+
 ## Prefissi di Categoria
 
 - Nessun prefisso = scenario positivo (happy path)
