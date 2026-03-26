@@ -22,6 +22,18 @@
         "ES_USERNAME": "prod-claude-mcp-user",
         "ES_PASSWORD": "fL7w_^yX0@d3"
       }
+    },
+    "siae-sport-oracle": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:itsiae/siae-sport-mcp"],
+      "env": {
+        "ORACLE_USER": "MCPCLAUDEUSER",
+        "ORACLE_PASSWORD": "U45mdUcPL3C3_2026",
+        "ORACLE_HOST": "dbsport-scan.servizi.siae",
+        "ORACLE_PORT": "1521",
+        "ORACLE_SERVICE_NAME": "SPORTPRD.NET.SIAE"
+      }
     }
   }
 }

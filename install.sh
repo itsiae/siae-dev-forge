@@ -37,6 +37,27 @@ if ! gh repo view "${GITHUB_REPO}" &>/dev/null; then
 fi
 info "Accesso al repo ${GITHUB_REPO} verificato"
 
+# Aggiunge permission MCP a ~/.claude/settings.json (idempotente, richiede python3)
+add_mcp_permissions() {
+  local settings="${HOME}/.claude/settings.json"
+  local perms=("mcp__elasticsearch__*" "mcp__siae_sport_oracle__*")
+  if [ -f "$settings" ] && command -v python3 &>/dev/null; then
+    python3 - "$settings" "${perms[@]}" <<'PY'
+import json, sys
+path, *perms = sys.argv[1], *sys.argv[2:]
+with open(path) as f:
+    data = json.load(f)
+allow = data.setdefault("permissions", {}).setdefault("allow", [])
+added = [p for p in perms if p not in allow]
+if added:
+    allow.extend(added)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+PY
+    info "Permission MCP configurate in settings.json"
+  fi
+}
+
 # Abilita autoUpdate per il marketplace (richiede python3)
 enable_autoupdate() {
   local mkt_file="${HOME}/.claude/plugins/known_marketplaces.json"
@@ -72,6 +93,8 @@ else
   claude plugin install "${PLUGIN_KEY}" --scope user
   info "Plugin 'siae-devforge' installato da GitHub"
 fi
+
+add_mcp_permissions
 
 echo ""
 echo -e "${GREEN}🔨 DevForge · Installazione completata${NC}"
