@@ -25,18 +25,18 @@ skills/siae-qa/reference/code-scan.md      ← NUOVO (task B2)
 
 | # | Task | File | Cluster | Stato |
 |---|------|------|---------|-------|
-| 01 | Allineamento segnali inferenza | `task-01-signal-alignment.md` | A | [PENDING] |
-| 02 | Skip-criteria espliciti per ogni domanda | `task-02-skip-criteria.md` | A | [PENDING] |
-| 03 | Cardinalità minima matrice scenari | `task-03-min-cardinality.md` | A | [PENDING] |
-| 04 | Regole granularità step | `task-04-step-granularity.md` | A | [PENDING] |
-| 05 | Domanda L4 performance/SLA (tutti i tipi) | `task-05-performance-questions.md` | B | [PENDING] |
-| 06 | Phase 0-bis Code Scan | `task-06-code-scan.md` | B | [PENDING] |
-| 07 | Split Integration → REST + Event | `task-07-integration-split.md` | B | [PENDING] |
-| 08 | 5 nuovi tipi applicativi | `task-08-new-types.md` | B | [PENDING] |
-| 09 | Ordinamento per flusso utente (Fase 4c) | `task-09-flow-ordering.md` | C | [PENDING] |
-| 10 | Primary Type + Secondary Tags | `task-10-composite-types.md` | C | [PENDING] |
-| 11 | Schema classificazione 5 campi enterprise | `task-11-enterprise-schema.md` | C | [PENDING] |
-| 12 | Release Readiness Score | `task-12-release-readiness.md` | C | [PENDING] |
+| 01 | Allineamento segnali inferenza | `task-01-signal-alignment.md` | A | [DONE] |
+| 02 | Skip-criteria espliciti per ogni domanda | `task-02-skip-criteria.md` | A | [DONE] |
+| 03 | Cardinalità minima matrice scenari | `task-03-min-cardinality.md` | A | [DONE] |
+| 04 | Regole granularità step | `task-04-step-granularity.md` | A | [DONE] |
+| 05 | Domanda L4 performance/SLA (tutti i tipi) | `task-05-performance-questions.md` | B | [DONE] |
+| 06 | Phase 0-bis Code Scan | `task-06-code-scan.md` | B | [DONE] |
+| 07 | Split Integration → REST + Event | `task-07-integration-split.md` | B | [DONE] |
+| 08 | 5 nuovi tipi applicativi | `task-08-new-types.md` | B | [DONE] |
+| 09 | Ordinamento per flusso utente (Fase 4c) | `task-09-flow-ordering.md` | C | [DONE] |
+| 10 | Primary Type + Secondary Tags | `task-10-composite-types.md` | C | [DONE] |
+| 11 | Schema classificazione 5 campi enterprise | `task-11-enterprise-schema.md` | C | [DONE] |
+| 12 | Release Readiness Score | `task-12-release-readiness.md` | C | [DONE] |
 
 ---
 
