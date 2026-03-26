@@ -1,6 +1,6 @@
 # Task 03 — Aggiorna plugin.json skill count
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File coinvolti:**
 - `.claude-plugin/plugin.json` (MODIFY)
 

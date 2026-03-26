@@ -1,6 +1,6 @@
 # Task 01 — Crea SKILL.md branching-strategy-check
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File coinvolti:**
 - `skills/branching-strategy-check/SKILL.md` (CREATE)
 

@@ -1,6 +1,6 @@
 # Task 02 — Modifica session-start: branching summary
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File coinvolti:**
 - `hooks/session-start` (MODIFY)
 
