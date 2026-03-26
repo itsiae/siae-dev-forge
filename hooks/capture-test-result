@@ -18,7 +18,7 @@ RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
 INPUT=$(cat)
 
 # Extract the command that was run
-COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | head -1 | sed 's/"command":"//;s/"$//' || echo "")
+COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 
 # Only care about test-related commands
 if ! echo "$COMMAND" | grep -qiE '(test|jest|vitest|pytest|mvn.*test|gradle.*test|npm.*test|yarn.*test|go test|cargo test|run-all\.sh|\.spec\.|\.test\.)'; then
@@ -26,8 +26,8 @@ if ! echo "$COMMAND" | grep -qiE '(test|jest|vitest|pytest|mvn.*test|gradle.*tes
 fi
 
 # Extract exit code and stdout summary
-EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code":[0-9]*' | head -1 | cut -d: -f2 || echo "?")
-STDOUT=$(echo "$INPUT" | grep -o '"stdout":"[^"]*"' | head -1 | sed 's/"stdout":"//;s/"$//' || echo "")
+EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$' || echo "?")
+STDOUT=$(echo "$INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"stdout"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 
 # Build summary
 NOW=$(date '+%H:%M')
