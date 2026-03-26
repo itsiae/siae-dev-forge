@@ -88,7 +88,7 @@ PY
       warning "jq: errore durante la modifica di settings.json — aggiungi manualmente mcp__siae_sport_oracle__* in permissions > allow"
     fi
   elif command -v node &>/dev/null; then
-    # node è garantito disponibile: setup-mcp-sport richiede npm/node per la build
+    # node come terzo fallback: disponibile sulla maggior parte delle macchine con npm
     node - "$settings" "${perms[@]}" <<'JS'
 const fs = require('fs');
 const [,, path, ...perms] = process.argv;
