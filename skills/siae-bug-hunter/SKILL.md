@@ -99,7 +99,7 @@ Poni le seguenti domande (salta se già fornite dall'utente, usa default se l'ut
 
 | # | Domanda | Default |
 |---|---|---|
-| 0a | Quali repo scansionare? (FE / BE / BFF — path, URL, oppure `git diff HEAD~1 --name-only` per scansionare solo i file modificati nella PR corrente) | cwd |
+| 0a | Quali repo scansionare? (FE / BE / BFF — path o URL GitHub). Opzionale: usa `git diff HEAD~1 --name-only` per identificare i repo coinvolti, ma la scansione avviene sempre sull'intero codebase, non sui soli file modificati. | cwd |
 | 0b | Stack tecnologico? | auto-detect |
 | 0c | Entry point utente principale? | `src/` → `main.ts` / `index.ts` / `App.tsx` |
 | 0d | Livello output? Solo i certi (`CONFIRMED`) / Certi + da verificare manualmente (`CONFIRMED+PROBABLE`) / Tutto inclusi i sospetti (`ALL`) | CONFIRMED |
