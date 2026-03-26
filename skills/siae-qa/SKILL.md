@@ -208,7 +208,7 @@ REQ PROFILE (multi-dominio):
 
 **Trigger:** esegui se e solo se:
 - Un repository git è accessibile nella sessione corrente
-- Il tipo requisito (da Phase 0) è in: `{BE, FE, ETL, Auth, DB, Notification, Batch, Report, Feature Flag, File Processing}`
+- Il tipo requisito (da Phase 0) è in: `{BE, FE, ETL, Auth}`
 
 **Steps:**
 1. Rileva stack con Glob (pom.xml, package.json, requirements.txt)
