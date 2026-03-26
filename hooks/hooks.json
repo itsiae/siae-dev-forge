@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "Setup": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' setup-mcp-kibana",
+            "timeout": 120,
+            "statusMessage": "DevForge: configurazione siae-mcp-kibana..."
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup|resume|clear|compact",
