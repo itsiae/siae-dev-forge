@@ -525,6 +525,7 @@ Coverage_Score = min(1.0, TC_generati / TC_attesi_minimi)
 
 Critical_Coverage_Score = TC_P1_generati / AC_critici_totali
   dove: AC critici = AC che toccano Auth + AC del flusso principale positivo
+  nota: se AC_critici_totali = 0, Critical_Coverage_Score = 1.0 (nessun critico da coprire)
 
 Execution_Score = TC_passed / TC_executed
   [N/A nella fase corrente — aggiornare dopo l'esecuzione dei test]
