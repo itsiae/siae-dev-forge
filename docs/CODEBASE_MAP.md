@@ -136,7 +136,7 @@ siae-dev-forge/
 │   ├── skill-triggering/        # CSO test: skill si attivano con prompt giusti
 │   └── analyze-token-usage.py   # Analisi token per ottimizzazione budget
 ├── install.sh                   # Installazione cross-platform via claude CLI + gh
-└── mcp.json                     # MCP servers: Atlassian, GitHub, Playwright
+└── .mcp.json                    # MCP servers: Atlassian, GitHub, Playwright, Elasticsearch
 ```
 
 ## Guida Moduli
@@ -184,12 +184,13 @@ siae-dev-forge/
 **API principali**: `findSkillsInDir()`, `buildCatalog()`, `inferSkillMeta()`, `extractFrontmatter()`
 **Gotcha**: Parser YAML regex-based — fragile con colon nel testo. Phase/type mapping hardcoded nel source.
 
-#### mcp.json
-**Scopo**: MCP server configuration
+#### .mcp.json
+**Scopo**: MCP server configuration (Claude Code reads `.mcp.json`, not `mcp.json`)
 **Server configurati**:
 - `atlassian` (http): Jira, Confluence, Compass
 - `github` (http): GitHub Copilot API
 - `playwright` (stdio): Browser automation via npx
+- `elasticsearch` (stdio): SPORT log analysis via siae-mcp-kibana
 
 ---
 
