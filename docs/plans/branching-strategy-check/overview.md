@@ -15,9 +15,9 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Crea SKILL.md branching-strategy-check | `task-01-skill-md.md` | [PENDING] |
-| 2 | Modifica session-start: branching summary | `task-02-session-start-hook.md` | [PENDING] |
-| 3 | Aggiorna plugin.json skill count | `task-03-plugin-json.md` | [PENDING] |
+| 1 | Crea SKILL.md branching-strategy-check | `task-01-skill-md.md` | [DONE] |
+| 2 | Modifica session-start: branching summary | `task-02-session-start-hook.md` | [DONE] |
+| 3 | Aggiorna plugin.json skill count | `task-03-plugin-json.md` | [DONE] |
 
 ## Dipendenze
 
