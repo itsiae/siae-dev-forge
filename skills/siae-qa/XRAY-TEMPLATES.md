@@ -26,7 +26,7 @@
 | **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase", "ALTER TABLE", "stored procedure", "view", "DynamoDB", "MongoDB", "Cosmos DB", "partition key", "Alembic", "revision", "read replica", "sharding" |
 | **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT", "SSO", "autorizzazione", "profilo utente", "OAuth2", "OIDC", "refresh token", "scope", "claims", "MFA", "OTP", "TOTP", "2FA", "API key", "client credentials", "Cognito", "user pool", "SAML" |
 | **Integration REST / Sync** | "chiamata esterna", "API terza parte", "REST client", "HTTP client", "timeout", "retry", "circuit breaker", "Feign", "RestTemplate", "WebClient", "OpenFeign", "Pact", "consumer-driven contract", "gRPC client" |
-| **Integration Event / Async** | "webhook", "evento", "Kafka", "SQS", "SNS", "notifica", "callback", "polling", "EventBridge", "event bus", "AMQP", "RabbitMQ", "ActiveMQ", "saga", "outbox pattern", "consumer", "producer", "topic", "queue", "dead letter", "DLQ" |
+| **Integration Event / Async** | "webhook", "evento", "Kafka", "SQS", "SNS", "notifica asincrona", "message broker", "event-driven", "callback", "polling", "EventBridge", "event bus", "AMQP", "RabbitMQ", "ActiveMQ", "saga", "outbox pattern", "consumer", "producer", "topic", "queue", "dead letter", "DLQ" |
 | **Notification / Messaging** | "email transazionale", "push notification", "SMS", "notifica in-app", "template email", "opt-out", "unsubscribe", "FCM", "APNs", "SES", "SendGrid", "Twilio", "notification center", "delivery receipt", "bounce", "webhook push" |
 | **Batch / Scheduler** | "batch", "cron", "scheduler", "Quartz", "EventBridge rule", "job periodico", "elaborazione notturna", "elaborazione massiva", "finestra temporale", "trigger scheduled", "AWS Batch", "Step Functions scheduled", "import massivo", "export massivo" |
 | **Report / Export** | "report", "export", "PDF", "Excel", "XLSX", "CSV export", "rendiconto", "estratto conto", "stampa", "download", "JasperReports", "Apache POI", "generazione documento", "template report", "BI", "dashboard export" |
@@ -48,7 +48,7 @@ e registra l'altro come tag secondario (vedi sezione Primary Type + Secondary Ta
 
 ```
 REQ PROFILE:
-  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration]
+  Tipo:       [Frontend / BE / ETL / DB / Auth / Integration REST / Integration Event / Notification / Batch / Report / Feature Flag / File Processing]
   Confidence: [HIGH / MEDIUM / LOW]
   Segnali:    [elenco segnali usati dall'inferenza]
   Stack:      [tecnologie rilevate]
@@ -228,6 +228,9 @@ Riepilogo copertura:
   TOTALE:        N TC
 
   Test Level:    Unit: X | Integration: Y | System: Z | E2E: W | Performance: V | Security: U
+  Priority:      P1-Critical: X | P2-High: Y | P3-Medium: Z | P4-Low: W
+  Classification: Functional: X | Non-Functional: Y | Security: Z | Regression: W
+  Exec Timing:   Pre-Deploy: X | Post-Deploy-Smoke: Y | Sprint: Z | Nightly: W | Release: V
   Automazione:   Y: N | N: M
   NRT:           Y: N | N: M
   Owner:         QA-Manual: X | QA-Automated: Y | Dev-Auto: Z | DevOps: W

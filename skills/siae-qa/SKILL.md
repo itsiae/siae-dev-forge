@@ -430,6 +430,11 @@ Usa le risposte a L0.1/L0.2/L0.3 del question tree per costruire le tappe.
 | Auth | AuthN (chi sei?) → AuthZ (puoi farlo?) → Operazione → Audit |
 | Integration REST | Setup/Auth → Request → Response → State verification |
 | Integration Event | Event production → Consumer processing → Ack/callback → State final |
+| Notification / Messaging | Trigger → Template rendering → Consegna → Delivery confirmation |
+| Batch / Scheduler | Trigger → Data selection → Processing → Checkpoint → Completion |
+| Report / Export | Data query → Aggregation → Formatting → Output delivery |
+| Feature Flag / Configuration | Flag evaluation → Path selection (ON/OFF) → Execution → Side effects |
+| File Processing / Async Upload | Upload → Validation → Processing → Status polling → Completion |
 
 #### Algoritmo di associazione scenario → tappa
 
