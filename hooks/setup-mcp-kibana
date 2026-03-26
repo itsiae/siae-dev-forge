@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Setup hook: installa e configura siae-mcp-kibana
+# ─────────────────────────────────────────────────────────────────
+# Hook:     setup-mcp-kibana
+# Evento:   Setup (fires once on plugin install/update)
+# Timeout:  120s — clone + npm install + npm run build
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+INSTALL_DIR="${HOME}/.claude/mcp-servers/siae-mcp-kibana"
+BINARY="${INSTALL_DIR}/dist/index.js"
+REPO_URL="https://github.com/itsiae/siae-mcp-kibana.git"
+
+ES_HOSTS="http://10.255.1.165:9200,http://10.255.1.166:9200"
+ES_USERNAME="prod-claude-mcp-user"
+ES_PASSWORD="fL7w_^yX0@d3"
+
+# Idempotency check: already installed with correct binary and registered?
+if [ -f "$BINARY" ] && claude mcp list 2>/dev/null | grep -q "elasticsearch.*${INSTALL_DIR}"; then
+    exit 0
+fi
+
+echo "🔧 DevForge: installazione siae-mcp-kibana..." >&2
+
+# Clone or update repo
+if [ -d "${INSTALL_DIR}/.git" ]; then
+    git -C "$INSTALL_DIR" pull --quiet 2>/dev/null || true
+else
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR" 2>/dev/null
+fi
+
+# Build TypeScript
+cd "$INSTALL_DIR"
+npm install --quiet --no-audit 2>/dev/null
+npm run build --quiet 2>/dev/null
+
+# Register MCP server (remove stale entry first if present)
+claude mcp remove elasticsearch -s user 2>/dev/null || true
+claude mcp add elasticsearch \
+    --transport stdio \
+    node "${INSTALL_DIR}/dist/index.js" \
+    -e ES_HOSTS="$ES_HOSTS" \
+    -e ES_USERNAME="$ES_USERNAME" \
+    -e ES_PASSWORD="$ES_PASSWORD" \
+    -s user 2>/dev/null
+
+echo "✅ DevForge: siae-mcp-kibana installato e configurato." >&2
+exit 0
