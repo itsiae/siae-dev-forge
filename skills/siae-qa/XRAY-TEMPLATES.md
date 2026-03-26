@@ -122,16 +122,22 @@ Riepilogo copertura:
 Output atteso della fase 4a — matrice scenari compilata prima della generazione:
 
 ```
-Categoria              | Scenari identificati
------------------------|-----------------------------------------------
-Positivi (happy path)  | [lista da AC + eventuali varianti]
-Edge case              | [lista da domande o da AC]
-Alternativi/negativi   | [lista da domande o da AC]
-Profilazioni/ruoli     | [lista da domande, o "N/A - nessun controllo ruolo"]
+Categoria              | Scenari identificati                          | Fonte      | Count
+-----------------------|-----------------------------------------------|------------|------
+Positivi (happy path)  | [lista da AC + varianti]                      | AC         | N
+Edge case              | [lista da domande o da AC]                    | AC/Dev/Scan| N
+Alternativi/negativi   | [lista da domande o da AC]                    | AC/Dev/Scan| N
+Profilazioni/ruoli     | [lista da domande, o "N/A - confermato + motivo"] | Dev     | N
 ```
 
-Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A — confermato dal developer" e procedi.
-**Non puoi procedere alla generazione con categorie non valutate.**
+Legenda Fonte:
+- `AC` — derivato dagli Acceptance Criteria
+- `Dev` — emerso dalle domande al developer
+- `Scan` — derivato dalla Phase 0-bis Code Scan (se eseguita)
+
+Se per una categoria il developer conferma N/A su categoria con minimo > 0:
+→ Registra `⚠️ RISCHIO ACCETTATO: [categoria] N/A — Motivo: [motivo dichiarato]`
+→ Il motivo è obbligatorio. Non accettare "N/A" senza motivazione.
 
 ---
 

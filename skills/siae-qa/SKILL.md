@@ -232,6 +232,35 @@ Utenti diversi con permessi o dati diversi. Se la Story tocca autorizzazioni o r
 Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A -- confermato dal developer" e procedi.
 **Non puoi procedere alla generazione con categorie non valutate.**
 
+#### Cardinalità minima per tipo [OBBLIGATORIA]
+
+Prima di procedere alla generazione, verifica che la matrice rispetti i minimi:
+
+| Tipo | Positivi | Edge | Negativi | Profilazioni |
+|------|----------|------|----------|--------------|
+| Frontend (FE) | 1 per AC | 2 | 2 | 0 (obbligatorio solo se Auth presente) |
+| Backend Microservice (BE) | 1 per AC | 2 | 3 | 0 (obbligatorio solo se Auth presente) |
+| ETL / Data Pipeline | 1 | 3 | 2 | 0 |
+| Database | 1 | 2 | 1 | 0 |
+| Auth / Security | 1 | 2 | 2 | 2 (minimo assoluto) |
+| Integration REST / Sync | 1 | 2 | 2 | 0 |
+| Integration Event / Async | 1 | 3 | 2 | 0 |
+| Notification / Messaging | 1 | 2 | 2 | 0 |
+| Batch / Scheduler | 1 | 3 | 2 | 0 |
+| Report / Export | 1 | 2 | 1 | 0 |
+| Feature Flag / Configuration | 1 | 2 | 1 | 0 |
+| File Processing / Async Upload | 1 | 2 | 2 | 0 |
+
+**Regola N/A:**
+Se il developer dichiara "N/A" su una categoria con minimo > 0, la skill deve:
+1. Chiedere giustificazione esplicita: "Perché questa categoria non è applicabile?"
+2. Registrare nel Test Plan: `⚠️ RISCHIO ACCETTATO: [categoria] — N/A dichiarato dal developer. Motivo: [motivo]`
+3. Non procedere senza questa giustificazione.
+
+**Non puoi procedere alla generazione se:**
+- Una categoria con minimo > 0 ha 0 scenari E nessuna giustificazione N/A
+- La matrice non ha il campo `Fonte` (AC / Code Scan / Developer) per ogni scenario
+
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) per template Matrice Scenari e formato output.
 
 ---
