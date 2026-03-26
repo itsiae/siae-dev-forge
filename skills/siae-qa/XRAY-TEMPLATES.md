@@ -250,5 +250,7 @@ Prima di dichiarare la skill completata:
 - [ ] Export effettuato (MCP / CSV) o spiegato come farlo
 - [ ] Mappatura ID sequenziali → chiavi Jira Xray raccolta (se si prevede di usare siae-automation)
 - [ ] Tier usato annunciato nella pre-flight card di apertura
+- [ ] Se tipo è uno dei 5 nuovi (Notification/Batch/Report/Feature Flag/File Processing):
+      question tree specifico del tipo usato (non tree generico FE/BE)
 
 **Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla fase bloccata.**
