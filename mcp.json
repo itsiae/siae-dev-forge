@@ -12,6 +12,16 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "elasticsearch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:itsiae/siae-mcp-kibana"],
+      "env": {
+        "ES_HOSTS": "http://10.255.1.165:9200,http://10.255.1.166:9200",
+        "ES_USERNAME": "prod-claude-mcp-user",
+        "ES_PASSWORD": "fL7w_^yX0@d3"
+      }
     }
   }
 }

@@ -1,4 +1,32 @@
 {
+  "allowManagedMcpServersOnly": false,
+  "allowedMcpServers": [
+    {
+      "serverName": "atlassian"
+    },
+    {
+      "serverName": "github"
+    },
+    {
+      "serverName": "playwright"
+    },
+    {
+      "serverName": "appium"
+    },
+    {
+      "serverName": "cypress"
+    },
+    {
+      "serverName": "elasticsearch"
+    }
+  ],
+  "attribution": {
+    "commit": "\nCo-Authored-By: SIAE DevForge",
+    "pr": "\nCo-Authored-By: SIAE DevForge"
+  },
+  "companyAnnouncements": [],
+  "deniedMcpServers": [],
+  "language": "italian",
   "permissions": {
     "deny": [
       "Read(./.env)",
@@ -7,32 +35,26 @@
       "Read(./secrets/**)"
     ]
   },
-
   "strictKnownMarketplaces": [
-    { "source": "github", "repo": "itsiae/siae-dev-forge" },
-    { "source": "github", "repo": "thedotmack/claude-mem" }
-  ],
-
-  "companyAnnouncements": [
-    "SIAE DevForge attivo. Usa /forge-plan, /forge-test, /forge-review, /forge-doc, /forge-rca.",
-    "Ricorda: branch policy sviluppo > collaudo > certificazione > produzione. Mai push diretto.",
-    "Per domande: lorenzo.detomasi@siae.it"
-  ],
-
-  "allowedMcpServers": [
-    { "serverName": "atlassian" },
-    { "serverName": "github" },
-    { "serverName": "playwright" }
-  ],
-
-  "language": "italian",
-
-  "attribution": {
-    "commit": "\nCo-Authored-By: SIAE DevForge",
-    "pr": ""
-  },
-
-  "allowManagedMcpServersOnly": false,
-
-  "deniedMcpServers": []
+    {
+      "repo": "itsiae/siae-dev-forge",
+      "source": "github"
+    },
+    {
+      "repo": "thedotmack/claude-mem",
+      "source": "github"
+    },
+    {
+      "repo": "appium/appium-mcp",
+      "source": "github"
+    },
+    {
+      "repo": "itsiae/siae-mcp-cypress",
+      "source": "github"
+    },
+    {
+      "repo": "itsiae/siae-mcp-kibana",
+      "source": "github"
+    }
+  ]
 }
