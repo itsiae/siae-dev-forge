@@ -385,6 +385,12 @@ non come step 1. I dati di test specifici appartengono al campo `Data`, non all'
 
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step" e "Riepilogo Copertura" per formato completo, prefissi e template riepilogo.
 
+**Derivazione automatica 5 campi enterprise:**
+Per ogni TC generato, calcola automaticamente `Test Level`, `Priority`, `Classification`,
+`Exec Timing`, `Owner` usando le regole in `XRAY-TEMPLATES.md` sezione
+"Regole di Derivazione Automatica — 5 Campi Enterprise".
+Mostra i valori nel riepilogo copertura e permetti al developer di modificarli.
+
 **Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.
 
 ---
