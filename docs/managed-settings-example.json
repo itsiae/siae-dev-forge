@@ -18,6 +18,9 @@
     },
     {
       "serverName": "elasticsearch"
+    },
+    {
+      "serverName": "siae-sport-oracle"
     }
   ],
   "attribution": {
@@ -54,6 +57,10 @@
     },
     {
       "repo": "itsiae/siae-mcp-kibana",
+      "source": "github"
+    },
+    {
+      "repo": "itsiae/siae-sport-mcp",
       "source": "github"
     }
   ]

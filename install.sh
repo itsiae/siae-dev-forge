@@ -37,6 +37,61 @@ if ! gh repo view "${GITHUB_REPO}" &>/dev/null; then
 fi
 info "Accesso al repo ${GITHUB_REPO} verificato"
 
+# Aggiunge permission MCP a ~/.claude/settings.json (idempotente)
+# Fallback chain: python3 → jq → warning manuale
+add_mcp_permissions() {
+  local settings="${HOME}/.claude/settings.json"
+  # Nota: Claude converte kebab-case → snake_case per le permission key
+  # es. "siae-sport-oracle" → "mcp__siae_sport_oracle__*"
+  local perms=("mcp__elasticsearch__*" "mcp__siae_sport_oracle__*")
+
+  if [ ! -f "$settings" ]; then
+    warning "settings.json non trovato: aggiungi manualmente mcp__siae_sport_oracle__* in ~/.claude/settings.json > permissions > allow"
+    return 0
+  fi
+
+  if command -v python3 &>/dev/null; then
+    python3 - "$settings" "${perms[@]}" <<'PY'
+import json, sys, os
+path = sys.argv[1]
+perms = sys.argv[2:]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except (json.JSONDecodeError, OSError) as e:
+    print(f"Warning: impossibile leggere {path}: {e}", file=sys.stderr)
+    sys.exit(1)
+allow = data.setdefault("permissions", {}).setdefault("allow", [])
+added = [p for p in perms if p not in allow]
+if added:
+    allow.extend(added)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+PY
+    info "Permission MCP configurate in settings.json (python3)"
+  elif command -v jq &>/dev/null; then
+    local tmp filter perm
+    tmp=$(mktemp)
+    # Costruisce il filtro jq: inizializza permissions.allow se assente,
+    # aggiunge ogni permission solo se non già presente (idempotente)
+    filter='. | .permissions //= {} | .permissions.allow //= []'
+    for perm in "${perms[@]}"; do
+      filter+=" | if (.permissions.allow | index(\"${perm}\")) == null then .permissions.allow += [\"${perm}\"] else . end"
+    done
+    if jq "$filter" "$settings" > "$tmp" 2>/dev/null; then
+      mv "$tmp" "$settings"
+      info "Permission MCP configurate in settings.json (jq)"
+    else
+      rm -f "$tmp"
+      warning "jq: errore durante la modifica di settings.json — aggiungi manualmente mcp__siae_sport_oracle__* in permissions > allow"
+    fi
+  else
+    warning "né python3 né jq disponibili: aggiungi manualmente mcp__siae_sport_oracle__* in ~/.claude/settings.json > permissions > allow"
+  fi
+}
+
 # Abilita autoUpdate per il marketplace (richiede python3)
 enable_autoupdate() {
   local mkt_file="${HOME}/.claude/plugins/known_marketplaces.json"
@@ -72,6 +127,8 @@ else
   claude plugin install "${PLUGIN_KEY}" --scope user
   info "Plugin 'siae-devforge' installato da GitHub"
 fi
+
+add_mcp_permissions
 
 echo ""
 echo -e "${GREEN}🔨 DevForge · Installazione completata${NC}"
