@@ -348,6 +348,7 @@ L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si app
 | Skill | Trigger / quando usarla | Tipo | Fase SDLC |
 |-------|------------------------|------|-----------|
 | siae-nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
+| siae-bug-hunter | bug proattivo, caccia ai bug, /forge-bugs, trova bug nel codice, bug latenti, analisi statica bug, cosa è già rotto, scansione bug, bug prima di produzione, pattern anti, codice rotto | Rigid | 6. QA Gate |
 | siae-blind-review | "blind review", "review cieca", "audit spec", "verifica spec vs codice", "review senza diff", /forge-blind-review | Rigid | 6. QA Gate |
 | siae-retrospective | fine sessione, lezioni apprese, cosa ho imparato, retrospettiva, salva per la prossima volta, /forge-retro, stop-gate hook | Rigid | Cross-cutting |
 

@@ -13,9 +13,9 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 30 skill, 7 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 31 skill, 8 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.14.0-mvp
+> **Versione:** 1.28.3-mvp
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
 
@@ -27,7 +27,7 @@
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (30)](#skill-30)
+- [Skill (31)](#skill-31)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
@@ -120,8 +120,8 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
   siae-code-standards      siae-tdd             siae-debugging            siae-documentation
-  siae-security            siae-qa (Xray TC)    siae-parallel-agents
-  siae-iac                 siae-automation
+  siae-security            siae-qa (Xray TC)    siae-bug-hunter
+  siae-iac                 siae-automation      siae-parallel-agents
   siae-data-engineering    (Appium/Cypress)
   siae-frontend
   siae-subagent-development
@@ -156,6 +156,7 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality)                       | `siae-subagent-development` |
 | `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e PlantUML                       | `siae-documentation`       |
 | `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per microservizi | `siae-service-logic-map`   |
+| `/forge-bugs`        | Scansiona proattivamente uno o piu' repo e riporta bug reali con passi di riproduzione           | `siae-bug-hunter`          |
 
 > **Nota:** Le funzionalita' precedentemente disponibili come comandi dedicati (`/forge-map`, `/forge-sysmap`, `/forge-plan`, `/forge-qa`, `/forge-review`, `/forge-rca`, `/forge-logic-search`) sono ora invocabili direttamente come skill via `using-devforge` (auto-discovery).
 
@@ -237,7 +238,7 @@ all'ultima domanda in un unico comando.
 
 ---
 
-## Skill (30)
+## Skill (31)
 
 ### Meta-skill
 
@@ -438,6 +439,20 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   5. Caricamento su Xray (crea/aggiorna Test Execution) o produzione CSV per import manuale
 - **Sync risultati:** PASS/FAIL/SKIP per TC, screenshot allegati ai fallimenti, nessuna TE duplicata
 - **Reference files:** `reference/appium-browserstack-config.md`, `reference/cypress-xray-config.md`
+- **Tipo:** Rigid
+
+#### `siae-bug-hunter` — Proactive Bug Detection (Fase 6: QA Gate)
+
+- **Trigger:** Bug proattivo, caccia ai bug, `/forge-bugs [path|URL]`, trova bug nel codice, analisi statica bug, cosa e' gia' rotto
+- **Posizionamento:** Complementare a `siae-debugging` (reattivo su bug segnalati) e `siae-nr-test-flows` (genera test futuri) — `siae-bug-hunter` trova bug gia' presenti prima che li segnalino gli utenti
+- **4 fasi:**
+  1. **Phase 0 — Context Interview:** 5 domande con default (repo, stack, entry point, livello output, path da escludere). Supporta modalita' PR con `git diff HEAD~1 --name-only`
+  2. **Phase 1 — Code Ingestion:** language detection, file manifest deterministico (`LC_ALL=C sort`), tier selection NANO→ENTERPRISE (5 tier, da ≤50 a >2000 file)
+  3. **Phase 2 — Pattern Extraction:** 5 moduli (M1 API Contract, M2 State Logic, M3 Error Handling, M4 Async Race, M5 Data Validation con pattern ISWC/ISRC/CF). Normalizzazione pre-gate obbligatoria sull'output subagent
+  4. **Phase 3 — Evidence Validation:** Three-Condition Gate (Citation + LiteralPattern + ReachablePath) + 7 falsificatori sequenziali
+  5. **Phase 4 — Output:** Report CONFIRMED/PROBABLE/SUSPECT con passi riproduzione atomici e dato di test specifico
+- **Legge di ferro:** `NESSUN BUG RIPORTATO SENZA FILE:RIGA + PATTERN LETTERALE + PERCORSO UTENTE`
+- **Reference files:** `reference/module-1-api-contract.md`, `reference/module-2-state-logic.md`, `reference/module-3-error-handling.md`, `reference/module-4-async-race.md`, `reference/module-5-data-validation.md`, `reference/evidence-protocol.md`, `reference/bug-report-template.md`, `reference/language-registry.md`
 - **Tipo:** Rigid
 
 #### `siae-debugging` — Investigazione sistematica (Fase 6: QA Gate)
@@ -871,6 +886,17 @@ siae-devforge/
 │   │   └── reference/
 │   │       ├── appium-browserstack-config.md
 │   │       └── cypress-xray-config.md
+│   ├── siae-bug-hunter/         # Proactive bug detection (CONFIRMED/PROBABLE/SUSPECT)
+│   │   ├── SKILL.md
+│   │   └── reference/
+│   │       ├── module-1-api-contract.md
+│   │       ├── module-2-state-logic.md
+│   │       ├── module-3-error-handling.md
+│   │       ├── module-4-async-race.md
+│   │       ├── module-5-data-validation.md
+│   │       ├── evidence-protocol.md
+│   │       ├── bug-report-template.md
+│   │       └── language-registry.md
 │   ├── siae-debugging/          # Debug sistematico, RCA
 │   │   ├── SKILL.md
 │   │   └── template/
@@ -972,7 +998,7 @@ Per configurare MCP Atlassian, segui la [documentazione ufficiale](https://devel
 
 Ogni skill integra tre meccanismi derivati dalla ricerca sulla persuasione applicata agli LLM, che insieme portano la compliance dell'agente dal ~50% al ~75%.
 
-### Social Proof (30/30 skill)
+### Social Proof (31/31 skill)
 
 Ogni skill contiene un blocco di statistiche plausibili derivate dall'analisi dei 816 repository GitHub itsiae. Posizionato subito dopo la regola principale della skill, rinforza il comportamento corretto mostrando che e' la norma nell'organizzazione.
 
@@ -984,7 +1010,7 @@ Ogni skill contiene un blocco di statistiche plausibili derivate dall'analisi de
 
 Il principio: quando l'agente vede che un comportamento e' diffuso e produce risultati misurabili, e' significativamente piu' propenso a seguirlo. Da solo, il social proof aumenta la compliance del +39%.
 
-### Limiti Operativi (30/30 skill)
+### Limiti Operativi (31/31 skill)
 
 Ogni skill ha una sezione `## Limiti Operativi` con vincoli concreti che prevengono loop infiniti, output eccessivi e tentativi ripetuti senza cambiamento di strategia.
 
@@ -1006,7 +1032,7 @@ Ogni skill ha una sezione `## Limiti Operativi` con vincoli concreti che preveng
 
 Il principio di scarcita': vincoli espliciti creano urgenza e prevengono il pattern "provo ancora la stessa cosa finche' non funziona".
 
-### Chaining Profondo (28/30 skill)
+### Chaining Profondo (29/31 skill)
 
 Le skill sono collegate tra loro con marker `REQUIRED SUB-SKILL` che dichiarano dipendenze esplicite. Quando una skill ha un marker, l'agente DEVE invocare la sub-skill indicata prima di procedere o prima di dichiarare il completamento.
 
@@ -1022,7 +1048,7 @@ Due tipi di chaining:
 
 Le uniche 2 skill senza chaining sono `siae-onboarding` (entry point del sistema) e `siae-verification` (leaf node terminale — non puo' richiamare se stessa).
 
-Copertura: 28/30 skill (93%) con dipendenze esplicite dichiarate.
+Copertura: 29/31 skill (94%) con dipendenze esplicite dichiarate.
 
 ---
 
