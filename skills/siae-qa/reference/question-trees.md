@@ -607,5 +607,6 @@ Cosa cambia nello stato del sistema alla fine del flusso?
 
 Per ogni domanda del tree, il blocco `> SKIP SE:` definisce i pattern di skip deterministici.
 **Non valutare semanticamente.** Se nessun pattern è trovato letteralmente negli AC → domanda obbligatoria.
-Le domande L0 (flusso trasversale) non hanno skip-criteria: sono sempre obbligatorie se non c'è
-struttura sequenziale esplicita negli AC.
+Le domande L0 (flusso trasversale) hanno i propri `> SKIP SE:` condizionati alla presenza
+di struttura sequenziale negli AC (Given/When/Then multipli, elenco numerato, connettivi
+sequenziali). In assenza di questi pattern sono obbligatorie — non valutare semanticamente.

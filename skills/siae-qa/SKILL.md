@@ -208,7 +208,7 @@ REQ PROFILE (multi-dominio):
 
 **Trigger:** esegui se e solo se:
 - Un repository git è accessibile nella sessione corrente
-- Il tipo requisito (da Phase 0) è in: `{BE, FE, ETL, Auth}`
+- Il tipo requisito (da Phase 0) è in scope Code Scan (vedi `reference/code-scan.md` tabella Trigger per la lista completa)
 
 **Steps:**
 1. Rileva stack con Glob (pom.xml, package.json, requirements.txt)
@@ -519,8 +519,9 @@ Pesi:
   W3 = 0.30  (esito esecuzione TC — disponibile post-esecuzione)
   W4 = 0.10  (assenza bug P1 aperti)
 
-Coverage_Score = TC_generati / TC_attesi_minimi
+Coverage_Score = min(1.0, TC_generati / TC_attesi_minimi)
   dove: TC_attesi_minimi = (N_AC × 1) + minimi_per_tipo (vedi tabella cardinalità Fase 4a)
+  nota: N_AC = numero di AC distinti identificati in Fase 1; se N_AC = 0 usare N_AC = 1
 
 Critical_Coverage_Score = TC_P1_generati / AC_critici_totali
   dove: AC critici = AC che toccano Auth + AC del flusso principale positivo
