@@ -144,6 +144,33 @@ Questa card e' l'input aggiuntivo per Phase 4a (matrice scenari).
 
 ## WORKFLOW A 5 FASI
 
+### Phase 0-bis — Code Scan [OPZIONALE — auto-skip se repo non disponibile]
+
+> Stai per passare a Fase 1 (lettura AC)?
+> FERMATI. Verifica prima se il repo è accessibile per il Code Scan.
+> Se sì, eseguilo: +65-85% scenari aggiuntivi con 90 secondi di lavoro.
+> Se no, procedi normalmente: il workflow AC-driven rimane valido.
+
+**Trigger:** esegui se e solo se:
+- Un repository git è accessibile nella sessione corrente
+- Il tipo requisito (da Phase 0) è in: `{BE, FE, ETL, Auth, DB, Notification, Batch, Report, Feature Flag, File Processing}`
+
+**Steps:**
+1. Rileva stack con Glob (pom.xml, package.json, requirements.txt)
+2. Identifica file modificati nella branch: `git diff --name-only main..HEAD`
+3. Esegui Grep selettivo per tipo (vedi `reference/code-scan.md` per i pattern esatti)
+4. Produci **Code Profile Card** con scenari candidati
+5. In Fase 4a, mostra i candidati al developer per conferma/scarto
+
+**Output:** Code Profile Card + lista scenari candidati (da validare, NON già TC)
+
+**Vedi:** `reference/code-scan.md` per extraction rules complete, fallback e casi limite.
+
+**Skip esplicito:** se il repo non è disponibile o il tipo non è nella lista trigger,
+emetti: `⚠️ Phase 0-bis skippata — [motivo]. Procedo con approccio solo-AC.`
+
+---
+
 ### Fase 1 — Lettura AC da Jira [HARD-GATE]
 
 Non procedere alla Fase 2 senza AC o contesto sufficiente.

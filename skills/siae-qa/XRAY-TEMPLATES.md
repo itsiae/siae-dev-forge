@@ -229,6 +229,9 @@ Salva la mappatura come output della skill: sara' l'input di Fase 1 di siae-auto
 Prima di dichiarare la skill completata:
 
 - [ ] Phase 0 eseguita: tipo requisito inferito e Req Profile Card mostrata
+- [ ] Phase 0-bis eseguita (o skip esplicito documentato con motivo)
+- [ ] Se Code Scan eseguito: Code Profile Card mostrata al developer
+- [ ] Se Code Scan eseguito: scenari candidati confermati/scartati prima di Fase 4a
 - [ ] Confidence HIGH → tree lanciato senza conferma tipo | MEDIUM/LOW → conferma ricevuta
 - [ ] Domande del tree skippate se risposta gia' presente in AC/description
 - [ ] Req Profile Card aggiornata con scenari L1/L2/L3 prima di procedere a Phase 4a
