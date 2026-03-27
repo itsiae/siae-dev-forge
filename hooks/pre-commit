@@ -15,8 +15,12 @@ set -euo pipefail
 # Read tool input from stdin (JSON with tool_name and tool_input)
 HOOK_INPUT=$(cat)
 
-# Extract the command from the tool input
-TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+# Extract the command from the tool input (jq handles escaped quotes in paths with spaces)
+if command -v jq >/dev/null 2>&1; then
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+else
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
 
 # Determine plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"

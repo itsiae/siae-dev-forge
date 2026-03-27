@@ -21,8 +21,12 @@ BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"
 
 HOOK_INPUT=$(cat)
 
-# Extract command
-TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+# Extract command (jq handles escaped quotes in paths with spaces)
+if command -v jq >/dev/null 2>&1; then
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+else
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
 
 # Only care about git commits that mark plan tasks as DONE
 # Pattern: "docs(plans)" in conventional commit or "docs/plans/" in file path or "task.*DONE" in message

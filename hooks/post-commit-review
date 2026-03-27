@@ -19,8 +19,12 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Extract the command that was executed (best-effort, may truncate on escaped quotes)
-TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+# Extract the command that was executed (jq handles escaped quotes in paths with spaces)
+if command -v jq >/dev/null 2>&1; then
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+else
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
 
 # F2: Detect new commit by comparing HEAD hash with saved hash (robust for heredoc/complex commands)
 LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash"
@@ -81,7 +85,11 @@ if [[ ! "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+create ]] && \
 fi
 
 # Check if push/PR actually succeeded (look for error indicators in output)
-TOOL_OUTPUT=$(echo "$HOOK_INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 || true)
+if command -v jq >/dev/null 2>&1; then
+    TOOL_OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.stdout // .tool_output.stdout // empty' 2>/dev/null || true)
+else
+    TOOL_OUTPUT=$(echo "$HOOK_INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 || true)
+fi
 if echo "$TOOL_OUTPUT" | grep -qi "error\|fatal\|rejected\|failed"; then
     echo '{}'
     exit 0

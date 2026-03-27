@@ -17,17 +17,22 @@ RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
 # Read tool input from stdin (Claude passes JSON with tool_input)
 INPUT=$(cat)
 
-# Extract the command that was run
-COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
+# Extract fields using jq (handles escaped quotes in JSON values correctly)
+# Fallback to grep for environments without jq
+if command -v jq >/dev/null 2>&1; then
+    COMMAND=$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || echo "")
+    EXIT_CODE=$(echo "$INPUT" | jq -r '.exit_code // .tool_output.exit_code // empty' 2>/dev/null || echo "?")
+    STDOUT=$(echo "$INPUT" | jq -r '.stdout // .tool_output.stdout // empty' 2>/dev/null || echo "")
+else
+    COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
+    EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$' || echo "?")
+    STDOUT=$(echo "$INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"stdout"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
+fi
 
 # Only care about test-related commands
 if ! echo "$COMMAND" | grep -qiE '(test|jest|vitest|pytest|mvn.*test|gradle.*test|npm.*test|yarn.*test|go test|cargo test|run-all\.sh|\.spec\.|\.test\.)'; then
     exit 0
 fi
-
-# Extract exit code and stdout summary
-EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$' || echo "?")
-STDOUT=$(echo "$INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"stdout"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 
 # Build summary
 NOW=$(date '+%H:%M')
