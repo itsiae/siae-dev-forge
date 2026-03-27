@@ -40,7 +40,7 @@ if command -v jq >/dev/null 2>&1; then
       fi
       # Path changed (e.g. plugin moved) — update it
       TMP_FILE=$(mktemp "${SETTINGS_FILE}.XXXXXX")
-      jq --arg cmd "$DESIRED_COMMAND" '.statusLine.command = $cmd' "$SETTINGS_FILE" > "$TMP_FILE"
+      jq --arg cmd "$DESIRED_COMMAND" '.statusLine.command = $cmd | .statusLine.type = "command"' "$SETTINGS_FILE" > "$TMP_FILE"
       mv "$TMP_FILE" "$SETTINGS_FILE"
       echo "✅ DevForge status line: path aggiornato" >&2
       exit 0
@@ -56,7 +56,7 @@ if command -v jq >/dev/null 2>&1; then
 
   # 6. statusLine not configured → inject
   TMP_FILE=$(mktemp "${SETTINGS_FILE}.XXXXXX")
-  jq --arg cmd "$DESIRED_COMMAND" '.statusLine = { "command": $cmd }' "$SETTINGS_FILE" > "$TMP_FILE"
+  jq --arg cmd "$DESIRED_COMMAND" '.statusLine = { "type": "command", "command": $cmd }' "$SETTINGS_FILE" > "$TMP_FILE"
   mv "$TMP_FILE" "$SETTINGS_FILE"
   echo "✅ DevForge status line installata" >&2
   exit 0
