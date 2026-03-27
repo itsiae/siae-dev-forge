@@ -124,7 +124,7 @@ Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato 
 | `package.json` con `"express"` / `"serverless-http"`, `jest.config.ts`               | **TypeScript Backend** | Jest + ts-jest                        | —                    |
 | `pom.xml`, file `.java`, package `it.siae.*`                                          | **Java / Spring Boot** | JUnit 5 + Mockito + AssertJ           | —                    |
 | File `.py`, `pyproject.toml`, `requirements.txt`, Glue job                            | **Python**             | pytest + pytest-mock                  | —                    |
-| File `.tf`, `.hcl`, `terragrunt.hcl`                                                  | **IaC**                | Terratest (Go)                        | siae-iac             |
+| File `.tf`, `.hcl`, `terragrunt.hcl`                                                  | **IaC (Terraform)**    | terraform test (HCL)                  | siae-iac             |
 
 ### Codice Frontend — integrazione con siae-frontend
 
@@ -327,6 +327,64 @@ def test_should_reject_empty_email_when_submitting_form(form_service):
     result = form_service.submit(email="")
     assert result.error == "Email obbligatoria"
 ```
+
+### Terraform/HCL (IaC)
+
+- **Framework:** terraform test (nativo, >= Terraform 1.6)
+- **Test file:** `{risorsa_logica}.tftest.hcl` (in directory `tests/` dentro il modulo)
+- **Run:** `terraform test` (dalla root del modulo, dopo `terraform init`)
+- **Coverage:** qualitativa — ogni risorsa con implicazioni di sicurezza (IAM, SG, encryption) ha almeno un assert sui suoi attributi critici
+
+**Struttura file:**
+```
+modules/
+  {module-name}/
+    main.tf
+    variables.tf
+    tests/
+      {risorsa_logica}.tftest.hcl
+```
+
+**Pattern test con mock_provider + command = plan:**
+```hcl
+mock_provider "aws" {}
+
+variables {
+  account_id = "123456789012"
+  region     = "eu-south-1"
+  env        = "dev"
+}
+
+run "policy_should_include_required_actions" {
+  command = plan
+
+  assert {
+    condition = contains(
+      jsondecode(aws_iam_policy.example.policy).Statement[0].Action,
+      "s3:GetObject"
+    )
+    error_message = "La policy deve includere s3:GetObject"
+  }
+}
+```
+
+**Naming dei run block:** `{risorsa}_{verifica}` in snake_case (es. `bedrock_policy_includes_agentcore_actions`).
+
+**Cosa testare:**
+- Attributi risorse derivati da variabili/locals (IAM actions, SG rules, tags)
+- Logica condizionale (`count`/`for_each` — "questa risorsa si crea solo se X")
+- Output values
+
+**Cosa NON testare:**
+- Comportamento del provider AWS (garantito da HashiCorp)
+- Sintassi HCL (validata da `terraform validate`)
+
+**RED/GREEN per Terraform:**
+- **RED:** scrivi assert su attributo/risorsa che non esiste ancora → `terraform test` fallisce (errore di riferimento o assert failure)
+- **GREEN:** aggiungi/modifica la risorsa `.tf` → `terraform test` passa
+- **REFACTOR:** riorganizza locals, variabili, estrai moduli → test ancora verdi
+
+> **Nota:** In Terraform il RED puo' manifestarsi come errore di riferimento (risorsa non ancora definita) anziche' come assert failure. Entrambi sono RED validi — il test fallisce, che e' il punto.
 
 > Per configurazioni CI dettagliate di ogni framework, vedi `reference/framework-configs.md`.
 

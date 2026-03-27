@@ -384,6 +384,80 @@ pytest tests/ -v -m "not slow"
 
 ---
 
+## Terraform/HCL — terraform test (nativo)
+
+### Struttura modulo con test
+
+```
+modules/
+  {module-name}/
+    main.tf
+    variables.tf
+    outputs.tf
+    tests/
+      {risorsa_logica}.tftest.hcl
+```
+
+### Test file — `{risorsa_logica}.tftest.hcl`
+
+```hcl
+mock_provider "aws" {}
+
+variables {
+  account_id = "123456789012"
+  region     = "eu-south-1"
+  env        = "dev"
+}
+
+run "policy_should_include_s3_read_actions" {
+  command = plan
+
+  assert {
+    condition = contains(
+      jsondecode(aws_iam_policy.data_access.policy).Statement[0].Action,
+      "s3:GetObject"
+    )
+    error_message = "data_access policy deve includere s3:GetObject"
+  }
+}
+
+run "security_group_should_restrict_ingress" {
+  command = plan
+
+  assert {
+    condition     = aws_security_group.main.ingress[0].cidr_blocks == tolist(["10.0.0.0/8"])
+    error_message = "Ingress deve essere ristretto alla rete interna"
+  }
+}
+```
+
+### Comandi
+
+```bash
+# Init del modulo (scarica provider — necessario prima di test)
+cd modules/{module-name}
+terraform init
+
+# Esegui tutti i test del modulo
+terraform test
+
+# Esegui un singolo file di test
+terraform test -filter=tests/{file}.tftest.hcl
+
+# Output verbose
+terraform test -verbose
+```
+
+### Note operative
+
+1. **`mock_provider` + `command = plan`** e' il default: zero costi AWS, zero credenziali necessarie, veloce.
+2. **`terraform init`** e' prerequisito: scarica i provider necessari anche per i mock.
+3. **Coverage**: non esiste un tool tipo JaCoCo. La metrica e': ogni risorsa con implicazioni di sicurezza (IAM, SG, encryption, networking) ha almeno un assert sui suoi attributi critici.
+4. **Naming run block**: `{risorsa}_{verifica}` in snake_case. Descrittivi, leggibili nel report.
+5. **Un file `.tftest.hcl` per gruppo logico** (es. `iam_policies.tftest.hcl`, `networking.tftest.hcl`), non uno per risorsa singola.
+
+---
+
 ## GitHub Actions — Integrazione con itsiae/siae-gh-actions
 
 ### Struttura tipica del workflow
@@ -546,6 +620,40 @@ jobs:
           path: coverage.xml
 ```
 
+### Terraform/HCL (terraform test)
+
+```yaml
+name: Test Terraform
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tftest.hcl'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module:
+          - modules/gh-roles
+          # aggiungi altri moduli con test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9'
+
+      - name: Terraform Init
+        working-directory: ${{ matrix.module }}
+        run: terraform init
+
+      - name: Terraform Test
+        working-directory: ${{ matrix.module }}
+        run: terraform test
+```
+
 ---
 
 ## Coverage Reporters — Formati comuni
@@ -558,6 +666,7 @@ Tutti i framework producono report in formati compatibili:
 | Jest/Istanbul | lcov + text | `coverage/lcov.info` | lcov per Codecov/Coveralls |
 | vitest/v8 | lcov + text | `coverage/lcov.info` | lcov per Codecov/Coveralls |
 | pytest-cov | XML + term | `coverage.xml` | XML per SonarQube/Codecov |
+| terraform test | text (stdout) | Console output | Nessun reporter esterno — pass/fail nel job |
 
 ### Soglie di coverage (riepilogo)
 
