@@ -166,12 +166,34 @@ REVIEW_EOF
 review_escaped=$(escape_for_json "$REVIEW_INSTRUCTIONS")
 review_context="<EXTREMELY_IMPORTANT>\nDevForge PR Auto-Review attivato.\n\n${review_escaped}\n</EXTREMELY_IMPORTANT>"
 
+# ─────────────────────────────────────────────────────────────────
+# RETROSPECTIVE TRIGGER — only on gh pr create (not git push)
+# ─────────────────────────────────────────────────────────────────
+RETRO_CONTEXT=""
+if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+create ]]; then
+    read -r -d '' RETRO_INSTRUCTIONS << 'RETRO_EOF' || true
+# DevForge Retrospective Trigger
+
+Una PR e' stata creata. DOPO la code review, invoca `siae-retrospective` per estrarre
+e persistere le lezioni apprese dalla sessione corrente.
+
+La retrospettiva e' il momento naturale per riflettere: la PR chiude il ciclo di lavoro.
+NON saltare questo step. Le lezioni non salvate sono lezioni perse.
+
+Invoca: Skill tool -> siae-devforge:siae-retrospective
+RETRO_EOF
+    retro_escaped=$(escape_for_json "$RETRO_INSTRUCTIONS")
+    RETRO_CONTEXT="\\n\\n<IMPORTANT>\\n${retro_escaped}\\n</IMPORTANT>"
+fi
+
+FULL_CONTEXT="${review_context}${RETRO_CONTEXT}"
+
 cat <<EOF
 {
-  "additional_context": "${review_context}",
+  "additional_context": "${FULL_CONTEXT}",
   "hookSpecificOutput": {
     "hookEventName": "PostToolUse",
-    "additionalContext": "${review_context}"
+    "additionalContext": "${FULL_CONTEXT}"
   }
 }
 EOF
