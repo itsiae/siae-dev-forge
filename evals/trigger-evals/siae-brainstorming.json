@@ -10,13 +10,13 @@
   {"query": "Devo decidere se usare SQS o EventBridge per la comunicazione tra il servizio contratti e il servizio notifiche. Entrambi hanno pro e contro nel nostro contesto. Aiutami a valutare.", "should_trigger": true},
   {"query": "Vorrei aggiungere il supporto multi-lingua (italiano/inglese) al frontend del portale associati. Attualmente e' tutto hardcoded in italiano. Come lo progettiamo?", "should_trigger": true},
 
-  {"query": "Il test TestRipartizioneService::testCalcoloQuote fallisce con NullPointerException alla riga 234. Puoi debuggare?", "should_trigger": false},
+  {"query": "Il test TestRipartizioneService::testCalcoloQuote fallisce con NullPointerException alla riga 234. Puoi debuggare?", "should_trigger": true},
   {"query": "Fai git checkout -b feature/SPORT-789-nuovo-endpoint e pusha il branch", "should_trigger": false},
   {"query": "Leggi il file src/main/java/it/siae/catalogo/CatalogoService.java e dimmi cosa fa il metodo cercaOpera", "should_trigger": false},
-  {"query": "Scrivi un unit test per il metodo validateISWC nella classe ISWCValidator", "should_trigger": false},
-  {"query": "La pipeline Glue job bronze-to-silver fallisce con errore OutOfMemoryError. Come lo risolvo?", "should_trigger": false},
+  {"query": "Scrivi un unit test per il metodo validateISWC nella classe ISWCValidator", "should_trigger": true},
+  {"query": "La pipeline Glue job bronze-to-silver fallisce con errore OutOfMemoryError. Come lo risolvo?", "should_trigger": true},
   {"query": "Puoi fare review del mio codice? Ho appena pushato su feature/SPORT-456-fix-auth", "should_trigger": false},
-  {"query": "Aggiorna la versione di Spring Boot da 3.1.0 a 3.2.1 nel pom.xml", "should_trigger": false},
+  {"query": "Aggiorna la versione di Spring Boot da 3.1.0 a 3.2.1 nel pom.xml", "should_trigger": true},
   {"query": "Ho ricevuto CHANGES REQUESTED sulla PR #45, il reviewer dice che manca la gestione degli errori nel controller", "should_trigger": false},
   {"query": "Genera la documentazione OpenAPI per il servizio catalogo-service", "should_trigger": false},
   {"query": "Esegui terraform plan per il modulo networking nel folder infrastructure/modules/vpc", "should_trigger": false}

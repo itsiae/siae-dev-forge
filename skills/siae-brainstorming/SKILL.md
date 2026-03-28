@@ -333,7 +333,7 @@ Non parafrasare. Non omettere campi. Questo rende il processo tracciabile e dete
 **Dopo Scope Assessment (Step 2):**
 ```
 [BRAINSTORM:SCOPE] Valutazione complessita'
-  Livello: {Banale/Basso/Medio/Alto}
+  Livello: {Basso/Medio/Alto}
   Dominio: {singolo/multiplo}
   Decomposizione: {necessaria SI/NO}
   Rischi: {lista rischi identificati}
