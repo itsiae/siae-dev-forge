@@ -157,6 +157,42 @@ docs/plans/<topic>/
 **Ogni `task-NN-<nome>.md`** contiene il task completo con il template TDD
 (file coinvolti, step 1-5: test fallente, run, implementazione, run, commit).
 
+### Step 3b — Placeholder Scan (Gate Obbligatorio)
+
+Prima di salvare il piano, esegui un scan completo per placeholder e
+riferimenti vaghi. Un piano con placeholder e' un piano che fallira'.
+
+**Pattern vietati — il piano NON e' pronto se contiene:**
+
+| Pattern | Esempio |
+|---------|---------|
+| `TBD` | "Formato TBD" |
+| `TODO` | "TODO: definire schema" |
+| `da definire` | "Endpoint da definire" |
+| `da decidere` | "Approccio da decidere" |
+| `similar to` / `simile a` | "Simile al Task 2" |
+| `come sopra` / `vedi sopra` | "Come sopra ma per utenti" |
+| `da completare` | "Implementazione da completare" |
+| `[...]` / `...` in codice | `function validate(...) { ... }` |
+| Riferimenti circolari | "Vedi Task N" senza contenuto inline |
+
+**Procedura:**
+1. Scansiona ogni `task-NN-*.md` per i pattern sopra
+2. Se trovi match → lista i match con file e riga
+3. Risolvi OGNI placeholder con contenuto concreto (path, codice, comando)
+4. Ri-scansiona fino a zero match
+5. Solo allora procedi a Step 4
+6. Emetti checkpoint:
+
+```
+[WRITING-PLANS:PLACEHOLDER-SCAN] Scan completato
+  File scansionati: {N}
+  Pattern trovati: {0 = PASS / N = FAIL}
+  Iterazioni: {N}
+```
+
+Un piano che passa questo gate ha zero ambiguita' per il subagent.
+
 ### Step 4 — Salva il Piano
 
 Salva la directory in `docs/plans/<topic>/` con `overview.md` e i file `task-NN-<nome>.md`.

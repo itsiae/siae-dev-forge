@@ -127,6 +127,26 @@ cd .worktrees/{branch-name}
 # IaC — nessun setup necessario
 ```
 
+### Step 3b — Sync DevForge Config
+
+Dopo aver installato le dipendenze, sincronizza la configurazione DevForge
+nel worktree tramite symlink. Senza questo step, l'agent nel worktree
+non ha hook, settings, ne' CLAUDE.md.
+
+```bash
+cd .worktrees/{branch-name}
+
+# Symlink .claude/ dal repo principale (hook, settings, CLAUDE.md)
+MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
+[ -d "$MAIN_REPO/.claude" ] && ln -sfn "$MAIN_REPO/.claude" .claude
+
+# Symlink CLAUDE.md root se esiste
+[ -f "$MAIN_REPO/CLAUDE.md" ] && ln -sfn "$MAIN_REPO/CLAUDE.md" CLAUDE.md
+```
+
+**Se `.claude/` non esiste nel repo principale:** skip silenzioso — il repo
+non usa DevForge hooks.
+
 ### Step 4 — Baseline Test Check
 
 ```bash
