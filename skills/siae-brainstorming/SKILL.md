@@ -115,6 +115,7 @@ Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato 
 | 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
 | 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
 | 6 | Auto-memory (`~/.claude/projects/<project>/memory/`) | Read MEMORY.md | Lezioni apprese, feedback, contesto cross-sessione |
+| 6b | Memoria episodica (file `project_session_*.md` in memory/) | Read | Contesto sessione precedente: branch, PR, decisioni, stato. Leggi il file piu' recente per ripristinare il contesto di lavoro. |
 | 7 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
 
 **Campi da inferire:**
