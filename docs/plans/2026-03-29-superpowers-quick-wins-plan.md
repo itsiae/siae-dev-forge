@@ -13,8 +13,8 @@
 
 | # | Task | Stato |
 |---|------|-------|
-| 1 | Aggiungere Step 3b "Sync DevForge Config" in siae-git-worktrees | [PENDING] |
-| 2 | Aggiungere Step 3b "Placeholder Scan" in siae-writing-plans | [PENDING] |
+| 1 | Aggiungere Step 3b "Sync DevForge Config" in siae-git-worktrees | [DONE] |
+| 2 | Aggiungere Step 3b "Placeholder Scan" in siae-writing-plans | [DONE] |
 
 ## Dipendenze
 
@@ -22,7 +22,7 @@
 
 ---
 
-## Task 1 — Step 3b "Sync DevForge Config" in siae-git-worktrees [PENDING]
+## Task 1 — Step 3b "Sync DevForge Config" in siae-git-worktrees [DONE]
 
 **File:** `skills/siae-git-worktrees/SKILL.md`
 **Posizione:** dopo Step 3 "Auto-detect Setup" (riga ~128, dopo il blocco `# IaC — nessun setup necessario`), prima di Step 4 "Baseline Test Check"
@@ -55,7 +55,7 @@ non usa DevForge hooks.
 
 ---
 
-## Task 2 — Step 3b "Placeholder Scan" in siae-writing-plans [PENDING]
+## Task 2 — Step 3b "Placeholder Scan" in siae-writing-plans [DONE]
 
 **File:** `skills/siae-writing-plans/SKILL.md`
 **Posizione:** dopo Step 3 "Scrivi il Piano Bite-Sized" (dopo il blocco che descrive `task-NN-<nome>.md`), prima di Step 4 "Salva il Piano"
