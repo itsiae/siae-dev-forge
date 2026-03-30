@@ -274,6 +274,8 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Base
 Prima di procedere all'export, esegui un audit strutturato del TC set generato.
 Approccio distrust: parti dall'assunzione che ci siano lacune — non fidarti del Coverage Score da solo.
 
+**Policy re-run:** se un check fallisce e viene risolto, ri-esegui l'intero gate 4c dall'inizio — un fix in una fase precedente può alterare l'esito di check già passati.
+
 Esegui i 5 check in sequenza:
 
 **[1] Tracciabilità AC→TC**
@@ -323,13 +325,14 @@ Se L1 saltate senza motivo documentato → AUDIT FAIL, torna a Phase 0c e rilanc
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 Se score < 50 → AUDIT FAIL (già bloccato da Riepilogo Copertura — riconferma).
+Se score 50-69 (PARZIALE) → AUDIT PASS con WARNING obbligatorio: documenta il gap nell'output del gate e segnalalo al developer prima di procedere.
 
 **Verdetto finale:**
 - Tutti i check OK → `✅ AUDIT PASS — procedi a Fase 5`
 - Almeno 1 check KO → mostra:
 
 ```
-⛔ AUDIT FAIL
+🔴 AUDIT FAIL
    Check fallito: [numero e descrizione del check]
    Gap: [descrizione specifica]
    Azione: torna a [fase] e [azione richiesta]
