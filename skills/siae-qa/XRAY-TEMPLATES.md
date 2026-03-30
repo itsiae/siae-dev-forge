@@ -217,6 +217,39 @@ Salva la mappatura come output della skill: sara' l'input di Fase 1 di siae-auto
 
 ---
 
+## TC Audit Gate Template
+
+Output atteso della Fase 4c — da compilare per ogni Story prima di procedere a Fase 5:
+
+```
+TC AUDIT GATE — {STORY_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [1] Tracciabilità AC→TC
+      AC1: "{testo AC}" → TC #{id} ✅ / ❌ MANCANTE
+      AC2: "{testo AC}" → TC #{id} ✅ / ❌ MANCANTE
+
+  [2] Categorie matrice 4a
+      Positivi:     N TC ✅ / ❌ 0 TC (N/A mai confermato)
+      Edge case:    N TC ✅ / N/A confermato ✅ / ❌ 0 TC
+      Negativi:     N TC ✅ / N/A confermato ✅ / ❌ 0 TC
+      Profilazioni: N TC ✅ / N/A confermato ✅ / ❌ 0 TC
+
+  [3] Decision Table
+      Gate 4a-bis: SI → TC [DT] presenti: ✅ N TC / ❌ 0 TC
+      Gate 4a-bis: NO → N/A ✅
+
+  [4] Domande contestuali (Phase 0)
+      Tipo: {tipo} — L1 poste: ✅ / ❌ SALTATE
+      L2/L3 applicabili: ✅ / N/A
+
+  [5] Coverage Score: {XX}/100 — {OTTIMA/BUONA/PARZIALE/INSUFFICIENTE}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERDETTO: ✅ AUDIT PASS / 🔴 AUDIT FAIL
+  Gap: [lista gap con riferimento alla fase da cui riprendere]
+```
+
+---
+
 ## Checklist di Verifica
 
 Prima di dichiarare la skill completata:
@@ -238,6 +271,7 @@ Prima di dichiarare la skill completata:
 - [ ] Il campo `ID JIRA Story` e' presente in tutti i Test Case
 - [ ] Riepilogo copertura per categoria mostrato al developer prima dell'export
 - [ ] Coverage Score calcolato e giudizio mostrato al developer (se < 50: export bloccato)
+- [ ] TC Audit Gate (Fase 4c) eseguito: AUDIT PASS ottenuto prima di Fase 5
 - [ ] Campi `Automazione` e `NRT` verificati con il developer
 - [ ] Export effettuato (MCP / CSV) o spiegato come farlo
 - [ ] Mappatura ID sequenziali → chiavi Jira Xray raccolta (se si prevede di usare siae-automation)
