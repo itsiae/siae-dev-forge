@@ -25,6 +25,14 @@ if [ -z "$FILE_PATH" ]; then
     exit 0
 fi
 
+# Skip files outside the plugin's git repository (e.g. one-shot scripts in other dirs)
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+GIT_ROOT="$(git -C "$HOOK_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -n "$GIT_ROOT" ] && [[ "$FILE_PATH" != "$GIT_ROOT"/* ]]; then
+    echo '{}'
+    exit 0
+fi
+
 # Check if file is production code (by extension)
 PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.tf$|\.hcl$|\.go$|\.kt$"
 if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
