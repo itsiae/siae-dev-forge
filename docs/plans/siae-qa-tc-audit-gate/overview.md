@@ -16,7 +16,7 @@
 | # | Task | File | Stato |
 |---|------|------|-------|
 | 1 | Fase 4c TC Audit Gate in SKILL.md | `task-01-fase-4c-skill-md.md` | [DONE] |
-| 2 | Template TC Audit Gate in XRAY-TEMPLATES.md | `task-02-template-audit-xray.md` | [PENDING] |
+| 2 | Template TC Audit Gate in XRAY-TEMPLATES.md | `task-02-template-audit-xray.md` | [DONE] |
 
 ## Dipendenze
 
