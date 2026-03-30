@@ -26,6 +26,9 @@
 | **Database** | "migration", "schema", "query", "tabella", "indice", "DDL", "flyway", "liquibase" |
 | **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
 | **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
+| **Mobile / Flutter**       | "Flutter", "Dart", "Riverpod", "app mobile", "iOS", "Android", "widget", "schermata", "deep link", "notifica push", "ObjectBox", "Amplify", "offline" |
+| **IaC / Terraform**        | "Terraform", "terragrunt", "modulo", "VPC", "ECS", "Lambda", "plan", "apply", "destroy", "IAM", "security group", "tfvars", "remote state" |
+| **Event-driven / Async**   | "Kafka", "SQS", "SNS", "consumer", "producer", "DLQ", "dead letter", "Step Functions", "async", "messaggio", "topic", "coda", "EventBridge" |
 
 **Confidence:**
 - **HIGH (>= 90%):** 2+ segnali forti convergenti
@@ -38,7 +41,7 @@
 
 ```
 REQ PROFILE:
-  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration]
+  Tipo:       [Frontend / BE / ETL / Database / Auth / Integration / Mobile / IaC / Event-driven]
   Confidence: [HIGH / MEDIUM / LOW]
   Segnali:    [elenco segnali usati dall'inferenza]
   Stack:      [tecnologie rilevate]
@@ -83,6 +86,7 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 - `[EDGE]` = edge case (limite, vuoto, volume estremo)
 - `[NEG]` = scenario negativo / alternativo (errore, input non valido, dipendenza assente)
 - `[PROFILO]` = scenario specifico di ruolo / profilazione
+- `[DT]` = test case derivato da Decision Table (combinazione di 2+ condizioni indipendenti)
 
 ---
 
@@ -98,11 +102,38 @@ Stesso ID = stesso Test Case con step multipli. I metadati (tipo, team, Jira, de
 
 ```
 Riepilogo copertura:
-  Positivi:    N TC
-  Edge case:   N TC
-  Negativi:    N TC
+  Positivi:     N TC
+  Edge case:    N TC
+  Negativi:     N TC
   Profilazioni: N TC
-  TOTALE:      N TC
+  [DT]:         N TC   (ometti la riga se il gate 4a-bis ha risposto NO)
+  TOTALE:       N TC
+
+  ─────────────────────────────────────
+  Coverage Score: XX/100
+    Breadth:   XX/40  (N/4 categorie con almeno 1 TC — 10 pt ciascuna)
+    Depth:     XX/20  (negativi ≥ positivi: SI/NO +10 | 1 TC per ogni AC: SI/NO +10)
+    Technique: XX/20  (DT applicata (gate=SI): +20 | DT non applicabile (gate=NO): +20 auto | DT applicabile ma omessa: +0)
+    Domain:    XX/20  (L1 domande poste: SI/NO +10 | L2/L3 → ≥1 TC extra: SI/NO +10)
+
+  Giudizio: OTTIMA (90-100) / BUONA (70-89) / PARZIALE (50-69) / INSUFFICIENTE (<50)
+  ─────────────────────────────────────
+```
+
+**Soglie e azioni:**
+
+| Score | Giudizio | Azione |
+|-------|----------|--------|
+| 90–100 | OTTIMA | Procedi all'export |
+| 70–89 | BUONA | Accettabile — aggiungi note sui gap minori come commento nel TC |
+| 50–69 | PARZIALE | Suggerisci integrazione su categorie deboli, ma non blocca |
+| < 50 | **INSUFFICIENTE** | **EXPORT BLOCCATO** — torna a 4a; indica categoria con score più basso |
+
+Se il giudizio è INSUFFICIENTE, mostra:
+```
+⛔ EXPORT BLOCCATO — Coverage Score: XX/100
+   Categoria debole: {Breadth/Depth/Technique/Domain} ({XX}/{max} pt)
+   Azione richiesta: {descrizione specifica — es. "aggiungere almeno 1 TC negativo"}
 ```
 
 ---
@@ -198,6 +229,7 @@ Prima di dichiarare la skill completata:
 - [ ] Test Strategy Confluence cercata (trovata o WARNING registrato)
 - [ ] Test Plan generato/creato con campi obbligatori
 - [ ] Matrice scenari compilata (4 categorie valutate: positivi, edge, negativi, profilazioni)
+- [ ] Gate 4a-bis eseguito: Decision Table applicata (se 2+ condizioni booleane) o scartata con SE NO esplicito
 - [ ] Ogni categoria ha scenari identificati o "N/A — confermato dal developer"
 - [ ] Ogni AC ha almeno 1 Test Case step-based
 - [ ] Presenti TC per scenari positivi, edge case, negativi e profilazioni (se applicabili)
@@ -205,6 +237,7 @@ Prima di dichiarare la skill completata:
 - [ ] Ogni step ha sia `Action` che `Expected Result` (nel CSV usa la colonna `Expceted Result` — typo template)
 - [ ] Il campo `ID JIRA Story` e' presente in tutti i Test Case
 - [ ] Riepilogo copertura per categoria mostrato al developer prima dell'export
+- [ ] Coverage Score calcolato e giudizio mostrato al developer (se < 50: export bloccato)
 - [ ] Campi `Automazione` e `NRT` verificati con il developer
 - [ ] Export effettuato (MCP / CSV) o spiegato come farlo
 - [ ] Mappatura ID sequenziali → chiavi Jira Xray raccolta (se si prevede di usare siae-automation)

@@ -151,3 +151,96 @@ Claude fa UNA domanda alla volta.
 ### L3 — Integrazioni / dipendenze
 5. "Esiste un ambiente di staging o sandbox dell'esterno per i test?
    O si usa un mock/stub/WireMock in locale?"
+
+---
+
+## Mobile / Flutter
+
+**Segnali di inferenza:** "Flutter", "Dart", "Riverpod", "app mobile", "iOS", "Android",
+"widget", "schermata", "notifica push", "deep link", "ObjectBox", "Amplify", "offline"
+
+### L1 — Flusso principale
+1. "Questa schermata richiede permessi OS (camera, location, notifiche, contatti)?
+   Cosa mostra l'app se l'utente nega il permesso al primo lancio?
+   E se lo revoca successivamente dalle impostazioni del dispositivo?"
+2. "La schermata ha stati di caricamento? Cosa mostra mentre aspetta dati dal backend
+   (skeleton loader, spinner, empty state)?
+   Cosa mostra se la chiamata al backend fallisce con errore o timeout?"
+
+### L2 — Edge case specifici Mobile
+3. "Cosa succede se l'utente manda l'app in background durante questa operazione
+   (es. form non salvato, upload in corso, pagamento in elaborazione)
+   e torna in foreground dopo 5+ minuti? Lo stato viene ripristinato o perso?"
+4. "Il comportamento cambia se il dispositivo è offline o passa da WiFi a 4G/5G
+   durante l'operazione? C'è una modalità offline supportata o si mostra un errore
+   con possibilità di retry?"
+
+### L3 — Integrazioni / dipendenze
+5. "La schermata è raggiungibile tramite deep link o tap su notifica push?
+   Come si comporta se l'app non è in memoria (cold start da link esterno)
+   rispetto al caso in cui l'app è già aperta in foreground?"
+
+---
+
+## IaC / Terraform
+
+**Segnali di inferenza:** "Terraform", "terragrunt", "modulo", "VPC", "ECS", "aws_lambda_function",
+"plan", "apply", "destroy", "IAM", "security group", "S3 bucket", "RDS", "tfvars",
+"remote state", "output", "provider"
+
+### L1 — Flusso principale
+1. "Il modulo è idempotente? `terraform apply` eseguito due volte su uno stato identico
+   produce zero diff? Ci sono risorse che cambiano ad ogni apply
+   (es. timestamp, random ID) che potrebbero generare rumore nel plan?"
+2. "Quali variabili di input sono obbligatorie e quali hanno default?
+   Ci sono default che potrebbero essere accettati silenziosamente ma scorretti
+   per certi ambienti (es. `instance_type = t2.micro` in produzione)?"
+
+### L2 — Edge case specifici IaC
+3. "Cosa succede se una risorsa è stata modificata manualmente fuori da Terraform
+   (configuration drift)? Il `terraform plan` rileva la differenza e la corregge,
+   o produce un piano inconsistente?"
+4. "Il `terraform destroy` del modulo lascia risorse orfane (S3 bucket con dati,
+   snapshot RDS, log group CloudWatch, certificate ACM)?
+   Ci sono risorse che richiedono `lifecycle { prevent_destroy = true }`?"
+
+### L3 — Integrazioni / dipendenze
+5. "Il modulo dipende da output di altri moduli tramite `data terraform_remote_state`
+   o variabili passate esternamente?
+   Se il modulo upstream non è ancora stato applicato (stato assente),
+   il plan fallisce con errore chiaro o degrada silenziosamente?"
+
+---
+
+## Event-driven / Async
+
+**Segnali di inferenza:** "Kafka", "SQS", "SNS", "consumer", "producer", "evento",
+"coda", "DLQ", "dead letter", "Step Functions", "async", "messaggio", "topic",
+"subscription", "EventBridge", "stream", "broker"
+
+### L1 — Flusso principale
+1. "Il consumer è idempotente? Se lo stesso messaggio arriva due volte
+   (at-least-once delivery di Kafka/SQS), il sistema produce effetti doppi
+   o li deduplica? Qual è la chiave di deduplication usata
+   (es. message ID, correlation ID, campo business univoco)?"
+2. "Qual è il comportamento atteso in caso di elaborazione riuscita?
+   Il messaggio viene ACKato / eliminato dalla coda automaticamente?
+   Viene prodotto un evento downstream? Viene aggiornato lo stato nel DB?"
+
+### L2 — Edge case specifici Event-driven
+3. "Cosa finisce in Dead Letter Queue (DLQ)?
+   Dopo quanti retry falliti il messaggio viene mandato in DLQ?
+   Chi monitora la DLQ (CloudWatch alarm, dashboard) e con quale procedura
+   di recovery (reprocess manuale, script automatico, alert al team)?"
+4. "Il comportamento è corretto se i messaggi arrivano out-of-order?
+   Il consumer assume un ordinamento implicito sugli eventi
+   (es. UPDATE prima di INSERT)?
+   Cosa succede se arriva prima un evento di aggiornamento di un record
+   che non esiste ancora?"
+
+### L3 — Integrazioni / dipendenze
+5. "Esiste un ambiente di test con il broker reale (Kafka cluster dedicato,
+   SQS in account non-prod) o si usa un mock (LocalStack, Testcontainers,
+   embedded Kafka)?
+   I test di integrazione girano su infrastruttura dedicata isolata
+   o su broker condiviso con altri team?"

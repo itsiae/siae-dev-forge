@@ -236,6 +236,30 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) per template Matrice Scenari e forma
 
 ---
 
+#### 4a-bis — Decision Table Check [AUTOMATICO — esegui sempre dopo 4a]
+
+Dopo aver compilato la matrice scenari, verifica:
+**"Negli AC o nella Req Profile Card ci sono 2+ condizioni booleane/discrete
+indipendenti la cui combinazione cambia il comportamento del sistema?"**
+
+Segnali tipici:
+- Frasi del tipo "se [A] e [B] allora [X], altrimenti [Y]"
+- Campi con valori discreti multipli (es. stato = {bozza, pubblicato, archiviato})
+- Combinazioni ruolo × stato → comportamento diverso
+- Logica "solo se entrambe le condizioni sono vere"
+
+**SE SÌ → costruisci una mini Decision Table prima di generare i TC:**
+1. Colonne = condizioni (max 4 per mantenibilità)
+2. Righe = combinazioni rilevanti — usa MC/DC (Modified Condition/Decision Coverage):
+   non serve generare 2^N combinazioni, seleziona quelle che cambiano l'output
+3. Output = azione attesa del sistema per ogni combinazione
+4. **Mostra la tabella al developer e attendi conferma prima di procedere**
+5. Ogni riga della DT approvata genera obbligatoriamente 1 TC con prefisso `[DT]`
+
+**SE NO → procedi a 4b direttamente.**
+Non forzare DT dove non ci sono condizioni combinatorie — peggiora la leggibilità
+della test list senza aggiungere valore.
+
 #### 4b — Generazione Test Case
 
 Per ogni scenario della matrice (4a), genera 1+ Test Case step-based.
@@ -320,6 +344,9 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 6. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
 7. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
 8. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import. Ovunque altrove (documentazione, checklist, commenti) usare `Expected Result` (corretto).
+9. **La Decision Table (gate 4a-bis) deve essere mostrata e approvata dal developer
+   prima di generare i TC da essa derivati** — non generare TC con prefisso `[DT]`
+   senza conferma esplicita della tabella
 
 ---
 
