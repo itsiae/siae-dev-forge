@@ -332,7 +332,7 @@ Se score 50-69 (PARZIALE) → AUDIT PASS con WARNING obbligatorio: documenta il 
 - Almeno 1 check KO → mostra:
 
 ```
-🔴 AUDIT FAIL
+⛔ AUDIT FAIL
    Check fallito: [numero e descrizione del check]
    Gap: [descrizione specifica]
    Azione: torna a [fase] e [azione richiesta]
