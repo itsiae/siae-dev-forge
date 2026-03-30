@@ -274,7 +274,7 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Base
 Prima di procedere all'export, esegui un audit strutturato del TC set generato.
 Approccio distrust: parti dall'assunzione che ci siano lacune — non fidarti del Coverage Score da solo.
 
-**Policy re-run:** se un check fallisce e viene risolto, ri-esegui l'intero gate 4c dall'inizio — un fix in una fase precedente può alterare l'esito di check già passati.
+**Policy re-run:** se un check fallisce e viene risolto, ri-esegui l'intero gate 4c dall'inizio — un fix in una fase precedente può alterare l'esito di check già passati. Massimo 2 re-run consecutivi; se dopo il secondo il gate risulta ancora FAIL, interrompi e presenta il problema al developer prima di procedere.
 
 Esegui i 5 check in sequenza:
 
