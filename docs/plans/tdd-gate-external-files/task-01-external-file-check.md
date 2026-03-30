@@ -3,7 +3,7 @@
 **File coinvolti:**
 - `hooks/tdd-gate` (modifica — aggiungere check dopo riga 26)
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 
 ---
 

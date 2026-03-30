@@ -15,4 +15,4 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Aggiungere check file esterno al repo in tdd-gate | `task-01-external-file-check.md` | [PENDING] |
+| 1 | Aggiungere check file esterno al repo in tdd-gate | `task-01-external-file-check.md` | [DONE] |
