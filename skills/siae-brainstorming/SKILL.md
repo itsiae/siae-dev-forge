@@ -272,14 +272,41 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 | 💡 Perche': Registra il design approvato nella history del repository |
 | 🚫 Se NO: Il file esiste ma non è committato — invisibile in git history |
 
-### 6b. Spec Review Gate
+### 6b. Spec Review Gate (con reviewer automatico)
 
-Prima di procedere al piano implementativo, presenta all'utente il design doc
-completo e chiedi conferma esplicita:
+Prima di chiedere conferma all'utente, lancia un subagent spec-reviewer
+che analizza il design doc automaticamente.
+
+**Processo:**
+
+1. Lancia subagent con il prompt in [design-reviewer-prompt.md](design-reviewer-prompt.md)
+   passando `{design_doc_path}` e `{user_goal}` (il messaggio originale dell'utente)
+2. Leggi il report del reviewer
+3. Se ci sono issue BLOCK:
+   a. Fixa le issue nel design doc
+   b. Ri-lancia il reviewer (loop max 5 iterazioni)
+   c. Se dopo 5 iterazioni ci sono ancora BLOCK → escalation all'utente
+4. Se ci sono solo WARN (zero BLOCK):
+   a. Presenta i WARN all'utente insieme al gate di conferma
+5. Se zero issue: presenta il gate di conferma standard
+
+**Checkpoint:**
 
 ```
-Il design doc e' stato scritto. Prima di passare al piano implementativo,
-rileggi il documento e conferma:
+[BRAINSTORM:SPEC-REVIEW] Review completata
+  Issue: {N BLOCK / N WARN}
+  Iterazioni: {N}/5
+  DECISIONE: {APPROVED / APPROVED_WITH_WARNINGS / BLOCKED}
+```
+
+Dopo il PASS del reviewer, presenta il gate utente:
+
+```
+Il design doc e' stato reviewato automaticamente (N iterazioni, 0 BLOCK).
+{Se WARN presenti: "N avvertimenti non bloccanti:
+- [WARN] descrizione
+"}
+Prima di passare al piano implementativo, conferma:
 
 - I requisiti sono completi? Non manca nulla?
 - I criteri di accettazione coprono tutti i casi?
@@ -292,7 +319,7 @@ Se qualcosa non torna, dimmi cosa modificare.
 ```
 
 NON invocare siae-writing-plans senza conferma esplicita a questo gate.
-Se l'utente chiede modifiche, aggiorna il design doc e ripresenta il gate.
+Se l'utente chiede modifiche, aggiorna il design doc e ri-esegui il reviewer.
 
 ### 7. REQUIRED: Transizione al piano implementativo
 
@@ -356,6 +383,14 @@ Non parafrasare. Non omettere campi. Questo rende il processo tracciabile e dete
   Approccio scelto: {nome}
   ADR: {decisioni chiave}
   SP: {N SP-Umano / M SP-Augmented}
+```
+
+**Dopo Spec Review automatica (Step 6b):**
+```
+[BRAINSTORM:SPEC-REVIEW] Review completata
+  Issue: {N BLOCK / N WARN}
+  Iterazioni: {N}/5
+  DECISIONE: {APPROVED / APPROVED_WITH_WARNINGS / BLOCKED}
 ```
 
 **Spec Review Gate (Step 6):**
