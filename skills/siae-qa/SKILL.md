@@ -417,6 +417,7 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 9. **La Decision Table (gate 4a-bis) deve essere mostrata e approvata dal developer
    prima di generare i TC da essa derivati** — non generare TC con prefisso `[DT]`
    senza conferma esplicita della tabella
+10. **Il gate 4c (TC Audit Gate) deve essere completato con AUDIT PASS** prima di procedere a Fase 5 — nessun export senza audit completato
 
 ---
 
