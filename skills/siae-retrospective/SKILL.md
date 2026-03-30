@@ -1,10 +1,11 @@
 ---
 name: siae-retrospective
 description: >
-  Estrae lezioni apprese a fine sessione e le persiste in auto-memory.
+  Estrae lezioni apprese e memoria episodica a fine sessione, persiste in auto-memory.
+  Salva sia lezioni astratte (feedback) che narrativa sessione (cosa fatto, decisioni, stato).
   Trigger: fine sessione, lezioni apprese, cosa ho imparato, retrospettiva,
-  salva per la prossima volta, /forge-retro, REQUIRED da stop-gate hook
-  per sessioni produttive (almeno 1 commit).
+  salva per la prossima volta, /forge-retro, apertura PR, REQUIRED da post-commit-review
+  hook su gh pr create.
 ---
 
 # SIAE Retrospective — Lezioni Apprese Cross-Sessione
@@ -127,6 +128,61 @@ type: <feedback|project|user|reference>
 **NON salvare in CLAUDE.md. NON salvare nel repo. NON creare file fuori da memory/.**
 Il sistema auto-memory e' l'unico canale di persistenza cross-sessione.
 
+### Step 4 — Memoria Episodica
+
+🟡 MEDIO — Scrive file di memoria
+
+La memoria episodica salva la **narrativa della sessione**: cosa e' stato fatto,
+quali decisioni sono state prese, dove si e' arrivati. Questo permette alla
+sessione successiva di riprendere il contesto senza che l'utente debba rispiegare.
+
+**Raccogli da git e dalla conversazione:**
+
+```bash
+git log --oneline HEAD~10..HEAD  # commit della sessione
+git branch --show-current         # branch corrente
+gh pr list --head $(git branch --show-current) --json number,state,title --jq '.[0]' 2>/dev/null
+```
+
+**Scrivi UN file episodico per sessione** in `~/.claude/projects/<project>/memory/`:
+
+```markdown
+---
+name: session-YYYY-MM-DD-<topic-breve>
+description: <1 riga — cosa si stava facendo e dove si e' arrivati>
+type: project
+---
+
+## Sessione YYYY-MM-DD
+
+**Branch:** <branch corrente>
+**PR:** <#numero se esiste> (<stato: aperta/merged/draft>)
+**Obiettivo:** <cosa l'utente voleva ottenere — 1 frase>
+
+**Cosa e' stato fatto:**
+1. <azione 1>
+2. <azione 2>
+...
+
+**Decisioni prese:**
+- <decisione e motivazione breve>
+
+**Stato:** <completato | PR aperta in review | in corso | bloccato da X>
+
+**Why:** Memoria episodica per ripristinare contesto nella sessione successiva.
+**How to apply:** Leggere all'inizio della prossima sessione sullo stesso branch/progetto.
+```
+
+**Regole:**
+- UN file per sessione, non uno per ogni azione
+- Se esiste gia' un file episodico per lo stesso branch, **aggiornalo** (non duplicare)
+- Il campo `description` deve essere abbastanza specifico da decidere se e' rilevante
+- Non ripetere il contenuto dei commit (c'e' git log) — concentrati su decisioni e stato
+
+**Aggiorna `MEMORY.md`** con il puntatore sotto una sezione `## Episodic`.
+
+---
+
 **Output strutturato obbligatorio:**
 
 ```
@@ -134,6 +190,9 @@ RETROSPECTIVE
 ═════════════
 Sessione: YYYY-MM-DD
 Skills usate: N | Commits: M
+
+Episodica:
+  → salvato in memory/project_session_YYYY-MM-DD_xxx.md
 
 Lezioni estratte:
   1. [FEEDBACK] ... → salvato in memory/feedback_xxx.md
@@ -174,7 +233,26 @@ Nessuna lezione? → "Sessione pulita, niente da persistere."
 ## Vincoli
 
 1. **NON** salvare in CLAUDE.md o nel repository git
-2. **NON** salvare riassunti di attivita' (c'e' git log)
-3. **NON** duplicare memory esistenti — aggiorna quelle che ci sono
-4. **SEMPRE** applicare il filtro "vale la pena salvare?" prima di persistere
-5. **SEMPRE** produrre l'output strutturato RETROSPECTIVE anche se 0 lezioni
+2. **NON** duplicare memory esistenti — aggiorna quelle che ci sono
+3. **SEMPRE** applicare il filtro "vale la pena salvare?" per le lezioni (Step 1-3)
+4. **SEMPRE** produrre l'output strutturato RETROSPECTIVE anche se 0 lezioni
+5. **SEMPRE** scrivere la memoria episodica (Step 4) — anche se 0 lezioni astratte
+
+### Pulizia Episodica — Regola di Rotazione
+
+<EXTREMELY-IMPORTANT>
+Le memorie episodiche crescono ogni sessione. Senza pulizia, MEMORY.md
+supera il limite di 200 righe e il contesto si perde per troncamento.
+</EXTREMELY-IMPORTANT>
+
+**Prima di scrivere un nuovo file episodico:**
+
+1. Conta i file episodici esistenti (`project_session_*.md`) nella directory memory/
+2. Se ce ne sono **>= 5**, elimina il piu' vecchio (per data nel filename)
+3. Rimuovi la riga corrispondente da MEMORY.md
+
+**Eccezione:** NON eliminare file episodici che riferiscono branch/PR ancora aperti.
+Verifica con `gh pr list --state open` prima di eliminare.
+
+**Regola:** massimo 5 file episodici in memoria. Le lezioni astratte (feedback, user,
+reference) non hanno limite di rotazione — restano finche' sono rilevanti.

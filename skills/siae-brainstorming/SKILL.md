@@ -1,11 +1,12 @@
 ---
 name: siae-brainstorming
 description: >
-  Guida il processo di design da idea a design doc approvato, prima di qualsiasi
-  implementazione non banale.
+  Guida il processo di design da idea a design doc approvato, prima di QUALSIASI
+  implementazione. Nessuna eccezione. Anche refactoring, bug fix, config change.
   Trigger: feature nuova, design, come procediamo, come progettiamo, quale approccio,
   valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature,
-  costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione.
+  costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione,
+  bug fix, refactoring, ottimizzazione, modifica codice, qualsiasi task implementativo.
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato
@@ -66,21 +67,26 @@ DEVI presentarlo e ottenere l'approvazione.
 
 ---
 
-## Scaling — Adatta il Processo alla Complessita'
+## Scaling — Adatta la Profondita', MAI il Processo
 
 GATE: Prima di iniziare la checklist, valuta la complessita' del task.
 
-| Complessita' | Segnali | Processo |
-|-------------|---------|----------|
-| **Banale** | Config change, typo, rename, bump versione | Presenta 2 frasi di design inline nella chat. Chiedi "Procedo?". Se si', salta a Step 7 (writing-plans). |
-| **Bassa** | CRUD singolo, fix isolato, modifica < 3 file | Smart Intake + design breve (1 paragrafo). Salta Step 4 (approcci multipli). |
-| **Media-Alta** | Feature nuova, cross-module, integrazione | Checklist completa a 7 punti. Nessuno shortcut. |
+| Complessita' | Segnali | Profondita' |
+|-------------|---------|-------------|
+| **Bassa** | Config change, typo, rename, bump versione, fix isolato, modifica < 3 file | Ogni step e' breve (poche frasi). Il design doc puo' essere 10-15 righe. Ma TUTTI i 7 step vanno eseguiti e il piano con subtask va SEMPRE prodotto. |
+| **Media** | CRUD, refactoring, ottimizzazione, bug fix multi-file | Step completi con dettaglio moderato. Design doc 30-60 righe. Piano con subtask obbligatorio. |
+| **Alta** | Feature nuova, cross-module, integrazione, migrazione | Checklist completa a 7 punti con massimo dettaglio. Piano con subtask obbligatorio. |
 
-**Come decidere:** se il task tocca un unico file senza cambiare comportamento,
-e' banale. Se introduce logica nuova o tocca 3+ file, e' medio-alto.
+<EXTREMELY-IMPORTANT>
+ZERO ECCEZIONI. Il processo a 7 step si esegue SEMPRE, per OGNI task.
+La complessita' determina la PROFONDITA' di ogni step, non se lo step si esegue.
+Un config change ha un brainstorming di 2 minuti. Un refactoring di 10 minuti.
+Ma entrambi passano per tutti e 7 gli step e producono un piano con subtask.
 
-NON decidere autonomamente di elidere step per task medio-alti.
-In caso di dubbio, chiedi: "Questo task sembra [banale/basso]. Vuoi il processo completo o abbreviato?"
+NON saltare step. NON abbreviare il processo. NON decidere autonomamente che
+un task e' "troppo semplice" per il brainstorming completo.
+Il piano con subtask (siae-writing-plans) e' SEMPRE l'output finale.
+</EXTREMELY-IMPORTANT>
 
 ---
 
@@ -109,6 +115,7 @@ Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato 
 | 4 | `git log --oneline -10` | Bash | Lavoro recente, contesto attuale |
 | 5 | `docs/plans/` | Glob + Read | Design doc precedenti, decisioni |
 | 6 | Auto-memory (`~/.claude/projects/<project>/memory/`) | Read MEMORY.md | Lezioni apprese, feedback, contesto cross-sessione |
+| 6b | Memoria episodica (file `project_session_*.md` in memory/) | Read | Contesto sessione precedente: branch, PR, decisioni, stato. Leggi il file piu' recente per ripristinare il contesto di lavoro. |
 | 7 | JIRA (se MCP disponibile) | MCP Atlassian | Ticket correlati |
 
 **Campi da inferire:**
@@ -210,15 +217,16 @@ si risolve con una modifica di configurazione, infrastruttura, o processo.
 
 **Se Option Zero si applica:**
 
-Presenta la soluzione config/infra, chiedi conferma, e chiudi il brainstorming
-senza design doc. Non serve piano implementativo per un cambio config.
+Presenta la soluzione config/infra, chiedi conferma. Anche le soluzioni config/infra
+passano per il design doc (breve) e producono un piano con subtask.
+Il piano puo' avere un singolo subtask ("modifica config X"), ma va scritto.
 
 Emetti checkpoint:
 ```
 [BRAINSTORM:OPTION-ZERO] Soluzione senza codice identificata
   Tipo: {config/infra/processo}
   Azione: {descrizione}
-  Motivo: {perche' non serve codice}
+  Piano: SI (anche per config change)
 ```
 
 **Se Option Zero non si applica:**
@@ -326,7 +334,7 @@ Non parafrasare. Non omettere campi. Questo rende il processo tracciabile e dete
 **Dopo Scope Assessment (Step 2):**
 ```
 [BRAINSTORM:SCOPE] Valutazione complessita'
-  Livello: {Banale/Basso/Medio/Alto}
+  Livello: {Basso/Medio/Alto}
   Dominio: {singolo/multiplo}
   Decomposizione: {necessaria SI/NO}
   Rischi: {lista rischi identificati}
@@ -565,6 +573,10 @@ L'implementazione inizia SOLO dopo aver creato il feature branch via `siae-git-w
 | "Ho letto il pom.xml, basta cosi'" | Un file non basta. Smart Intake legge manifest, struttura, log, e docs/plans/ prima di procedere. |
 | "Mettiamo tutto in un'unica spec, e' piu' veloce" | Spec ampie producono piani ingestibili. Decomponi. |
 | "Serve per forza codice nuovo" | Nel 30% dei casi, una config change basta. Verifica Option Zero prima. |
+| "E' solo refactoring, stessi input/output" | Il refactoring cambia struttura. Il design documenta cosa cambia e perche'. |
+| "E' solo un bug fix, non serve brainstorming" | Un bug fix senza design = fix a tentativi. Il brainstorming identifica root cause. |
+| "Ho gia' analizzato i punti col utente" | L'analisi informale non e' un design doc. Formalizza e produci il piano. |
+| "Sono solo config/typo/rename" | Anche un config change ha un piano: 1 subtask, 2 minuti. Non saltare. |
 
 ## Classificazione Rischio Operazioni
 

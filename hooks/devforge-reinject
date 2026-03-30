@@ -75,7 +75,7 @@ COMPACT_CONTEXT="<EXTREMELY_IMPORTANT>\\n\
 - 'E solo un commit veloce' → Ogni commit senza siae-git-workflow = naming sbagliato.\\n\\n\
 **Dynamic Skill Catalog:**\\n\\n\
 ${skill_catalog_escaped}\\n\\n\
-**Disambiguazione:** bug/errore/stacktrace → siae-debugging | git op → siae-git-workflow | C4/HLD/CQRS → siae-architecture | Terraform/ECS → siae-iac | Glue/PySpark/ETL → siae-data-engineering | Playwright/Cypress/E2E → siae-automation | brainstorming SOLO per feature nuove generiche.\\n\
+**Disambiguazione:** bug/errore/stacktrace → siae-debugging | git op → siae-git-workflow | C4/HLD/CQRS → siae-architecture | Terraform/ECS → siae-iac | Glue/PySpark/ETL → siae-data-engineering | Playwright/Cypress/E2E → siae-automation | brainstorming SEMPRE per QUALSIASI task implementativo (feature, bug fix, refactoring, config — escluse pure operazioni git).\\n\
 </EXTREMELY_IMPORTANT>"
 
 cat <<EOF
