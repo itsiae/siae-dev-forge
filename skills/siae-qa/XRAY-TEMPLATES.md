@@ -244,7 +244,7 @@ TC AUDIT GATE — {STORY_ID}
 
   [5] Coverage Score: {XX}/100 — {OTTIMA/BUONA/PARZIALE/INSUFFICIENTE}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VERDETTO: ✅ AUDIT PASS / 🔴 AUDIT FAIL
+VERDETTO: ✅ AUDIT PASS / ⛔ AUDIT FAIL
   Gap: [lista gap con riferimento alla fase da cui riprendere]
 ```
 
