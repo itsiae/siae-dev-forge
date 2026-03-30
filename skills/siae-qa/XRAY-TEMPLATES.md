@@ -12,6 +12,7 @@
 - [Domande Elicitazione per Categoria](#domande-elicitazione-per-categoria)
 - [Mappatura ID Sequenziali e Chiavi Jira Xray](#mappatura-id-sequenziali-e-chiavi-jira-xray)
 - [Tier 3 CSV Export](#tier-3-csv-export)
+- [TC Audit Gate Template](#tc-audit-gate-template)
 - [Checklist di Verifica](#checklist-di-verifica)
 
 ---
