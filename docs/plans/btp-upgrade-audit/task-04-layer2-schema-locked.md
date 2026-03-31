@@ -89,6 +89,7 @@ logic_blocks:
     conditions:
       - line: <N>
         verbatim: "<if_condition>"     # verbatim: tutto il testo dell'if (max 120 char)
+        nesting_depth: 0               # v1.3: integer — 0=top-level, 1=inside one if, 2=inside two if (max 2)
         branch_true:                   # lista verbatim di TUTTE le azioni nel ramo true (max 120 char ciascuna)
           - "<azione_1>"
           - "<azione_2>"
@@ -97,6 +98,7 @@ logic_blocks:
         nested:                        # condizioni annidate (max depth 2) | [] se assenti
           - line: <N>
             verbatim: "<if_annidato>"
+            nesting_depth: 1           # sempre 1 se è dentro una condition di depth 0
             branch_true:
               - "<azione>"
             branch_false: []
@@ -105,7 +107,14 @@ logic_blocks:
       - type: "<enum>"                 # enum: MessageBox.error | MessageBox.success | MessageBox.warning | navigation | OData.write | OData.read | BusyIndicator | Fragment | null
         verbatim: "<riga_esatta>"      # verbatim: riga esatta (max 120 char)
 
-    data_transforms:                   # NUOVO v1.2 — trasformazioni dati rilevate nel metodo
+    timing_annotations:                # v1.3 — delay/debounce logic nel metodo
+      - line: <N>
+        # enum: setTimeout | setInterval | debounce | throttle
+        type: "<enum>"
+        delay_ms: <N> | null          # intero (ms) se estratto verbatim, null se non determinabile
+        verbatim: "<riga_esatta>"
+
+    data_transforms:                   # v1.2 — trasformazioni dati rilevate nel metodo
       - line: <N>
         # enum: reduce | filter | map | sort | arithmetic | format | parse | date
         operation: "<enum>"
@@ -130,13 +139,44 @@ external_calls:
     verbatim: "<riga_esatta>"      # verbatim: la riga della chiamata (max 120 char)
     file: "<path>"
     line: <N>
-    callbacks:                     # NUOVO v1.2 — handler success/error della callback OData
+    callbacks:                     # v1.2 — handler success/error della callback OData
+      success_signature: "<params>"  # v1.3: verbatim parametri della callback success | null
       success:                     # lista verbatim delle azioni nel handler success | [] se assente
         - "<azione_1>"
         - "<azione_2>"
+      error_signature: "<params>"    # v1.3: verbatim parametri della callback error | null
       error:                       # lista verbatim delle azioni nel handler error | [] se assente
         - "<azione_1>"
+      style: "object_config"       # v1.3 enum: object_config | promise | async_await
 ```
+
+#### Validazione Completeness (OBBLIGATORIA prima di salvare il YAML)
+
+Prima di produrre il fingerprint finale, esegui questa verifica di completeness:
+
+```python
+# Conta i metodi trovati da grep (Layer 1-B) per questo file
+GREP_METHOD_COUNT = <N>  # da method_signatures Layer 1-B per questo file
+
+# Conta i metodi estratti da Layer 2
+LAYER2_METHOD_COUNT = len(logic_blocks)  # metodi nel fingerprint Layer 2
+
+completeness_ratio = LAYER2_METHOD_COUNT / GREP_METHOD_COUNT if GREP_METHOD_COUNT > 0 else 1.0
+
+if completeness_ratio < 1.0:
+    # BLOCCA — Layer 2 ha tronco l'output
+    # Aggiungi al fingerprint:
+    layer2_completeness = {
+        "file": "<FILE_PATH>",
+        "methods_expected": GREP_METHOD_COUNT,
+        "methods_extracted": LAYER2_METHOD_COUNT,
+        "completeness_ratio": completeness_ratio,
+        "status": "INCOMPLETE"  # WARNING nel gap report
+    }
+    # Ripeti l'estrazione Layer 2 su questo file prima di procedere
+```
+
+Se `completeness_ratio < 1.0` dopo 2 tentativi: spezza il file in metà e processa in 2 invocazioni separate.
 
 #### Checklist di auto-verifica prima di salvare il YAML
 
@@ -147,8 +187,11 @@ Prima di produrre il fingerprint finale, verifica ogni campo:
 - [ ] Nessun campo enum contiene un valore non nella lista definita
 - [ ] I `line` numbers corrispondono alle righe reali del file
 - [ ] `branch_true`/`branch_false` sono liste (non stringhe singole)
-- [ ] `data_transforms` è popolato se il pre-location Layer 1-E ha trovato match nel file
-- [ ] `callbacks.success`/`callbacks.error` sono liste (anche vuote `[]`)
+- [ ] `nesting_depth` è 0 per condizioni top-level, 1+ per annidate
+- [ ] `timing_annotations` è popolato se Layer 1-E ha trovato setTimeout/debounce nel file
+- [ ] `data_transforms` è popolato se Layer 1-E ha trovato match nel file
+- [ ] `callbacks.success_signature`/`error_signature` sono verbatim dei parametri (es. `"function(oData, oResponse)"`)
+- [ ] `completeness_ratio` è 1.0 (tutti i metodi estratti)
 
 Se anche UN campo fallisce la checklist → azzeralo a `null`.
 ```

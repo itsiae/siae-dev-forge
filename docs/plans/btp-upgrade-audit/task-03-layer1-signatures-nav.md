@@ -51,6 +51,8 @@ echo "$CONTENT" | grep -n \
     done
 ```
 
+**REGOLA DETERMINISMO:** aggiungere `| sort` dopo tutti i grep prima del loop `while`.
+
 **Nota:** cattura anche ES6 arrow functions (`onPress = (oEvent) => {}`) e method shorthand
 (`onInit() {}`). Le funzioni `init`, `exit`, `onBeforeRendering`, `onAfterRendering`
 sono lifecycle SAPUI5 — non hanno prefisso `on`/`_` ma vanno catturate con pattern aggiuntivo:
@@ -146,6 +148,44 @@ for name, val in ds.items():
     print('    type: \"' + ds_type + '\"')
 "
 ```
+
+---
+
+### Layer 1-B: Model Bindings (da dove viene il model)
+
+Per ogni file `.js` del controller, traccia come viene ottenuto il modello OData:
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "this\.getModel\s*(" \
+  -e "this\._o[A-Z][a-zA-Z]*Model\s*[=\.]" \
+  -e "this\.getOwnerComponent()\.getModel" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      BINDING_TYPE=$(echo "$REST" | grep -oE "getModel\s*\(|_o[A-Z][a-zA-Z]*Model|getOwnerComponent" | head -1 \
+        | sed 's/getModel(/getModel/; s/_o[A-Z].*/component_property/; s/getOwnerComponent/owner_component/')
+      MODEL_REF=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-80)
+      printf "  - file: \"%s\"\n    line: %s\n    binding_type: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${BINDING_TYPE}" "${MODEL_REF}"
+    done
+```
+
+Enum `binding_type`: `getModel | component_property | owner_component`
+
+Output (sezione YAML `model_bindings`):
+```yaml
+model_bindings:
+  - file: "webapp/controller/App.controller.js"
+    line: 23
+    binding_type: "getModel"
+    verbatim: "const oModel = this.getModel(\"main\");"
+```
+
+**Diff rule:**
+- Se `binding_type` cambia da `getModel` a `component_property` → `HIGH: model binding pattern modificato — verificare Component.js`
+- Se `binding_type` cambia da `getModel("X")` a `getModel("Y")` (nome diverso) → `CRITICAL: model name cambiato — tutte le chiamate OData su questo model sono a rischio`
+
+---
 
 Output (sezione YAML `routing_config` + `data_sources`):
 ```yaml

@@ -107,14 +107,26 @@ Dopo aver generato tutti i report singoli, genera `gap-report/SUMMARY.md`:
 | appcausali | 2 | 0 | 1 | 0 | 12/16 |
 | ... | ... | ... | ... | ... | ... |
 
-**Nota metrica:** la colonna chiave è `CRITICAL`. Un'app con `CRITICAL=0` è sicura per il merge.
-`Items OK` è informativo — non usare OK% come indicatore di salute.
+**Nota metrica:** la colonna chiave è `CRITICAL`. `Items OK` è informativo.
+
+## Criterio di Merge Safety — AGGIORNATO v1.3
+
+Un'app è **safe per il merge** SE E SOLO SE:
+1. `CRITICAL == 0`, E
+2. `LOGIC DIFF <= 3` (max 3 condizioni isolate, già revisionate manualmente), E
+3. Nessun LOGIC DIFF su metodi core (`onInit`, `on*Submit`, `_validate*`, `on*Confirm`)
+
+Se `CRITICAL == 0` ma `LOGIC DIFF > 3`:
+→ App richiede **review umana obbligatoria** prima del merge — creare issue di tracking per ogni LOGIC DIFF.
 
 ## App che richiedono blocco immediato (CRITICAL > 0)
 - appXXX: **BLOCCA PR** — N critical issues (metodi rimossi / OData calls perse / handler assenti)
 
-## App che richiedono review (HIGH > 0 o LOGIC DIFF > 0, CRITICAL = 0)
-- appYYY: review obbligatoria — N high / M logic diff
+## App che richiedono review (CRITICAL=0, LOGIC DIFF > 3)
+- appYYY: review obbligatoria — LOGIC DIFF troppi per dichiararla safe automaticamente
+
+## App safe (CRITICAL=0 e LOGIC DIFF ≤ 3)
+- appZZZ: safe per merge (con verifica manuale sui 3 LOGIC DIFF)
 ```
 
 ### Regola: cosa NON scrivere nel report

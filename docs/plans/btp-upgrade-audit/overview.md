@@ -6,7 +6,7 @@
 **Goal:** Creare la skill `siae-btp-upgrade-audit` in siae-dev-forge per rilevare regressioni di business logic durante l'upgrade delle librerie SAP BTP deprecate nel repo `itsiae/liquidazione`.
 **Architettura:** Skill markdown **Rigid** a due fasi (BASELINE + AUDIT). Layer 1 estrae meccanicamente via bash (grep su JS, XML, CDS). Layer 2 estrae semanticamente via Claude con schema YAML locked (un file per invocazione). Diff strutturale con canonicalizzazione produce gap report per app.
 **Stack:** Markdown (skill), Bash (layer1), Python3 (gh api parsing), YAML (fingerprint schema), GitHub API via `gh` CLI
-**SP:** 15 SP-Umano / 5 SP-Augmented
+**SP:** 23 SP-Umano / 8 SP-Augmented (schema v1.3)
 **Design doc:** `docs/plans/2026-03-31-btp-upgrade-audit-design.md`
 
 ---
@@ -16,14 +16,14 @@
 | # | Task | File | Stato |
 |---|------|------|-------|
 | 1 | Skill skeleton + frontmatter + banner (tipo: Rigid) | `task-01-skill-skeleton.md` | [PENDING] |
-| 2 | Phase 1: app discovery + Layer 1-A (deprecated imports + OData v2 esteso) + Layer 1-C (XMLView + Component.js) | `task-02-layer1-deprecated-odata.md` | [PENDING] |
-| 3 | Phase 1: Layer 1-B (method signatures ES6 + navigation + routing + dataSources) | `task-03-layer1-signatures-nav.md` | [PENDING] |
-| 4 | Phase 1: Layer 2 schema-locked atomico (error_handlers + logic_blocks + external_calls) | `task-04-layer2-schema-locked.md` | [PENDING] |
-| 5 | Phase 2: diff engine (canonicalizzazione verbatim + rename detection + XMLView/Component/dataSources rules) | `task-05-diff-engine.md` | [PENDING] |
-| 6 | Phase 2: gap report generator (CRITICAL count come metrica primaria, sezioni blocco PR) | `task-06-gap-report.md` | [PENDING] |
+| 2 | Phase 1: app discovery + Layer 1-A (deprecated imports + OData v2 + EventBus + model lifecycle + fragment + dialog + external formatters) + Layer 1-C (XMLView + Component.js) | `task-02-layer1-deprecated-odata.md` | [PENDING] |
+| 3 | Phase 1: Layer 1-B (method signatures ES6 + navigation + routing + dataSources + model bindings) | `task-03-layer1-signatures-nav.md` | [PENDING] |
+| 4 | Phase 1: Layer 2 schema-locked atomico (error_handlers + logic_blocks + nesting_depth + timing_annotations + external_calls + callbacks signatures + completeness_ratio) | `task-04-layer2-schema-locked.md` | [PENDING] |
+| 5 | Phase 2: diff engine (canonicalizzazione + rename detection + diff ordinato branch_true/false + nesting_depth + completeness gate + tutti i nuovi campi v1.3) | `task-05-diff-engine.md` | [PENDING] |
+| 6 | Phase 2: gap report generator (CRITICAL count metrica primaria + merge safety CRITICAL=0 AND LOGIC DIFF≤3) | `task-06-gap-report.md` | [PENDING] |
 | 7 | Registrazione skill + smoke test positivo + negative test su `appavvisi` | `task-07-registration-test.md` | [PENDING] |
-| 8 | Layer 1-D: CAP CDS handlers + annotations (solo moduli wf_*) | `task-08-cap-cds-layer.md` | [PENDING] |
-| 9 | Layer 1-E: pre-location trasformazioni dati (grep) + schema v1.2 (branch_true[], nested, data_transforms, callbacks) | `task-09-layer1e-data-transforms.md` | [PENDING] |
+| 8 | Layer 1-D: CAP CDS handlers + security checks + lib modules + context accesses + annotations (SOLO liquidazione root srv/ — NON wf_*) | `task-08-cap-cds-layer.md` | [PENDING] |
+| 9 | Layer 1-E: pre-location trasformazioni dati + timing logic (grep hints per Layer 2) | `task-09-layer1e-data-transforms.md` | [PENDING] |
 
 ## Dipendenze
 
@@ -64,7 +64,17 @@
 - Per batch >10 app: usare `siae-parallel-agents` con batch da 10 app per sessione
 - In caso di crash: riprendere dall'ultimo `{app}.yaml` già salvato
 
-### Tipi di moduli nel repo `itsiae/liquidazione`
+### Tipi di moduli nel repo `itsiae/liquidazione` (v1.3 — ARCHITECTURAL FIX)
 
-- `app*`: SAPUI5 Fiori puri → Task 1-7 (Layer 1-A, 1-B, 1-C, Layer 2)
-- `wf_*`: CAP CDS workflow → Task 1-8 (aggiungere Layer 1-D)
+- `app*`: SAPUI5 Fiori puri → Task 1-7+9 (Layer 1-A, 1-B, 1-C, Layer 1-E, Layer 2)
+- `liquidazione` (root): CAP CDS service → Task 1-8+9 (aggiungere Layer 1-D)
+- `wf_*`: **SAP BPM workflow modules (YAML/XML) — NON CAP services — SALTARE sempre**
+
+### Schema Version History
+
+| Versione | Campi aggiunti |
+|----------|---------------|
+| v1.0 | Base: deprecated_imports, odata_v2_calls, method_signatures, navigation_targets, routing_config, error_handlers, logic_blocks, external_calls |
+| v1.1 | xmlview_bindings, component_models, data_sources, cap_handlers, cds_annotations, cap_config |
+| v1.2 | branch_true/false come liste, nested conditions, data_transforms, external_calls.callbacks |
+| v1.3 | nesting_depth, timing_annotations, completeness_ratio, eventbus_calls, model_lifecycle_handlers, fragment_loads, dialog_lifecycle, model_bindings, external_formatters, callbacks.style + signatures, cap_security_checks, cap_lib_modules, cap_context_accesses, cap_config.odata_version/features/sql, grep `\| sort` obbligatorio |

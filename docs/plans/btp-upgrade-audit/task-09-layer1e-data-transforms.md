@@ -56,6 +56,7 @@ echo "$JS_CONTENT" | grep -n \
   -e "parseFloat\s*(" \
   -e "\.toFixed\s*(" \
   -e "DateFormat\." \
+  | sort \
   | while IFS=: read -r LINE REST; do
       VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
       printf "  - file: \"%s\"\n    line: %s\n    hint: \"%s\"\n" \
@@ -87,6 +88,40 @@ Enum `operation` per Layer 2:
 - `format` → `.toFixed(`, `formatter.*`, `NumberFormat.*`
 - `parse` → `parseInt(`, `parseFloat(`, `Number(`
 - `date` → `DateFormat.*`, `new Date(`, `.getTime(`, `.toDateString(`
+
+---
+
+### Layer 1-E: Timing Logic Pre-location
+
+Aggiungere nello stesso passaggio il grep per timing logic (setTimeout, debounce, throttle):
+
+```bash
+echo "$JS_CONTENT" | grep -n \
+  -e "setTimeout\s*(" \
+  -e "setInterval\s*(" \
+  -e "debounce\s*(" \
+  -e "throttle\s*(" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      TIMING_TYPE=$(echo "$REST" | grep -oE "setTimeout|setInterval|debounce|throttle" | head -1)
+      DELAY=$(echo "$REST" | grep -oE ",\s*[0-9]+" | head -1 | tr -d ', ')
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    type: \"%s\"\n    delay_ms: %s\n    hint: \"%s\"\n" \
+        "<JS_FILE_PATH>" "${LINE}" "${TIMING_TYPE}" "${DELAY:-null}" "${VERBATIM}"
+    done
+```
+
+Output (segnalazione per Layer 2 — `timing_hints`, non nel fingerprint finale):
+```yaml
+timing_hints:
+  - file: "webapp/controller/App.controller.js"
+    line: 56
+    type: "setTimeout"
+    delay_ms: 500
+    hint: "setTimeout(function() { this.getModel().create(...); }.bind(this), 500)"
+```
+
+**Nota:** `timing_hints` è solo per Layer 2. Il fingerprint finale contiene `timing_annotations`.
 ```
 
 ---

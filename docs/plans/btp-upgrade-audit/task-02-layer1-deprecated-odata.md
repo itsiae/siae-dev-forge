@@ -13,11 +13,19 @@ Implementare nella skill il protocollo di estrazione Layer 1 per:
 - `odata_v2_calls`: chiamate OData v2 (tutti i metodi del modello, non solo read/create)
 - `xmlview_bindings`: formatter, event handler, fragment include nei file `.view.xml` / `.fragment.xml`
 - `component_models`: registrazione modelli in `Component.js`
+- `eventbus_calls`: publish/subscribe inter-controller (EventBus)
+- `model_lifecycle_handlers`: attachMetadataLoaded, attachRequestCompleted, etc.
+- `fragment_loads`: Fragment.load() e sap.ui.xmlfragment runtime (non solo core:Fragment in XMLView)
+- `external_formatters`: import di file formatter.js separati
+- `dialog_lifecycle`: attachAfterClose, attachAfterOpen, attachBeforeClose su Dialog/Popover
 
 Tutto via `gh api` (accesso remoto al repo — no clone locale).
 
 **FIX CRITICO:** il GitHub API non accetta branch name in `/git/trees/`. Richiede SHA.
 Ogni accesso al tree DEVE passare per la risoluzione branch → commit SHA → tree SHA.
+
+**REGOLA DETERMINISMO:** tutti i grep Layer 1 DEVONO includere `| sort` prima del loop.
+Senza sort, l'ordine dipende dal filesystem (macOS vs Linux) → fingerprint non deterministico.
 
 ---
 
@@ -153,6 +161,7 @@ echo "$CONTENT" | grep -n \
   -e "@ui5/cli.*[\"']2\." \
   -e "sap/m/MessageToast" \
   -e "sap\.ui\.require\s*\(" \
+  | sort \
   | awk -F: '{print "  - file: \"<FILE_PATH>\"\n    line: " $1 "\n    api: \"" $2 "\"\n    verbatim: \"" $0 "\""}'
 ```
 
@@ -186,6 +195,7 @@ echo "$CONTENT" | grep -n \
   -e "\.attachBatchRequestCompleted(" \
   -e "\.attachRequestCompleted(" \
   | grep -v "^\s*//" \
+  | sort \
   | while IFS=: read -r LINE REST; do
       OP=$(echo "$REST" | grep -oE '\.(read|create|update|remove|callFunction|submitChanges|resetChanges|setProperty|getProperty|bindElement|attachBatchRequestCompleted|attachRequestCompleted)\(' | head -1 | tr -d '.(')
       ENTITY=$(echo "$REST" | grep -oE '"\/[A-Za-z][A-Za-z0-9_]*' | head -1 | tr -d '"')
@@ -212,6 +222,168 @@ odata_v2_calls:
     entity: null
     verbatim: "this.getModel().submitChanges({"
 ```
+
+---
+
+### Layer 1-A: EventBus Calls
+
+Per ogni file `.js`, cerca chiamate EventBus inter-controller:
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "\.publish\s*(" \
+  -e "\.subscribe\s*(" \
+  -e "\.unsubscribe\s*(" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      OP=$(echo "$REST" | grep -oE "publish|subscribe|unsubscribe" | head -1)
+      CHANNEL=$(echo "$REST" | grep -oE '"[^"]+"' | head -1 | tr -d '"')
+      EVENT=$(echo "$REST" | grep -oE '"[^"]+"' | head -2 | tail -1 | tr -d '"')
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    operation: \"%s\"\n    channel: \"%s\"\n    event: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${OP}" "${CHANNEL}" "${EVENT}" "${VERBATIM}"
+    done
+```
+
+Enum `operation`: `publish | subscribe | unsubscribe`
+
+Output (sezione YAML fingerprint `eventbus_calls`):
+```yaml
+eventbus_calls:
+  - file: "webapp/controller/App.controller.js"
+    line: 45
+    operation: "publish"
+    channel: "siae.liquidazione"
+    event: "dataUpdated"
+    verbatim: "oEventBus.publish(\"siae.liquidazione\", \"dataUpdated\","
+```
+
+**Diff rule:** rimozione di un `subscribe` → `CRITICAL: listener EventBus rimosso — sincronizzazione inter-controller persa`
+
+---
+
+### Layer 1-A: Model Lifecycle Handlers
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "\.attachMetadataLoaded\s*(" \
+  -e "\.attachMetadataFailed\s*(" \
+  -e "\.attachRequestCompleted\s*(" \
+  -e "\.attachRequestFailed\s*(" \
+  -e "\.attachBatchRequestCompleted\s*(" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      EVENT=$(echo "$REST" | grep -oE "attach[A-Za-z]+" | head -1)
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    event: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${EVENT}" "${VERBATIM}"
+    done
+```
+
+Output (sezione YAML `model_lifecycle_handlers`):
+```yaml
+model_lifecycle_handlers:
+  - file: "webapp/controller/App.controller.js"
+    line: 15
+    event: "attachMetadataLoaded"
+    verbatim: "oModel.attachMetadataLoaded(() => { this._loadInitialData(); })"
+```
+
+**Diff rule:** rimozione di `attachMetadataLoaded` → `CRITICAL: init hook perso — dati non caricati al boot`
+
+---
+
+### Layer 1-A: Fragment Loads (runtime)
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "sap\.ui\.xmlfragment\s*(" \
+  -e "Fragment\.load\s*(" \
+  -e "sap\.ui\.fragment\s*(" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      STYLE=$(echo "$REST" | grep -oE "xmlfragment|Fragment\.load|sap\.ui\.fragment" | head -1)
+      FRAG_NAME=$(echo "$REST" | grep -oE '"[^"]+"' | head -1 | tr -d '"')
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    style: \"%s\"\n    name: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${STYLE}" "${FRAG_NAME}" "${VERBATIM}"
+    done
+```
+
+Enum `style`: `xmlfragment | Fragment.load | sap.ui.fragment`
+
+Output (sezione YAML `fragment_loads`):
+```yaml
+fragment_loads:
+  - file: "webapp/controller/App.controller.js"
+    line: 45
+    style: "xmlfragment"
+    name: "com.siae.app.view.CreateDialog"
+    verbatim: "sap.ui.xmlfragment(\"com.siae.app.view.CreateDialog\", this)"
+```
+
+**Diff rule:** rimozione → `CRITICAL: fragment rimosso`; cambio `name` → `HIGH: fragment path cambiato`
+
+---
+
+### Layer 1-A: Dialog/Popover Lifecycle
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "\.attachAfterOpen\s*(" \
+  -e "\.attachAfterClose\s*(" \
+  -e "\.attachBeforeOpen\s*(" \
+  -e "\.attachBeforeClose\s*(" \
+  -e "\.attachConfirm\s*(" \
+  -e "\.attachCancel\s*(" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      EVENT=$(echo "$REST" | grep -oE "attach[A-Za-z]+" | head -1)
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    event: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${EVENT}" "${VERBATIM}"
+    done
+```
+
+Output (sezione YAML `dialog_lifecycle`):
+```yaml
+dialog_lifecycle:
+  - file: "webapp/controller/App.controller.js"
+    line: 42
+    event: "attachAfterClose"
+    verbatim: "this._oCreateDialog.attachAfterClose(() => { this._refreshData(); })"
+```
+
+**Diff rule:** rimozione → `CRITICAL: side-effect post-dialog perso (es. refresh dati)`
+
+---
+
+### Layer 1-A: External Formatter Imports
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "import.*formatter\|import.*Formatter" \
+  -e "require.*formatter\|require.*Formatter" \
+  -e "\./formatter\|\.\/Formatter" \
+  | sort \
+  | while IFS=: read -r LINE REST; do
+      FPATH=$(echo "$REST" | grep -oE '["'"'"'][^"'"'"']*[Ff]ormatter[^"'"'"']*["'"'"']' | head -1 | tr -d '"'"'"')
+      VERBATIM=$(echo "$REST" | sed 's/^[[:space:]]*//' | cut -c1-120)
+      printf "  - file: \"%s\"\n    line: %s\n    formatter_path: \"%s\"\n    verbatim: \"%s\"\n" \
+        "<FILE_PATH>" "${LINE}" "${FPATH}" "${VERBATIM}"
+    done
+```
+
+Output (sezione YAML `external_formatters`):
+```yaml
+external_formatters:
+  - file: "webapp/controller/App.controller.js"
+    line: 5
+    formatter_path: "./formatter"
+    verbatim: "sap.ui.define([..., \"./formatter\"], function(..., formatter) {"
+```
+
+**Diff rule:** se `formatter_path` cambia o l'import scompare → `HIGH: formatter esterno rimosso o rilocato`
 
 ---
 

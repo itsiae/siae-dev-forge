@@ -45,6 +45,30 @@ Output atteso: `3` o più
 
 ## Diff Engine — Confronto Strutturale
 
+### Gate: Completeness Validation (OBBLIGATORIA prima del diff engine)
+
+Prima di eseguire qualsiasi regola diff su un'app, verifica che il fingerprint sia completo:
+
+```python
+# Per ogni file nel fingerprint:
+for fp_file in fingerprint.layer2_completeness:
+    if fp_file.get("status") == "INCOMPLETE":
+        # Non eseguire il diff engine per questo file
+        print(f"WARN: {fp_file['file']} — Layer 2 incompleto "
+              f"({fp_file['methods_extracted']}/{fp_file['methods_expected']} metodi). "
+              f"Rieseguire Layer 2 prima del diff.")
+        # Aggiungi nel gap report una riga WARN invece di diff
+        continue
+```
+
+**Se il completeness_ratio < 1.0:** il diff engine non può garantire CRITICAL assenti.
+Il gap report deve includere nella sezione INFO:
+```
+[W1] File <path> — Layer 2 incompleto (N/M metodi estratti). Risultati diff parziali.
+```
+
+---
+
 ### Canonicalizzazione Verbatim (OBBLIGATORIA prima di ogni confronto)
 
 Prima di qualsiasi confronto verbatim, applica questa funzione di canonicalizzazione:
@@ -130,19 +154,23 @@ Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è c
 #### logic_blocks — conditions
 - Per ogni metodo in `old.logic_blocks`:
   - Per ogni condition `verbatim` in `old`:
-    - Trovata identica in `new` (stesso metodo, stesso verbatim) → `OK`
+    - Trovata in `new` con stesso `verbatim` (canonicalizzato) E stesso `nesting_depth` → `OK`
+    - Trovata con `verbatim` identico ma `nesting_depth` diverso → `CRITICAL: livello annidamento modificato — semantica condizione cambiata`
     - Non trovata → `LOGIC DIFF: condizione rimossa — revisione umana richiesta`
-    - Trovata ma `verbatim` diverso → `LOGIC DIFF: condizione modificata — revisione umana richiesta`
-  - Per ogni elemento in `old.condition.branch_true[]`:
-    - Trovato (canonicalizzato) in `new.condition.branch_true[]` per la stessa condizione → `OK`
-    - Non trovato → `LOGIC DIFF: azione nel ramo true rimossa — revisione umana richiesta`
-  - Per ogni elemento in `old.condition.branch_false[]`:
-    - Trovato (canonicalizzato) in `new.condition.branch_false[]` → `OK`
-    - Non trovato → `LOGIC DIFF: azione nel ramo false rimossa — revisione umana richiesta`
+    - Trovata con `verbatim` diverso → `LOGIC DIFF: condizione modificata — revisione umana richiesta`
+  - Per ogni elemento in `old.condition.branch_true[]` (confronto ORDINATO — non come set):
+    - Elemento all'indice `i` uguale in `new.branch_true[i]` (canonicalizzato) → `OK`
+    - Elemento non trovato allo stesso indice → `LOGIC DIFF: azione nel ramo true modificata o riordinata — revisione umana richiesta`
+    - Lista di lunghezza diversa → `LOGIC DIFF: numero azioni nel ramo true modificato`
+  - Per ogni elemento in `old.condition.branch_false[]` (confronto ORDINATO):
+    - Stessa regola di branch_true
   - Per ogni condition `nested[]` in `old`:
-    - Trovata condizione annidata identica (per `verbatim` canonicalizzato) in `new` → `OK`
+    - Trovata condizione annidata identica (per `verbatim` + `nesting_depth`) in `new` → `OK`
     - Non trovata → `LOGIC DIFF: condizione annidata rimossa — revisione umana richiesta`
     - Trovata ma `verbatim` diverso → `LOGIC DIFF: condizione annidata modificata`
+
+**REGOLA ORDERING:** Il confronto di `branch_true[]` e `branch_false[]` è ORDINATO (lista, non set).
+Due liste `[A, B]` e `[B, A]` → `LOGIC DIFF: ordine delle azioni modificato — verificare race condition`.
 
 #### logic_blocks — data_transforms (NUOVO v1.2)
 - Per ogni entry in `old.logic_blocks[method].data_transforms`:
@@ -162,13 +190,67 @@ Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è c
   - Trovata in `new` con stesso `endpoint` e `type` → `OK`
   - Trovata con `type` diverso → `HIGH: chiamata esterna cambiata tipo`
   - Non trovata → `CRITICAL: chiamata esterna rimossa`
-- Per ogni entry trovata (stesso `endpoint`), confronta callbacks (NUOVO v1.2):
-  - Per ogni elemento in `old.callbacks.success[]`:
-    - Trovato (canonicalizzato) in `new.callbacks.success[]` → `OK`
+- Per ogni entry trovata (stesso `endpoint`), confronta callbacks (v1.2):
+  - `old.callbacks.style` vs `new.callbacks.style`:
+    - Identici → OK
+    - Diversi (es. `object_config` → `promise`) → `HIGH: stile callback OData cambiato — verificare mappatura success/error`
+  - `old.callbacks.success_signature` vs `new.callbacks.success_signature`:
+    - Identici (canonicalizzati) → OK
+    - Diversi → `LOGIC DIFF: signature callback success modificata — parametri cambiati`
+    - OLD ha signature, NEW è null → `CRITICAL: callback success rimossa`
+  - `old.callbacks.error_signature` vs `new.callbacks.error_signature`:
+    - Identici → OK
+    - OLD ha signature, NEW è null → `CRITICAL: callback error rimossa — gestione errori OData persa`
+  - Per ogni elemento in `old.callbacks.success[]` (confronto ORDINATO):
+    - Trovato allo stesso indice in `new.callbacks.success[]` → `OK`
     - Non trovato → `CRITICAL: azione nel callback success rimossa — potenziale perdita di logica post-OData`
-  - Per ogni elemento in `old.callbacks.error[]`:
-    - Trovato (canonicalizzato) in `new.callbacks.error[]` → `OK`
+  - Per ogni elemento in `old.callbacks.error[]` (confronto ORDINATO):
+    - Trovato allo stesso indice in `new.callbacks.error[]` → `OK`
     - Non trovato → `CRITICAL: azione nel callback error rimossa — gestione errore OData persa`
+
+#### timing_annotations (v1.3)
+- Per ogni entry in `old.timing_annotations[method]`:
+  - Trovata in `new` con stesso `type` e `delay_ms` → `OK`
+  - Trovata con `type` identico ma `delay_ms` diverso → `LOGIC DIFF: delay modificato — verificare debounce/race condition`
+  - Non trovata → `LOGIC DIFF: timing logic rimossa — possibile race condition o double-submit`
+
+#### eventbus_calls (v1.3)
+- Per ogni `subscribe` in `old.eventbus_calls`:
+  - Trovato in `new` con stesso `channel` + `event` → `OK`
+  - Non trovato → `CRITICAL: subscriber EventBus rimosso — sincronizzazione inter-controller persa`
+- Per ogni `publish` in `old.eventbus_calls`:
+  - Trovato in `new` con stesso `channel` + `event` → `OK`
+  - Non trovato → `CRITICAL: publisher EventBus rimosso — evento non più emesso`
+- Per ogni `publish/subscribe` in `new` NON in `old`: `INFO: nuovo evento EventBus introdotto`
+
+#### model_lifecycle_handlers (v1.3)
+- Per ogni entry in `old.model_lifecycle_handlers`:
+  - Trovata con stesso `event` + `verbatim` canonicalizzato → `OK`
+  - Trovata con `event` identico ma `verbatim` diverso → `HIGH: init hook modificato`
+  - Non trovata → `CRITICAL: init hook rimosso — possibile app che non carica dati al boot`
+
+#### fragment_loads (v1.3)
+- Per ogni entry in `old.fragment_loads`:
+  - Trovata con stesso `style` + `name` → `OK`
+  - Trovata con `name` diverso → `HIGH: fragment path cambiato — layout/logica diversa`
+  - Non trovata → `CRITICAL: fragment rimosso`
+
+#### dialog_lifecycle (v1.3)
+- Per ogni entry in `old.dialog_lifecycle`:
+  - Trovata con stesso `event` + `verbatim` canonicalizzato → `OK`
+  - Non trovata → `CRITICAL: side-effect post-dialog perso`
+
+#### model_bindings (v1.3)
+- Per ogni entry in `old.model_bindings`:
+  - `binding_type` identico → `OK`
+  - `binding_type` cambiato da `getModel` a `component_property` → `HIGH: pattern binding model modificato`
+  - `getModel("X")` vs `getModel("Y")` (nomi diversi) → `CRITICAL: nome model OData cambiato`
+
+#### external_formatters (v1.3)
+- Per ogni entry in `old.external_formatters`:
+  - `formatter_path` identico → `OK`
+  - `formatter_path` diverso → `HIGH: path formatter esterno cambiato`
+  - Non trovato → `HIGH: import formatter esterno rimosso`
 
 #### xmlview_bindings
 - Per ogni entry `type=formatter` in `old.xmlview_bindings`:

@@ -71,14 +71,16 @@ Il modello NON può produrre:
 
 ---
 
-## Schema YAML Fingerprint (locked) — v1.2
+## Schema YAML Fingerprint (locked) — v1.3
 
 ```yaml
 app: "appavvisi"
 branch: "main-alt"
 extracted_at: "2026-03-31T..."
-schema_version: "1.2"
-module_type: "sapui5"   # enum: sapui5 | cap_cds (wf_* modules)
+schema_version: "1.3"
+module_type: "sapui5"   # enum: sapui5 | cap_cds
+# NOTA: module_type=cap_cds si applica SOLO al modulo liquidazione ROOT (che ha srv/)
+# I moduli wf_* sono SAP BPM workflow (YAML/XML) — NON sono CAP services. Saltarli sempre.
 
 # ── LAYER 1-A: regex/bash — JS files ──
 
@@ -95,6 +97,41 @@ odata_v2_calls:
     operation: "read"
     entity: "/EntitySet"       # verbatim
     verbatim: "this.getModel().read(\"/EntitySet\","
+
+eventbus_calls:                           # v1.3: EventBus publish/subscribe inter-controller
+  - file: "webapp/controller/App.controller.js"
+    line: 78
+    type: "subscribe"                     # enum: subscribe | publish | unsubscribe
+    channel: "sap.ui.core.EventBus"
+    event: "dataLoaded"
+    verbatim: "EventBus.getInstance().subscribe(\"sap.ui.core.EventBus\", \"dataLoaded\","
+
+model_lifecycle_handlers:                 # v1.3: attachMetadataLoaded / attachMetadataFailed
+  - file: "webapp/controller/App.controller.js"
+    line: 34
+    # enum: attachMetadataLoaded | attachMetadataFailed | attachRequestCompleted
+    type: "attachMetadataLoaded"
+    verbatim: "oModel.attachMetadataLoaded(function() {"
+
+fragment_loads:                           # v1.3: Fragment.load() o sap.ui.xmlfragment()
+  - file: "webapp/controller/App.controller.js"
+    line: 56
+    style: "Fragment.load"                # enum: Fragment.load | sap.ui.xmlfragment
+    name: "siae.liquidazione.view.DetailDialog"
+    verbatim: "Fragment.load({ name: \"siae.liquidazione.view.DetailDialog\","
+
+dialog_lifecycle:                         # v1.3: dialog.open() / dialog.close() + side effects
+  - file: "webapp/controller/App.controller.js"
+    line: 67
+    # enum: open | close | destroy
+    event: "close"
+    verbatim: "this._oDialog.close();"
+
+external_formatters:                      # v1.3: import di formatter esterni
+  - file: "webapp/controller/App.controller.js"
+    line: 8
+    formatter_path: "siae/liquidazione/formatter/StatusFormatter"
+    verbatim: "\"siae/liquidazione/formatter/StatusFormatter\""
 
 # ── LAYER 1-B: regex/bash — method signatures + routing ──
 
@@ -120,6 +157,12 @@ data_sources:                             # da manifest.json sap.app.dataSources
     uri: "/sap/opu/odata/siae/LIQUIDAZIONE_SRV/"
     type: "OData"
 
+model_bindings:                           # v1.3: come viene ottenuto il model OData
+  - file: "webapp/controller/App.controller.js"
+    line: 23
+    binding_type: "getModel"             # enum: getModel | component_property | owner_component
+    verbatim: "const oModel = this.getModel(\"main\");"
+
 # ── LAYER 1-C: regex/bash — XMLView + Component.js ──
 
 xmlview_bindings:                         # da *.view.xml e *.fragment.xml
@@ -140,9 +183,10 @@ component_models:                         # da webapp/Component.js
     file: "webapp/Component.js"
     line: 34
 
-# ── LAYER 1-D: regex/bash — CAP CDS (solo moduli wf_*) ──
+# ── LAYER 1-D: regex/bash — CAP CDS (solo liquidazione root srv/) ──
+# ARCHITETTURA: wf_* = SAP BPM workflow, NON CAP services. Non processarli.
 
-cap_handlers:                             # da srv/*.js — presente solo se module_type = cap_cds
+cap_handlers:                             # da srv/*.js — solo se module_type = cap_cds
   - file: "srv/liquidazione-service.js"
     hook: "before"                        # enum: before|on|after
     event: "CREATE"                       # enum: CREATE|READ|UPDATE|DELETE|<action_name>
@@ -150,7 +194,25 @@ cap_handlers:                             # da srv/*.js — presente solo se mod
     verbatim: "this.before('CREATE', 'Liquidazioni', async (req) => {"
     line: 12
 
-cds_annotations:                          # da *.cds files — presente solo se module_type = cap_cds
+cap_security_checks:                      # v1.3: req.reject() nei handlers
+  - file: "srv/liquidazione-service.js"
+    line: 15
+    method_context: "CREATE"
+    http_code: 403
+    verbatim: "req.reject(403, 'Accesso negato: utente non autorizzato');"
+
+cap_lib_modules:                          # v1.3: helper di business logic in srv/lib/
+  - file: "srv/lib/validation.js"
+    line: 1
+    verbatim: "module.exports = { validateLiquidazione, checkAutore }"
+
+cap_context_accesses:                     # v1.3: req.user/tenant/data nei handlers
+  - file: "srv/liquidazione-service.js"
+    line: 18
+    access_type: "user"                   # enum: user | tenant | data | params
+    verbatim: "if (req.user.is('admin')) { req.reject(403); }"
+
+cds_annotations:                          # da *.cds files — solo se module_type = cap_cds
   - file: "srv/liquidazione-service.cds"
     annotation: "@restrict"
     verbatim: "@restrict: [{ grant: 'READ', to: 'authenticated-user' }]"
@@ -158,11 +220,24 @@ cds_annotations:                          # da *.cds files — presente solo se 
 
 cap_config:                               # da package.json sezione cds
   cds_version: "^6.8.0"
-  services:
-    - name: "db"
+  odata_version: "v4"                     # v1.3: da cds.odata.version
+  feature_lean_draft: true                # v1.3: da cds.features (breaking v6→v7)
+  sql_native_hana_associations: null      # v1.3: da cds.sql (breaking v7)
+  requires:
+    - service: "db"
       kind: "hana"
 
+# ── LAYER 1-E: bash pre-location (hint per Layer 2) ──
+# data_transforms_hints e timing_hints sono SOLO per Layer 2 — non nel fingerprint finale
+
 # ── LAYER 2: Claude schema-locked (atomico: un file per invocazione) ──
+
+layer2_completeness:                      # v1.3: validation gate post-estrazione
+  - file: "webapp/controller/App.controller.js"
+    methods_expected: 8                   # da method_signatures Layer 1-B
+    methods_extracted: 8
+    completeness_ratio: 1.0
+    status: "OK"                          # enum: OK | INCOMPLETE
 
 error_handlers:
   - method: "onInit"
@@ -179,12 +254,14 @@ logic_blocks:
     conditions:
       - line: 34
         verbatim: "if (!oData.codiceAutore)"
-        branch_true:                   # v1.2: lista di TUTTE le azioni nel ramo true
+        nesting_depth: 0               # v1.3: 0=top-level, 1=inside one if, 2=inside two if
+        branch_true:                   # v1.2+: lista ORDINATA di TUTTE le azioni nel ramo true
           - "return false"
-        branch_false: []               # v1.2: lista vuota se ramo assente
-        nested: []                     # v1.2: condizioni annidate (max depth 2)
+        branch_false: []               # lista vuota se ramo assente
+        nested: []                     # v1.2+: condizioni annidate (max depth 2)
       - line: 38
         verbatim: "if (oData.importo <= 0 || oData.importo > 999999)"
+        nesting_depth: 0
         branch_true:
           - "MessageBox.error(this._getText('ERR_IMPORTO'))"
         branch_false: []
@@ -200,7 +277,13 @@ logic_blocks:
       - type: "OData.write"
         verbatim: "this.getModel().create(\"/LiquidazioniSet\","
 
-    data_transforms:                   # v1.2: trasformazioni dati nel metodo
+    timing_annotations:                  # v1.3: delay/debounce logic
+      - line: 56
+        type: "setTimeout"               # enum: setTimeout|setInterval|debounce|throttle
+        delay_ms: 500
+        verbatim: "setTimeout(function() { this.getModel().create(...); }.bind(this), 500)"
+
+    data_transforms:                   # v1.2+: trasformazioni dati nel metodo
       - line: 67
         # enum: reduce|filter|map|sort|arithmetic|format|parse|date
         operation: "filter"
@@ -218,10 +301,13 @@ external_calls:
     verbatim: "this.getModel().callFunction(\"/FunctionImport\","
     file: "webapp/controller/App.controller.js"
     line: 112
-    callbacks:                         # v1.2: handler success/error della callback OData
+    callbacks:                         # v1.2+: handler success/error della callback OData
+      style: "object_config"           # v1.3: enum: object_config|promise|async_await
+      success_signature: "function(oData, oResponse)"   # v1.3: verbatim parametri
       success:
         - "this._onSubmitSuccess(oData)"
         - "this.getRouter().navTo(\"RouteConferma\""
+      error_signature: "function(oError)"               # v1.3: verbatim parametri
       error:
         - "MessageBox.error(this._getText('ERR_SUBMIT'))"
 ```
@@ -291,13 +377,14 @@ NEW: [NON TROVATO]
 1. **Input validation**: risolvi branch → SHA (gh api ref/heads → commit → tree)
    - Se branch non esiste: `ERRORE: branch '<X>' non trovato`
    - Se `--app=nome` e app non trovata: `ERRORE: app '<nome>' non trovata. App disponibili: <lista>`
-2. **App discovery**: lista tutti i moduli `app*` e `wf_*` dal tree root
-3. **Identifica tipo modulo**: `app*` → sapui5; `wf_*` → verifica presenza `srv/` → cap_cds
+2. **App discovery**: lista tutti i moduli `app*` dal tree root; identifica il modulo `liquidazione` root (CAP)
+3. **Identifica tipo modulo**: `app*` → sapui5; modulo root con `srv/` → cap_cds. `wf_*` sono SAP BPM workflow — NON processarli.
 4. **Per ogni app — Layer 1 (bash)**:
-   - Layer 1-A: deprecated imports + OData v2 calls (tutti i metodi del modello)
-   - Layer 1-B: method signatures (on*, _*, ES6, lifecycle) + navigation + routing + dataSources
+   - Layer 1-A: deprecated imports + OData v2 calls + EventBus + model lifecycle + fragment loads + dialog lifecycle + external formatters
+   - Layer 1-B: method signatures (on*, _*, ES6, lifecycle) + navigation + routing + dataSources + model bindings
    - Layer 1-C: XMLView bindings + Component.js model registration
-   - Layer 1-D (solo cap_cds): CAP handlers srv/*.js + CDS annotations + cap_config
+   - Layer 1-D (solo cap_cds, liquidazione root): CAP handlers + security checks + lib modules + context accesses + CDS annotations + cap_config
+   - Layer 1-E: pre-location data_transforms e timing (hints per Layer 2 — non nel fingerprint)
 5. **Per ogni app — Layer 2 (Claude schema-locked, atomico)**:
    - Un file controller alla volta, TUTTI i metodi in una sola invocazione
    - Popola `error_handlers`, `logic_blocks`, `external_calls`
@@ -325,10 +412,21 @@ NEW: [NON TROVATO]
 - [ ] Skill tipo `Rigid` (non `Flexible`)
 - [ ] `gh api` usa sempre risoluzione branch→SHA (zero chiamate con branch name diretto)
 - [ ] Layer 2 atomico: un file alla volta, tutti i metodi in una sola invocazione
-- [ ] `branch_true`/`branch_false` sono liste nel fingerprint (schema v1.2)
+- [ ] `branch_true`/`branch_false` sono liste ORDINATE nel fingerprint (schema v1.2+) — diff index-by-index
 - [ ] `data_transforms` presente per i metodi con reduce/filter/map/Math/format/parse
 - [ ] `external_calls.callbacks.success`/`.error` presenti per le OData calls con callback
-- [ ] Layer 1-E grep individua i file con trasformazioni dati prima di Layer 2
+- [ ] Layer 1-E grep individua i file con trasformazioni dati e timing logic prima di Layer 2
+- [ ] `nesting_depth` integer presente in ogni condizione (v1.3) — cambio depth = CRITICAL
+- [ ] `timing_annotations` presenti per metodi con setTimeout/debounce (v1.3)
+- [ ] `layer2_completeness` calcolato e validato dopo ogni file (completeness_ratio = 1.0 richiesto)
+- [ ] EventBus calls (`eventbus_calls`) tracciate (v1.3)
+- [ ] Model lifecycle handlers (`model_lifecycle_handlers`) tracciati (v1.3)
+- [ ] Fragment loads, dialog lifecycle, model bindings, external formatters tracciati (v1.3)
+- [ ] Layer 1-D CAP si applica SOLO a liquidazione root (`srv/`) — `wf_*` saltati esplicitamente
+- [ ] `cap_security_checks` (req.reject) tracciati — rimosso = CRITICAL (v1.3)
+- [ ] `cap_config.odata_version` tracciato — cambio = CRITICAL (v1.3)
+- [ ] Merge safety criteria: CRITICAL=0 AND LOGIC DIFF ≤ 3 (non solo CRITICAL=0)
+- [ ] Tutti i grep Layer 1 con `| sort` prima dei loop while (determinismo su macOS vs Linux)
 
 ---
 
@@ -345,20 +443,32 @@ NEW: [NON TROVATO]
 | 7 | Canonicalizzazione verbatim prima del diff | Differenze di whitespace producono falsi positivi che erodono la fiducia nel tool |
 | 8 | Rename detection best-effort | Metodi rinominati sistemicamente (es. OData v4 migration) producono alert fatigue se trattati solo come CRITICAL; il suggerimento riduce il rumore mantenendo la sicurezza |
 | 9 | Layer 2 atomico (un file per invocazione) | Ambiguità dell'unità di elaborazione causa variabilità dell'output tra esecuzioni — viola il determinismo |
-| 10 | CAP CDS come Layer 1-D separato | I moduli wf_* hanno una struttura radicalmente diversa (srv/, .cds) rispetto alle app SAPUI5; separarli evita falsi negativi su handler CAP e annotation di sicurezza |
+| 10 | CAP CDS come Layer 1-D separato (solo liquidazione root) | Il modulo liquidazione root ha `srv/`; i moduli `wf_*` sono SAP BPM workflow YAML/XML — non CAP services. Errore architetturale corretto in v1.3. |
 | 11 | Checkpoint su filesystem dopo ogni app | Sessioni lunghe (70+ app) rischiano crash; il checkpoint permette di riprendere senza ripetere il lavoro già fatto |
 | 12 | Skill tipo Rigid | Il protocollo di estrazione non ammette adattamenti: ogni variazione rompe il determinismo. Flexible permetterebbe a Claude di "ottimizzare" con verbatim parafrasati |
-| 13 | `branch_true`/`branch_false` come liste (v1.2) | Una singola azione verbatim non cattura branch con più istruzioni; la lista garantisce che ogni azione nel ramo sia verificabile singolarmente nel diff |
+| 13 | `branch_true`/`branch_false` come liste ORDINATE (v1.2) | Una singola azione verbatim non cattura branch con più istruzioni; la lista ORDINATA garantisce che reorder `[A,B]→[B,A]` sia rilevato come LOGIC DIFF |
 | 14 | `data_transforms` come campo separato (v1.2) | Le trasformazioni dati (reduce/filter/map/format) sono logica di business critica ma non rilevabile come side_effect; un campo dedicato permette un diff granulare |
 | 15 | `callbacks` in `external_calls` (v1.2) | La logica post-OData (success/error handler) è spesso dove la business logic si nasconde; ignorarla produce falsi negativi su upgrade che cambiano le signature delle callback |
-| 16 | Layer 1-E bash pre-location per data_transforms | Il Layer 2 deve sapere dove concentrarsi; il grep bash riduce i falsi negativi senza aggiungere invocazioni Claude extra |
+| 16 | Layer 1-E bash pre-location per data_transforms e timing | Il Layer 2 deve sapere dove concentrarsi; il grep bash riduce i falsi negativi senza aggiungere invocazioni Claude extra |
+| 17 | `nesting_depth` integer in condizioni (v1.3) | Stessa condizione a profondità diversa ha semantica diversa (`if` annidato in `else` vs top-level); senza depth il diff è cieco a questo tipo di refactoring |
+| 18 | Completeness validation post-Layer 2 (v1.3) | Claude può troncare l'output su file grandi; senza validazione, un file con 8 metodi di cui 3 estratti produce un fingerprint silentemente incompleto che poi passa il diff |
+| 19 | Diff ordinato su `branch_true`/`branch_false` (v1.3) | Set-based comparison mancava il reorder delle azioni: `[BusyIndicator.show, create]` e `[create, BusyIndicator.show]` sono semanticamente diversi (race condition) |
+| 20 | Merge safety: CRITICAL=0 AND LOGIC DIFF≤3 (v1.3) | Solo CRITICAL=0 era troppo permissivo: un'app con 10 LOGIC DIFF passava come "sicura" anche se richiedeva review approfondita |
+| 21 | `grep | sort` obbligatorio in tutti i Layer 1 (v1.3) | Filesystem order diverso su macOS (HFS+) vs Linux (ext4) produce fingerprint non-deterministici; `sort` garantisce output identico su entrambi |
+| 22 | EventBus, model lifecycle, fragment, dialog lifecycle (v1.3) | Pattern SAPUI5 avanzati non tracciati in v1.2: EventBus inter-controller, attachMetadataLoaded, Fragment.load() runtime, dialog.close() side-effects — tutti producono falsi negativi |
+| 23 | `cap_security_checks` (req.reject) come campo separato (v1.3) | I security check (403 guards) sono la funzionalità più critica da verificare in un upgrade CAP; seppellirli in logic_blocks li rendeva invisibili al diff |
+| 24 | `cap_config.odata_version` e feature flags (v1.3) | Il cambio di versione OData e i feature flag CAP sono breaking changes silenti: cambiano il comportamento runtime senza errori di compilazione |
 
 ---
 
 ## Story Points
 
-**18 SP-Umano / 6 SP-Augmented**
+**23 SP-Umano / 8 SP-Augmented**
 
 - Tipo dominante: feature nuova cross-domain (skill framework + analisi codice SAP)
-- Accelerazione AI: ~3x (logica complessa ma spec definite — +2 SP per coverage CAP e XMLView)
-- Rispetto alla stima precedente (15 SP-U / 5 SP-A): +3 SP-U / +1 SP-A per schema v1.2 (branch_true[], nested, data_transforms, callbacks) e Layer 1-E
+- Accelerazione AI: ~3x (logica complessa ma spec definite)
+- Evoluzione stime:
+  - v1.0 (schema base): 15 SP-U / 5 SP-A
+  - v1.2 (+branch_true[], nested, data_transforms, callbacks, Layer 1-E): 18 SP-U / 6 SP-A
+  - v1.3 (+nesting_depth, completeness_ratio, timing_annotations, EventBus, model_lifecycle, fragment, dialog, model_bindings, external_formatters, CAP architectural fix, cap_security_checks, diff ordinato, grep sort): +5 SP-U / +2 SP-A
+- **Schema v1.3 nota SP:** l'architectural fix CAP (ADR-10 corretto) riduce la complessità di un modulo intero (wf_* saltati) ma aggiunge nuovi campi di tracking (cap_security_checks, cap_lib_modules, cap_context_accesses) — impatto netto +2 SP
