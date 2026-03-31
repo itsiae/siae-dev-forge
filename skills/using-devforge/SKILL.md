@@ -218,7 +218,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 - Query su Flutter, Dart, Riverpod, ObjectBox, Get_it, Amplify Cognito, Dio, app mobile → `siae-flutter` (NON brainstorming, NON siae-frontend)
 - Query su .robot, .resource, Robot Framework, AppiumLibrary, pabot, porting test Android/iOS, UIAutomator2, XCUITest, NoSuchElementException Appium, SessionNotCreatedException, adb dump, BrowserStack mobile → `siae-robot-framework` (NON siae-automation, NON siae-debugging)
 - Query su Xray report + test .robot, Test Execution risultati RF → `siae-automation` (NON siae-robot-framework)
-- Query su "automatizza test RF su CI/CD GitHub Actions" → `siae-robot-framework` per il codice RF + `siae-automation` per la pipeline CI; la pipeline RF su CI è un gap noto del ciclo DevForge (vedi nota J7-T5)
+- Query su "automatizza test RF su CI/CD GitHub Actions" → `siae-robot-framework` per il codice RF + `siae-automation` per la pipeline CI (gap noto: nessun reference file per workflow GitHub Actions RF — futuro `siae-robot-framework/reference/ci-pipeline.md`)
 
 ## Rule Priority — Quando le Skill Confliggono
 

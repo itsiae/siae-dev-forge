@@ -103,6 +103,14 @@ ${PASSWORD}    ${ENV_PASSWORD}         # da variabile d'ambiente
 
 Oppure da file separato non versionato: `variables.yaml` (aggiunto a `.gitignore`).
 
+> ⚠️ **Log masking RF:** quando un test fallisce in debug mode, RF stampa tutte le variabili dello scope.
+> Per evitare che `${ENV_PASSWORD}` appaia in chiaro nei log, assegna il valore a una variabile
+> con `password` nel nome (RF 5+ maschera automaticamente le variabili il cui nome contiene `password`):
+> ```robotframework
+> ${password}=    Get Environment Variable    ENV_PASSWORD
+> ```
+> Oppure usa `Log Variables` solo in debug locale, mai in CI.
+
 ### Guard obbligatorio nel Suite Setup
 
 Se le variabili d'ambiente non sono settate, RF le espande come stringa vuota senza errore.

@@ -104,30 +104,6 @@ TC02_LoginConPasswordErrata
 
 **Regola**: nessuna keyword nel file .robot. Tutto va nel Page resource.
 
-### A.5 Esecuzione test in locale
-
-```bash
-# Run singolo file
-robot tests/TC01_LoginConCredenzialiValide.robot
-
-# Run con log di debug (per debug fallimenti)
-robot --loglevel DEBUG tests/TC01_LoginConCredenzialiValide.robot
-
-# Run intera suite con output separato
-robot --outputdir results tests/
-
-# Run con tag specifico (es. solo smoke test)
-robot --include smoke tests/
-
-# Run e apri report HTML
-robot --outputdir results tests/ && open results/report.html
-```
-
-Se il test fallisce, leggi `reference/debug-engine.md` per la classificazione dell'errore.
-Per esecuzione su BrowserStack, vedi `reference/browserstack-sdk-config.md`.
-
----
-
 ### A.4 Variante iOS (creazione da zero su iOS)
 
 Se la piattaforma target è iOS, usa locatori iOS nel Page resource:
@@ -173,6 +149,30 @@ TC01_LoginConCredenzialiValide
 ```
 
 **MAI** usare `android.widget.*` o `resource-id` in file iOS. Usa `XCUIElementType*` per xpath e `accessibility_id` come prima scelta.
+
+---
+
+### A.5 Esecuzione test in locale
+
+```bash
+# Run singolo file
+robot tests/TC01_LoginConCredenzialiValide.robot
+
+# Run con log di debug (per debug fallimenti)
+robot --loglevel DEBUG tests/TC01_LoginConCredenzialiValide.robot
+
+# Run intera suite con output separato
+robot --outputdir results tests/
+
+# Run con tag specifico (es. solo smoke test)
+robot --include smoke tests/
+
+# Run e apri report HTML
+robot --outputdir results tests/ && open results/report.html
+```
+
+Se il test fallisce, leggi `reference/debug-engine.md` per la classificazione dell'errore.
+Per esecuzione su BrowserStack, vedi `reference/browserstack-sdk-config.md`.
 
 ---
 

@@ -101,14 +101,7 @@ Switch To Context    WEBVIEW_com.siae.app
   ```robotframework
   Wait Until Keyword Succeeds    5x    1s    Scroll Until Element Found    ${TARGET_ELEMENT}
   ```
-  Dove `Scroll Until Element Found` è una keyword composita da scrivere nel Page resource:
-  ```robotframework
-  Scroll Until Element Found
-      [Documentation]    Scrolla verso il basso e verifica visibilità elemento target
-      [Arguments]    ${locator}
-      Swipe Up
-      Wait And Assert Element Visible    ${locator}    timeout=3s
-  ```
+  `Scroll Until Element Found` è già definita in `common.resource` — non ridefinirla nel Page resource.
 
 ---
 
