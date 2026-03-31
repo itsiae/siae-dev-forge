@@ -71,13 +71,13 @@ Il modello NON può produrre:
 
 ---
 
-## Schema YAML Fingerprint (locked) — v1.1
+## Schema YAML Fingerprint (locked) — v1.2
 
 ```yaml
 app: "appavvisi"
 branch: "main-alt"
 extracted_at: "2026-03-31T..."
-schema_version: "1.1"
+schema_version: "1.2"
 module_type: "sapui5"   # enum: sapui5 | cap_cds (wf_* modules)
 
 # ── LAYER 1-A: regex/bash — JS files ──
@@ -179,12 +179,16 @@ logic_blocks:
     conditions:
       - line: 34
         verbatim: "if (!oData.codiceAutore)"
-        branch_true:  "return false"
-        branch_false: null
+        branch_true:                   # v1.2: lista di TUTTE le azioni nel ramo true
+          - "return false"
+        branch_false: []               # v1.2: lista vuota se ramo assente
+        nested: []                     # v1.2: condizioni annidate (max depth 2)
       - line: 38
         verbatim: "if (oData.importo <= 0 || oData.importo > 999999)"
-        branch_true:  "MessageBox.error(this._getText('ERR_IMPORTO'))"
-        branch_false: null
+        branch_true:
+          - "MessageBox.error(this._getText('ERR_IMPORTO'))"
+        branch_false: []
+        nested: []
 
     side_effects:
       # enum: MessageBox.error|MessageBox.success|MessageBox.warning|navigation|
@@ -195,6 +199,12 @@ logic_blocks:
         verbatim: "this.getRouter().navTo(\"RouteConferma\""
       - type: "OData.write"
         verbatim: "this.getModel().create(\"/LiquidazioniSet\","
+
+    data_transforms:                   # v1.2: trasformazioni dati nel metodo
+      - line: 67
+        # enum: reduce|filter|map|sort|arithmetic|format|parse|date
+        operation: "filter"
+        verbatim: "aItems.filter(function(o) { return o.stato === 'A'; })"
 
     return_values:
       - verbatim: "return false"
@@ -208,6 +218,12 @@ external_calls:
     verbatim: "this.getModel().callFunction(\"/FunctionImport\","
     file: "webapp/controller/App.controller.js"
     line: 112
+    callbacks:                         # v1.2: handler success/error della callback OData
+      success:
+        - "this._onSubmitSuccess(oData)"
+        - "this.getRouter().navTo(\"RouteConferma\""
+      error:
+        - "MessageBox.error(this._getText('ERR_SUBMIT'))"
 ```
 
 ---
@@ -309,6 +325,10 @@ NEW: [NON TROVATO]
 - [ ] Skill tipo `Rigid` (non `Flexible`)
 - [ ] `gh api` usa sempre risoluzione branch→SHA (zero chiamate con branch name diretto)
 - [ ] Layer 2 atomico: un file alla volta, tutti i metodi in una sola invocazione
+- [ ] `branch_true`/`branch_false` sono liste nel fingerprint (schema v1.2)
+- [ ] `data_transforms` presente per i metodi con reduce/filter/map/Math/format/parse
+- [ ] `external_calls.callbacks.success`/`.error` presenti per le OData calls con callback
+- [ ] Layer 1-E grep individua i file con trasformazioni dati prima di Layer 2
 
 ---
 
@@ -328,13 +348,17 @@ NEW: [NON TROVATO]
 | 10 | CAP CDS come Layer 1-D separato | I moduli wf_* hanno una struttura radicalmente diversa (srv/, .cds) rispetto alle app SAPUI5; separarli evita falsi negativi su handler CAP e annotation di sicurezza |
 | 11 | Checkpoint su filesystem dopo ogni app | Sessioni lunghe (70+ app) rischiano crash; il checkpoint permette di riprendere senza ripetere il lavoro già fatto |
 | 12 | Skill tipo Rigid | Il protocollo di estrazione non ammette adattamenti: ogni variazione rompe il determinismo. Flexible permetterebbe a Claude di "ottimizzare" con verbatim parafrasati |
+| 13 | `branch_true`/`branch_false` come liste (v1.2) | Una singola azione verbatim non cattura branch con più istruzioni; la lista garantisce che ogni azione nel ramo sia verificabile singolarmente nel diff |
+| 14 | `data_transforms` come campo separato (v1.2) | Le trasformazioni dati (reduce/filter/map/format) sono logica di business critica ma non rilevabile come side_effect; un campo dedicato permette un diff granulare |
+| 15 | `callbacks` in `external_calls` (v1.2) | La logica post-OData (success/error handler) è spesso dove la business logic si nasconde; ignorarla produce falsi negativi su upgrade che cambiano le signature delle callback |
+| 16 | Layer 1-E bash pre-location per data_transforms | Il Layer 2 deve sapere dove concentrarsi; il grep bash riduce i falsi negativi senza aggiungere invocazioni Claude extra |
 
 ---
 
 ## Story Points
 
-**15 SP-Umano / 5 SP-Augmented**
+**18 SP-Umano / 6 SP-Augmented**
 
 - Tipo dominante: feature nuova cross-domain (skill framework + analisi codice SAP)
 - Accelerazione AI: ~3x (logica complessa ma spec definite — +2 SP per coverage CAP e XMLView)
-- Rispetto alla stima originale (13 SP): +2 per Layer 1-C (XMLView/Component) e Layer 1-D (CAP CDS)
+- Rispetto alla stima precedente (15 SP-U / 5 SP-A): +3 SP-U / +1 SP-A per schema v1.2 (branch_true[], nested, data_transforms, callbacks) e Layer 1-E

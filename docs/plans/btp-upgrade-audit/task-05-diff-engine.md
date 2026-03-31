@@ -133,6 +133,23 @@ Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è c
     - Trovata identica in `new` (stesso metodo, stesso verbatim) → `OK`
     - Non trovata → `LOGIC DIFF: condizione rimossa — revisione umana richiesta`
     - Trovata ma `verbatim` diverso → `LOGIC DIFF: condizione modificata — revisione umana richiesta`
+  - Per ogni elemento in `old.condition.branch_true[]`:
+    - Trovato (canonicalizzato) in `new.condition.branch_true[]` per la stessa condizione → `OK`
+    - Non trovato → `LOGIC DIFF: azione nel ramo true rimossa — revisione umana richiesta`
+  - Per ogni elemento in `old.condition.branch_false[]`:
+    - Trovato (canonicalizzato) in `new.condition.branch_false[]` → `OK`
+    - Non trovato → `LOGIC DIFF: azione nel ramo false rimossa — revisione umana richiesta`
+  - Per ogni condition `nested[]` in `old`:
+    - Trovata condizione annidata identica (per `verbatim` canonicalizzato) in `new` → `OK`
+    - Non trovata → `LOGIC DIFF: condizione annidata rimossa — revisione umana richiesta`
+    - Trovata ma `verbatim` diverso → `LOGIC DIFF: condizione annidata modificata`
+
+#### logic_blocks — data_transforms (NUOVO v1.2)
+- Per ogni entry in `old.logic_blocks[method].data_transforms`:
+  - Trovata in `new` con stessa `operation` + `verbatim` canonicalizzato → `OK`
+  - Trovata con stessa `operation` ma `verbatim` diverso → `LOGIC DIFF: trasformazione dati modificata — verificare logica di mapping/calcolo`
+  - Non trovata → `LOGIC DIFF: trasformazione dati rimossa — possibile perdita di mapping/calcolo`
+- Per ogni entry in `new.data_transforms` NON in `old`: `INFO: nuova trasformazione dati introdotta`
 
 #### logic_blocks — side_effects
 - Per ogni `type` + `verbatim` in `old.logic_blocks[method].side_effects`:
@@ -145,6 +162,13 @@ Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è c
   - Trovata in `new` con stesso `endpoint` e `type` → `OK`
   - Trovata con `type` diverso → `HIGH: chiamata esterna cambiata tipo`
   - Non trovata → `CRITICAL: chiamata esterna rimossa`
+- Per ogni entry trovata (stesso `endpoint`), confronta callbacks (NUOVO v1.2):
+  - Per ogni elemento in `old.callbacks.success[]`:
+    - Trovato (canonicalizzato) in `new.callbacks.success[]` → `OK`
+    - Non trovato → `CRITICAL: azione nel callback success rimossa — potenziale perdita di logica post-OData`
+  - Per ogni elemento in `old.callbacks.error[]`:
+    - Trovato (canonicalizzato) in `new.callbacks.error[]` → `OK`
+    - Non trovato → `CRITICAL: azione nel callback error rimossa — gestione errore OData persa`
 
 #### xmlview_bindings
 - Per ogni entry `type=formatter` in `old.xmlview_bindings`:

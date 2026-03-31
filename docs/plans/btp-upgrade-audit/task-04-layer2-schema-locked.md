@@ -89,11 +89,26 @@ logic_blocks:
     conditions:
       - line: <N>
         verbatim: "<if_condition>"     # verbatim: tutto il testo dell'if (max 120 char)
-        branch_true: "<verbatim>"      # verbatim: prima azione nel ramo true | null
-        branch_false: "<verbatim>"     # verbatim: prima azione nel ramo false | null
+        branch_true:                   # lista verbatim di TUTTE le azioni nel ramo true (max 120 char ciascuna)
+          - "<azione_1>"
+          - "<azione_2>"
+        branch_false:                  # lista verbatim di TUTTE le azioni nel ramo false | [] se assente
+          - "<azione_1>"
+        nested:                        # condizioni annidate (max depth 2) | [] se assenti
+          - line: <N>
+            verbatim: "<if_annidato>"
+            branch_true:
+              - "<azione>"
+            branch_false: []
 
     side_effects:
       - type: "<enum>"                 # enum: MessageBox.error | MessageBox.success | MessageBox.warning | navigation | OData.write | OData.read | BusyIndicator | Fragment | null
+        verbatim: "<riga_esatta>"      # verbatim: riga esatta (max 120 char)
+
+    data_transforms:                   # NUOVO v1.2 — trasformazioni dati rilevate nel metodo
+      - line: <N>
+        # enum: reduce | filter | map | sort | arithmetic | format | parse | date
+        operation: "<enum>"
         verbatim: "<riga_esatta>"      # verbatim: riga esatta (max 120 char)
 
     return_values:
@@ -102,6 +117,9 @@ logic_blocks:
 
 Regola: se un metodo non ha `if`/`else` → `conditions: []`
 Regola: se un metodo non fa side effect → `side_effects: []`
+Regola: se un metodo non ha trasformazioni dati → `data_transforms: []`
+Regola: `branch_true`/`branch_false` sono sempre liste (anche se contengono un solo elemento)
+Regola: `nested` max depth 2 — non scendere oltre il secondo livello di if annidato
 
 #### external_calls
 ```yaml
@@ -112,6 +130,12 @@ external_calls:
     verbatim: "<riga_esatta>"      # verbatim: la riga della chiamata (max 120 char)
     file: "<path>"
     line: <N>
+    callbacks:                     # NUOVO v1.2 — handler success/error della callback OData
+      success:                     # lista verbatim delle azioni nel handler success | [] se assente
+        - "<azione_1>"
+        - "<azione_2>"
+      error:                       # lista verbatim delle azioni nel handler error | [] se assente
+        - "<azione_1>"
 ```
 
 #### Checklist di auto-verifica prima di salvare il YAML
@@ -122,6 +146,9 @@ Prima di produrre il fingerprint finale, verifica ogni campo:
 - [ ] Ogni campo `null` è davvero non trovato nel codice
 - [ ] Nessun campo enum contiene un valore non nella lista definita
 - [ ] I `line` numbers corrispondono alle righe reali del file
+- [ ] `branch_true`/`branch_false` sono liste (non stringhe singole)
+- [ ] `data_transforms` è popolato se il pre-location Layer 1-E ha trovato match nel file
+- [ ] `callbacks.success`/`callbacks.error` sono liste (anche vuote `[]`)
 
 Se anche UN campo fallisce la checklist → azzeralo a `null`.
 ```

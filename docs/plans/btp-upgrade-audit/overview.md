@@ -23,6 +23,7 @@
 | 6 | Phase 2: gap report generator (CRITICAL count come metrica primaria, sezioni blocco PR) | `task-06-gap-report.md` | [PENDING] |
 | 7 | Registrazione skill + smoke test positivo + negative test su `appavvisi` | `task-07-registration-test.md` | [PENDING] |
 | 8 | Layer 1-D: CAP CDS handlers + annotations (solo moduli wf_*) | `task-08-cap-cds-layer.md` | [PENDING] |
+| 9 | Layer 1-E: pre-location trasformazioni dati (grep) + schema v1.2 (branch_true[], nested, data_transforms, callbacks) | `task-09-layer1e-data-transforms.md` | [PENDING] |
 
 ## Dipendenze
 
@@ -30,9 +31,10 @@
 - Task 2 e 3 sono eseguibili in parallelo tra loro
 - Task 4 dipende da Task 2+3
 - Task 8 dipende da Task 2+3 (eseguibile in parallelo con Task 4)
-- Task 5 dipende da Task 2+3+4
+- Task 9 dipende da Task 2+3 (eseguibile in parallelo con Task 4 e Task 8)
+- Task 5 dipende da Task 2+3+4+9
 - Task 6 dipende da Task 5
-- Task 7 dipende da Task 1–6 (e idealmente Task 8)
+- Task 7 dipende da Task 1–6 (e idealmente Task 8+9)
 
 ## Note Architetturali (fix da panel 5 esperti — 2026-03-31)
 
