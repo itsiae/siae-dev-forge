@@ -66,6 +66,10 @@ Perform Login
 
 ### A.3 Struttura file .robot obbligatoria
 
+Le keyword di setup (`Open SIAE Application`, `Close SIAE Application`, `Reset App State`,
+`Capture Screenshot On Failure`) sono definite in `resources/common.resource` — importato
+transitivamente da ogni Page resource tramite `Resource   ../common.resource`.
+
 ```robotframework
 *** Settings ***
 Resource    ../resources/LoginPage.resource
