@@ -12,6 +12,8 @@ Leggi il log e classifica l'errore in base al messaggio principale:
 | Messaggio chiave nel log | Categoria | Note |
 |--------------------------|-----------|------|
 | `NoSuchElementException`, `Element not found`, `No match for` | CATEGORIA 1 | Locatore rotto o pagina non caricata |
+| `ElementNotInteractableException`, `Element is not interactable` | CATEGORIA 1-R1.x | Elemento coperto da overlay o disabled — vedi R1.8 |
+| `InvalidElementStateException` | CATEGORIA 1 | Campo non editabile o disabled |
 | `TimeoutException`, `Stale element`, `StaleElementReference` | CATEGORIA 2 | Timing o UI refresh |
 | `SessionNotCreatedException`, `Could not start a new session` | CATEGORIA 3-R1 | Problema infrastrutturale (non nel test) |
 | `WebDriverException: An unknown server-side error` | CATEGORIA 3-R2 | App crash o errore Appium |
@@ -66,9 +68,47 @@ Switch To Context    WEBVIEW_com.siae.app
 ```
 
 **R1.6 — Nessuna delle regole precedenti risolve?**
-- Acquisisci dump aggiornato tramite `dump-acquisition.md`
+- Acquisisci dump aggiornato tramite [dump-acquisition.md](dump-acquisition.md)
 - Confronta dump attuale con locatore nel .resource
 - Identifica la discrepanza e correggi
+
+**R1.7 — Elemento fuori viewport orizzontalmente (tab strip, carosello, ViewPager)?**
+- Segnale: elemento visibile nel dump ma non sul display — scroll verticale R1.4 non aiuta
+- Fix: aggiungi `Swipe Left` (o `Swipe Right`) prima del `Wait And Click`
+  ```robotframework
+  Swipe Left    # o Swipe Right — aggiungi keyword in common.resource se assente
+  Wait And Click    ${TARGET_TAB}
+  ```
+- Nota: `common.resource` include solo `Swipe Up` / `Swipe Down`. Aggiungi varianti orizzontali seguendo lo stesso pattern percentuale (no coordinate assolute).
+
+**R1.8 — Elemento non interagibile — overlay, banner, dialog?**
+- Segnale: `ElementNotInteractableException` o `Element is not interactable`
+- Il dump mostra l'elemento target MA un altro elemento (bottom sheet, dialog, banner) è sovrapposto
+- Fix: individua l'elemento overlay nel dump → dimettilo prima di interagire
+  ```robotframework
+  # Dismissi dialog nativo
+  Handle Alert    ACCEPT
+  # oppure tappa fuori dalla modal
+  Wait And Click    ${OVERLAY_DISMISS_BUTTON}
+  # poi riprova
+  Wait And Click    ${TARGET_ELEMENT}
+  ```
+- Se l'overlay è un banner pubblicitario o cookie consent, aggiungi dismissal nel `Suite Setup`
+
+**R1.9 — RecyclerView o lista con lazy loading?**
+- Segnale: elemento non trovato ma dovrebbe essere nella lista (scrollando oltre quanto R1.4 ha già scrollato)
+- Fix: usa scroll iterativo con verifica condizionale
+  ```robotframework
+  Wait Until Keyword Succeeds    5x    1s    Scroll Until Element Found    ${TARGET_ELEMENT}
+  ```
+  Dove `Scroll Until Element Found` è una keyword composita da scrivere nel Page resource:
+  ```robotframework
+  Scroll Until Element Found
+      [Documentation]    Scrolla verso il basso e verifica visibilità elemento target
+      [Arguments]    ${locator}
+      Swipe Up
+      Wait And Assert Element Visible    ${locator}    timeout=3s
+  ```
 
 ---
 
@@ -133,7 +173,7 @@ Switch To Context    WEBVIEW_com.siae.app
   curl -u "${BROWSERSTACK_USERNAME}:${BROWSERSTACK_ACCESS_KEY}" \
     https://api-cloud.browserstack.com/app-automate/recent_apps
   ```
-- Per upload manuale: vedi `browserstack-sdk-config.md` §Upload app manuale
+- Per upload manuale: vedi [browserstack-sdk-config.md §Upload app manuale](browserstack-sdk-config.md)
 
 **R3.5 — Orientamento/alert inatteso?**
 - Segnale: elemento non trovato su pagina nota, schermata diversa dall'attesa

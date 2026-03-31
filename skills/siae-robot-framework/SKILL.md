@@ -80,8 +80,10 @@ Classifica lo scenario leggendo file aperti, messaggio utente, errori presenti:
 
 **Tie-breaking:**
 - Ambiguo A/C: esiste già un file .robot per la stessa feature in altra piattaforma? → C, altrimenti → A
-- Ambiguo B/E: c'è un errore attivo nel terminale o nel log? → E, altrimenti → B
+- Ambiguo A/B: il file .robot esiste ma è quasi vuoto (solo `*** Settings ***`)? → A (completamento). Il file .robot esiste e ha test case? → B (manutenzione). **Non creare un secondo Page resource** se `*Page.resource` esiste già.
+- Ambiguo B/E: c'è un errore attivo nel terminale o nel log? → E, altrimenti → B. **Se lo scenario cambia da B a E durante l'esecuzione, aggiorna il campo scenario nell'OUTPUT DELLA SKILL.**
 - Ambiguo B/D: il test fallisce? → B. Il test passa ma ha anti-pattern? → D. Il test è skippato con anti-pattern strutturali? → D.
+- Ambiguo C/D: il file iOS esiste ma contiene xpath Android copiati? → C (porting da rifare), non D.
 
 ---
 
@@ -146,6 +148,9 @@ Regole principali (dettaglio in [reference/best-practices.md](reference/best-pra
 
 - **In debug (E):** ri-esegui il test dopo ogni fix. Leggi l'output completo. Vedi loop di verifica in [reference/debug-engine.md §LOOP](reference/debug-engine.md).
 - **In creazione/modifica:** autorevisa contro la checklist BP-4 + D.1 di [reference/scenarios-maintenance-refactor.md](reference/scenarios-maintenance-refactor.md).
+- **Prima di dichiarare un file "pronto" o un test "funzionante":** invoca `siae-verification` (REQUIRED SUB-SKILL — vedi sezione dedicata in fondo).
+
+**Nota test-first per RF:** `siae-tdd` si applica al codice applicativo (Java/TypeScript/Python), non ai file `.robot`. La qualità dei test RF è garantita da questa skill tramite BP-1..6 + Knowledge Acquisition obbligatoria. Nessun ciclo RED-GREEN-REFACTOR separato è richiesto per i file `.robot`.
 
 ---
 

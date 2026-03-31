@@ -32,6 +32,9 @@ pip install browserstack-sdk
 
 Il file va nella **root del progetto** (stessa directory di `tests/`).
 
+**Campi obbligatori:** `userName`, `accessKey`, `framework`, `platforms`, `app`
+**Campi opzionali:** `appiumVersion`, `parallelsPerPlatform`, `buildName`, `sessionName`, `debug`, `networkLogs`, `deviceLogs`
+
 ```yaml
 # --- Credenziali (MAI hardcoded: usa variabili d'ambiente) ---
 userName: ${BROWSERSTACK_USERNAME}
@@ -120,6 +123,9 @@ browserstack-sdk robot --outputdir results_bs --log log.html --report report.htm
 
 # Run parallelo con pabot
 browserstack-sdk pabot --processes 4 --outputdir results_bs tests/BS/
+
+# Config iOS alternativa (file separato)
+browserstack-sdk --config-file browserstack-ios.yml robot --outputdir results_bs_ios tests/BS_iOS/
 ```
 
 ### Test iOS BS (con SDK)
@@ -128,6 +134,17 @@ browserstack-sdk robot --outputdir results_bs_ios tests/BS_iOS/TC01_Login.robot
 
 browserstack-sdk pabot --processes 4 --outputdir results_bs_ios tests/BS_iOS/
 ```
+
+### ⚠️ Avvertenza: pabot × parallelsPerPlatform
+
+Quando si usa `pabot --processes N` insieme a `parallelsPerPlatform: M` nel YAML, il numero
+totale di sessioni BS aperte è `N × M × numero di platform`. Esempio:
+
+- `pabot --processes 2` + `parallelsPerPlatform: 1` + 2 device Android = **4 sessioni parallele**
+
+Non superare il limite di sessioni parallele del tuo account BS. Verifica il limite nel
+dashboard BS → Account → Plan. Se si supera il limite, le sessioni in eccesso vengono
+accodate silenziosamente — i test sembrano lenti ma non falliscono, rendendo difficile la diagnosi.
 
 ### Variabili d'ambiente richieste
 ```bash

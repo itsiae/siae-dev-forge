@@ -13,6 +13,28 @@
 4. Verifica che la modifica non introduca anti-pattern → applica BP-1..6
 5. Se il locatore è rotto → esegui Knowledge Acquisition per trovare il nuovo locatore
 
+### B.3 Sub-workflow: locatore rotto noto (senza errore attivo)
+
+Se il QA engineer dice "aggiorna il locatore di X perché è cambiato con la nuova release" ma
+non c'è stack trace (altrimenti sarebbe Scenario E):
+
+1. **Non scrivere il nuovo locatore a memoria** — dichiara subito LOCATORE MANCANTE
+2. Esegui Knowledge Acquisition per la pagina coinvolta (vedi `reference/dump-acquisition.md`)
+3. Confronta il dump fresco con il locatore corrente nel Page resource
+4. Aggiorna il locatore nel Page resource — rispetta la gerarchia BP-1
+5. Verifica che non ci siano altri file che usano lo stesso locatore (cerca nel codebase)
+6. Applica pre-flight card 🟡 prima della modifica
+
+```
+LOCATORE DA AGGIORNARE: ${LOGIN_SUBMIT_BUTTON}
+Motivo: nuova release app — elemento rinominato
+Azione: acquisizione dump per LoginPage tramite reference/dump-acquisition.md
+```
+
+**Non procedere senza dump** anche in questo caso: un locatore scritto a memoria è un bug silenzioso.
+
+---
+
 ### B.2 Regola di conservazione
 
 In manutenzione non toccare ciò che non è nel perimetro della modifica richiesta.

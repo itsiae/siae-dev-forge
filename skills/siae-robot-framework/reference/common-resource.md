@@ -17,6 +17,9 @@ ${DEFAULT_TIMEOUT}     15s
 ${DEFAULT_INTERVAL}    0.5s
 ${LONG_TIMEOUT}        30s
 ${APPIUM_URL}          http://localhost:4723
+${ENV_USERNAME}        ${EMPTY}    # popolare via variabile d'ambiente ENV_USERNAME
+${ENV_PASSWORD}        ${EMPTY}    # popolare via variabile d'ambiente ENV_PASSWORD
+${APP_PATH}            ${EMPTY}    # popolare via variabile d'ambiente APP_PATH
 
 *** Keywords ***
 Open SIAE Application
@@ -40,6 +43,8 @@ Reset App State
 
 Capture Screenshot On Failure
     [Documentation]    Cattura screenshot se il test è fallito. Usa in Test Teardown.
+    ...    ⚠️ SICUREZZA: gli screenshot possono contenere PII SIAE (codici fiscali, IBAN, dati pagamento diritti).
+    ...    Non committare mai la directory results/ nel repository. Verificare che results*/ sia in .gitignore.
     Run Keyword If Test Failed    Capture Page Screenshot
 
 Wait And Click
@@ -92,6 +97,13 @@ Swipe Down
 Switch To Native Context
     [Documentation]    Switcha al context nativo dell'app. Necessario dopo interazioni con webview.
     Switch To Context    NATIVE_APP
+
+Validate Test Environment
+    [Documentation]    Fail esplicito se le env var obbligatorie non sono settate.
+    ...    Chiamare in Suite Setup prima di Open SIAE Application.
+    Should Not Be Empty    ${ENV_USERNAME}     ENV_USERNAME non settata — impossibile proseguire
+    Should Not Be Empty    ${ENV_PASSWORD}     ENV_PASSWORD non settata — impossibile proseguire
+    Should Not Be Empty    ${APP_PATH}         APP_PATH non settata — impossibile proseguire
 
 Switch To Webview Context
     [Documentation]    Switcha al context webview. Fornisce il package name come argomento.

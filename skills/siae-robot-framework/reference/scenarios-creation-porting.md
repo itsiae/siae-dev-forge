@@ -64,7 +64,7 @@ ${USERNAME}    ${ENV_USERNAME}
 ${PASSWORD}    ${ENV_PASSWORD}
 
 *** Test Cases ***
-TC01_LoginConCredenzaliValide
+TC01_LoginConCredenzialiValide
     [Documentation]    Verifica il login con credenziali valide — smoke test
     [Tags]    smoke    login    android
     Assert Login Page Loaded
@@ -83,6 +83,52 @@ TC02_LoginConPasswordErrata
 ```
 
 **Regola**: nessuna keyword nel file .robot. Tutto va nel Page resource.
+
+### A.4 Variante iOS (creazione da zero su iOS)
+
+Se la piattaforma target è iOS, usa locatori iOS nel Page resource:
+
+```robotframework
+*** Settings ***
+Library    AppiumLibrary
+Resource   ../../common.resource
+
+*** Variables ***
+# Locatori iOS — gerarchia: accessibility_id > xpath XCUIElement > class chain > predicate string
+${LOGIN_USERNAME_FIELD}       accessibility_id=username_field
+${LOGIN_PASSWORD_FIELD}       accessibility_id=password_field
+${LOGIN_SUBMIT_BUTTON}        accessibility_id=login_button
+${LOGIN_ERROR_MESSAGE}        xpath=//XCUIElementTypeStaticText[@name='login_error']
+
+*** Keywords ***
+Assert Login Page Loaded
+    [Documentation]    Verifica che la pagina di login sia visibile e pronta (iOS)
+    Wait And Assert Element Visible    ${LOGIN_USERNAME_FIELD}
+```
+
+File .robot iOS — inserisci nella directory `tests/iOS/`:
+```robotframework
+*** Settings ***
+Resource    ../../resources/iOS/LoginPage.resource
+Suite Setup       Open SIAE Application
+Suite Teardown    Close SIAE Application
+Test Setup        Reset App State
+Test Teardown     Capture Screenshot On Failure
+
+*** Variables ***
+${USERNAME}    ${ENV_USERNAME}
+${PASSWORD}    ${ENV_PASSWORD}
+
+*** Test Cases ***
+TC01_LoginConCredenzialiValide
+    [Documentation]    Verifica il login con credenziali valide — smoke test (iOS)
+    [Tags]    smoke    login    ios
+    Assert Login Page Loaded
+    Perform Login    ${USERNAME}    ${PASSWORD}
+    Assert Home Page Loaded
+```
+
+**MAI** usare `android.widget.*` o `resource-id` in file iOS. Usa `XCUIElementType*` per xpath e `accessibility_id` come prima scelta.
 
 ---
 

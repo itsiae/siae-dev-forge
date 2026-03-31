@@ -129,7 +129,12 @@ tests/dumps/
 logcat*.txt
 /tmp/logcat.txt
 results*/
+*.png
+screenshots/
+videos/
 ```
+
+**Nota screenshot/video:** Appium genera automaticamente screenshot on failure e può registrare video. Questi file possono contenere **PII sensibili SIAE** (codici fiscali, IBAN, dati di pagamento diritti d'autore). Non committarli mai nel repository.
 
 ---
 
@@ -155,7 +160,8 @@ Get Welcome Message
 - `[Documentation]` obbligatorio se >2 step O ha argomenti O è composita
 - `[Arguments]` con nomi descrittivi: `${username}` non `${arg1}`
 - `RETURN` (non `[Return]`, deprecato da RF 5)
-- Nessuna chiamata AppiumLibrary diretta — solo wrapper da `common.resource`
+- **Keyword di interazione** (tap, swipe, input, navigation) → SEMPRE tramite wrapper da `common.resource`
+- **Keyword di query stato** (`Get Text`, `Get Element Attribute`, `Element Should Be Visible`, `Get Element Count`) → possono chiamare AppiumLibrary direttamente SE non richiedono wait logic aggiuntiva
 
 ---
 
