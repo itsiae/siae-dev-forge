@@ -1,10 +1,9 @@
 ---
 name: siae-robot-framework
 description: >
-  Attivare su: file .robot o .resource aperti/modificati/creati, errori Appium o
-  BrowserStack nel terminale, richieste di porting Android↔iOS, refactor o debug
-  di test RF mobile SIAE. Non attivare per: Cypress/web o ROI Xray (→ siae-automation),
-  bug su codice applicativo non-RF (→ siae-debugging).
+  Use when: file .robot/.resource aperti/creati/modificati, errori Appium/BrowserStack nel
+  terminale, porting Android↔iOS, refactor o debug test RF mobile. NOT per Cypress/web
+  (→ siae-automation) o bug codice applicativo non-RF (→ siae-debugging).
 ---
 
 # SIAE Robot Framework — Appium Mobile Test Automation

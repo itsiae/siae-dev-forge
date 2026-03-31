@@ -202,7 +202,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 
 - "C4 model", "HLD", "bounded context", "CQRS", "microservizi vs monolite" → invoca `siae-architecture` (puo' invocare anche brainstorming dopo)
 - "Playwright", "Cypress", "test E2E", "CI/CD pipeline", "GitHub Actions" → invoca `siae-automation`
-- "Robot Framework", ".robot", ".resource", "AppiumLibrary", "pabot", "test mobile RF", "porting Android iOS test", "UIAutomator2", "XCUITest", "adb dump", "NoSuchElementException Appium", "SessionNotCreatedException", "BrowserStack mobile test", "Wait And Click", "debug test Appium" → invoca `siae-robot-framework`
+- "Robot Framework", "file .robot", "file .resource", ".robot", ".resource", "AppiumLibrary", "pabot", "test mobile Appium", "UIAutomator2", "XCUITest", "adb dump", "adb logcat", "locatore mancante", "NoSuchElementException Appium", "SessionNotCreatedException", "BrowserStack mobile", "porting Android↔iOS test RF", "debug test Appium" → invoca `siae-robot-framework`
 - "Glue job", "PySpark", "ETL", "Medallion", "pipeline ingestion" → invoca `siae-data-engineering`
 - "Terraform", "terragrunt", "VPC", "ECS", "Lambda" → invoca `siae-iac`
 - "Flutter", "Dart", "Riverpod", "ObjectBox", "Get_it", "Amplify", "app mobile", "widget Flutter" → invoca `siae-flutter`
@@ -352,7 +352,7 @@ L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si app
 | Skill | Trigger / quando usarla | Tipo | Fase SDLC |
 |-------|------------------------|------|-----------|
 | siae-nr-test-flows | no-regression test flows, NRT suite, /forge-flows, repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione | Flexible | 5. Testing / QA |
-| siae-robot-framework | file .robot, .resource, AppiumLibrary, pabot, test mobile Appium, UIAutomator2, XCUITest, NoSuchElementException Appium, SessionNotCreatedException, adb dump, BrowserStack mobile, porting Android↔iOS test RF, debug test Appium | Rigid | 5. Testing / 4. Implementation |
+| siae-robot-framework | file .robot, file .resource, AppiumLibrary, pabot, test mobile Appium, UIAutomator2, XCUITest, adb dump, adb logcat, locatore mancante, NoSuchElementException Appium, SessionNotCreatedException, BrowserStack mobile, porting Android↔iOS test RF, debug test Appium | Rigid | 5. Testing / 4. Implementation |
 | siae-bug-hunter | bug proattivo, caccia ai bug, /forge-bugs, trova bug nel codice, bug latenti, analisi statica bug, cosa è già rotto, scansione bug, bug prima di produzione, pattern anti, codice rotto | Rigid | 6. QA Gate |
 | siae-blind-review | "blind review", "review cieca", "audit spec", "verifica spec vs codice", "review senza diff", /forge-blind-review | Rigid | 6. QA Gate |
 | siae-retrospective | fine sessione, lezioni apprese, cosa ho imparato, retrospettiva, salva per la prossima volta, /forge-retro, stop-gate hook | Rigid | Cross-cutting |

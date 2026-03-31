@@ -94,6 +94,33 @@ Swipe Down
     ${end_y}=   Evaluate    ${size}[height] * ${end_y_pct}
     Swipe    ${width}    ${start_y}    ${width}    ${end_y}    500
 
+Swipe Left
+    [Documentation]    Swipe orizzontale verso sinistra usando percentuali schermo (no coordinate assolute).
+    ...    Usare per: tab strip, caroselli, ViewPager, navigazione laterale.
+    [Arguments]    ${start_x_pct}=0.8    ${end_x_pct}=0.2
+    ${size}=    Get Window Size
+    ${height}=  Evaluate    ${size}[height] / 2
+    ${start_x}= Evaluate    ${size}[width] * ${start_x_pct}
+    ${end_x}=   Evaluate    ${size}[width] * ${end_x_pct}
+    Swipe    ${start_x}    ${height}    ${end_x}    ${height}    500
+
+Swipe Right
+    [Documentation]    Swipe orizzontale verso destra usando percentuali schermo (no coordinate assolute).
+    ...    Usare per: tab strip, caroselli, ViewPager, navigazione laterale.
+    [Arguments]    ${start_x_pct}=0.2    ${end_x_pct}=0.8
+    ${size}=    Get Window Size
+    ${height}=  Evaluate    ${size}[height] / 2
+    ${start_x}= Evaluate    ${size}[width] * ${start_x_pct}
+    ${end_x}=   Evaluate    ${size}[width] * ${end_x_pct}
+    Swipe    ${start_x}    ${height}    ${end_x}    ${height}    500
+
+Scroll Until Element Found
+    [Documentation]    Scrolla verso il basso e verifica visibilità elemento target.
+    ...    Usare con: Wait Until Keyword Succeeds    5x    1s    Scroll Until Element Found    ${locator}
+    [Arguments]    ${locator}
+    Swipe Up
+    Wait And Assert Element Visible    ${locator}    timeout=3s
+
 Switch To Native Context
     [Documentation]    Switcha al context nativo dell'app. Necessario dopo interazioni con webview.
     Switch To Context    NATIVE_APP

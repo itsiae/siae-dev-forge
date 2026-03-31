@@ -5,6 +5,22 @@
 
 ## SCENARIO A — Creazione da Zero
 
+### A.0 Prerequisito: Knowledge Acquisition
+
+Prima di creare qualsiasi test (Android o iOS), acquisire il dump UI della piattaforma target.
+**Non inventare locatori senza dump — un locatore scritto a memoria è un bug silenzioso.**
+
+**Guida di riferimento:** `reference/dump-acquisition.md`
+
+Metodi supportati (in ordine di preferenza):
+1. **ADB (Android locale):** `adb shell uiautomator dump /sdcard/dump.xml && adb pull /sdcard/dump.xml`
+2. **Appium MCP:** integrazione diretta per spy su simulator/device
+3. **BrowserStack:** device farm remoto (Android e iOS)
+
+Senza dump, dichiarare `LOCATORE MANCANTE` e non procedere.
+
+---
+
 ### A.1 Sequenza operativa
 
 1. Determina la pagina target dal nome del file richiesto
@@ -83,6 +99,30 @@ TC02_LoginConPasswordErrata
 ```
 
 **Regola**: nessuna keyword nel file .robot. Tutto va nel Page resource.
+
+### A.5 Esecuzione test in locale
+
+```bash
+# Run singolo file
+robot tests/TC01_LoginConCredenzialiValide.robot
+
+# Run con log di debug (per debug fallimenti)
+robot --loglevel DEBUG tests/TC01_LoginConCredenzialiValide.robot
+
+# Run intera suite con output separato
+robot --outputdir results tests/
+
+# Run con tag specifico (es. solo smoke test)
+robot --include smoke tests/
+
+# Run e apri report HTML
+robot --outputdir results tests/ && open results/report.html
+```
+
+Se il test fallisce, leggi `reference/debug-engine.md` per la classificazione dell'errore.
+Per esecuzione su BrowserStack, vedi `reference/browserstack-sdk-config.md`.
+
+---
 
 ### A.4 Variante iOS (creazione da zero su iOS)
 
