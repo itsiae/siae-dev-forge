@@ -52,7 +52,7 @@ description: >
 
 [BANNER DEVFORGE]
 
-> **Tipo:** Flexible | **Fase SDLC:** 4. Implementation (tool di supporto upgrade)
+> **Tipo:** Rigid | **Fase SDLC:** 4. Implementation (tool di supporto upgrade)
 
 ---
 

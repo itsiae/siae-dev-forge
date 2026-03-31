@@ -10,9 +10,9 @@
 ## Obiettivo
 
 Aggiungere alla skill il protocollo Layer 1 per:
-- `method_signatures`: nomi metodi del controller (on*, _*)
+- `method_signatures`: nomi metodi del controller (on*, _*, ES6 arrow, method shorthand)
 - `navigation_targets`: chiamate `navTo()` con target
-- `routing_config`: routes da `manifest.json`
+- `routing_config`: routes + `data_sources` (OData service endpoints) da `manifest.json`
 
 ---
 
@@ -41,9 +41,27 @@ echo "$CONTENT" | grep -n \
   -e "^\s*on[A-Z][a-zA-Z]*\s*:" \
   -e "^\s*_[a-zA-Z][a-zA-Z]*\s*:" \
   -e "^\s*[a-z][a-zA-Z]*\s*:\s*function" \
+  -e "^\s*on[A-Z][a-zA-Z]*\s*(" \
+  -e "^\s*on[A-Z][a-zA-Z]*\s*=\s*(" \
+  -e "^\s*on[A-Z][a-zA-Z]*\s*=\s*async" \
   | while IFS=: read -r LINE REST; do
-      METHOD=$(echo "$REST" | grep -oE '(on|_)[A-Za-z]+' | head -1)
-      echo "  - name: \"${METHOD}\"\n    file: \"<FILE_PATH>\"\n    line: ${LINE}"
+      METHOD=$(echo "$REST" | grep -oE '(on[A-Z]|_)[A-Za-z]+' | head -1)
+      [ -z "$METHOD" ] && continue
+      printf "  - name: \"%s\"\n    file: \"%s\"\n    line: %s\n" "${METHOD}" "<FILE_PATH>" "${LINE}"
+    done
+```
+
+**Nota:** cattura anche ES6 arrow functions (`onPress = (oEvent) => {}`) e method shorthand
+(`onInit() {}`). Le funzioni `init`, `exit`, `onBeforeRendering`, `onAfterRendering`
+sono lifecycle SAPUI5 — non hanno prefisso `on`/`_` ma vanno catturate con pattern aggiuntivo:
+
+```bash
+echo "$CONTENT" | grep -n \
+  -e "^\s*\(init\|exit\|onBeforeRendering\|onAfterRendering\)\s*:" \
+  -e "^\s*\(init\|exit\|onBeforeRendering\|onAfterRendering\)\s*(" \
+  | while IFS=: read -r LINE REST; do
+      METHOD=$(echo "$REST" | grep -oE 'init|exit|onBeforeRendering|onAfterRendering' | head -1)
+      printf "  - name: \"%s\"\n    file: \"%s\"\n    line: %s\n" "${METHOD}" "<FILE_PATH>" "${LINE}"
     done
 ```
 
@@ -109,18 +127,46 @@ import sys, json
 m = json.load(sys.stdin)
 routes = m.get('sap.ui5', {}).get('routing', {}).get('routes', [])
 print('routing_config:')
-print('  routes: ' + str([r.get('name','') for r in routes]))
+print('  routes:')
+for r in routes:
+    print('    - \"' + r.get('name','') + '\"')
+"
+
+# Estrai dataSources (OData service endpoints — CRITICO per upgrade URL)
+echo "$MANIFEST" | python3 -c "
+import sys, json
+m = json.load(sys.stdin)
+ds = m.get('sap.app', {}).get('dataSources', {})
+print('data_sources:')
+for name, val in ds.items():
+    uri = val.get('uri', '')
+    ds_type = val.get('type', 'OData')
+    print('  - name: \"' + name + '\"')
+    print('    uri: \"' + uri + '\"')
+    print('    type: \"' + ds_type + '\"')
 "
 ```
 
-Output (sezione YAML `routing_config`):
+Output (sezione YAML `routing_config` + `data_sources`):
 ```yaml
 routing_config:
   routes:
     - "RouteMain"
     - "RouteDetail"
     - "RouteConferma"
+
+data_sources:
+  - name: "mainService"
+    uri: "/sap/opu/odata/siae/LIQUIDAZIONE_SRV/"
+    type: "OData"
+  - name: "annotations"
+    uri: "/sap/opu/odata/siae/LIQUIDAZIONE_SRV/$metadata"
+    type: "ODataAnnotation"
 ```
+
+**NOTA:** `data_sources.uri` è critico: se la URI del servizio OData cambia tra branch,
+TUTTE le chiamate arriveranno a un endpoint sbagliato. Il diff engine deve trattare
+una variazione di `uri` come `CRITICAL`.
 ```
 
 ---
@@ -128,11 +174,11 @@ routing_config:
 ## Step 3 — Verifica che i pattern siano presenti nella skill
 
 ```bash
-grep -c "method_signatures\|navigation_targets\|routing_config" \
+grep -c "method_signatures\|navigation_targets\|routing_config\|data_sources" \
   /Users/mazzacuv/Git/siae-dev-forge/skills/siae-btp-upgrade-audit/SKILL.md
 ```
 
-Output atteso: `3` o più
+Output atteso: `4` o più
 
 ---
 
@@ -140,5 +186,5 @@ Output atteso: `3` o più
 
 ```bash
 git add skills/siae-btp-upgrade-audit/SKILL.md
-git commit -m "feat(skills): add layer1 method signatures, navigation and routing extraction to btp-upgrade-audit"
+git commit -m "feat(skills): add layer1-B (signatures+navigation+routing+dataSources) to btp-upgrade-audit"
 ```

@@ -101,14 +101,20 @@ Dopo aver generato tutti i report singoli, genera `gap-report/SUMMARY.md`:
 **Generato:** <data>
 **App analizzate:** <N>
 
-| App | CRITICAL | HIGH | LOGIC DIFF | INFO | OK% |
-|-----|----------|------|------------|------|-----|
-| appavvisi | 0 | 1 | 2 | 3 | 87% |
-| appcausali | 2 | 0 | 1 | 0 | 75% |
+| App | CRITICAL | HIGH | LOGIC DIFF | INFO | Items OK |
+|-----|----------|------|------------|------|----------|
+| appavvisi | 0 | 1 | 2 | 3 | 14/20 |
+| appcausali | 2 | 0 | 1 | 0 | 12/16 |
 | ... | ... | ... | ... | ... | ... |
 
-## App che richiedono attenzione immediata (CRITICAL > 0)
-- appXXX: N critical issues
+**Nota metrica:** la colonna chiave è `CRITICAL`. Un'app con `CRITICAL=0` è sicura per il merge.
+`Items OK` è informativo — non usare OK% come indicatore di salute.
+
+## App che richiedono blocco immediato (CRITICAL > 0)
+- appXXX: **BLOCCA PR** — N critical issues (metodi rimossi / OData calls perse / handler assenti)
+
+## App che richiedono review (HIGH > 0 o LOGIC DIFF > 0, CRITICAL = 0)
+- appYYY: review obbligatoria — N high / M logic diff
 ```
 
 ### Regola: cosa NON scrivere nel report

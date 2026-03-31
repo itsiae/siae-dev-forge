@@ -34,6 +34,21 @@ La sezione da aggiungere è:
 ```markdown
 ### Layer 2 — Schema-Locked (Claude come estrattore)
 
+#### Regola di Atomicità — OBBLIGATORIA
+
+<EXTREMELY-IMPORTANT>
+Unità di elaborazione Layer 2: **un file controller alla volta**.
+Per ogni file, estrai TUTTI i metodi in UN'UNICA invocazione Claude.
+NON processare un metodo per volta. NON spezzare un file in più chiamate.
+NON concatenare più file in una sola chiamata.
+
+Flusso corretto:
+  per ogni file JS del controller:
+    → UNA invocazione Claude con il contenuto COMPLETO del file
+    → estrae TUTTI i method_signatures trovati in quel file
+    → produce il blocco YAML completo per quel file in un solo output
+</EXTREMELY-IMPORTANT>
+
 <EXTREMELY-IMPORTANT>
 REGOLA ASSOLUTA DI DETERMINISTMO — NESSUNA ECCEZIONE:
 

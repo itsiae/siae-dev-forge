@@ -45,10 +45,52 @@ Output atteso: `3` o più
 
 ## Diff Engine — Confronto Strutturale
 
+### Canonicalizzazione Verbatim (OBBLIGATORIA prima di ogni confronto)
+
+Prima di qualsiasi confronto verbatim, applica questa funzione di canonicalizzazione:
+
+```python
+def canonicalize(s):
+    """Normalizza verbatim per confronto: rimuove differenze di whitespace irrilevanti."""
+    if s is None:
+        return None
+    import re
+    s = re.sub(r'\s+', ' ', s)   # collassa whitespace multiplo
+    s = s.strip()                  # rimuovi spazi iniziali/finali
+    return s
+```
+
+**Regola:** due verbatim `a` e `b` sono equivalenti se `canonicalize(a) == canonicalize(b)`.
+
+Esempio: `if(!oData.codiceAutore)` e `if (!oData.codiceAutore)` → **stessi dopo canonicalize → OK**.
+Senza canonicalize, questi produrrebbero un falso `LOGIC DIFF`.
+
+---
+
+### Rilevamento Rinominazioni (Rename Detection)
+
+Dopo aver applicato le regole standard per `method_signatures`, se un metodo `X` è marcato
+`CRITICAL` (rimosso) E simultaneamente esiste un metodo `Y` in `new` marcato `INFO` (introdotto),
+aggiungi nel report:
+
+```
+⚠️ POSSIBILE RENAME: <X> → <Y> — richiede verifica manuale
+   Criterio: prefisso identico (es. _load*, on*) oppure nomi con edit-distance ≤ 3
+```
+
+Criteri "simile":
+- Prefisso identico: `_loadData` e `_loadDataV4` → stesso prefisso `_loadData`
+- Edit-distance ≤ 3: `onSave` e `onSaveNew` → differenza di 3 caratteri
+
+**Importante:** il CRITICAL rimane CRITICAL fino a conferma umana. Il Rename Detection
+è un suggerimento, non una risoluzione automatica.
+
+---
+
 ### Regole di confronto (in ordine di esecuzione)
 
 Per ogni sezione del fingerprint, applica le regole seguenti.
-Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è identico?".
+Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è canonicamente identico?".
 
 #### deprecated_imports
 - Per ogni entry in `old.deprecated_imports`: cerca la stessa `api` in `new.deprecated_imports`
@@ -103,6 +145,30 @@ Il confronto è SEMPRE old vs new. Non valutare "è equivalente?" — solo "è i
   - Trovata in `new` con stesso `endpoint` e `type` → `OK`
   - Trovata con `type` diverso → `HIGH: chiamata esterna cambiata tipo`
   - Non trovata → `CRITICAL: chiamata esterna rimossa`
+
+#### xmlview_bindings
+- Per ogni entry `type=formatter` in `old.xmlview_bindings`:
+  - Trovata (stessa `verbatim` canonicalizzata) → `OK`
+  - Non trovata → `HIGH: formatter rimosso da XMLView — logica display potenzialmente persa`
+- Per ogni entry `type=press|change|selectionChange` in `old`:
+  - Trovata → `OK`
+  - Non trovata → `CRITICAL: event handler binding rimosso da XMLView`
+- Per ogni `type=fragment` in `old`:
+  - Trovato (stesso `fragmentName`) → `OK`
+  - Non trovato → `HIGH: fragment include rimosso`
+
+#### component_models
+- Per ogni entry in `old.component_models` (per `name`):
+  - Trovata con stesso `type` e `verbatim` canonicalizzato → `OK`
+  - Trovata con `type` diverso → `CRITICAL: modello registrato con tipo diverso`
+  - Trovata con `name` diverso (modello rinominato) → `CRITICAL: nome modello cambiato — tutti i controller che lo usano sono rotti`
+  - Non trovata → `CRITICAL: registrazione modello rimossa da Component.js`
+
+#### data_sources
+- Per ogni entry in `old.data_sources` (per `name`):
+  - Trovata con `uri` identica → `OK`
+  - Trovata con `uri` diversa → `CRITICAL: URI servizio OData cambiata — TUTTE le chiamate sono rotte`
+  - Non trovata → `CRITICAL: dataSource rimosso da manifest.json`
 
 ### Tabella Severity
 
