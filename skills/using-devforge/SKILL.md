@@ -202,6 +202,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 
 - "C4 model", "HLD", "bounded context", "CQRS", "microservizi vs monolite" → invoca `siae-architecture` (puo' invocare anche brainstorming dopo)
 - "Playwright", "Cypress", "test E2E", "CI/CD pipeline", "GitHub Actions" → invoca `siae-automation`
+- "Robot Framework", ".robot", ".resource", "AppiumLibrary", "pabot", "test mobile RF", "porting Android iOS test" → invoca `siae-robot-framework`
 - "Glue job", "PySpark", "ETL", "Medallion", "pipeline ingestion" → invoca `siae-data-engineering`
 - "Terraform", "terragrunt", "VPC", "ECS", "Lambda" → invoca `siae-iac`
 - "Flutter", "Dart", "Riverpod", "ObjectBox", "Get_it", "Amplify", "app mobile", "widget Flutter" → invoca `siae-flutter`
@@ -215,6 +216,8 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 - Query su blind review, review cieca, audit spec, spec vs codice → `siae-blind-review` (NON code-reviewer)
 - Query su retrospettiva, lezioni apprese, cosa ho imparato, fine sessione → `siae-retrospective` (NON brainstorming)
 - Query su Flutter, Dart, Riverpod, ObjectBox, Get_it, Amplify Cognito, Dio, app mobile → `siae-flutter` (NON brainstorming, NON siae-frontend)
+- Query su .robot, .resource, Robot Framework, AppiumLibrary, pabot, porting test Android/iOS → `siae-robot-framework` (NON siae-automation, NON siae-debugging)
+- Query su Xray report + test .robot, Test Execution risultati RF → `siae-automation` (NON siae-robot-framework)
 
 ## Rule Priority — Quando le Skill Confliggono
 
