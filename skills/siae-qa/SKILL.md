@@ -114,10 +114,20 @@ Cosa vuoi fare?
 
 Attendi risposta prima di procedere.
 Non avviare la PRE-FLIGHT CARD finché l'utente non ha scelto il tier.
-**Anche se l'utente ha già fornito Story ID, documento o tier nel messaggio di avvio: mostra ugualmente il dialog. Il dialog non è inferenza — è una scelta esplicita. Non saltarlo mai.**
+
+**Inferenza contestuale (riduce round-trip non necessari):**
+Se il tier è univocamente deducibile dal messaggio di avvio, sostituisci il menu completo con una conferma one-shot:
+- Documento allegato o incollato in chat → `"Tier 2 rilevato (documento presente). Procedo? (s/n)"`
+- Story ID JIRA esplicita nel messaggio → `"Tier 1 rilevato (PROJ-XXX). Procedo? (s/n)"`
+- Tier menzionato esplicitamente dall'utente → `"Confermo Tier X. Procedo? (s/n)"`
+
+Il menu completo (3 opzioni) rimane obbligatorio per invocazioni senza contesto (`/forge-qa` senza argomenti o fonte non chiara).
+
+**Una risposta esplicita è sempre richiesta — non avviare il workflow senza.**
 
 Anti-razionalizzazione inline:
-- "Ho già il ticket in chat, salto il dialog" → Il dialog non è opzionale. Mostralo sempre.
+- "Ho già il documento in chat, salto tutto" → Usa la one-shot confirmation — non il menu, ma una conferma esplicita è sempre richiesta.
+- "L'utente ha detto Tier 2, è già confermato" → Mostra la one-shot confirmation per registrare la scelta formalmente.
 
 ---
 
@@ -154,6 +164,13 @@ Mostra la Req Profile Card. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione 
 - **Se MEDIUM/LOW:** chiedi conferma con scelta multipla.
 
 ### 0c — Lancia le domande del tree contestuale
+
+**Prima di lanciare le domande:** usa Read tool per leggere `reference/question-trees.md`.
+Se il file non è trovato: segnala `⚠️ question-trees.md non trovato — uso domande generiche` e usa le seguenti domande di fallback:
+1. "Ci sono valori di lookup enumerati non elencati negli AC?"
+2. "Ci sono campi obbligatori la cui assenza deve produrre un errore esplicito?"
+3. "Ci sono regole condizionali dipendenti da più campi contemporaneamente?"
+4. "Ci sono ruoli utente con comportamenti distinti per questa funzionalità?"
 
 Usa le domande in `reference/question-trees.md` per il tipo confermato.
 
@@ -279,6 +296,23 @@ UNIQUEREF1 è chiave condivisa tra: GENERAL_DATA, TITLES, NUMBERS, CONTRIBUTORS,
 ...
 ```
 
+**Formato riga output atteso (schema uniforme obbligatorio per tutti e 3 gli agenti):**
+
+| matrix_row_id | entity | field | condition | test_type | source_ref |
+|---|---|---|---|---|---|
+| A-001 | GENERAL_DATA | CATEGORY | `"F"` → tipo feature | POS | AC-03 |
+| A-002 | GENERAL_DATA | CATEGORY | `"S"` → tipo serie | POS | AC-03 |
+| A-003 | GENERAL_DATA | CATEGORY | valore fuori lookup (es. `"X"`) | NEG | AC-03 |
+
+Ogni agente DEVE usare esattamente questi nomi di colonna. Variazioni nei nomi colonna rendono il merge M_A+M_B+M_C non valido.
+
+**[CHECKPOINT SERIALIZZAZIONE — OBBLIGATORIO prima del lancio]**
+
+Mostra al developer il blocco serializzato e chiedi:
+> "La serializzazione è completa? Entità, lookup tables, regole business e vincoli referenziali corrispondono alla specifica? Posso procedere con il lancio dei 3 agenti Matrix?"
+
+Non lanciare Matrix A/B/C senza risposta esplicita. Un "sì" o "ok" è sufficiente — la spec è già stata validata in Fase 1, questo è un sanity check sulla serializzazione.
+
 #### Lancio 3 agenti in parallelo (Agent tool — stesso turno)
 
 **Matrix Agent A — Field/Value Decomposer:**
@@ -297,7 +331,7 @@ Produci: tabella M_A con colonne matrix_row_id, entity, field, condition, test_t
 **Matrix Agent B — Rule Composer:**
 ```
 Sei un QA Matrix Agent specializzato in regole di business composte e vincoli referenziali.
-Input: {REGOLE DI BUSINESS COMPOSTE serializzate} + {VINCOLI REFERENZIALI}
+Input: {REGOLE DI BUSINESS COMPOSTE serializzate} + {VINCOLI REFERENZIALI} + {LOOKUP TABLES serializzate}
 Per ogni regola composita: costruisci prodotto cartesiano ridotto
   - Mantieni solo combinazioni con esiti DISTINTI
   - Aggiungi 1 happy path (tutti i campi nominali validi)
@@ -322,10 +356,14 @@ Produci: tabella M_C con colonne matrix_row_id, entity, field, condition, test_t
 #### Gate #1 — J1_MATRIX + J2_MATRIX (bloccante, opera su M_A+M_B+M_C)
 
 <EXTREMELY-IMPORTANT>
+FERMATI. Stai per procedere a Fase 4b? Esegui prima Gate #1 con Agent tool.
+
 J1 e J2 operano QUI sulle matrici — NON sui TC (che non esistono ancora).
 Invoca J1 e J2 in parallelo con Agent tool dopo aver ricevuto M_A, M_B, M_C.
 NON procedere a Fase 4b senza PASS da entrambi.
 Un'autovalutazione interna di Claude NON è Gate #1 — è un'assunzione.
+
+**Criterio verificabile:** l'esecuzione di Gate #1 deve produrre 2 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #1 non è stato eseguito — è stato simulato.
 </EXTREMELY-IMPORTANT>
 
 **J1_MATRIX — Coverage Completeness:**
@@ -352,10 +390,21 @@ Output: GIUDICE J2_MATRIX | DUPLICATI: N | LISTA_DUPLICATI: [lista da rimuovere]
 Dopo J1_MATRIX PASS e J2_MATRIX dedup applicato: merge M_A + M_B + M_C (senza duplicati) = **M_FINAL**.
 Assegna matrix_row_id univoco a ogni riga. M_FINAL è l'input esclusivo di Fase 4b.
 
-**Se J1_MATRIX FAIL:** rilancia solo l'agente mancante (A o B) per le entità/campi scoperti.
-Poi ripeti J1_MATRIX. Max 2 iterazioni, poi escalation all'utente.
+**[CHECKPOINT OBBLIGATORIO — salva M_FINAL su file prima di procedere]**
 
-**Output atteso Fase 1.5:** M_FINAL — tabella con N righe, ognuna = 1 TC atteso.
+Usa Write tool per salvare M_FINAL su `MFINAL.md` nella directory del progetto corrente.
+Dopo il salvataggio: **M_A, M_B, M_C non sono più necessarie** — non referenziarle nelle fasi successive.
+Tutte le fasi successive (4b, J3, J4, J5) leggono M_FINAL da `MFINAL.md` tramite Read tool.
+Questo protegge M_FINAL dalla compattazione automatica del context.
+
+**Partial failure handling:**
+
+- **Se un agente Matrix (A/B/C) restituisce errore o output vuoto:** rilancia quell'agente singolo una volta. Se il retry fallisce: segnala `⚠️ Matrix [A/B/C] non disponibile` e procedi con la matrice parziale — annota il gap in `MFINAL.md`.
+- **Se M_C è vuota (nessun ruolo distinto):** comportamento atteso — J1_MATRIX opera solo su M_A+M_B. Procedi normalmente.
+- **Se J1_MATRIX FAIL:** rilancia solo l'agente mancante (A o B) per le entità/campi scoperti. Poi ripeti J1_MATRIX. Max 2 iterazioni, poi escalation all'utente.
+- **Se J2_MATRIX identifica duplicati:** rimuovili da M_FINAL prima del salvataggio su file.
+
+**Output atteso Fase 1.5:** `MFINAL.md` su filesystem — tabella con N righe, ognuna = 1 TC atteso.
 
 ---
 
@@ -426,6 +475,18 @@ Non è più una fase di elicitazione scenari astratti. La matrice guida la gener
 
 #### 4b — Generazione Test Case da M_FINAL
 
+**Prima di iniziare:**
+1. Usa Read tool per ricaricare `MFINAL.md` dal filesystem (protegge dalla compattazione)
+2. Usa Read tool per leggere `XRAY-TEMPLATES.md` — sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step"
+   Se `XRAY-TEMPLATES.md` non è trovato: segnala `⚠️ XRAY-TEMPLATES.md non trovato — uso formato inline` e usa il template minimo:
+   ```
+   Titolo: [test_type] descrizione
+   Description: matrix_row_id: {id} | entity: {entity} | field: {field}
+   Precondizioni: {condizione concreta dalla colonna condition}
+   Step 1 - Action: {azione concreta}
+   Step 1 - Expected Result: {risultato verificabile e non generico}
+   ```
+
 Per ogni riga di M_FINAL genera **esattamente 1 TC** step-based.
 
 **Vincolo di specificità (obbligatorio):** ogni TC deve contenere nei passi/precondizioni i valori concreti dalla colonna `condition` della riga matrice:
@@ -434,13 +495,27 @@ Per ogni riga di M_FINAL genera **esattamente 1 TC** step-based.
 - ❌ "Fornire una data non valida"
 - ✅ "Impostare RELEASED = `'01/01/2024'` (formato DD/MM/YYYY, non ISO 8601)"
 
-**Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description`.
+**Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description` (non nel titolo).
+
+Esempio di struttura TC corretta:
+```
+Titolo:        [POS] CATEGORY = "F" → migrazione come feature
+Description:   matrix_row_id: A-001 | entity: GENERAL_DATA | field: CATEGORY
+Precondizioni: CSV GENERAL_DATA contiene riga con CATEGORY = "F"
+Step 1 Action: Esegui la migrazione del record
+Step 1 Expected Result: Il record viene creato come tipo "feature" nel nuovo sistema
+```
+
+**Condizioni multi-valore nella colonna `condition`:** se la condizione contiene `AND`/`OR` tra più valori (es. `"importo > 1000 AND valuta IN (EUR, USD)"`), genera **1 TC** con un set di valori rappresentativo (es. importo=1500, valuta=EUR). Non espandere in TC multipli — l'esplosione combinatoria è già avvenuta in Fase 1.5 tramite le regole di Agent B.
 
 **Prefisso titolo:** usa il `test_type` della riga (`[POS]`, `[NEG]`, `[EDGE]`, `[ROLE]`).
 
-Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step" e "Riepilogo Copertura" per formato completo.
+**[CHECKPOINT OBBLIGATORIO — salva TC su file prima di Gate #2]**
 
-**Riepilogo prima del gate:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare `Automazione` e `NRT` prima di procedere.
+Usa Write tool per salvare tutti i TC generati su `TC_DRAFT.md` nella directory del progetto.
+Gate #2 (J3+J4) leggerà da `TC_DRAFT.md` — garantisce dati integri anche dopo compattazione.
+
+**Riepilogo prima del gate:** mostra la tabella compatta al developer (TC-ID, titolo, matrix_row_id, test_type). Il developer puo' modificare `Automazione` e `NRT` prima di procedere.
 
 ---
 
@@ -450,10 +525,16 @@ Dopo la generazione (Fase 4b), lancia **J3 e J4 in parallelo** con Agent tool.
 Verificano la bijection TC↔M_FINAL e la specificità dei TC.
 
 <EXTREMELY-IMPORTANT>
+FERMATI. Stai per procedere a Fase 4d senza Gate #2?
+
 J3 e J4 operano QUI sui TC prodotti — verificano che ogni riga di M_FINAL sia diventata
 un TC concreto e che ogni TC abbia dati di test specifici (non generici).
 Invoca J3 e J4 con Agent tool nello STESSO turno. Non sequenzialmente.
 Un'autovalutazione interna di Claude NON è Gate #2.
+
+**Criterio verificabile:** l'esecuzione di Gate #2 deve produrre 2 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #2 non è stato eseguito — è stato simulato.
+
+**Input per J3 e J4:** leggi M_FINAL da `MFINAL.md` e i TC da `TC_DRAFT.md` tramite Read tool — non usare il context direttamente, i file garantiscono dati integri dopo eventuale compattazione.
 </EXTREMELY-IMPORTANT>
 
 #### Serializzazione input (OBBLIGATORIA prima del lancio)
@@ -510,6 +591,11 @@ Output: GIUDICE J4 | PERCENTUALE: XX% | PASS/FAIL | TC_GENERICI: [lista con moti
    Valuta i TC aggiornati: [lista TC nuovi]."
 4. Max 2 iterazioni per gate, poi escalation all'utente
 
+Escalation asimmetrica: se un solo judge (J3 o J4) supera il max di iterazioni mentre
+l'altro è già PASS, l'escalation riguarda solo il judge fallito. Mostra il GATE #2
+REPORT parziale e chiedi: "J3/J4 non converge dopo 2 iterazioni — vuoi procedere
+con questo gap o rifai la generazione da zero per le righe coinvolte?"
+
 Se J3 PASS e J4 PASS: procedi a Fase 4d (J5 Final Audit)
 ```
 
@@ -535,7 +621,8 @@ Dopo Gate #2 PASS, lancia J5 con Agent tool come auditor finale con vista comple
 
 ```
 Sei un QA Judge specializzato in correttezza tecnica e audit finale.
-Input: M_FINAL + TC GENERATI + REPORT J1_MATRIX + J2_MATRIX + GATE#2
+Input: M_FINAL (da MFINAL.md) + TC GENERATI (da TC_DRAFT.md) + REPORT J1_MATRIX + J2_MATRIX + GATE#2
+       + {TIPI E RANGE CAMPI: tipi dato, range validi, formati attesi dei campi dalla serializzazione Fase 1.5}
 Analizza:
   1. Boundary conditions non catturate dalla matrice (valori al limite del range,
      overflow numerico, timezone, caratteri speciali, encoding)
@@ -726,6 +813,18 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 
 **Se MCP non disponibile (gia' gestito dal Tier system):**
 - Il Tier 3 (CSV) e' gia' il fallback — non richiede MCP
+
+**Se Agent tool viene negato (Matrix A/B/C o J1-J5):**
+
+<EXTREMELY-IMPORTANT>
+NON simulare il judge o l'agente Matrix internamente.
+Simulare un giudice senza Agent tool invalida l'intero meccanismo di verifica indipendente.
+</EXTREMELY-IMPORTANT>
+
+1. FERMATI. Il gate/fase non può essere eseguito senza Agent tool.
+2. Comunica esplicitamente: "Agent tool è necessario per [fase X] — senza invocazione reale il gate non è eseguito. Vuoi continuare con un piano QA non verificato da judge indipendente? Confermalo esplicitamente."
+3. **Se l'utente conferma consapevolmente:** procedi ma aggiungi nel Coverage Certificate: `⚠️ ATTENZIONE: [Gate X] non eseguito con Agent tool — validazione manuale richiesta prima del collaudo`
+4. **Se l'utente non conferma:** blocca. Attendi che Agent tool sia abilitato.
 
 **Fasi completabili senza permessi:** Fase 1-4 (conversazionali — lettura AC, elicitazione scenari, generazione TC)
 **Fasi che richiedono permessi:** Fase 5 (Write per CSV, MCP per Xray)
