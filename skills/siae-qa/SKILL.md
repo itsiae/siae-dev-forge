@@ -114,6 +114,10 @@ Cosa vuoi fare?
 
 Attendi risposta prima di procedere.
 Non avviare la PRE-FLIGHT CARD finché l'utente non ha scelto il tier.
+**Anche se l'utente ha già fornito Story ID, documento o tier nel messaggio di avvio: mostra ugualmente il dialog. Il dialog non è inferenza — è una scelta esplicita. Non saltarlo mai.**
+
+Anti-razionalizzazione inline:
+- "Ho già il ticket in chat, salto il dialog" → Il dialog non è opzionale. Mostralo sempre.
 
 ---
 
@@ -189,10 +193,13 @@ potenzialmente molti requisiti, nessun template garantito.
    normativa, capitolato, specifica tecnica)
 2. Leggi l'intero documento e **deriva** gli AC candidati dai requisiti
    (step interpretativo: un requisito → 1+ AC testabili, espressi come comportamenti verificabili)
+   Granularità: massimo 3 AC per requisito. Se emergono di più, il requisito è troppo ampio — segnalalo e chiedi di decomporlo prima di procedere.
 3. Presenta la lista AC derivati in forma numerata al developer per revisione
 4. **[HARD-GATE]** Attendi validazione/correzione esplicita dall'utente:
    l'utente conferma, modifica o integra gli AC prima che il workflow proceda.
    Non procedere alla Fase 2 senza questa conferma.
+   Se l'utente non risponde o risponde in modo ambiguo: **blocca e chiedi di nuovo esplicitamente** — "Confermato il testo: 'AC confermati' prima di procedere."
+   Un silenzio o un "ok" generico non è una conferma valida.
 5. Se Story ID o titolo feature sono assenti dal documento: chiedi esplicitamente
    (necessario per collegare i TC a Xray)
 6. Gli AC confermati diventano l'input equivalente degli AC Jira per tutte le fasi successive
@@ -316,74 +323,131 @@ Il gate è bloccante: non si procede a Fase 5 senza aver soddisfatto le soglie.
 | **J4** | Copertura casi positivi: happy path completi per ogni AC | **≥75%** | SI |
 | **J5** | Correttezza tecnica + gap analysis + boundary conditions | Best effort | NO |
 
+#### Istruzione di serializzazione input (OBBLIGATORIA prima del lancio)
+
+Prima di invocare i subagent, serializza i dati reali come testo letterale:
+
+```
+REQUISITI (da documento/Jira/conversazione — Fase 1):
+1. {testo requisito 1}
+2. {testo requisito 2}
+...
+
+AC VALIDATI (da Fase 1 HARD-GATE):
+1. {testo AC 1}
+2. {testo AC 2}
+...
+
+TC GENERATI (da Fase 4b — formato: ID | Titolo | Categoria):
+TC-01 | {titolo} | {positivo/negativo/edge}
+TC-02 | {titolo} | {positivo/negativo/edge}
+...
+```
+
+Sostituisci questo testo serializzato al posto dei placeholder `[lista ...]` nei prompt J1-J5 prima di invocare i subagent. Non lanciare mai i subagent con i placeholder non espansi.
+
+**Formato output atteso da ogni giudice** (usato per costruire il COVERAGE GATE REPORT):
+```
+GIUDICE: Jx
+PERCENTUALE: XX%
+PASS/FAIL: [PASS / FAIL]
+GAP: [lista vuota se PASS, altrimenti lista item mancanti]
+```
+
 #### Prompt dei Giudici (da lanciare in parallelo con Agent tool)
 
 **J1 — Copertura Requisiti:**
 
-Prompt da iniettare nel subagent:
+Prompt da iniettare nel subagent (sostituisci i placeholder con dati reali):
 ```
 Sei un QA Judge specializzato in copertura requisiti.
-Input: [lista requisiti originali] + [lista TC generati].
+Input:
+  REQUISITI: {lista requisiti serializzata}
+  TC GENERATI: {lista TC serializzata}
 Verifica che ogni requisito abbia almeno 1 TC che lo copre esplicitamente.
 Calcola: TC coperti / totale requisiti = XX%.
 Elenca i requisiti senza copertura. Soglia: 100%.
-Output: percentuale + lista gap.
+Output formato:
+  GIUDICE: J1 | PERCENTUALE: XX% | PASS/FAIL: [P/F] | GAP: [lista]
 ```
 
 **J2 — Copertura AC:**
 
-Prompt da iniettare nel subagent:
+Prompt da iniettare nel subagent (sostituisci i placeholder con dati reali):
 ```
 Sei un QA Judge specializzato in copertura Acceptance Criteria.
-Input: [lista AC validati] + [lista TC generati].
+Input:
+  AC VALIDATI: {lista AC serializzata}
+  TC GENERATI: {lista TC serializzata}
 Verifica che ogni AC abbia almeno 1 test che lo verifica esplicitamente.
 Calcola: AC coperti / totale AC = XX%.
 Elenca gli AC senza test. Soglia: 100%.
-Output: percentuale + lista gap.
+Output formato:
+  GIUDICE: J2 | PERCENTUALE: XX% | PASS/FAIL: [P/F] | GAP: [lista]
 ```
 
 **J3 — Casi Negativi:**
 
-Prompt da iniettare nel subagent:
+Prompt da iniettare nel subagent (sostituisci i placeholder con dati reali):
 ```
 Sei un QA Judge specializzato in test negativi e flussi di errore.
-Input: [lista AC] + [lista TC generati].
+Input:
+  AC VALIDATI: {lista AC serializzata}
+  TC GENERATI: {lista TC serializzata}
 Verifica la presenza di TC per: input non validi, errori di sistema,
 permessi mancanti, stati incompatibili, dipendenze assenti.
 Stima la percentuale di scenari negativi coperti sul totale identificabile.
 Elenca i gap. Soglia minima: 75%.
-Output: percentuale + lista gap.
+Output formato:
+  GIUDICE: J3 | PERCENTUALE: XX% | PASS/FAIL: [P/F] | GAP: [lista]
 ```
 
 **J4 — Casi Positivi:**
 
-Prompt da iniettare nel subagent:
+Prompt da iniettare nel subagent (sostituisci i placeholder con dati reali):
 ```
 Sei un QA Judge specializzato in happy path e scenari positivi.
-Input: [lista AC] + [lista TC generati].
+Input:
+  AC VALIDATI: {lista AC serializzata}
+  TC GENERATI: {lista TC serializzata}
 Verifica che ogni AC abbia almeno 1 TC positivo che copra il flusso principale.
 Stima la percentuale di happy path coperti sul totale identificabile.
 Elenca i gap. Soglia minima: 75%.
-Output: percentuale + lista gap.
+Output formato:
+  GIUDICE: J4 | PERCENTUALE: XX% | PASS/FAIL: [P/F] | GAP: [lista]
 ```
 
 **J5 — Gap Analysis & Correttezza Tecnica:**
 
-Prompt da iniettare nel subagent:
+Prompt da iniettare nel subagent (sostituisci i placeholder con dati reali):
 ```
 Sei un QA Judge specializzato in correttezza tecnica e boundary conditions.
-Input: [lista requisiti/AC] + [lista TC generati].
+Input:
+  REQUISITI: {lista requisiti serializzata}
+  AC VALIDATI: {lista AC serializzata}
+  TC GENERATI: {lista TC serializzata}
 Analizza: valori limite, condizioni di gara, idempotenza, edge case tecnici,
 coerenza tra step Action e Expected Result, precisione delle precondizioni.
 Non hai soglia bloccante. Produci un report gap prioritizzato (ALTA/MEDIA/BASSA).
-Output: lista gap con priorità.
+Output formato:
+  GIUDICE: J5 | GAP: [lista con priorità ALTA/MEDIA/BASSA]
 ```
+
+**J5 è run-once: non viene mai rilanciato nel loop di riesecuzione.**
 
 #### Comportamento del Gate
 
+<EXTREMELY-IMPORTANT>
+Il Coverage Gate Report è valido SOLO se prodotto da subagent invocati esplicitamente
+con Agent tool (5 chiamate Agent nello stesso turno).
+Un'autovalutazione interna di Claude NON è un Coverage Gate — è un'assunzione.
+Se non hai invocato 5 subagent con Agent tool, non hai eseguito il gate.
+</EXTREMELY-IMPORTANT>
+
 ```
-1. Lancia J1, J2, J3, J4, J5 in parallelo (Agent tool — 5 subagent simultanei)
-   Input comune a tutti: lista requisiti/AC + lista TC generati in Fase 4b
+1. Serializza i dati (vedi sezione "Istruzione di serializzazione input" sopra)
+2. Lancia J1, J2, J3, J4, J5 in parallelo — 5 chiamate Agent tool nello STESSO turno.
+   NON eseguire i giudici in sequenza. Tutti e 5 devono partire nello stesso turno.
 
 2. Valuta le soglie sui risultati ricevuti:
    - J1 < 100% → BLOCCANTE
@@ -392,11 +456,15 @@ Output: lista gap con priorità.
    - J4 < 75%  → BLOCCANTE
    - J5        → NON bloccante (report informativo)
 
-3. Se almeno 1 giudice bloccante fallisce:
+3. Aggrega i risultati dai 5 subagent usando il formato COVERAGE GATE REPORT sotto
+4. Se almeno 1 giudice bloccante (J1-J4) fallisce:
    a. Mostra il COVERAGE GATE REPORT (formato sotto)
    b. Genera i TC mancanti per i gap specifici identificati (torna a Fase 4b mirata)
-   c. Rilancia SOLO i giudici che hanno fallito (non tutti e 5)
-   d. Ripeti fino a quando tutte le soglie bloccanti sono soddisfatte
+   c. Rilancia SOLO i giudici bloccanti che hanno fallito con prompt aggiornato:
+      includi nel prompt "Nel run precedente hai identificato questi gap: [lista gap].
+      Ora valuta la lista TC aggiornata: [lista TC nuova]."
+   d. J5 NON viene mai rilanciato nel loop — è run-once
+   e. Ripeti fino a quando tutte le soglie bloccanti sono soddisfatte
 
 4. Se tutti i giudici bloccanti sono soddisfatti (J1-J4 OK):
    a. Mostra il COVERAGE GATE REPORT completo
