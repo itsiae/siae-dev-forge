@@ -551,23 +551,49 @@ Output: GIUDICE J5 | SCORE: XX% | CERTIFICATE: {dati} | GAP: [lista con priorit�
 
 **J5 è run-once.** Non viene mai rilanciato. Il developer può accettare i gap o aggiungere TC.
 
+#### Comportamento post-J5
+
+```
+SE il developer sceglie di aggiungere TC per i gap J5:
+
+1. Aggiungi i nuovi TC alla lista (con matrix_row_id = "J5-gap-Gxx")
+2. PRIMA di esportare: RILANCIA Gate #2 (J3 + J4) in parallelo
+   sui TC AGGIORNATI (vecchi + nuovi)
+   Input aggiornato:
+     M_FINAL + nuove righe J5 (aggiunte come righe sintetiche)
+     TC aggiornati (vecchi + nuovi)
+3. Se Gate #2 PASS → procedi a Fase 5 (export)
+4. Se Gate #2 FAIL → fixa solo i TC falliti, ripeti Gate #2 (max 1 iterazione aggiuntiva)
+
+SE il developer sceglie di NON aggiungere TC (accetta i gap):
+→ Procedi direttamente a Fase 5 (export) con il certificate "CONDITIONAL PASS"
+
+NON esportare mai dopo aver aggiunto TC senza aver ripassato Gate #2.
+"Ho appena aggiunto i TC, sicuramente passano" → non è Gate #2. Il gate va eseguito.
+```
+
+<EXTREMELY-IMPORTANT>
+Hai aggiunto TC per i gap J5 e stai per esportare senza rilanciare Gate #2?
+FERMATI. I nuovi TC non sono stati verificati da J3 (bijection) né da J4 (specificità).
+Gate #2 va rilanciato sui TC aggiornati prima di qualsiasi export.
+</EXTREMELY-IMPORTANT>
+
 #### Formato COVERAGE CERTIFICATE
 
 ```
 COVERAGE CERTIFICATE
 ────────────────────
 Timestamp:        {data ora}
-M_FINAL righe:    N
-TC generati:      N
+M_FINAL righe:    N (+K righe J5-gap se aggiunte)
+TC generati:      N (+K nuovi se aggiunte)
 Coverage score:   XX%
 Gate #1 (matrix): PASS ✅
-Gate #2 (TC):     PASS ✅
-J5 Gap ALTA:      N gap
-J5 Gap MEDIA:     N gap
-J5 Gap BASSA:     N gap
+Gate #2 (TC):     PASS ✅  [ri-eseguito post-J5 se TC aggiunti]
+J5 Gap ALTA risolti:  K/N
+J5 Gap MEDIA aperti:  N (sprint successivo)
+J5 Gap BASSA aperti:  N (opzionali)
 
-Gap ad alta priorità:
-  ALTA: [gap con impatto alto]
+Gap aperti accettati:
   MEDIA: [gap con impatto medio]
   BASSA: [suggerimenti opzionali]
 ────────────────────
@@ -646,6 +672,8 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "Ho scelto il tier sbagliato nell'Opening Dialog, è un problema" | Puoi cambiare tier prima che il workflow inizi: rilancia la skill e scegli di nuovo. Il dialog è il momento giusto per decidere, non dopo. |
 | "La Coverage Matrix è solo per spec di migrazione" | La matrice si applica a ogni spec con lookup, mandatory/optional, o regole condizionali. Anche un semplice form con 5 campi produce 15+ righe di matrice e TC sistematici. |
 | "Matrix Agent B rallenta per regole composte semplici" | Se la spec ha 0 regole composite, M_B è vuota in pochi secondi. Il costo è zero. Se le regole ci sono e non costruisci la matrice, mancano quei TC nel collaudo. |
+| "Ho appena aggiunto i TC per J5, Gate #2 è superfluo" | I TC aggiunti per J5 non sono stati verificati da J3 (bijection) né da J4 (specificità). Gate #2 va rilanciato. Un TC aggiunto senza matrix_row_id o con passi generici passa la generazione ma fallisce il gate. |
+| "Esporto subito dopo J5, poi se serve riciclo" | Non si esporta con TC non verificati. Gate #2 post-J5 costa secondi. Riciclare dopo l'export significa aggiornare il file CSV già distribuito al team — costo molto più alto. |
 
 ---
 
