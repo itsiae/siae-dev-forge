@@ -95,11 +95,6 @@ Il tier viene scelto esplicitamente dall'utente nell'Opening Dialog. Ogni operaz
 
 All'avvio mostra sempre questo dialog. **Non procedere senza risposta esplicita dell'utente.**
 
-Smart pre-selection (suggerisci, non eseguire autonomamente):
-- MCP Atlassian disponibile → suggerisci `[1]`
-- Testo o documento già presente in chat → suggerisci `[2]`
-- Nessuna fonte rilevata → suggerisci `[3]`
-
 ```
 ──────────────────────────────────────────────
 Cosa vuoi fare?
@@ -107,27 +102,16 @@ Cosa vuoi fare?
 [1] Story Jira       — ho un ticket PROJ-XXX da cui leggere i requisiti
 [2] Documento        — ho una specifica/doc da allegare o incollare
 [3] Conversazione    — descrivo i requisiti direttamente in chat
-
-> Suggerito: [X] — motivo: {es. MCP disponibile / documento rilevato in chat}
 ──────────────────────────────────────────────
 ```
 
 Attendi risposta prima di procedere.
 Non avviare la PRE-FLIGHT CARD finché l'utente non ha scelto il tier.
-
-**Inferenza contestuale (riduce round-trip non necessari):**
-Se il tier è univocamente deducibile dal messaggio di avvio, sostituisci il menu completo con una conferma one-shot:
-- Documento allegato o incollato in chat → `"Tier 2 rilevato (documento presente). Procedo? (s/n)"`
-- Story ID JIRA esplicita nel messaggio → `"Tier 1 rilevato (PROJ-XXX). Procedo? (s/n)"`
-- Tier menzionato esplicitamente dall'utente → `"Confermo Tier X. Procedo? (s/n)"`
-
-Il menu completo (3 opzioni) rimane obbligatorio per invocazioni senza contesto (`/forge-qa` senza argomenti o fonte non chiara).
-
-**Una risposta esplicita è sempre richiesta — non avviare il workflow senza.**
+**Non fare inferenze, non suggerire, non pre-selezionare. Solo chiedere.**
 
 Anti-razionalizzazione inline:
-- "Ho già il documento in chat, salto tutto" → Usa la one-shot confirmation — non il menu, ma una conferma esplicita è sempre richiesta.
-- "L'utente ha detto Tier 2, è già confermato" → Mostra la one-shot confirmation per registrare la scelta formalmente.
+- "So già il tier dal contesto, salto il dialog" → Non inferire. Chiedi sempre.
+- "L'utente ha già detto Tier 2, è confermato" → Il dialog non è opzionale. Mostralo e aspetta.
 
 ---
 
