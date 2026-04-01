@@ -243,7 +243,8 @@ Test Plan: {Story summary}
 ```
 
 **Tier 1 (MCP):** crea il Test Plan in Xray via MCP tool
-**Tier 3:** mostra la struttura testuale, da importare manualmente
+**Tier 2 (Documento):** mostra la struttura testuale del Test Plan; usa `[nome documento]` come fonte al posto del link Jira; il Test Plan verrà esportato come CSV in Fase 5
+**Tier 3 (Conversazione):** mostra la struttura testuale, da importare manualmente
 
 ---
 
@@ -394,7 +395,7 @@ Output: lista gap con priorità.
 3. Se almeno 1 giudice bloccante fallisce:
    a. Mostra il COVERAGE GATE REPORT (formato sotto)
    b. Genera i TC mancanti per i gap specifici identificati (torna a Fase 4b mirata)
-   c. Rilancia l'intero gate dall'inizio
+   c. Rilancia SOLO i giudici che hanno fallito (non tutti e 5)
    d. Ripeti fino a quando tutte le soglie bloccanti sono soddisfatte
 
 4. Se tutti i giudici bloccanti sono soddisfatti (J1-J4 OK):
@@ -437,12 +438,10 @@ Gap non bloccanti (J5 — accetta o integra):
 3. Dopo l'esecuzione dei test, aggiorna il Test Execution con i risultati
 
 **Tier 2 (Documento):**
-- Usa la stessa pipeline export di Tier 3: CSV semicolon-separated in formato Xray-importabile
-- Se MCP Atlassian è disponibile: puoi usare il flusso Tier 1 (crea TC via MCP)
-  dopo aver validato gli AC nel workflow Tier 2
+- Output sempre CSV semicolon-separated in formato Xray-importabile — indipendentemente dalla disponibilità MCP
 - Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni
 
-**Tier 3 (CSV):**
+**Tier 3 (Conversazione):**
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni import.
 
 **Passo post-export — Mappatura ID sequenziali -> chiavi Jira Xray [OBBLIGATORIO se si usa siae-automation]**
