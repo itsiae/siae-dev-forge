@@ -83,10 +83,37 @@ Prima di iniziare, verifica quale tier e' disponibile e annuncialo nella pre-fli
 
 | Tier | Condizione | Comportamento |
 |------|------------|---------------|
-| **Tier 1 — MCP Atlassian** | MCP `atlassian` disponibile | Legge AC da Jira, legge Confluence, crea TC e Test Plan in Xray via MCP, raccoglie chiavi Jira assegnate |
-| **Tier 3 — CSV export** | MCP non disponibile | Genera CSV semicolon-separated in formato Xray-importabile, import manuale, mappatura chiavi richiesta post-import |
+| **Tier 1 — Story Jira** | MCP `atlassian` disponibile | Legge AC da Jira, legge Confluence, crea TC e Test Plan in Xray via MCP, raccoglie chiavi Jira assegnate |
+| **Tier 2 — Documento utente** | Utente fornisce documento (spec, PDF, markdown, testo con requisiti grezzi) | Deriva AC dai requisiti, chiede validazione esplicita al developer, genera CSV o crea TC via MCP se disponibile |
+| **Tier 3 — Conversazione** | Nessuna fonte strutturata disponibile | Raccoglie AC via domande guidate una alla volta, genera CSV semicolon-separated importabile in Xray |
 
-Ogni operazione deve esplicitare il tier usato nella pre-flight card di apertura.
+Il tier viene scelto esplicitamente dall'utente nell'Opening Dialog. Ogni operazione esplicita il tier attivo nella pre-flight card.
+
+---
+
+## OPENING DIALOG [OBBLIGATORIO — prima di tutto]
+
+All'avvio mostra sempre questo dialog. **Non procedere senza risposta esplicita dell'utente.**
+
+Smart pre-selection (suggerisci, non eseguire autonomamente):
+- MCP Atlassian disponibile → suggerisci `[1]`
+- Testo o documento già presente in chat → suggerisci `[2]`
+- Nessuna fonte rilevata → suggerisci `[3]`
+
+```
+──────────────────────────────────────────────
+Cosa vuoi fare?
+
+[1] Story Jira       — ho un ticket PROJ-XXX da cui leggere i requisiti
+[2] Documento        — ho una specifica/doc da allegare o incollare
+[3] Conversazione    — descrivo i requisiti direttamente in chat
+
+> Suggerito: [X] — motivo: {es. MCP disponibile / documento rilevato in chat}
+──────────────────────────────────────────────
+```
+
+Attendi risposta prima di procedere.
+Non avviare la PRE-FLIGHT CARD finché l'utente non ha scelto il tier.
 
 ---
 
@@ -96,12 +123,12 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-qa |
 |:---|
-| 📡 Tier attivo: `Tier 1 MCP / Tier 3 CSV` · 🎫 Story Jira: `PROJ-XXX` |
-| ✅ AC disponibili: `Si / No` · 📚 Confluence: `Spazio QA trovato / Non configurato` |
+| 📡 Tier attivo: `Tier 1 Jira / Tier 2 Documento / Tier 3 Conversazione` · 🎫 Story/Fonte: `PROJ-XXX / [nome doc] / [topic]` |
+| ✅ AC: `Disponibili (Tier 1) / Da validare (Tier 2) / Da raccogliere (Tier 3)` · 📚 Confluence: `Spazio QA trovato / Non configurato` |
 | **▼ Azione** |
-| 1. 📋 Lettura AC da Jira + avvio workflow QA → `PROJ-XXX` |
-| 💡 Perche': Il tier determina come vengono sincronizzati i TC |
-| 🚫 Se NO: Se Tier 3: esporto CSV importabile manualmente in Xray |
+| 1. 📋 Avvio workflow QA con tier scelto nell'Opening Dialog |
+| 💡 Perche': Il tier determina come vengono letti i requisiti e sincronizzati i TC |
+| 🚫 Se NO: Tier 2/3 → genero CSV importabile manualmente in Xray |
 
 ---
 
@@ -152,6 +179,24 @@ Non procedere alla Fase 2 senza AC o contesto sufficiente.
    - Se ancora non basta → segui i link a pagine Confluence collegate alla Story
    - Se ancora insufficiente → chiedi al developer con domande mirate UNA ALLA VOLTA
 
+**Tier 2 (Documento):**
+
+Il documento contiene **requisiti grezzi** — non AC strutturati. Formato libero,
+potenzialmente molti requisiti, nessun template garantito.
+
+1. Se il documento non è ancora presente in chat: chiedi all'utente di incollare il testo,
+   allegare il file o indicare il contenuto (qualunque formato: prosa, lista, tabelle,
+   normativa, capitolato, specifica tecnica)
+2. Leggi l'intero documento e **deriva** gli AC candidati dai requisiti
+   (step interpretativo: un requisito → 1+ AC testabili, espressi come comportamenti verificabili)
+3. Presenta la lista AC derivati in forma numerata al developer per revisione
+4. **[HARD-GATE]** Attendi validazione/correzione esplicita dall'utente:
+   l'utente conferma, modifica o integra gli AC prima che il workflow proceda.
+   Non procedere alla Fase 2 senza questa conferma.
+5. Se Story ID o titolo feature sono assenti dal documento: chiedi esplicitamente
+   (necessario per collegare i TC a Xray)
+6. Gli AC confermati diventano l'input equivalente degli AC Jira per tutte le fasi successive
+
 **Tier 3 (no Jira):**
 - Chiedi la Story ID (es. `PROJ-123`) e il titolo della User Story
 - Poi chiedi gli AC con domande mirate, una alla volta, finche' il contesto e' completo
@@ -168,6 +213,13 @@ Non procedere alla Fase 2 senza AC o contesto sufficiente.
 - Naming convention attesa: `Test Strategy - {JIRA_PROJECT_KEY} - {Sprint/Release}`
 - Leggi le sezioni: `Scope`, `Approach`, `Test Types`
 - Se non trovata: registra WARNING e procedi senza questa sezione
+
+**Tier 2 (Documento):**
+- Verifica se il documento fornito dall'utente contiene già una sezione
+  Test Strategy, Approccio di Test, o Strategia di Verifica
+- Se sì: usa quella sezione come input per Scope/Approach/Test Types
+- Se no: segnala `⚠️ WARNING: Test Strategy non presente nel documento` e procedi
+  senza — identico al comportamento Tier 3
 
 **Tier 3 (no Confluence):**
 - Segnala: `⚠️ WARNING: Test Strategy Confluence non cercabile — nessuna integrazione MCP`
@@ -245,12 +297,150 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Base
 
 ---
 
+---
+
+### Fase 4c — 5-Judge Coverage Gate [OBBLIGATORIO — prima dell'export]
+
+Dopo la generazione dei TC (Fase 4b), **prima dell'export**, lancia 5 agenti AI
+in parallelo. Ognuno valuta una dimensione diversa della copertura.
+Il gate è bloccante: non si procede a Fase 5 senza aver soddisfatto le soglie.
+
+#### Struttura dei 5 Giudici
+
+| Judge | Focus | Soglia | Bloccante |
+|-------|-------|--------|-----------|
+| **J1** | Copertura Requisiti → TC: ogni requisito fornito ha ≥1 TC tracciabile | **100%** | SI |
+| **J2** | Copertura AC → Test: ogni Acceptance Criterion ha ≥1 test tracciabile | **100%** | SI |
+| **J3** | Copertura casi negativi: flussi di errore, input non validi, stati alternativi | **≥75%** | SI |
+| **J4** | Copertura casi positivi: happy path completi per ogni AC | **≥75%** | SI |
+| **J5** | Correttezza tecnica + gap analysis + boundary conditions | Best effort | NO |
+
+#### Prompt dei Giudici (da lanciare in parallelo con Agent tool)
+
+**J1 — Copertura Requisiti:**
+
+Prompt da iniettare nel subagent:
+```
+Sei un QA Judge specializzato in copertura requisiti.
+Input: [lista requisiti originali] + [lista TC generati].
+Verifica che ogni requisito abbia almeno 1 TC che lo copre esplicitamente.
+Calcola: TC coperti / totale requisiti = XX%.
+Elenca i requisiti senza copertura. Soglia: 100%.
+Output: percentuale + lista gap.
+```
+
+**J2 — Copertura AC:**
+
+Prompt da iniettare nel subagent:
+```
+Sei un QA Judge specializzato in copertura Acceptance Criteria.
+Input: [lista AC validati] + [lista TC generati].
+Verifica che ogni AC abbia almeno 1 test che lo verifica esplicitamente.
+Calcola: AC coperti / totale AC = XX%.
+Elenca gli AC senza test. Soglia: 100%.
+Output: percentuale + lista gap.
+```
+
+**J3 — Casi Negativi:**
+
+Prompt da iniettare nel subagent:
+```
+Sei un QA Judge specializzato in test negativi e flussi di errore.
+Input: [lista AC] + [lista TC generati].
+Verifica la presenza di TC per: input non validi, errori di sistema,
+permessi mancanti, stati incompatibili, dipendenze assenti.
+Stima la percentuale di scenari negativi coperti sul totale identificabile.
+Elenca i gap. Soglia minima: 75%.
+Output: percentuale + lista gap.
+```
+
+**J4 — Casi Positivi:**
+
+Prompt da iniettare nel subagent:
+```
+Sei un QA Judge specializzato in happy path e scenari positivi.
+Input: [lista AC] + [lista TC generati].
+Verifica che ogni AC abbia almeno 1 TC positivo che copra il flusso principale.
+Stima la percentuale di happy path coperti sul totale identificabile.
+Elenca i gap. Soglia minima: 75%.
+Output: percentuale + lista gap.
+```
+
+**J5 — Gap Analysis & Correttezza Tecnica:**
+
+Prompt da iniettare nel subagent:
+```
+Sei un QA Judge specializzato in correttezza tecnica e boundary conditions.
+Input: [lista requisiti/AC] + [lista TC generati].
+Analizza: valori limite, condizioni di gara, idempotenza, edge case tecnici,
+coerenza tra step Action e Expected Result, precisione delle precondizioni.
+Non hai soglia bloccante. Produci un report gap prioritizzato (ALTA/MEDIA/BASSA).
+Output: lista gap con priorità.
+```
+
+#### Comportamento del Gate
+
+```
+1. Lancia J1, J2, J3, J4, J5 in parallelo (Agent tool — 5 subagent simultanei)
+   Input comune a tutti: lista requisiti/AC + lista TC generati in Fase 4b
+
+2. Valuta le soglie sui risultati ricevuti:
+   - J1 < 100% → BLOCCANTE
+   - J2 < 100% → BLOCCANTE
+   - J3 < 75%  → BLOCCANTE
+   - J4 < 75%  → BLOCCANTE
+   - J5        → NON bloccante (report informativo)
+
+3. Se almeno 1 giudice bloccante fallisce:
+   a. Mostra il COVERAGE GATE REPORT (formato sotto)
+   b. Genera i TC mancanti per i gap specifici identificati (torna a Fase 4b mirata)
+   c. Rilancia l'intero gate dall'inizio
+   d. Ripeti fino a quando tutte le soglie bloccanti sono soddisfatte
+
+4. Se tutti i giudici bloccanti sono soddisfatti (J1-J4 OK):
+   a. Mostra il COVERAGE GATE REPORT completo
+   b. J5: presenta il report gap — il developer può accettare o integrare
+   c. Procedi a Fase 5 (export)
+```
+
+#### Formato COVERAGE GATE REPORT
+
+```
+COVERAGE GATE REPORT
+────────────────────
+J1 Req → TC:     XX/YY requisiti coperti (XX%)   [PASS ✅ / FAIL ❌]
+J2 AC  → Test:   XX/YY AC coperti       (XX%)   [PASS ✅ / FAIL ❌]
+J3 Negativi:     XX% scenari negativi coperti   [PASS ✅ / FAIL ❌]
+J4 Positivi:     XX% happy path coperti         [PASS ✅ / FAIL ❌]
+J5 Gap analysis: N gap trovati                  [REPORT 📋]
+
+Gap bloccanti da colmare:
+  J1: [lista requisiti senza TC]
+  J2: [lista AC senza test]
+  J3: [lista scenari negativi scoperti]
+  J4: [lista happy path mancanti]
+
+Gap non bloccanti (J5 — accetta o integra):
+  ALTA:   [gap con impatto alto]
+  MEDIA:  [gap con impatto medio]
+  BASSA:  [suggerimenti opzionali]
+────────────────────
+```
+
+---
+
 ### Fase 5 — Export / Sincronizzazione
 
 **Tier 1 (MCP):**
 1. Crea ogni Test Case in Xray via MCP
 2. Ogni TC creato ottiene automaticamente una chiave Jira (es. `PROJ-456`) — registrala nella mappatura (vedi Passo post-export)
 3. Dopo l'esecuzione dei test, aggiorna il Test Execution con i risultati
+
+**Tier 2 (Documento):**
+- Usa la stessa pipeline export di Tier 3: CSV semicolon-separated in formato Xray-importabile
+- Se MCP Atlassian è disponibile: puoi usare il flusso Tier 1 (crea TC via MCP)
+  dopo aver validato gli AC nel workflow Tier 2
+- Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni
 
 **Tier 3 (CSV):**
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni import.
@@ -299,6 +489,12 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "Ho letto gli AC, so gia' il tipo — salto Phase 0" | Phase 0 non e' solo typing: e' la raccolta degli scenari contestuali che gli AC non esplicitano. Senza queste domande, i TC coprono solo cio' che e' scritto, non cio' che puo' rompersi. |
 | "Le domande del tree rallentano il workflow" | 4-6 domande mirate producono 2-3x piu' scenari edge rispetto alla matrice generica. Il piano di test finale e' piu' completo in meno iterazioni. |
 | "Il tipo e' ovvio, non serve inferire" | Ovvio per te. La Req Profile Card documenta il tipo e i segnali: e' evidenza, non burocrazia. Se sbagli il tipo, i TC coprono il dominio sbagliato. |
+| "Il documento ha i requisiti, non serve derivare gli AC" | I requisiti descrivono cosa fare, gli AC descrivono come verificarlo. Derivare gli AC è lo step interpretativo chiave — senza di esso i TC testano il documento, non il comportamento. |
+| "Ho già letto il documento, so quali AC ci sono" | La derivazione degli AC deve essere esplicita e validata dall'utente. Un'inferenza non validata è un'assunzione. |
+| "Il Coverage Gate rallenta il workflow" | Un TC che non copre un requisito è un buco nel collaudo. 5 giudici in parallelo impiegano secondi. Un bug in produzione da AC non coperto costa ore. |
+| "J1 e J2 al 100% è irraggiungibile con molti requisiti" | È raggiungibile: ogni requisito deve avere almeno 1 TC. Non deve coprire tutti gli aspetti — deve esistere. 1 TC per requisito è il minimo, non il massimo. |
+| "Salto il Coverage Gate per la Fase 5, tanto i TC sono completi" | Il Coverage Gate non si salta. È la prova formale che la copertura è sufficiente, non una stima soggettiva. |
+| "Ho scelto il tier sbagliato nell'Opening Dialog, è un problema" | Puoi cambiare tier prima che il workflow inizi: rilancia la skill e scegli di nuovo. Il dialog è il momento giusto per decidere, non dopo. |
 
 ---
 
@@ -320,6 +516,7 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 6. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
 7. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
 8. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import. Ovunque altrove (documentazione, checklist, commenti) usare `Expected Result` (corretto).
+9. **Il 5-Judge Coverage Gate è obbligatorio prima di Fase 5** — nessun export senza aver soddisfatto le soglie J1/J2 (100%) e J3/J4 (≥75%)
 
 ---
 
