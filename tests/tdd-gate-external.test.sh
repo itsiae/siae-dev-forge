@@ -62,6 +62,66 @@ else
     PASS=$((PASS+1))
 fi
 
+# --- Test 5: file .tf (IaC) → ALLOW (no TDD for IaC) ---
+reset_session
+INPUT="{\"file_path\":\"${REPO_ROOT}/modules/vpc/security-groups.tf\"}"
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "FAIL: test5 — file .tf bloccato dal TDD gate"
+    FAIL=$((FAIL+1))
+else
+    echo "PASS: test5 — file .tf non bloccato (IaC exempt)"
+    PASS=$((PASS+1))
+fi
+
+# --- Test 6: file .hcl (IaC) → ALLOW (no TDD for IaC) ---
+reset_session
+INPUT="{\"file_path\":\"${REPO_ROOT}/infra/terragrunt.hcl\"}"
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "FAIL: test6 — file .hcl bloccato dal TDD gate"
+    FAIL=$((FAIL+1))
+else
+    echo "PASS: test6 — file .hcl non bloccato (IaC exempt)"
+    PASS=$((PASS+1))
+fi
+
+# --- Test 7: path relativo → normalizzato e bloccato come prod code ---
+reset_session
+INPUT='{"file_path":"src/service.java"}'
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "PASS: test7 — path relativo normalizzato e bloccato"
+    PASS=$((PASS+1))
+else
+    echo "FAIL: test7 — path relativo non gestito"
+    FAIL=$((FAIL+1))
+fi
+
+# --- Test 8: path relativo con ./ prefix → normalizzato ---
+reset_session
+INPUT='{"file_path":"./src/handler.ts"}'
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "PASS: test8 — path ./relativo normalizzato e bloccato"
+    PASS=$((PASS+1))
+else
+    echo "FAIL: test8 — path ./relativo non gestito"
+    FAIL=$((FAIL+1))
+fi
+
+# --- Test 9: path assoluto resta invariato ---
+reset_session
+INPUT="{\"file_path\":\"${REPO_ROOT}/lib/something.py\"}"
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "PASS: test9 — path assoluto bloccato correttamente"
+    PASS=$((PASS+1))
+else
+    echo "FAIL: test9 — path assoluto non bloccato"
+    FAIL=$((FAIL+1))
+fi
+
 # --- Riepilogo ---
 echo ""
 echo "Risultato: ${PASS} PASS, ${FAIL} FAIL"
