@@ -25,6 +25,12 @@ if [ -z "$FILE_PATH" ]; then
     exit 0
 fi
 
+# Normalize relative paths to absolute so gating is deterministic.
+# Claude can provide either relative or absolute file_path depending on tool flow.
+if [[ "$FILE_PATH" != /* ]]; then
+    FILE_PATH="$(pwd)/${FILE_PATH#./}"
+fi
+
 # Skip files outside the plugin's git repository (e.g. one-shot scripts in other dirs)
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 GIT_ROOT="$(git -C "$HOOK_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
@@ -33,8 +39,9 @@ if [ -n "$GIT_ROOT" ] && [[ "$FILE_PATH" != "$GIT_ROOT"/* ]]; then
     exit 0
 fi
 
-# Check if file is production code (by extension)
-PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.tf$|\.hcl$|\.go$|\.kt$"
+# Check if file is production code with testable runtime behavior.
+# IaC (.tf, .hcl), config, CI, and docs are validated via plan/lint, NOT TDD.
+PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
 if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
     echo '{}'
     exit 0
