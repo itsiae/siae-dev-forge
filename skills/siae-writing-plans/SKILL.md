@@ -193,6 +193,39 @@ riferimenti vaghi. Un piano con placeholder e' un piano che fallira'.
 
 Un piano che passa questo gate ha zero ambiguita' per il subagent.
 
+### Step 3c — Plan Review (Gate Obbligatorio)
+
+Dopo il placeholder scan (pattern testuali), lancia un subagent plan-reviewer
+che verifica la qualita' semantica del piano.
+
+**Differenza col placeholder scan (Step 3b):**
+- Step 3b: pattern matching testuale (TBD, TODO, ...)
+- Step 3c: verifica semantica (path validi, codice completo, coerenza col design)
+
+**Processo:**
+
+1. Lancia subagent con il prompt in [plan-reviewer-prompt.md](plan-reviewer-prompt.md)
+   passando `{plan_directory}` e `{design_doc_path}`
+2. Il reviewer analizza ogni task-NN-*.md singolarmente (chunk-by-chunk)
+3. Leggi il report del reviewer
+4. Se ci sono issue BLOCK:
+   a. Fixa le issue nei task file
+   b. Ri-lancia il reviewer (loop max 5 iterazioni)
+   c. Se dopo 5 iterazioni ci sono ancora BLOCK → escalation all'utente
+5. Se ci sono solo WARN (zero BLOCK):
+   a. Presenta i WARN all'utente
+6. Se zero issue: procedi a Step 4
+
+**Checkpoint:**
+
+```
+[WRITING-PLANS:PLAN-REVIEW] Plan review completata
+  Task reviewati: {N}
+  Issue: {N BLOCK / N WARN}
+  Iterazioni: {N}/5
+  DECISIONE: {APPROVED / REVISE}
+```
+
 ### Step 4 — Salva il Piano
 
 Salva la directory in `docs/plans/<topic>/` con `overview.md` e i file `task-NN-<nome>.md`.

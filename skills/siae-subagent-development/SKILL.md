@@ -45,6 +45,12 @@ FERMATI. Nessun completamento senza spec-review + code-quality-review.
 
 "Posso implementare io, conosco il codice" = bias accumulato = bug invisibili.
 "La review e' eccessiva per questo task" = i bug peggiori vengono dai task "semplici".
+
+**Orchestrator Boundary:**
+L'orchestratore NON implementa codice, NON fa review di codice, NON modifica file
+di produzione. Ruolo esclusivo: caricare task, dispatchare subagent, raccogliere
+risultati, aggiornare stato piano.
+"Posso farlo io velocemente" = bias accumulato = il motivo per cui esistono i subagent.
 </EXTREMELY-IMPORTANT>
 
 ---
@@ -164,6 +170,23 @@ che non gli competono → risparmio token significativo.
 
 Estrai dal file monolitico la sezione del task corrente e passala al subagent
 insieme all'header del piano.
+
+### Step 2b — GATE: Valuta Complessita' Task per Review Scaling
+
+Prima di lanciare i reviewer, valuta la complessita' del task corrente.
+
+| Complessita' | Segnali | Review |
+|---|---|---|
+| **Bassa** | config, rename, typo, 1-2 file, nessuna logica nuova | Solo code-quality-reviewer (spec-review elidibile con conferma utente) |
+| **Media** | CRUD, refactoring, 3-5 file, logica moderata | Entrambi i reviewer (default, non elidibile) |
+| **Alta** | Feature nuova, cross-module, integrazione, migrazione | Entrambi i reviewer (non elidibile) |
+
+**Regole GATE:**
+- Per complessita' bassa, CHIEDI all'utente: "Task '{nome}' e' a bassa complessita' (N file, nessuna logica nuova). Review completa (spec + code-quality) o ridotta (solo code-quality)?"
+- Per complessita' media/alta, procedi con entrambi i reviewer senza chiedere
+- L'utente decide SEMPRE — l'orchestratore non salta mai autonomamente
+- Code-quality-reviewer non e' MAI elidibile (anche su task banali)
+- Se in dubbio sulla complessita', tratta come media (entrambi i reviewer)
 
 ### Step 3 — Dispatch Spec-Reviewer
 
@@ -348,6 +371,8 @@ IMPLEMENTAZIONE COMPLETATA:
 | "Troppi round di review rallentano" | I bug in produzione rallentano di piu'. 2 review sono un investimento. |
 | "Il task e' troppo piccolo per un subagent" | Contesto fresco = meno errori. Anche per task piccoli. |
 | "Conosco gia' la codebase, non serve contesto fresco" | La familiarita' genera cecita'. Il contesto fresco trova bug invisibili. |
+| "Questo task e' banale, posso implementarlo io" | L'orchestratore non implementa. Mai. Dispatcha un subagent. |
+| "La review spec non serve per un rename" | Chiedi all'utente. Non decidere tu. GATE scaling. |
 
 ---
 
