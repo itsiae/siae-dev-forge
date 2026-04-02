@@ -96,7 +96,7 @@ Il flusso e' unidirezionale. Ogni ambiente ha la sua branch protetta.
 Regole:
 - Il JIRA ID e' **obbligatorio** (es. `feature/SDLC-142-add-login`)
 - Usare kebab-case per la descrizione
-- Creare sempre la feature branch da **sviluppo**, mai da main/produzione
+- Creare la feature branch dal branch di riferimento (tipicamente `release/*` o `sviluppo`), mai da `main` direttamente
 
 ---
 
@@ -195,7 +195,7 @@ Le HARD-GATE rules si applicano anche in guida manuale.
 Regole aggiuntive:
 - No `--force` senza conferma esplicita dell'utente (rischio 🚨)
 - Branch delete solo dopo merge confermato
-- Feature branch sempre da **sviluppo** (mai da main)
+- Feature branch dal branch di riferimento (`release/*` o `sviluppo`), mai da `main` direttamente
 
 ---
 
@@ -224,14 +224,16 @@ Regole aggiuntive:
 
 ### Nuova feature
 ```bash
-git checkout sviluppo
-git pull origin sviluppo
+# Checkout dal branch di riferimento (release/* o sviluppo)
+git checkout <parent-branch>
+git pull origin <parent-branch>
 git checkout -b feature/{JIRA-ID}-descrizione
 # ... sviluppo ...
 git add .
 git commit -m "feat({scope}): descrizione"
 git push origin feature/{JIRA-ID}-descrizione
-# → Apri PR verso sviluppo (squash merge)
+# → Apri PR verso <parent-branch> (squash merge)
+# Il target della PR viene rilevato automaticamente da siae-finishing-branch (Step 0b)
 ```
 
 ### Promozione ambiente

@@ -54,7 +54,7 @@ Anche un singolo file modificato merita: test verdi, diff review, commit history
 
 Usa questa skill quando:
 - Hai finito l'implementazione di una feature/fix/refactoring
-- Stai per aprire una Pull Request verso `sviluppo`
+- Stai per aprire una Pull Request verso il branch parent (rilevato dinamicamente)
 - Vuoi verificare la readiness del branch prima di coinvolgere reviewer
 
 **NON usare per:**
@@ -76,6 +76,71 @@ Se gia' eseguita nella sessione, usa il contesto esistente senza ripetere il che
 
 ## Processo in 6 Step
 
+### Step 0b — Rileva Parent Branch
+
+🟢 SICURO
+
+Il target della PR non e' hardcoded. Va rilevato dinamicamente dal branch da cui
+e' stato staccato il branch corrente.
+
+**1. Rileva il branch corrente:**
+
+```bash
+CURRENT_BRANCH=$(git branch --show-current)
+```
+
+**2. Determina il tipo di branch:**
+
+- Se `release/*` → il target e' il default branch (`main`). Salta al risultato.
+- Se `feature/*`, `fix/*`, `refactor/*`, `hotfix/*` → procedi con il rilevamento.
+
+**3. Fetch e lista candidati parent:**
+
+```bash
+git fetch origin
+# Lista branch release/* e sviluppo remoti
+git branch -r --list 'origin/release/*'
+git branch -r --list 'origin/sviluppo'
+```
+
+**4. Calcola il parent piu' probabile:**
+
+| Candidati trovati | Azione |
+|-------------------|--------|
+| **0 candidati** | Chiedi all'utente: "Non ho trovato branch `release/*` o `sviluppo`. Quale branch e' il target della PR?" |
+| **1 candidato** | Proponi con conferma: "Il parent branch rilevato e' `<branch>`. Confermi?" |
+| **2+ candidati** | Calcola merge-base per ciascuno (vedi sotto) |
+
+Per 2+ candidati, calcola la distanza di ogni candidato:
+
+```bash
+# Per ogni candidato <branch>:
+MERGE_BASE=$(git merge-base HEAD origin/<branch>)
+DISTANCE=$(git rev-list --count $MERGE_BASE..HEAD)
+```
+
+Il candidato con **distanza minore** e' il parent piu' probabile.
+
+- Se il best match e' chiaro (unico minimo, o differenza > 3 commit col secondo):
+  → "Il parent branch piu' probabile e' `<branch>` (N commit di distanza). Confermi?"
+- Se ambiguo (2+ candidati con distanza simile, differenza ≤ 3 commit):
+  → "Ho trovato piu' branch candidati: `<lista con distanze>`. Quale e' il target della PR?"
+
+**5. GUARDRAIL — Protezione default branch:**
+
+Se il target rilevato e' `main` (default branch) e il branch corrente **non** e' `release/*`:
+
+```
+🔴 BLOCCO — Solo branch release/* possono aprire PR verso main.
+Il branch corrente e' <branch-corrente>.
+Scegli un altro target.
+```
+
+**Risultato:** il parent branch rilevato e confermato viene salvato come `$PARENT_BRANCH`
+e usato in tutti gli step successivi.
+
+---
+
 ### Step 1 — Verifica Stato del Branch
 
 🟢 SICURO
@@ -84,26 +149,26 @@ Se gia' eseguita nella sessione, usa il contesto esistente senza ripetere il che
 # Stato corrente
 git status
 
-# Confronto con sviluppo (quanti commit avanti/dietro?)
-git log origin/sviluppo..HEAD --oneline
+# Confronto con $PARENT_BRANCH (quanti commit avanti/dietro?)
+git log origin/$PARENT_BRANCH..HEAD --oneline
 
-# Controlla se sviluppo e' avanzato
+# Controlla se $PARENT_BRANCH e' avanzato
 git fetch origin
-git log HEAD..origin/sviluppo --oneline
+git log HEAD..origin/$PARENT_BRANCH --oneline
 ```
 
 **Criteri di OK:**
 - [ ] Nessun file non committato (`git status` clean)
 - [ ] Tutti i commit sono nel branch (nessun lavoro perso)
-- [ ] Conosco quanti commit apporto a sviluppo
+- [ ] Conosco quanti commit apporto a `$PARENT_BRANCH`
 
-**Se sviluppo e' avanzato rispetto al tuo branch:**
+**Se `$PARENT_BRANCH` e' avanzato rispetto al tuo branch:**
 
 ```
 REQUIRED SUB-SKILL: siae-git-workflow
 ```
 
-Esegui un rebase o merge da sviluppo prima di procedere.
+Esegui un rebase o merge da `$PARENT_BRANCH` prima di procedere.
 
 ---
 
@@ -160,14 +225,14 @@ Non aprire la PR con test rossi. MAI.
 Leggi il diff completo come se fossi il reviewer.
 
 ```bash
-# Diff rispetto a sviluppo
-git diff origin/sviluppo...HEAD
+# Diff rispetto a $PARENT_BRANCH
+git diff origin/$PARENT_BRANCH...HEAD
 
 # Lista file modificati
-git diff origin/sviluppo...HEAD --name-only
+git diff origin/$PARENT_BRANCH...HEAD --name-only
 
 # Statistiche
-git diff origin/sviluppo...HEAD --stat
+git diff origin/$PARENT_BRANCH...HEAD --stat
 ```
 
 **Cerca e rimuovi:**
@@ -192,7 +257,7 @@ git commit -m "chore: clean up before PR"
 🟢 SICURO
 
 ```bash
-git log origin/sviluppo..HEAD --oneline
+git log origin/$PARENT_BRANCH..HEAD --oneline
 ```
 
 **Criteri di OK:**
@@ -206,7 +271,7 @@ git log origin/sviluppo..HEAD --oneline
 Considera di squashare localmente prima della PR:
 ```bash
 # Squash degli ultimi N commit in uno solo
-git rebase -i origin/sviluppo
+git rebase -i origin/$PARENT_BRANCH
 # Nel editor: lascia "pick" solo sul primo, cambia gli altri in "squash"
 ```
 
@@ -279,9 +344,9 @@ Questo e' un gap nel processo — il lavoro e' stato fatto senza spec scritta.
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-finishing-branch |
 |:---|
 | **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
-| 🌿 Branch: `feature/{JIRA-ID}-descrizione` · 🎯 Target: `sviluppo` · 📝 Commit: `N commit` |
+| 🌿 Branch: `<branch-corrente>` · 🎯 Target: `$PARENT_BRANCH` · 📝 Commit: `N commit` |
 | **▼ Azione** |
-| 1. 🚀 Azione: Push branch + apertura PR → `origin/feature/{JIRA-ID}-descrizione` |
+| 1. 🚀 Azione: Push branch + apertura PR → `origin/<branch-corrente>` verso `$PARENT_BRANCH` |
 | 💡 Perche': Branch pronto, test verdi, diff revisionato |
 | 🚫 Se NO: Il branch resta locale, nessuna PR aperta |
 
@@ -291,11 +356,11 @@ Questo e' un gap nel processo — il lavoro e' stato fatto senza spec scritta.
 
 ```bash
 # Push del branch
-git push origin feature/{JIRA-ID}-descrizione
+git push origin <branch-corrente>
 
 # Apri PR via GitHub CLI
 gh pr create \
-  --base sviluppo \
+  --base $PARENT_BRANCH \
   --title "feat({scope}): descrizione [JIRA-ID]" \
   --body "$(cat <<'EOF'
 ## Cosa fa questa PR
@@ -324,11 +389,11 @@ EOF
 
 ```bash
 # Push del branch
-git push origin feature/{JIRA-ID}-descrizione
+git push origin <branch-corrente>
 ```
 
 Poi apri la PR manualmente:
-1. Vai su: `https://github.com/<owner>/<repo>/compare/sviluppo...feature/{JIRA-ID}-descrizione`
+1. Vai su: `https://github.com/<owner>/<repo>/compare/$PARENT_BRANCH...<branch-corrente>`
 2. Clicca "Create pull request"
 3. Usa il template seguente per il body:
 
@@ -362,14 +427,14 @@ Poi apri la PR manualmente:
 | Situazione | Strategia consigliata |
 |-----------|----------------------|
 | Feature con storia significativa da preservare | Merge commit |
-| Serie di commit WIP / fix intermedi | Squash merge (default su sviluppo) |
-| Branch sincronizzato con sviluppo (pochi commit) | Rebase (history lineare) |
+| Serie di commit WIP / fix intermedi | Squash merge (default per feature → parent) |
+| Branch sincronizzato con parent (pochi commit) | Rebase (history lineare) |
 
-Su SIAE, la strategia default per feature → sviluppo e' **squash merge** (cfr. `siae-git-workflow`).
+Su SIAE, la strategia default per feature → parent branch e' **squash merge** (cfr. `siae-git-workflow`).
 
 ### Quanti reviewer?
 
-Minimo 1 reviewer obbligatorio per merge su sviluppo (regola SIAE).
+Minimo 1 reviewer obbligatorio per merge (regola SIAE).
 Per modifiche ad architettura o moduli condivisi: almeno 2.
 
 ### La PR e' troppo grande?
