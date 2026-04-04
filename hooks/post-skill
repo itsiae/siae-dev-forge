@@ -18,8 +18,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Source activity logger
+# Source activity logger and SDLC state machine
 source "${PLUGIN_ROOT}/lib/logger.sh"
+source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
 
 # Timestamp file for chaining
 SKILL_TS_FILE="${DEVFORGE_STATE_DIR}/.devforge-skill-start"
@@ -46,6 +47,12 @@ if [ -n "$SKILL_NAME" ]; then
     SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
     if [ ! -f "$SESSION_SKILLS_FILE" ] || ! grep -qxF "$SKILL_NAME" "$SESSION_SKILLS_FILE" 2>/dev/null; then
         echo "$SKILL_NAME" >> "$SESSION_SKILLS_FILE"
+    fi
+
+    # Advance SDLC stage if this is a backbone skill
+    BACKBONE_STAGE=$(sdlc_lookup_stage "$SKILL_NAME")
+    if [ -n "$BACKBONE_STAGE" ]; then
+        sdlc_advance_stage "$BACKBONE_STAGE"
     fi
 
     # Step 2: Logging (non-critical — || true prevents set -euo pipefail from

@@ -503,36 +503,39 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 15: sub-skill-gate BLOCCA skill con prerequisiti mancanti
-echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+# Check 15: stage-gate BLOCCA skill backbone senza fasi precedenti completate
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-sdlc-stage"
 subskill_block_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null; echo "exit:$?")
 if echo "$subskill_block_output" | grep -q '"decision"' && echo "$subskill_block_output" | grep -q '"block"' && echo "$subskill_block_output" | grep -q 'exit:0'; then
-  echo "  PASS  hooks/sub-skill-gate: BLOCCA siae-finishing-branch senza prerequisiti"
+  echo "  PASS  hooks/stage-gate: BLOCCA siae-finishing-branch senza fasi backbone"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/sub-skill-gate: non blocca senza prerequisiti"
+  echo "  FAIL  hooks/stage-gate: non blocca senza fasi backbone"
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 16: sub-skill-gate consente skill con prerequisiti soddisfatti
-printf 'siae-git-env\nsiae-git-workflow\n' > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+# Check 16: stage-gate consente skill con fasi backbone completate
+source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
+for stg in brainstorming plan tdd review verification; do
+    sdlc_advance_stage "$stg"
+done
 subskill_allow_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_allow_output" = "{}" ]; then
-  echo "  PASS  hooks/sub-skill-gate: consente con prerequisiti soddisfatti"
+  echo "  PASS  hooks/stage-gate: consente siae-finishing-branch con fasi completate"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/sub-skill-gate: non consente con prerequisiti soddisfatti"
+  echo "  FAIL  hooks/stage-gate: non consente con fasi completate"
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 17: sub-skill-gate silenzioso per skill senza prerequisiti
-echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
-subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-tdd"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
+# Check 17: stage-gate silenzioso per skill support (nessuno stage)
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-sdlc-stage"
+subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-onboarding"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_noreq_output" = "{}" ]; then
-  echo "  PASS  hooks/sub-skill-gate: silenzioso per skill senza prerequisiti"
+  echo "  PASS  hooks/stage-gate: silenzioso per skill support (no stage)"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/sub-skill-gate: non silenzioso per skill senza prerequisiti"
+  echo "  FAIL  hooks/stage-gate: non silenzioso per skill support"
   hook_fail=$((hook_fail + 1))
 fi
 
