@@ -53,7 +53,8 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
     if [ -n "$SKILLS_LIST" ]; then
-        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
+        # Format: one skill per line (post D1 migration)
+        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | sort -u | wc -l | tr -d ' ')
     else
         SKILLS_USED_COUNT=0
     fi

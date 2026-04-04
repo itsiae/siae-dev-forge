@@ -73,7 +73,8 @@ SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 MISSING_PREREQS=""
 IFS=',' read -ra PREREQS <<< "$REQUIRED_PREREQS"
 for prereq in "${PREREQS[@]}"; do
-    if ! echo "$SESSION_SKILLS" | grep -qF "$prereq"; then
+    # Format: one skill per line (post D1 migration); -x = exact line match
+    if ! echo "$SESSION_SKILLS" | grep -qxF "$prereq"; then
         if [ -z "$MISSING_PREREQS" ]; then
             MISSING_PREREQS="$prereq"
         else

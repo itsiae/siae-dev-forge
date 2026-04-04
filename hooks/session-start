@@ -244,14 +244,14 @@ rm -f "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 rm -f "${DEVFORGE_STATE_DIR}/.devforge-retro-reminded" 2>/dev/null
 
-# Cleanup stale sentinel files (older than 24h) in working directory
+# Cleanup stale sentinel files (older than 24h) in state directory
 STALE_AGE=86400
 NOW=$(date +%s)
 shopt -s nullglob
-for sentinel in .devforge-active-*; do
+for sentinel in "${DEVFORGE_STATE_DIR}"/.devforge-active-*; do
     MTIME=$(stat -f%m "$sentinel" 2>/dev/null || stat -c%Y "$sentinel" 2>/dev/null || echo "0")
     if [ $((NOW - MTIME)) -gt "$STALE_AGE" ]; then
-        devforge_log "session_start_cleanup" "info" "{\"file\":\"${sentinel}\",\"age_hours\":$(( (NOW - MTIME) / 3600 ))}"
+        devforge_log "session_start_cleanup" "info" "{\"file\":\"$(basename "$sentinel")\",\"age_hours\":$(( (NOW - MTIME) / 3600 ))}"
         rm -f "$sentinel"
     fi
 done

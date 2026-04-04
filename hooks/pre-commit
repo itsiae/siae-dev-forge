@@ -71,7 +71,8 @@ escape_for_json() {
 # Route to appropriate check based on command
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     # Check if siae-git-workflow was invoked this session — HARD GATE
-    if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
+    # Format: one skill per line (post D1 migration); -x = exact line match
+    if ! echo "$SESSION_SKILLS" | grep -qxF "siae-git-workflow"; then
         devforge_log "pre_commit" "blocked" "{\"command\":\"${TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
         cat <<BLOCK_EOF
 {

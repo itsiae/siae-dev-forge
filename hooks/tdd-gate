@@ -52,14 +52,6 @@ if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
     exit 0
 fi
 
-# IaC config-only files: bypass TDD per SKILL.md:94
-# "Config pura (.env, .yml, terraform vars) → NO — validate/plan basta"
-IAC_CONFIG_BYPASS="\.tfvars$|\.auto\.tfvars$|variables\.tf$|terraform\.tfvars$"
-if echo "$FILE_PATH" | grep -qE "$IAC_CONFIG_BYPASS"; then
-    echo '{}'
-    exit 0
-fi
-
 # Exclude test files and non-production paths
 EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
 if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
@@ -71,7 +63,7 @@ fi
 SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
-if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+if echo "$SESSION_SKILLS" | grep -qxF "siae-tdd"; then
     # siae-tdd invoked — check TDD phase state machine
     TDD_STATE_FILE="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
     TDD_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")

@@ -7,8 +7,12 @@
 
 set -euo pipefail
 
-# State directory — overridable for isolated/CI testing
-export DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
+# State directory — hermetic by default, overridable via env
+if [ -z "${DEVFORGE_STATE_DIR:-}" ]; then
+    export DEVFORGE_STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/devforge-test-XXXXXX")"
+    _DEVFORGE_CLEANUP_STATE=1
+fi
+mkdir -p "$DEVFORGE_STATE_DIR"
 
 # Parse arguments
 WITH_TRIGGER_REGRESSION=false
@@ -442,18 +446,6 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 9c: tdd-gate bypassa file IaC config-only (D6b)
-for iac_file in "env/prod.tfvars" "terraform.auto.tfvars" "modules/variables.tf"; do
-  iac_result=$(echo "{\"file_path\":\"${iac_file}\"}" | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
-  if [ "$iac_result" = "{}" ]; then
-    echo "  PASS  hooks/tdd-gate: bypassa $(basename ${iac_file}) (IaC config-only D6b)"
-    hook_ok=$((hook_ok + 1))
-  else
-    echo "  FAIL  hooks/tdd-gate: non bypassa $(basename ${iac_file})"
-    hook_fail=$((hook_fail + 1))
-  fi
-done
-
 # Check 10: tdd-gate silenzioso con siae-tdd già invocata (fase non-INIT)
 echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 # Ensure the cycle is not in INIT, otherwise tdd-gate must block by design.
@@ -523,7 +515,7 @@ else
 fi
 
 # Check 16: sub-skill-gate consente skill con prerequisiti soddisfatti
-echo "siae-git-env,siae-git-workflow" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+printf 'siae-git-env\nsiae-git-workflow\n' > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 subskill_allow_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_allow_output" = "{}" ]; then
   echo "  PASS  hooks/sub-skill-gate: consente con prerequisiti soddisfatti"
@@ -778,11 +770,15 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check: user-prompt-context inietta contesto con sentinel file presente
+# Check: user-prompt-context inietta contesto con sentinel in STATE_DIR
 TEST_DIR=$(mktemp -d)
-echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
-upc_inject_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+DEVFORGE_STATE_DIR_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_set_mode "tdd" "RED|src/MyService.java|testShouldWork"
+upc_inject_output=$(bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_SAVE"
 if echo "$upc_inject_output" | grep -q 'additional_context' && echo "$upc_inject_output" | grep -q 'TDD' && echo "$upc_inject_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/user-prompt-context: inietta contesto con sentinel TDD"
   hook_ok=$((hook_ok + 1))
@@ -817,9 +813,13 @@ export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_BAK"
 
 # Check: user-prompt-context emette JSON valido con sentinel
 TEST_DIR=$(mktemp -d)
-echo "RED|src/MyService.java|testShouldWork" > "${TEST_DIR}/.devforge-active-tdd"
-upc_json_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+DEVFORGE_STATE_DIR_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_set_mode "tdd" "RED|src/MyService.java|testShouldWork"
+upc_json_output=$(bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_SAVE"
 if echo "$upc_json_output" | python3 -m json.tool >/dev/null 2>&1; then
   echo "  PASS  hooks/user-prompt-context: output JSON valido"
   hook_ok=$((hook_ok + 1))
@@ -830,9 +830,12 @@ fi
 
 # Check: user-prompt-context silenzioso con sentinel vuoto
 TEST_DIR=$(mktemp -d)
+DEVFORGE_STATE_DIR_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
 touch "${TEST_DIR}/.devforge-active-tdd"
-upc_empty_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+upc_empty_output=$(bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_SAVE"
 if echo "$upc_empty_output" | grep -q 'exit:0' && ! echo "$upc_empty_output" | grep -q 'additional_context'; then
   echo "  PASS  hooks/user-prompt-context: silenzioso con sentinel vuoto"
   hook_ok=$((hook_ok + 1))
@@ -843,9 +846,12 @@ fi
 
 # Check: user-prompt-context ignora mode non in whitelist
 TEST_DIR=$(mktemp -d)
+DEVFORGE_STATE_DIR_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
 echo "some-content" > "${TEST_DIR}/.devforge-active-unknown-mode"
-upc_unknown_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
+upc_unknown_output=$(bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null; echo "exit:$?")
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_SAVE"
 if echo "$upc_unknown_output" | grep -q 'exit:0' && ! echo "$upc_unknown_output" | grep -q 'additional_context'; then
   echo "  PASS  hooks/user-prompt-context: ignora mode non in whitelist"
   hook_ok=$((hook_ok + 1))
@@ -856,10 +862,14 @@ fi
 
 # Check: user-prompt-context gestisce sentinel multipli
 TEST_DIR=$(mktemp -d)
-echo "RED|src/MyService.java|testX" > "${TEST_DIR}/.devforge-active-tdd"
-echo "docs/plans/my-plan.md" > "${TEST_DIR}/.devforge-active-plan"
-upc_multi_output=$(cd "$TEST_DIR" && bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
+DEVFORGE_STATE_DIR_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_set_mode "tdd" "RED|src/MyService.java|testX"
+devforge_set_mode "plan" "docs/plans/my-plan.md"
+upc_multi_output=$(bash "${PLUGIN_ROOT}/hooks/user-prompt-context" 2>/dev/null)
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_SAVE"
 if echo "$upc_multi_output" | grep -q 'TDD' && echo "$upc_multi_output" | grep -q 'Piano attivo'; then
   echo "  PASS  hooks/user-prompt-context: gestisce sentinel multipli"
   hook_ok=$((hook_ok + 1))
@@ -1254,6 +1264,11 @@ echo "| ✅ PASS: \`${TOTAL_PASS}\` |"
 echo "| ❌ FAIL: \`${TOTAL_FAIL}\` |"
 echo "| ⏭️  SKIP: \`${TOTAL_SKIP}\` |"
 echo ""
+
+# Cleanup hermetic state dir if we created it
+if [ "${_DEVFORGE_CLEANUP_STATE:-}" = "1" ] && [ -d "$DEVFORGE_STATE_DIR" ]; then
+    rm -rf "$DEVFORGE_STATE_DIR"
+fi
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
   exit 1
