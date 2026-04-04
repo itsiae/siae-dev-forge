@@ -243,6 +243,8 @@ rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 rm -f "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 rm -f "${DEVFORGE_STATE_DIR}/.devforge-retro-reminded" 2>/dev/null
+# Reset SDLC backbone stage for new session
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-sdlc-stage"
 
 # Cleanup stale sentinel files (older than 24h) in state directory
 STALE_AGE=86400

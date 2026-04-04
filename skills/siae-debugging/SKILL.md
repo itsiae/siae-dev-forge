@@ -5,6 +5,9 @@ description: >
   Trigger: bug, errore, incident, test che fallisce, comportamento inatteso,
   eccezione, stacktrace, crash, errore di compilazione, build failure, 500,
   timeout, NullPointerException, TypeError, non funziona, rotto, fallisce, non va.
+backbone_role: specialist
+backbone_stage: verification
+hard_gate: false
 ---
 
 # SIAE Debugging Sistematico

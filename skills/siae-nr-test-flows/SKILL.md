@@ -4,6 +4,9 @@ description: >
   Analizza repository frontend/mobile e genera NRT flow map + test list deterministici
   pronti per Xray. Trigger: no-regression test flows, NRT suite, /forge-flows,
   repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione.
+backbone_role: specialist
+backbone_stage: tdd
+hard_gate: false
 ---
 
 # NR Test Flows — No-Regression Test List da Navigazione

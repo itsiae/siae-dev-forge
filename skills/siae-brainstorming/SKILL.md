@@ -7,6 +7,9 @@ description: >
   valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature,
   costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione,
   bug fix, refactoring, ottimizzazione, modifica codice, qualsiasi task implementativo.
+backbone_role: backbone
+backbone_stage: brainstorming
+hard_gate: true
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato

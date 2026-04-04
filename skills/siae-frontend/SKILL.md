@@ -5,6 +5,9 @@ description: >
   su S3+CloudFront.
   Trigger: componente Vue.js, Vitest, test frontend, deploy S3 CloudFront,
   Firebase, Pinia, Vue Router, responsive design, drag drop, upload file.
+backbone_role: specialist
+backbone_stage: execution
+hard_gate: false
 ---
 
 # SIAE Frontend

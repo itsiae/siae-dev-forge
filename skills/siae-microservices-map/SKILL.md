@@ -5,6 +5,9 @@ description: >
   Trigger: "mappa SPORT", "sistema a microservizi", "dipendenze tra servizi",
   "chi chiama chi", "topologia sistema", /forge-sysmap, onboarding su sistema
   distribuito.
+backbone_role: specialist
+backbone_stage: brainstorming
+hard_gate: false
 ---
 
 # SIAE Microservices Map — Mappa Sistemi Distribuiti Senza Allucinare

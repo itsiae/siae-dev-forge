@@ -3,6 +3,9 @@ name: siae-documentation
 description: >
   Genera documentazione tecnica per componenti e API SIAE.
   Trigger: richiesta documentazione, /forge-doc, design review, pre-release.
+backbone_role: specialist
+backbone_stage: finish
+hard_gate: false
 ---
 
 ```

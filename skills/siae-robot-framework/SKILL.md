@@ -4,6 +4,9 @@ description: >
   Use when: file .robot/.resource aperti/creati/modificati, errori Appium/BrowserStack nel
   terminale, porting Android↔iOS, refactor o debug test RF mobile. NOT per Cypress/web
   (→ siae-automation) o bug codice applicativo non-RF (→ siae-debugging).
+backbone_role: specialist
+backbone_stage: tdd
+hard_gate: false
 ---
 
 # SIAE Robot Framework — Appium Mobile Test Automation

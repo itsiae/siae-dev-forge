@@ -5,6 +5,9 @@ description: >
   Trigger: "pronto per review", "ho aperto la PR", "chiedo il review", PR aperta
   senza reviewer assegnato, assegna reviewer, richiedi review, PR creata, post-PR,
   reviewer mancante.
+backbone_role: specialist
+backbone_stage: review
+hard_gate: false
 ---
 
 # SIAE Requesting Review — Richiedere una Code Review Efficace

@@ -4,6 +4,9 @@ description: >
   Genera documentazione test formale per Xray a completamento implementazione.
   Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5),
   /forge-qa.
+backbone_role: specialist
+backbone_stage: tdd
+hard_gate: false
 ---
 
 # SIAE QA — Orchestrazione Xray
