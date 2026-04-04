@@ -2,21 +2,25 @@
 
 **Data:** 2026-04-02
 **Autore:** Lorenzo De Tomasi + DevForge
-**Story Points:** 8 SP-Umano / 3 SP-Augmented
-**Approccio:** Foundation First — 7 deliverable (D1-D6b) in PR atomiche ordinate per dipendenza
+**Story Points:** 28 SP-Umano / 11 SP-Augmented
+**Approccio:** Foundation First — 12 deliverable (D1-D11, con D6b) in PR atomiche ordinate per dipendenza
 
 ---
 
 ## Contesto
 
-L'infrastruttura DevForge (hook, lib, test) ha accumulato debito tecnico in 6 aree:
+L'infrastruttura DevForge (hook, lib, test) ha accumulato debito tecnico in 10 aree:
 
 1. Stato runtime hardcoded in `~/.claude/` — impedisce CI/sandbox/test ermetici
 2. `session-start` monolitico — slow startup, hard to debug
-3. `plugin.json` description manuale — drift con realtà (35 vs 36 skill)
+3. `plugin.json` description manuale — drift con realtà (README 30, marketplace 34, plugin.json 35, repo 36)
 4. Frontmatter parser regex — fragile su YAML reale
 5. Test suite senza livelli — mix statico/ambientale
 6. Gate con comportamento fail-open/fail-closed implicito
+7. `sub-skill-gate` prerequisiti hardcoded — drift con skill reali
+8. `skills-core.js` type/phase da mappe hardcoded — non derivati da frontmatter
+9. Plumbing bug: sentinel in CWD (`logger.sh:163`) vs state in `~/.claude` (`devforge-context-always:107`)
+10. Session stats imprecise (`devforge-context-always:77` — skills count via `grep -c '.'` su CSV) e JSON parsing grep/sed-based in hook critici
 
 **21 file** accedono a `${HOME}/.claude/.devforge-*` con path hardcoded.
 
@@ -45,6 +49,14 @@ DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
 ```
 
 Ogni hook sostituisce `${HOME}/.claude/.devforge-*` con `${DEVFORGE_STATE_DIR}/.devforge-*`.
+
+### Fix espliciti inclusi nella migrazione
+
+**Bug ALTO 2 — Sentinel piano in CWD:** `logger.sh:166` (`devforge_set_mode`) scrive il sentinel in `$(pwd)/.devforge-active-plan`, ma `devforge-context-always:108` lo cerca in `${STATE_DIR}/.devforge-active-plan`. Fix: `devforge_set_mode()` e `devforge_clear_mode()` usano `${DEVFORGE_STATE_DIR}` invece di `$(pwd)`.
+
+**Bug ALTO 1 — Conteggio skill CSV:** `post-skill:49-51` scrive le skill come CSV su una riga (`a,b,c`), ma `devforge-context-always:77` conta le righe con `grep -c '.'` (sempre 1). Fix: cambiare il formato di `.devforge-session-skills` da CSV inline a **una skill per riga**. Aggiornare `post-skill` per appendere con `echo "$SKILL_NAME" >> file` (con dedup) e `devforge-context-always` per contare con `wc -l`.
+
+**Bug MEDIO 3 — Output sporco con pipefail:** `devforge-context-always:77` usa `cat file | grep -c '.' || echo "0"` che con `set -euo pipefail` produce `0` su riga separata quando il file non esiste. Fix: sostituire con `SKILLS=$(wc -l < "$file" 2>/dev/null || echo "0")` dopo la migrazione a una skill per riga.
 
 ### File impattati
 
@@ -163,11 +175,16 @@ Nuovo script `scripts/generate-manifest.js`:
 - CI: check che `plugin.json` sia allineato (fail se dirty dopo generate)
 
 ### Scope
-Solo `description` viene rigenerata. `version`, `author`, `repository` restano manuali.
+- `plugin.json`: campo `description` rigenerato automaticamente
+- `marketplace.json`: campo `description` rigenerato dallo stesso script (stessa logica, file diverso)
+- `README.md`: riga con conteggi skill/hook/comandi rigenerata (regex match + replace sulla riga esistente)
+- `version`, `author`, `repository` restano manuali in tutti i file
 
 ### File impattati
 - Nuovo: `scripts/generate-manifest.js`
 - Modificato: `plugin.json` (output)
+- Modificato: `.claude-plugin/marketplace.json` (output)
+- Modificato: `README.md` (riga conteggi)
 - Modificato: `hooks/pre-commit` (opzionale auto-run)
 
 ---
@@ -289,24 +306,271 @@ Minimo — i file bypassati sono dichiarativi per definizione. Se un team mette 
 
 ---
 
-## Ordine di esecuzione
+---
+
+## D7: Trigger strutturati nel frontmatter
+
+### Problema
+`skills-core.js:288-298` estrae i trigger dalla `description` con regex. La description mixa scopo e keyword di attivazione in prosa libera. Le mappe `nameTypeMap` (righe 181-201) e `namePhaseMap` (righe 225-255) sono hardcoded: 8 skill mancano da `nameTypeMap`, 12 da `namePhaseMap`.
+
+### Soluzione
+Aggiungere 3 campi strutturati al frontmatter YAML di ogni SKILL.md:
+
+```yaml
+---
+name: siae-brainstorming
+description: >
+  Guida il processo di design da idea a design doc approvato [...]
+triggers:
+  - feature nuova
+  - design
+  - come procediamo
+  - quale approccio
+  - trade-off
+  - bug fix
+  - refactoring
+type: Rigid
+sdlc_phase: "2. Design"
+---
+```
+
+- **`triggers`**: lista YAML di keyword/frasi. Sostituisce il parsing `Trigger:` dalla description.
+- **`type`**: `Rigid | Flexible | Auto`. Sostituisce `nameTypeMap`.
+- **`sdlc_phase`**: stringa. Sostituisce `namePhaseMap`. Campo già parzialmente supportato da `readPhaseFromFrontmatter()`.
+
+Modifiche a `skills-core.js`:
+1. `extractFrontmatter()` estrae anche `triggers`, `type`, `sdlc_phase` (dopo D5/js-yaml questo viene gratis; senza D5, i campi sono parsabili con regex semplice)
+2. `inferSkillMeta()` usa i campi frontmatter come source primaria; le mappe hardcoded diventano fallback e poi vengono rimosse
+3. Il campo `trigger` nella tabella catalogo diventa `triggers.join(', ')` troncato a 120 char
+
+### File impattati
+- 37 `skills/*/SKILL.md` (aggiunta campi frontmatter — meccanico, automabile)
+- `lib/skills-core.js` (`extractFrontmatter` + `inferSkillMeta` semplificati, ~70 righe rimosse)
+
+### Dipendenza
+Beneficia da D5 (YAML parser). Funziona anche senza.
+
+### Test
+```bash
+# Verifica che ogni SKILL.md abbia i 3 campi obbligatori
+node -e "
+const {findSkillsInDir, extractFrontmatter} = require('./lib/skills-core');
+const skills = findSkillsInDir('./skills');
+const missing = skills.filter(s => {
+  const fm = extractFrontmatter(s.filePath);
+  return !fm.triggers || !fm.type || !fm.sdlc_phase;
+});
+if (missing.length) { console.error('Missing fields:', missing.map(s=>s.name)); process.exit(1); }
+console.log('All', skills.length, 'skills have structured frontmatter');
+"
+```
+
+---
+
+## D8: Separare output macchina da output prompt
+
+### Problema
+`buildCatalog()` (skills-core.js:307-346) restituisce `.table` con righe Markdown + 8 righe di disambiguazione (329-339). Il CLI entry point (riga 355) stampa tutto su stdout. Il test in `run-all.sh:145` conta `wc -l` sull'intero output → 45 righe invece di 36 skill reali (bug MEDIO 4).
+
+### Soluzione
+Aggiungere flag `--format` al CLI entry point:
+
+```javascript
+if (require.main === module) {
+  const pluginDir = process.argv[2] || path.resolve(__dirname, '..');
+  const format = process.argv[3] || 'markdown';
+  const catalog = buildCatalog(pluginDir);
+
+  if (format === 'json') {
+    const out = catalog.skills.map(s => ({
+      name: s.name,
+      triggers: s.triggers || [],
+      type: s.type,
+      phase: s.phase,
+    }));
+    process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+  } else {
+    process.stdout.write(catalog.table + '\n');
+  }
+}
+```
+
+### Consumatori
+- `session-start:92` e `devforge-reinject:40` → `markdown` (default, invariato)
+- `tests/run-all.sh:144` → cambia a `json`, conta con `node -e "...JSON.parse(d).length"`
+- Eval/CI futuri → usano `json`
+
+### File impattati
+- `lib/skills-core.js` (CLI entry point, ~10 righe)
+- `tests/run-all.sh` (1 test, ~5 righe)
+
+### Dipendenza
+Nessuna. Parallelizzabile con D7.
+
+---
+
+## D9: Shortlist contestuale in reinject
+
+### Problema
+`session-start` inietta l'intero catalogo (37 skill × ~120 char = ~4.5KB) al primo prompt. `devforge-reinject` lo re-inietta ogni 20 messaggi. La maggior parte delle skill non è rilevante per la query corrente.
+
+### Soluzione
+Nuova funzione `matchSkills(query, skills, topN)` in `skills-core.js`:
+
+```javascript
+function matchSkills(query, skills, topN = 7) {
+  const q = query.toLowerCase();
+  const scored = skills.map(s => {
+    const triggers = s.triggers || [];
+    const hits = triggers.filter(t => q.includes(t.toLowerCase()));
+    return { ...s, score: hits.length };
+  });
+  return scored
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN);
+}
+```
+
+### Dove si usa
+- `devforge-reinject` — invece del catalogo completo, inietta shortlist basata sul messaggio utente (disponibile via stdin in hook UserPromptSubmit)
+- `session-start` — continua a iniettare catalogo completo (primo prompt, nessuna query)
+
+### Fallback
+Se `matchSkills` ritorna 0 risultati → inietta catalogo completo.
+
+### CLI
+```bash
+node lib/skills-core.js <plugin-root> shortlist "la mia query"
+```
+
+### File impattati
+- `lib/skills-core.js` (~15 righe nuova funzione + CLI branch)
+- `hooks/devforge-reinject` (usa shortlist)
+
+### Dipendenza
+Beneficia da D7 (trigger strutturati). Funziona anche col parsing attuale.
+
+### Rischio
+Matching troppo aggressivo potrebbe escludere skill rilevanti. Mitigazione: `topN = 7` conservativo + fallback a catalogo completo. Raffinabile con dati da D10.
+
+---
+
+## D10: Eval come gate CI con soglie
+
+### Problema
+`run-trigger-eval.py` e `run-trigger-regression.sh` esistono ma non hanno soglie di accettazione. Non c'è baseline storica. Il runner non fallisce CI.
+
+### Soluzione
+
+**1. Soglie per skill negli eval file (29 file):**
+```json
+{
+  "skill": "siae-brainstorming",
+  "threshold": { "precision": 0.8, "recall": 0.9 },
+  "queries": [...]
+}
+```
+
+**2. `run-trigger-regression.sh` diventa gate:**
+- Legge `threshold` da ogni eval file
+- Confronta risultati vs soglia
+- Exit code 1 se qualsiasi skill è sotto soglia
+- Report summary in `evals/results/regression-summary.json`
+
+**3. Baseline storica:**
+Dopo ogni run, salva risultati in `evals/results/<skill>-<date>.json`. Delta > 10% rispetto all'ultimo risultato = warning.
+
+### File impattati
+- `evals/trigger-evals/*.json` (29 file — campo `threshold`)
+- `tests/run-trigger-regression.sh` (~20 righe threshold check + summary)
+- `tests/run-trigger-eval.py` (~10 righe per leggere/validare threshold)
+
+### Dipendenza
+Nessuna. Più utile dopo D7.
+
+---
+
+## D11: Strumentazione mismatch attivazione (ridotta)
+
+### Problema
+Non c'è modo di sapere quando una skill viene invocata tardi o quando il catalogo suggerisce skill mai invocate. Il feedback loop per migliorare il triggering è cieco.
+
+### Soluzione (versione pragmatica)
+
+**1. `hooks/post-skill` — aggiungere `message_number` al log:**
+```bash
+MSG_COUNT=$(cat "${DEVFORGE_STATE_DIR}/.devforge-message-counter" 2>/dev/null || echo "0")
+devforge_log "$SKILL_NAME" "skill_invoked" \
+  "{\"message_number\":$MSG_COUNT,\"phase\":\"$PHASE\"}"
+```
+
+**2. `hooks/stop-gate` — loggare `skill_late_invocation`:**
+Skill invocata dopo messaggio 5 → evento `skill_late_invocation` nel JSONL.
+
+### Scope ridotto (no shortlist tracking)
+La versione completa (confronto shortlist vs invocazione) richiede che D9 sia stabile e che `devforge-reinject` salvi la shortlist per ogni messaggio. Complessità significativa, rimandata.
+
+### File impattati
+- `hooks/post-skill` (~5 righe)
+- `hooks/stop-gate` (~10 righe)
+
+### Dipendenza
+Nessuna per la versione ridotta. Versione completa dipende da D9.
+
+---
+
+## Decisione architetturale (D7-D11)
+
+| # | Decisione | Alternative scartate | Motivazione |
+|---|-----------|---------------------|-------------|
+| ADR-7 | Trigger/type/phase nel frontmatter di ogni SKILL.md | Registry centralizzato, ibrido | Colocation: ogni skill dichiara il suo contratto. Il registry crea drift — esattamente il problema che stiamo risolvendo |
+| ADR-8 | Flag `--format json` in CLI skills-core.js | Funzione separata, file separato | Minima superficie, stesso entry point, backward compatible |
+| ADR-9 | Shortlist solo in reinject, catalogo completo in session-start | Shortlist ovunque | Il primo prompt non ha query, serve catalogo completo per discovery |
+| ADR-10 | Soglie nel JSON eval stesso | File soglie separato | Colocation: soglia vive accanto alle query che la testano |
+| ADR-11 | Solo late-invocation logging (no shortlist tracking) | Tracking completo shortlist vs invocazione | Complessità sproporzionata finché D9 non è stabile |
+
+---
+
+## Ordine di esecuzione (completo D1-D11)
 
 ```
 D1 (STATE_DIR) ──→ D2 (test split)
                 ──→ D3 (split session-start)
-                ──→ D4 (manifest) ──→ D5 (YAML parser)
+                ──→ D4 (manifest) ──→ D5 (YAML parser) ──→ D7 (frontmatter)
                 ──→ D6 (gate espliciti)
+D8 (output separato) ──→ [indipendente, parallelizzabile con D7]
+D7 (frontmatter)     ──→ D9 (shortlist)
+D10 (eval gate)      ──→ [indipendente]
+D11 (strumentazione) ──→ [indipendente]
 ```
 
-D1 è prerequisito per D2. D4 beneficia D5. D3, D6 e D6b sono indipendenti. D6b può essere implementato insieme a D6 nella stessa PR.
+D1 è prerequisito per D2. D4 beneficia D5. D5 beneficia D7. D8 è indipendente da D7 (parallelizzabili). D9 beneficia da D7. D10 e D11 sono indipendenti e parallelizzabili.
 
 ## Criteri di accettazione
 
+### Infrastruttura (D1-D6b)
 1. `DEVFORGE_STATE_DIR=/tmp/x tests/run-all.sh` passa senza toccare `~/.claude/`
 2. `tests/run-all.sh --fast` completa in <5s con solo test statici
 3. `session-start` completa in <1s (no network call sincrono)
-4. `node scripts/generate-manifest.js && git diff plugin.json` → nessun diff
+4. `node scripts/generate-manifest.js && git diff plugin.json README.md marketplace.json` → nessun diff
 5. `lib/skills-core.js` parsa correttamente frontmatter con `:` nei valori
 6. Ogni gate hook ha un GATE CONTRACT header e usa `devforge_gate_check_state`
 7. Zero regressioni sulla test suite esistente
 8. `tdd-gate` bypassa `.tfvars` e `variables.tf` senza richiedere ciclo TDD (allineamento con SKILL.md:94)
+9. `.devforge-session-skills` usa formato una-skill-per-riga (non CSV inline) e `devforge-context-always` conta con `wc -l` (fix bug ALTO 1)
+10. `devforge_set_mode()` scrive sentinel in `${DEVFORGE_STATE_DIR}`, non in `$(pwd)` (fix bug ALTO 2)
+11. `devforge-context-always` non produce output sporco quando `.devforge-session-skills` non esiste (fix bug MEDIO 3)
+
+### Triggering (D7-D11)
+12. Tutte le 37 SKILL.md hanno `triggers`, `type`, `sdlc_phase` nel frontmatter
+13. `nameTypeMap` e `namePhaseMap` rimossi da `skills-core.js`
+14. `node lib/skills-core.js <root> json | jq length` restituisce il numero esatto di skill (no disambiguazione)
+15. `tests/run-all.sh` usa output JSON per conteggio catalogo (fix bug MEDIO 4)
+16. `devforge-reinject` inietta shortlist (max 7 skill) invece di catalogo completo
+17. Ogni eval file in `evals/trigger-evals/` ha campo `threshold`
+18. `run-trigger-regression.sh` esce con codice 1 se una skill è sotto soglia
+19. `post-skill` logga `message_number` in ogni evento `skill_invoked`
+
+### Stima complessiva
+**Story Points: 28 SP-Umano / 11 SP-Augmented**
