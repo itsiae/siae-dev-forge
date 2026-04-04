@@ -926,6 +926,100 @@ if [ "$WITH_TRIGGER_REGRESSION" = true ]; then
   fi
 fi
 
+# --- SDLC Backbone Tests ---
+echo ""
+echo "=== SDLC Backbone Tests ==="
+echo ""
+backbone_ok=0
+backbone_fail=0
+
+# Save and isolate state dir for backbone tests
+_BB_STATE_SAVE="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR=$(mktemp -d)
+source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
+
+# Test 1: initial stage is idle
+STAGE=$(sdlc_get_current_stage)
+if [ "$STAGE" = "idle" ]; then
+    echo "  PASS  sdlc-state: initial stage is idle"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  sdlc-state: initial stage is '$STAGE', expected 'idle'"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Test 2: advance + check (execution bypassabile)
+sdlc_advance_stage "brainstorming"
+sdlc_advance_stage "plan"
+PREREQS=$(sdlc_check_prerequisites "tdd")
+if [ "$PREREQS" = "ok" ]; then
+    echo "  PASS  sdlc-state: brainstorming+plan sufficient for tdd (execution bypassed)"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  sdlc-state: prerequisites for tdd wrong: $PREREQS"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Test 3: all stages completed → ok for finish
+for stage in tdd review verification; do
+    sdlc_advance_stage "$stage"
+done
+PREREQS=$(sdlc_check_prerequisites "finish")
+if [ "$PREREQS" = "ok" ]; then
+    echo "  PASS  sdlc-state: all required stages completed, finish ok"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  sdlc-state: with all stages, got: $PREREQS"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Test 4: impl-gate blocks without backbone
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-sdlc-stage"
+impl_result=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/impl-gate" 2>/dev/null)
+if echo "$impl_result" | grep -q '"block"'; then
+    echo "  PASS  impl-gate: blocks prod code without backbone stages"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  impl-gate: did not block without backbone"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Test 5: impl-gate allows with backbone
+sdlc_advance_stage "brainstorming"
+sdlc_advance_stage "plan"
+sdlc_advance_stage "tdd"
+impl_result=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/impl-gate" 2>/dev/null)
+if [ "$impl_result" = "{}" ]; then
+    echo "  PASS  impl-gate: allows prod code with backbone stages"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  impl-gate: blocked with backbone: $impl_result"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Test 6: backbone skill count = 7
+BACKBONE_COUNT=$(node -e "
+const {findSkillsInDir} = require('${PLUGIN_ROOT}/lib/skills-core');
+const skills = findSkillsInDir('${PLUGIN_ROOT}/skills');
+console.log(skills.filter(s => s.backbone_role === 'backbone').length);
+" 2>/dev/null)
+if [ "$BACKBONE_COUNT" = "7" ]; then
+    echo "  PASS  backbone: 7 backbone skills in frontmatter"
+    backbone_ok=$((backbone_ok + 1))
+else
+    echo "  FAIL  backbone: ${BACKBONE_COUNT} backbone skills, expected 7"
+    backbone_fail=$((backbone_fail + 1))
+fi
+
+# Restore state dir
+rm -rf "$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$_BB_STATE_SAVE"
+
+echo ""
+echo "  SDLC Backbone: ${backbone_ok} OK | ${backbone_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + backbone_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + backbone_fail))
+
 # --- Telemetry Functional Tests ---
 echo ""
 echo "=== Telemetry Functional Tests ==="

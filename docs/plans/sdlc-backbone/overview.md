@@ -14,14 +14,14 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Frontmatter backbone metadata su tutte le skill | `task-01-frontmatter-metadata.md` | [PENDING] |
-| 2 | State machine lib/sdlc-state.sh | `task-02-state-machine.md` | [PENDING] |
-| 3 | post-skill avanza stage | `task-03-post-skill-advance.md` | [PENDING] |
-| 4 | impl-gate (sostituisce tdd-gate + plan-gate) | `task-04-impl-gate.md` | [PENDING] |
-| 5 | close-gate (sostituisce stop-gate enforcement + pre-commit enforcement) | `task-05-close-gate.md` | [PENDING] |
-| 6 | stage-gate (sostituisce sub-skill-gate) | `task-06-stage-gate.md` | [PENDING] |
-| 7 | Context injection phase-based | `task-07-context-injection.md` | [PENDING] |
-| 8 | Nuova skill siae-review-gate | `task-08-review-gate.md` | [PENDING] |
+| 1 | Frontmatter backbone metadata su tutte le skill | `task-01-frontmatter-metadata.md` | [DONE] |
+| 2 | State machine lib/sdlc-state.sh | `task-02-state-machine.md` | [DONE] |
+| 3 | post-skill avanza stage | `task-03-post-skill-advance.md` | [DONE] |
+| 4 | impl-gate (sostituisce tdd-gate + plan-gate) | `task-04-impl-gate.md` | [DONE] |
+| 5 | close-gate (sostituisce stop-gate enforcement + pre-commit enforcement) | `task-05-close-gate.md` | [DONE] |
+| 6 | stage-gate (sostituisce sub-skill-gate) | `task-06-stage-gate.md` | [DONE] |
+| 7 | Context injection phase-based | `task-07-context-injection.md` | [DONE] |
+| 8 | Nuova skill siae-review-gate | `task-08-review-gate.md` | [DONE] |
 | 9 | Test + eval backbone | `task-09-tests.md` | [PENDING] |
 
 ## Dipendenze
