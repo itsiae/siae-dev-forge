@@ -29,7 +29,9 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
 
-# Regola 3: review + verification devono essere completate
+# Regola 3: review + verification devono essere completate prima di push/PR.
+# "finish" (siae-finishing-branch) e' enforced da stage-gate — non serve qui
+# perche' close-gate intercetta git push che avviene DURANTE finish.
 MISSING_STAGES=""
 for stage in review verification; do
     if [ "$(sdlc_is_stage_completed "$stage")" != "yes" ]; then
