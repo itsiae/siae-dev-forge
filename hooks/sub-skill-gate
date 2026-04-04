@@ -7,6 +7,11 @@
 # Timeout:  5s — Check prerequisiti da mappa statica
 # Formato:  decision:"block" se REQUIRED SUB-SKILL prerequisite non invocate
 # History:  v1.4.0 NEW (determinismo SDLC — enforcement catena skill)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-closed
+# Requires:  SESSION_SKILLS_FILE (state)
+# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
+# On-missing: block (prerequisiti non verificabili)
 # ─────────────────────────────────────────────────────────────────
 #
 # Mappa prerequisiti: skill che DEVONO essere invocate PRIMA di quella corrente.

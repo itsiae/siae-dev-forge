@@ -7,6 +7,10 @@
 # Timeout:  5s — Telemetry + verification block
 # Formato:  decision:"block" se completion claim senza siae-verification (HARD GATE)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-open
+# Requires:  SESSION_SKILLS_FILE (state), session timestamps
+# On-missing: proceed (telemetria persa accettabile, bloccare stop no)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail

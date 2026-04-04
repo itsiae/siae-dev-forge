@@ -144,18 +144,16 @@ echo "=== Dynamic Catalog Validation ==="
 echo ""
 
 if command -v node >/dev/null 2>&1; then
-  catalog_output=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" 2>&1)
-  catalog_lines=$(echo "$catalog_output" | wc -l | tr -d ' ')
-  # Subtract 2 for header rows
-  catalog_skills=$((catalog_lines - 2))
+  catalog_output=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" json 2>&1)
+  catalog_skills=$(node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.length)" <<< "$catalog_output")
 
   # The catalog excludes using-devforge (meta-skill), so expected = skill_ok - 1
   expected_catalog=$((skill_ok - 1))
   if [ "$catalog_skills" -ge "$expected_catalog" ]; then
-    echo "  PASS  Catalogo dinamico: ${catalog_skills} skill rilevate (attese >= ${expected_catalog}, meta-skill esclusa)"
+    echo "  PASS  Catalogo dinamico (JSON): ${catalog_skills} skill rilevate (attese >= ${expected_catalog}, meta-skill esclusa)"
     TOTAL_PASS=$((TOTAL_PASS + 1))
   else
-    echo "  FAIL  Catalogo dinamico: ${catalog_skills} skill rilevate (attese >= ${expected_catalog})"
+    echo "  FAIL  Catalogo dinamico (JSON): ${catalog_skills} skill rilevate (attese >= ${expected_catalog})"
     TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
 else
@@ -443,6 +441,18 @@ else
   echo "  FAIL  hooks/tdd-gate: non silenzioso su file .tf/.hcl"
   hook_fail=$((hook_fail + 1))
 fi
+
+# Check 9c: tdd-gate bypassa file IaC config-only (D6b)
+for iac_file in "env/prod.tfvars" "terraform.auto.tfvars" "modules/variables.tf"; do
+  iac_result=$(echo "{\"file_path\":\"${iac_file}\"}" | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+  if [ "$iac_result" = "{}" ]; then
+    echo "  PASS  hooks/tdd-gate: bypassa $(basename ${iac_file}) (IaC config-only D6b)"
+    hook_ok=$((hook_ok + 1))
+  else
+    echo "  FAIL  hooks/tdd-gate: non bypassa $(basename ${iac_file})"
+    hook_fail=$((hook_fail + 1))
+  fi
+done
 
 # Check 10: tdd-gate silenzioso con siae-tdd già invocata (fase non-INIT)
 echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"

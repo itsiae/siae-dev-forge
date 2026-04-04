@@ -8,6 +8,11 @@
 # Formato:  decision:"block" se siae-git-workflow non invocata (HARD GATE)
 #           additional_context per quality gate (se skill presente)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK per git commit (determinismo SDLC)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-closed (git commit), fail-open (checkout -b)
+# Requires:  SESSION_SKILLS_FILE (state), PLUGIN_ROOT (env)
+# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
+# On-missing: block commit (fail-closed)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail

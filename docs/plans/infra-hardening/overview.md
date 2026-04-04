@@ -15,14 +15,14 @@
 
 | # | Task | Deliverable | File | Stato |
 |---|------|-------------|------|-------|
-| 01 | STATE_DIR + bug fix plumbing | D1 | `task-01-state-dir.md` | [PENDING] |
+| 01 | STATE_DIR + bug fix plumbing | D1 | `task-01-state-dir.md` | [DONE] |
 | 02 | Test ermetici con flag | D2 | `task-02-test-hermetic.md` | [PENDING] |
 | 03 | Split session-start | D3 | `task-03-split-session-start.md` | [PENDING] |
-| 04 | Manifest generato | D4 | `task-04-manifest-generator.md` | [PENDING] |
+| 04 | Manifest generato | D4 | `task-04-manifest-generator.md` | [DONE] |
 | 05 | YAML parser js-yaml | D5 | `task-05-yaml-parser.md` | [PENDING] |
-| 06 | Gate contract espliciti | D6+D6b | `task-06-gate-contracts.md` | [PENDING] |
+| 06 | Gate contract espliciti | D6+D6b | `task-06-gate-contracts.md` | [DONE] |
 | 07 | Frontmatter strutturato | D7 | `task-07-structured-frontmatter.md` | [PENDING] |
-| 08 | Output JSON skills-core | D8 | `task-08-json-output.md` | [PENDING] |
+| 08 | Output JSON skills-core | D8 | `task-08-json-output.md` | [DONE] |
 | 09 | Shortlist contestuale reinject | D9 | `task-09-shortlist.md` | [PENDING] |
 | 10 | Eval gate con soglie | D10 | `task-10-eval-gate.md` | [PENDING] |
 | 11 | Strumentazione mismatch | D11 | `task-11-instrumentation.md` | [PENDING] |

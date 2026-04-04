@@ -7,6 +7,11 @@
 # Timeout:  5s — Solo check file flat + estensione
 # Formato:  decision:"block" se siae-tdd non invocata (HARD GATE)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-open
+# Requires:  SESSION_SKILLS_FILE (state)
+# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
+# On-missing: proceed (nessun path = non e' file edit)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -43,6 +48,14 @@ fi
 # IaC (.tf, .hcl), config, CI, and docs are validated via plan/lint, NOT TDD.
 PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
 if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
+    echo '{}'
+    exit 0
+fi
+
+# IaC config-only files: bypass TDD per SKILL.md:94
+# "Config pura (.env, .yml, terraform vars) → NO — validate/plan basta"
+IAC_CONFIG_BYPASS="\.tfvars$|\.auto\.tfvars$|variables\.tf$|terraform\.tfvars$"
+if echo "$FILE_PATH" | grep -qE "$IAC_CONFIG_BYPASS"; then
     echo '{}'
     exit 0
 fi

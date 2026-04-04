@@ -180,6 +180,24 @@ devforge_clear_mode() {
     rm -f "${DEVFORGE_STATE_DIR}/.devforge-active-${mode}"
 }
 
+# ─── Gate state helper ───
+# Usage: devforge_gate_check_state <file> <gate_name> <behavior>
+#   behavior: "fail-open" | "fail-closed"
+#   Returns: 0 = proceed, 1 = block
+#   Stdout: file content if exists
+devforge_gate_check_state() {
+    local file="$1" gate_name="$2" behavior="$3"
+    if [ ! -f "$file" ]; then
+        if [ "$behavior" = "fail-closed" ]; then
+            devforge_log "$gate_name" "blocked" \
+              "{\"reason\":\"state_file_missing\",\"file\":\"$(devforge_sanitize_json_str "$file")\"}" 2>/dev/null || true
+            return 1
+        fi
+        return 0
+    fi
+    cat "$file"
+}
+
 # TDD State Machine — set phase explicitly
 # Usage: devforge_tdd_set_phase <phase> <target_file> <test_name>
 # Phases: NONE, RED, GREEN, REFACTOR
