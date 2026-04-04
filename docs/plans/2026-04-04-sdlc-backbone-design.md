@@ -41,7 +41,7 @@ Tutto il resto e' specialistico.
 |---|------|---------------|-----------|
 | 1 | brainstorming | siae-brainstorming | SI |
 | 2 | plan | siae-writing-plans | SI |
-| 3 | execution | siae-executing-plans | NO (fase implicita) |
+| 3 | execution | siae-executing-plans | NO (bypassabile — per piani multi-task con subagent) |
 | 4 | tdd | siae-tdd | SI |
 | 5 | review | siae-review-gate (nuova) | SI |
 | 6 | verification | siae-verification | SI |
@@ -52,7 +52,7 @@ Tutto il resto e' specialistico.
 ### Backbone (7)
 siae-brainstorming, siae-writing-plans, siae-executing-plans, siae-tdd, siae-review-gate (nuova), siae-verification, siae-finishing-branch
 
-### Specialist (22, agganciate a una fase)
+### Specialist (23, agganciate a una fase)
 
 | Fase | Specialist |
 |------|-----------|
@@ -91,8 +91,9 @@ IDLE → brainstorming → plan → execution → tdd → review → verificatio
 Regole di transizione:
 - Una fase e' `completed` quando la sua skill backbone viene invocata E completa il suo flusso
 - `post-skill` hook aggiorna lo stato quando una skill backbone viene invocata
-- Le fasi possono essere ri-entrate (es. tornare a brainstorming dopo review)
+- La fase `execution` e' bypassabile — `sdlc_check_prerequisites` la salta. Serve solo per piani multi-task con subagent.
 - Le specialist non avanzano lo stato — operano dentro la fase corrente
+- **Re-entry:** tornare a una fase precedente resetta le fasi successive. Es. se torni a brainstorming, plan/tdd/review sono resettate.
 
 ### Libreria: `lib/sdlc-state.sh`
 
@@ -149,21 +150,22 @@ json.dump(s, sys.stdout)
 
 sdlc_check_prerequisites() {
     local target_stage="$1"
-    # Trova l'indice della fase target
-    # Verifica che tutte le fasi precedenti siano completate
     local state
     state=$(sdlc_get_state)
     echo "$state" | python3 -c "
 import sys, json
-STAGES = ['brainstorming', 'plan', 'execution', 'tdd', 'review', 'verification', 'finish']
+# Fasi obbligatorie (execution e' bypassabile)
+REQUIRED_STAGES = ['brainstorming', 'plan', 'tdd', 'review', 'verification', 'finish']
+ALL_STAGES = ['brainstorming', 'plan', 'execution', 'tdd', 'review', 'verification', 'finish']
 s = json.load(sys.stdin)
 completed = set(s.get('completed_stages', []))
 target = '$target_stage'
-if target not in STAGES:
+if target not in ALL_STAGES:
     print('ok')
     sys.exit(0)
-idx = STAGES.index(target)
-missing = [st for st in STAGES[:idx] if st not in completed]
+idx = ALL_STAGES.index(target)
+# Check solo le fasi OBBLIGATORIE prima del target
+missing = [st for st in REQUIRED_STAGES if ALL_STAGES.index(st) < idx and st not in completed]
 if missing:
     print('missing:' + ','.join(missing))
 else:
@@ -183,11 +185,21 @@ Sostituisce: `tdd-gate` + `plan-gate` (parzialmente)
 
 ```bash
 # Regola 1: brainstorming + plan completate
-# Regola 2: tdd completata
-PREREQS=$(sdlc_check_prerequisites "tdd")
+PREREQS=$(sdlc_check_prerequisites "plan")
 if [ "$PREREQS" != "ok" ]; then
     MISSING="${PREREQS#missing:}"
-    # Block con messaggio che indica le fasi mancanti
+    # Block: "completa brainstorming e plan prima di scrivere codice"
+fi
+
+# Regola 2: tdd deve essere ATTIVA (current_stage >= tdd), non completata.
+# Il codice prod si scrive DURANTE il ciclo TDD (green phase).
+CURRENT=$(sdlc_get_current_stage)
+COMPLETED=$(sdlc_get_completed_stages)
+TDD_ACTIVE=false
+if echo ",$COMPLETED," | grep -q ",tdd,"; then TDD_ACTIVE=true; fi
+if [ "$CURRENT" = "tdd" ]; then TDD_ACTIVE=true; fi
+if [ "$TDD_ACTIVE" != "true" ]; then
+    # Block: "invoca siae-tdd prima di scrivere codice produzione"
 fi
 ```
 
@@ -318,7 +330,7 @@ hard_gate: true | false
 ## Criteri di accettazione
 
 1. File `.devforge-sdlc-stage` creato da `post-skill` quando prima skill backbone invocata
-2. `impl-gate` blocca Edit/Write su codice prod se brainstorming+plan+tdd non completate
+2. `impl-gate` blocca Edit/Write su codice prod se brainstorming+plan non completate O tdd non attiva (current/completed)
 3. `close-gate` blocca finish/stop se review+verification non completate
 4. `stage-gate` blocca skill backbone se fase precedente non completata
 5. Context injection mostra fase corrente + specialist consigliate (non catalogo completo)
@@ -326,4 +338,5 @@ hard_gate: true | false
 7. `siae-review-gate` esiste e orchestra la fase review
 8. I gate attuali (tdd-gate, plan-gate, sub-skill-gate) sono sostituiti dai 3 nuovi
 9. Zero regressioni sulla test suite
-10. `sdlc_check_prerequisites "tdd"` ritorna `missing:brainstorming,plan` se le fasi non sono completate
+10. `sdlc_check_prerequisites "tdd"` ritorna `missing:brainstorming,plan` se non completate (execution bypassata)
+11. Re-entry a fase precedente resetta le fasi successive nello stato

@@ -86,14 +86,16 @@ sdlc_check_prerequisites() {
     stages_csv=$(sdlc_get_completed_stages)
 
     python3 -c "
-STAGES = ['brainstorming', 'plan', 'execution', 'tdd', 'review', 'verification', 'finish']
+# Fasi obbligatorie (execution e' bypassabile)
+REQUIRED = ['brainstorming', 'plan', 'tdd', 'review', 'verification', 'finish']
+ALL = ['brainstorming', 'plan', 'execution', 'tdd', 'review', 'verification', 'finish']
 completed = set('$stages_csv'.split(',')) if '$stages_csv' else set()
 target = '$target_stage'
-if target not in STAGES:
+if target not in ALL:
     print('ok')
 else:
-    idx = STAGES.index(target)
-    missing = [st for st in STAGES[:idx] if st not in completed]
+    idx = ALL.index(target)
+    missing = [st for st in REQUIRED if ALL.index(st) < idx and st not in completed]
     print('missing:' + ','.join(missing) if missing else 'ok')
 " 2>/dev/null || echo "ok"
 }
