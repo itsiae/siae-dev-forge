@@ -2,8 +2,11 @@
 # DevForge Activity Logger
 # Appends structured JSONL events to ~/.claude/devforge-activity.jsonl
 
-DEVFORGE_LOG_FILE="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
-DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
+# ─── State directory (centralizzata, overridable per test/CI) ───
+DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
+
+DEVFORGE_LOG_FILE="${DEVFORGE_LOG_FILE:-${DEVFORGE_STATE_DIR}/devforge-activity.jsonl}"
+DEVFORGE_SID_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-id"
 
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
@@ -65,7 +68,7 @@ devforge_get_user() {
     # 2. Global git config
     [ -z "$user" ] && user=$(git config --global user.email 2>/dev/null)
     # 3. Session cache (set by session-start)
-    [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ] && user=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null)
+    [ -z "$user" ] && [ -f "${DEVFORGE_STATE_DIR}/.devforge-user" ] && user=$(cat "${DEVFORGE_STATE_DIR}/.devforge-user" 2>/dev/null)
     # 4. OS user
     [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
     echo "$user"
@@ -160,21 +163,21 @@ devforge_log_timed() {
         "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
 }
 
-# Set an active mode sentinel in the current working directory
+# Set an active mode sentinel in DEVFORGE_STATE_DIR
 # Usage: devforge_set_mode <mode_name> <context_string>
 # Example: devforge_set_mode "tdd" "RED|src/MyService.java|testShouldReturnEmpty"
 devforge_set_mode() {
     local mode="$1"
     local context="$2"
-    echo "$context" > "$(pwd)/.devforge-active-${mode}"
+    echo "$context" > "${DEVFORGE_STATE_DIR}/.devforge-active-${mode}"
 }
 
-# Clear an active mode sentinel from the current working directory
+# Clear an active mode sentinel from DEVFORGE_STATE_DIR
 # Usage: devforge_clear_mode <mode_name>
 # Example: devforge_clear_mode "tdd"
 devforge_clear_mode() {
     local mode="$1"
-    rm -f "$(pwd)/.devforge-active-${mode}"
+    rm -f "${DEVFORGE_STATE_DIR}/.devforge-active-${mode}"
 }
 
 # TDD State Machine — set phase explicitly
@@ -184,18 +187,18 @@ devforge_tdd_set_phase() {
     local phase="$1"
     local target="${2:-unknown}"
     local test_name="${3:-unknown}"
-    local state_file="${HOME}/.claude/.devforge-tdd-state"
+    local state_file="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
     echo "${phase}|${target}|${test_name}|$(date +%s)" > "$state_file"
 }
 
 # TDD State Machine — get current phase
 # Returns: RED, GREEN, REFACTOR, or empty string
 devforge_tdd_get_phase() {
-    local state_file="${HOME}/.claude/.devforge-tdd-state"
+    local state_file="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
     cat "$state_file" 2>/dev/null | cut -d'|' -f1
 }
 
 # TDD State Machine — reset (end of cycle or session)
 devforge_tdd_reset() {
-    rm -f "${HOME}/.claude/.devforge-tdd-state"
+    rm -f "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 }

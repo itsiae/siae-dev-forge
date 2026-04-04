@@ -15,8 +15,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
 REINJECT_EVERY=20
-COUNTER_FILE="${HOME}/.claude/.devforge-message-counter"
+COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-message-counter"
 
 # Initialize counter if missing
 if [ ! -f "$COUNTER_FILE" ]; then

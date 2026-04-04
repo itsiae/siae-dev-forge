@@ -12,7 +12,7 @@
 set -euo pipefail
 
 # Check if siae-brainstorming was invoked this session
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 if echo "$SESSION_SKILLS" | grep -qF "siae-brainstorming"; then

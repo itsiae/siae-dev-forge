@@ -30,11 +30,11 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
 # --- Session-aware enforcement + catalog re-injection ---
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 # Tool counter for periodic catalog re-injection
-TOOL_COUNTER_FILE="${HOME}/.claude/.devforge-tool-counter"
+TOOL_COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-tool-counter"
 COUNTER=$(cat "$TOOL_COUNTER_FILE" 2>/dev/null || echo "0")
 COUNTER=$((COUNTER + 1))
 echo "$COUNTER" > "$TOOL_COUNTER_FILE"
@@ -79,7 +79,7 @@ BLOCK_EOF
     SKILL_REMINDER=""
 
     # Coverage Gate — HARD BLOCK if coverage below threshold
-    COVERAGE_FILE="${HOME}/.claude/.devforge-last-coverage"
+    COVERAGE_FILE="${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
     if [ -f "$COVERAGE_FILE" ]; then
         COVERAGE_DATA=$(cat "$COVERAGE_FILE" 2>/dev/null || echo "")
         COVERAGE_PCT=$(echo "$COVERAGE_DATA" | cut -d'|' -f1)

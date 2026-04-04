@@ -22,7 +22,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
 # Timestamp file for chaining
-SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+SKILL_TS_FILE="${DEVFORGE_STATE_DIR}/.devforge-skill-start"
 
 # Read tool output from stdin (JSON with tool_name and tool_input)
 HOOK_INPUT=$(cat)
@@ -43,12 +43,9 @@ if [ -n "$SKILL_NAME" ]; then
     # invocation. It MUST be written before any logging call that can fail:
     # with set -euo pipefail, a failing devforge_log* would exit the script
     # before reaching this write, leaving the gate unable to detect the skill.
-    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
-    EXISTING_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
-    if [ -z "$EXISTING_SKILLS" ]; then
-        echo "$SKILL_NAME" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
-    elif ! echo "$EXISTING_SKILLS" | grep -qF "$SKILL_NAME"; then
-        echo "${EXISTING_SKILLS},${SKILL_NAME}" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
+    SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+    if [ ! -f "$SESSION_SKILLS_FILE" ] || ! grep -qxF "$SKILL_NAME" "$SESSION_SKILLS_FILE" 2>/dev/null; then
+        echo "$SKILL_NAME" >> "$SESSION_SKILLS_FILE"
     fi
 
     # Step 2: Logging (non-critical — || true prevents set -euo pipefail from
@@ -85,7 +82,7 @@ fi
 if [ -n "$SKILL_NAME" ]; then
     CLEAN_SKILL="${SKILL_NAME##*:}"
     if [ "$CLEAN_SKILL" = "siae-tdd" ]; then
-        TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
+        TDD_STATE_FILE="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
         CURRENT_TDD=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
         CURRENT_TDD_PHASE=$(echo "$CURRENT_TDD" | cut -d'|' -f1)
         # Only initialize if no active TDD cycle (avoid resetting mid-cycle)

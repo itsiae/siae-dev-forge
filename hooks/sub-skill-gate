@@ -61,7 +61,7 @@ if [ -z "$REQUIRED_PREREQS" ]; then
 fi
 
 # Check session skills
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 # Check each prerequisite

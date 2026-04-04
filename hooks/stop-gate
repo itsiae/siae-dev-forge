@@ -19,11 +19,11 @@ source "${PLUGIN_ROOT}/lib/logger.sh"
 INPUT=$(cat)
 
 # --- BLOCCO 2: Telemetry sincrona (F1: no background, no kill, no disown) ---
-SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
+SESSION_END_GUARD="${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 
 if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     # Close last skill via timestamp chaining
-    SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+    SKILL_TS_FILE="${DEVFORGE_STATE_DIR}/.devforge-skill-start"
     if [ -f "$SKILL_TS_FILE" ]; then
         PREV_DATA=$(cat "$SKILL_TS_FILE")
         PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
@@ -40,9 +40,9 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     fi
 
     # Emit session_end event with aggregated counters
-    SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
-    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
-    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+    SESSION_START_NS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-start-ns"
+    SESSION_COMMITS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-commits"
+    SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 
     SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
     COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
@@ -153,12 +153,12 @@ fi
 # --- BLOCCO 5: Verification gate ---
 if echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
     # Verification invoked — all checks passed
-    rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+    rm -f "${DEVFORGE_STATE_DIR}/.devforge-retro-reminded" 2>/dev/null
     exit 0
 fi
 
 # Escape hatch: after 2 consecutive blocks, allow stop with strong warning
-STOP_BLOCK_COUNTER_FILE="${HOME}/.claude/.devforge-stop-block-count"
+STOP_BLOCK_COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-stop-block-count"
 STOP_BLOCK_COUNT=$(cat "$STOP_BLOCK_COUNTER_FILE" 2>/dev/null || echo "0")
 STOP_BLOCK_COUNT=$((STOP_BLOCK_COUNT + 1))
 echo "$STOP_BLOCK_COUNT" > "$STOP_BLOCK_COUNTER_FILE"

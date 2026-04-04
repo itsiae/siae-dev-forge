@@ -175,11 +175,11 @@ EOF
 devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
 
 # Save session start timestamp for duration calculation in session_end
-echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
+echo "$START_NS" > "${DEVFORGE_STATE_DIR}/.devforge-session-start-ns"
 
 # Cache resolved user for non-git contexts (F3: fix user "unknown")
 RESOLVED_USER=$(devforge_get_user)
-echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
+echo "$RESOLVED_USER" > "${DEVFORGE_STATE_DIR}/.devforge-user"
 
 # F4: Detect PR merges in last 24h — use explicit --repo from git remote
 if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
@@ -217,7 +217,7 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 
 # Session lock: detect concurrent sessions sharing state files
-SESSION_LOCK_FILE="${HOME}/.claude/.devforge-session-lock"
+SESSION_LOCK_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-lock"
 CURRENT_PID=$$
 if [ -f "$SESSION_LOCK_FILE" ]; then
     OLD_PID=$(cat "$SESSION_LOCK_FILE" 2>/dev/null || echo "0")
@@ -232,17 +232,17 @@ echo "$CURRENT_PID" > "$SESSION_LOCK_FILE"
 # Remove session_end guard so the next stop-gate can emit session_end.
 # Without this cleanup, a stale guard from a crashed session would prevent
 # session_end telemetry from firing.
-echo "0" > "${HOME}/.claude/.devforge-session-commits"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-session-commits"
 # F2: Init last commit hash for commit_created detection
-git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null || echo "" > "${HOME}/.claude/.devforge-last-commit-hash"
-echo "" > "${HOME}/.claude/.devforge-session-skills"
-echo "0" > "${HOME}/.claude/.devforge-tool-counter"
-echo "0" > "${HOME}/.claude/.devforge-message-counter"
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+git rev-parse HEAD > "${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash" 2>/dev/null || echo "" > "${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-tool-counter"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-message-counter"
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 # Reset TDD state machine and coverage for new session
-rm -f "${HOME}/.claude/.devforge-tdd-state"
-rm -f "${HOME}/.claude/.devforge-last-coverage"
-rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-retro-reminded" 2>/dev/null
 
 # Cleanup stale sentinel files (older than 24h) in working directory
 STALE_AGE=86400

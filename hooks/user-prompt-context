@@ -69,7 +69,7 @@ for sentinel in "${SENTINEL_FILES[@]}"; do
     case "$mode_name" in
         tdd)
             # Prefer global TDD state file (updated by capture-test-result state machine)
-            TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
+            TDD_STATE_FILE="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
             if [ -f "$TDD_STATE_FILE" ]; then
                 tdd_state=$(cat "$TDD_STATE_FILE")
                 phase=$(echo "$tdd_state" | cut -d'|' -f1)

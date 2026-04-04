@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+# State directory — overridable for isolated/CI testing
+export DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
+
 # Parse arguments
 WITH_TRIGGER_REGRESSION=false
 WITH_EVALS=""
@@ -383,7 +386,7 @@ else
 fi
 
 # Check 5: post-skill emette skill_completed per skill precedente
-SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+SKILL_TS_FILE="${DEVFORGE_STATE_DIR}/.devforge-skill-start"
 echo '1710000000000000000|test-skill-prev|2. Design' > "$SKILL_TS_FILE"
 TEST_LOG="/tmp/devforge-test-skill-completed.jsonl"
 DEVFORGE_LOG_FILE_BAK="${DEVFORGE_LOG_FILE:-}"
@@ -401,7 +404,7 @@ rm -f "$TEST_LOG" "$SKILL_TS_FILE"
 [ -n "$DEVFORGE_LOG_FILE_BAK" ] && export DEVFORGE_LOG_FILE="$DEVFORGE_LOG_FILE_BAK" || unset DEVFORGE_LOG_FILE
 
 # Check 7: tdd-gate BLOCCA per file .java senza siae-tdd (hard gate v1.4.0)
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 tdd_java_output=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
 if echo "$tdd_java_output" | grep -q '"decision"' && echo "$tdd_java_output" | grep -q '"block"' && echo "$tdd_java_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/tdd-gate: BLOCCA per .java senza siae-tdd (hard gate)"
@@ -431,19 +434,31 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 10: tdd-gate silenzioso con siae-tdd già invocata
-echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-tdd_with_skill=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
-if [ "$tdd_with_skill" = "{}" ]; then
-  echo "  PASS  hooks/tdd-gate: silenzioso con siae-tdd in sessione"
+# Check 9b: tdd-gate silenzioso su IaC Terraform/HCL (validate/plan workflow)
+tdd_tf_output=$(echo '{"file_path":"modules/vpc/security-groups.tf"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_tf_output" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: silenzioso su file .tf/.hcl (IaC config)"
   hook_ok=$((hook_ok + 1))
 else
-  echo "  FAIL  hooks/tdd-gate: non silenzioso con siae-tdd in sessione"
+  echo "  FAIL  hooks/tdd-gate: non silenzioso su file .tf/.hcl"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 10: tdd-gate silenzioso con siae-tdd già invocata (fase non-INIT)
+echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+# Ensure the cycle is not in INIT, otherwise tdd-gate must block by design.
+echo "GREEN|src/UserService.java|testAlreadyGreen|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
+tdd_with_skill=$(echo '{"file_path":"src/UserService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
+if [ "$tdd_with_skill" = "{}" ]; then
+  echo "  PASS  hooks/tdd-gate: silenzioso con siae-tdd in sessione (fase GREEN)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/tdd-gate: non silenzioso con siae-tdd in sessione (fase GREEN)"
   hook_fail=$((hook_fail + 1))
 fi
 
 # Check 11: plan-gate BLOCCA senza siae-brainstorming (hard gate v1.4.0)
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 plan_output=$(echo '{"tool_name":"EnterPlanMode"}' | bash "${PLUGIN_ROOT}/hooks/plan-gate" 2>/dev/null; echo "exit:$?")
 if echo "$plan_output" | grep -q '"decision"' && echo "$plan_output" | grep -q '"block"' && echo "$plan_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/plan-gate: BLOCCA senza siae-brainstorming (hard gate)"
@@ -454,7 +469,7 @@ else
 fi
 
 # Check 12: plan-gate silenzioso con siae-brainstorming invocata
-echo "siae-brainstorming" > "${HOME}/.claude/.devforge-session-skills"
+echo "siae-brainstorming" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 plan_with_skill=$(echo '{"tool_name":"EnterPlanMode"}' | bash "${PLUGIN_ROOT}/hooks/plan-gate" 2>/dev/null)
 if [ "$plan_with_skill" = "{}" ]; then
   echo "  PASS  hooks/plan-gate: silenzioso con siae-brainstorming in sessione"
@@ -465,7 +480,7 @@ else
 fi
 
 # Check 13: pre-commit BLOCCA git commit senza siae-git-workflow (hard gate v1.4.0)
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 precommit_block_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
 if echo "$precommit_block_output" | grep -q '"decision"' && echo "$precommit_block_output" | grep -q '"block"' && echo "$precommit_block_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/pre-commit: BLOCCA git commit senza siae-git-workflow (hard gate)"
@@ -476,7 +491,7 @@ else
 fi
 
 # Check 14: pre-commit consente git commit con siae-git-workflow invocata
-echo "siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
+echo "siae-git-workflow" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 precommit_allow_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null; echo "exit:$?")
 if echo "$precommit_allow_output" | grep -q "additional_context" && echo "$precommit_allow_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/pre-commit: consente git commit con siae-git-workflow"
@@ -487,7 +502,7 @@ else
 fi
 
 # Check 15: sub-skill-gate BLOCCA skill con prerequisiti mancanti
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 subskill_block_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null; echo "exit:$?")
 if echo "$subskill_block_output" | grep -q '"decision"' && echo "$subskill_block_output" | grep -q '"block"' && echo "$subskill_block_output" | grep -q 'exit:0'; then
   echo "  PASS  hooks/sub-skill-gate: BLOCCA siae-finishing-branch senza prerequisiti"
@@ -498,7 +513,7 @@ else
 fi
 
 # Check 16: sub-skill-gate consente skill con prerequisiti soddisfatti
-echo "siae-git-env,siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
+echo "siae-git-env,siae-git-workflow" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 subskill_allow_output=$(echo '{"skill":"siae-devforge:siae-finishing-branch"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_allow_output" = "{}" ]; then
   echo "  PASS  hooks/sub-skill-gate: consente con prerequisiti soddisfatti"
@@ -509,7 +524,7 @@ else
 fi
 
 # Check 17: sub-skill-gate silenzioso per skill senza prerequisiti
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-tdd"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_noreq_output" = "{}" ]; then
   echo "  PASS  hooks/sub-skill-gate: silenzioso per skill senza prerequisiti"
@@ -520,8 +535,8 @@ else
 fi
 
 # Check 18: tdd-gate BLOCCA codice produzione in fase INIT (nessun test fallente)
-echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-echo "INIT|pending|awaiting-test|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "INIT|pending|awaiting-test|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 tdd_init_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null; echo "exit:$?")
 if echo "$tdd_init_output" | grep -q '"decision"' && echo "$tdd_init_output" | grep -q '"block"' && echo "$tdd_init_output" | grep -q 'test fallente'; then
   echo "  PASS  hooks/tdd-gate: BLOCCA codice produzione in fase INIT (state machine)"
@@ -532,7 +547,7 @@ else
 fi
 
 # Check 18b: tdd-gate CONSENTE codice produzione in fase RED (test fallente confermato)
-echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 tdd_red_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
 if [ "$tdd_red_output" = "{}" ]; then
   echo "  PASS  hooks/tdd-gate: consente codice produzione in fase RED (test fallente confermato)"
@@ -543,7 +558,7 @@ else
 fi
 
 # Check 19: tdd-gate consente codice produzione in fase GREEN
-echo "GREEN|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "GREEN|src/MyService.java|testShouldWork|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 tdd_green_output=$(echo '{"file_path":"src/MyService.java"}' | bash "${PLUGIN_ROOT}/hooks/tdd-gate" 2>/dev/null)
 if [ "$tdd_green_output" = "{}" ]; then
   echo "  PASS  hooks/tdd-gate: consente codice produzione in fase GREEN"
@@ -554,10 +569,10 @@ else
 fi
 
 # Check 19b: capture-test-result avanza INIT→RED su test FAIL (test fallente confermato)
-echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-echo "INIT|pending|awaiting-test|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "INIT|pending|awaiting-test|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 echo '{"command":"npm test","exit_code":1,"stdout":"Tests: 1 failed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-TDD_INIT_TO_RED=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+TDD_INIT_TO_RED=$(cat "${DEVFORGE_STATE_DIR}/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
 if [ "$TDD_INIT_TO_RED" = "RED" ]; then
   echo "  PASS  hooks/capture-test-result: avanza INIT→RED su test FAIL"
   hook_ok=$((hook_ok + 1))
@@ -567,10 +582,10 @@ else
 fi
 
 # Check 20: capture-test-result avanza RED→GREEN su test PASS
-echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 echo '{"command":"npm test","exit_code":0,"stdout":"Tests: 1 passed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-TDD_AFTER_PASS=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+TDD_AFTER_PASS=$(cat "${DEVFORGE_STATE_DIR}/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
 if [ "$TDD_AFTER_PASS" = "GREEN" ]; then
   echo "  PASS  hooks/capture-test-result: avanza RED→GREEN su test PASS"
   hook_ok=$((hook_ok + 1))
@@ -580,9 +595,9 @@ else
 fi
 
 # Check 21: capture-test-result mantiene RED su test FAIL
-echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${HOME}/.claude/.devforge-tdd-state"
+echo "RED|src/MyService.java|testShouldWork|$(date +%s)" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 echo '{"command":"npm test","exit_code":1,"stdout":"Tests: 1 failed"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-TDD_AFTER_FAIL=$(cat "${HOME}/.claude/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
+TDD_AFTER_FAIL=$(cat "${DEVFORGE_STATE_DIR}/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1)
 if [ "$TDD_AFTER_FAIL" = "RED" ]; then
   echo "  PASS  hooks/capture-test-result: mantiene RED su test FAIL (atteso)"
   hook_ok=$((hook_ok + 1))
@@ -592,13 +607,13 @@ else
 fi
 
 # Check 22: session-start resetta TDD state
-echo "RED|test|test|0" > "${HOME}/.claude/.devforge-tdd-state"
+echo "RED|test|test|0" > "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 # Cleanup: remove state
-rm -f "${HOME}/.claude/.devforge-tdd-state"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
 
 # Check 23: batch-checkpoint silenzioso senza siae-executing-plans
-echo "" > "${HOME}/.claude/.devforge-session-skills"
-rm -f "${HOME}/.claude/.devforge-batch-checkpoint" "${HOME}/.claude/.devforge-batch-counter"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint" "${DEVFORGE_STATE_DIR}/.devforge-batch-counter"
 batch_noskill=$(echo '{"command":"git commit -m docs(plans): mark task 1 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null)
 if [ "$batch_noskill" = "{}" ]; then
   echo "  PASS  hooks/batch-checkpoint: silenzioso senza siae-executing-plans"
@@ -609,11 +624,11 @@ else
 fi
 
 # Check 24: batch-checkpoint incrementa contatore con siae-executing-plans
-echo "siae-executing-plans" > "${HOME}/.claude/.devforge-session-skills"
-echo "0" > "${HOME}/.claude/.devforge-batch-counter"
-rm -f "${HOME}/.claude/.devforge-batch-checkpoint"
+echo "siae-executing-plans" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-batch-counter"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint"
 echo '{"command":"git commit -m docs(plans): mark task 1 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null
-BATCH_COUNT=$(cat "${HOME}/.claude/.devforge-batch-counter" 2>/dev/null || echo "0")
+BATCH_COUNT=$(cat "${DEVFORGE_STATE_DIR}/.devforge-batch-counter" 2>/dev/null || echo "0")
 if [ "$BATCH_COUNT" = "1" ]; then
   echo "  PASS  hooks/batch-checkpoint: incrementa contatore task (0→1)"
   hook_ok=$((hook_ok + 1))
@@ -623,12 +638,12 @@ else
 fi
 
 # Check 25: batch-checkpoint BLOCCA dopo 3 task
-echo "2" > "${HOME}/.claude/.devforge-batch-counter"
-rm -f "${HOME}/.claude/.devforge-batch-checkpoint"
+echo "2" > "${DEVFORGE_STATE_DIR}/.devforge-batch-counter"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint"
 # This commit is task 3 → triggers checkpoint
 echo '{"command":"git commit -m docs(plans): mark task 3 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null
 # Now checkpoint file should exist
-if [ -f "${HOME}/.claude/.devforge-batch-checkpoint" ]; then
+if [ -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint" ]; then
   # Next commit should be blocked
   batch_blocked=$(echo '{"command":"git commit -m docs(plans): mark task 4 as DONE"}' | bash "${PLUGIN_ROOT}/hooks/batch-checkpoint" 2>/dev/null)
   if echo "$batch_blocked" | grep -q '"decision"' && echo "$batch_blocked" | grep -q '"block"'; then
@@ -645,9 +660,9 @@ fi
 
 # Check 26: batch-reset sblocca dopo feedback utente (bypass age check with old mtime)
 # Set checkpoint mtime to 30 seconds ago to bypass the 10-second minimum age
-touch -t "$(date -v-30S '+%Y%m%d%H%M.%S' 2>/dev/null || date -d '30 seconds ago' '+%Y%m%d%H%M.%S' 2>/dev/null)" "${HOME}/.claude/.devforge-batch-checkpoint" 2>/dev/null || true
+touch -t "$(date -v-30S '+%Y%m%d%H%M.%S' 2>/dev/null || date -d '30 seconds ago' '+%Y%m%d%H%M.%S' 2>/dev/null)" "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint" 2>/dev/null || true
 batch_reset_output=$(bash "${PLUGIN_ROOT}/hooks/batch-reset" 2>/dev/null)
-if [ ! -f "${HOME}/.claude/.devforge-batch-checkpoint" ]; then
+if [ ! -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint" ]; then
   echo "  PASS  hooks/batch-reset: sblocca checkpoint dopo feedback utente"
   hook_ok=$((hook_ok + 1))
 else
@@ -656,13 +671,13 @@ else
 fi
 
 # Cleanup batch state
-rm -f "${HOME}/.claude/.devforge-batch-checkpoint" "${HOME}/.claude/.devforge-batch-counter"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-batch-checkpoint" "${DEVFORGE_STATE_DIR}/.devforge-batch-counter"
 
 # Check 27: capture-test-result estrae coverage da Jest/Vitest output
-echo "siae-tdd" > "${HOME}/.claude/.devforge-session-skills"
-rm -f "${HOME}/.claude/.devforge-last-coverage"
+echo "siae-tdd" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 echo '{"command":"npx vitest run --coverage","exit_code":0,"stdout":"All files | 85.71 | 100 | 75 | 85.71"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-COV_VITEST=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+COV_VITEST=$(cat "${DEVFORGE_STATE_DIR}/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
 if [ "$COV_VITEST" = "85.71" ]; then
   echo "  PASS  hooks/capture-test-result: estrae coverage 85.71% da Vitest output"
   hook_ok=$((hook_ok + 1))
@@ -672,9 +687,9 @@ else
 fi
 
 # Check 28: capture-test-result estrae coverage da pytest-cov output
-rm -f "${HOME}/.claude/.devforge-last-coverage"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 echo '{"command":"pytest --cov","exit_code":0,"stdout":"TOTAL    150     30    80%"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-COV_PYTEST=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+COV_PYTEST=$(cat "${DEVFORGE_STATE_DIR}/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
 if [ "$COV_PYTEST" = "80" ]; then
   echo "  PASS  hooks/capture-test-result: estrae coverage 80% da pytest-cov"
   hook_ok=$((hook_ok + 1))
@@ -684,9 +699,9 @@ else
 fi
 
 # Check 29: capture-test-result estrae coverage da Go test output
-rm -f "${HOME}/.claude/.devforge-last-coverage"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 echo '{"command":"go test -cover","exit_code":0,"stdout":"coverage: 72.5% of statements"}' | bash "${PLUGIN_ROOT}/hooks/capture-test-result" 2>/dev/null
-COV_GO=$(cat "${HOME}/.claude/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
+COV_GO=$(cat "${DEVFORGE_STATE_DIR}/.devforge-last-coverage" 2>/dev/null | cut -d'|' -f1)
 if [ "$COV_GO" = "72.5" ]; then
   echo "  PASS  hooks/capture-test-result: estrae coverage 72.5% da Go test"
   hook_ok=$((hook_ok + 1))
@@ -696,8 +711,8 @@ else
 fi
 
 # Check 30: pre-commit BLOCCA se coverage < 70%
-echo "siae-git-workflow" > "${HOME}/.claude/.devforge-session-skills"
-echo "65|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
+echo "siae-git-workflow" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "65|$(date +%s)|npx vitest" > "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 cov_block_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_block_output" | grep -q '"decision"' && echo "$cov_block_output" | grep -q '"block"' && echo "$cov_block_output" | grep -q '65%'; then
   echo "  PASS  hooks/pre-commit: BLOCCA commit con coverage 65% < 70%"
@@ -708,7 +723,7 @@ else
 fi
 
 # Check 31: pre-commit consente commit se coverage >= soglia (85% > 80% feature, > 70% altro)
-echo "85|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
+echo "85|$(date +%s)|npx vitest" > "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 cov_allow_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_allow_output" | grep -q "additional_context" && ! echo "$cov_allow_output" | grep -q '"block"'; then
   echo "  PASS  hooks/pre-commit: consente commit con coverage 85% >= soglia"
@@ -719,7 +734,7 @@ else
 fi
 
 # Check 32: pre-commit consente commit senza coverage file (graceful)
-rm -f "${HOME}/.claude/.devforge-last-coverage"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 cov_nocov_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_nocov_output" | grep -q "additional_context" && ! echo "$cov_nocov_output" | grep -q '"block"'; then
   echo "  PASS  hooks/pre-commit: consente commit senza coverage data (graceful)"
@@ -730,7 +745,7 @@ else
 fi
 
 # Cleanup coverage state
-rm -f "${HOME}/.claude/.devforge-last-coverage"
+rm -f "${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
 
 # Check: user-prompt-context esiste ed è eseguibile
 if [ -x "${PLUGIN_ROOT}/hooks/user-prompt-context" ]; then
@@ -768,8 +783,10 @@ fi
 
 # Check: devforge_set_mode/clear_mode helpers
 TEST_DIR=$(mktemp -d)
+DEVFORGE_STATE_DIR_BAK="$DEVFORGE_STATE_DIR"
+export DEVFORGE_STATE_DIR="$TEST_DIR"
 source "${PLUGIN_ROOT}/lib/logger.sh"
-(cd "$TEST_DIR" && devforge_set_mode "test" "hello-world")
+devforge_set_mode "test" "hello-world"
 if [ -f "${TEST_DIR}/.devforge-active-test" ] && grep -q "hello-world" "${TEST_DIR}/.devforge-active-test"; then
   echo "  PASS  logger.sh: devforge_set_mode crea sentinel file"
   hook_ok=$((hook_ok + 1))
@@ -777,7 +794,7 @@ else
   echo "  FAIL  logger.sh: devforge_set_mode non crea sentinel file"
   hook_fail=$((hook_fail + 1))
 fi
-(cd "$TEST_DIR" && devforge_clear_mode "test")
+devforge_clear_mode "test"
 if [ ! -f "${TEST_DIR}/.devforge-active-test" ]; then
   echo "  PASS  logger.sh: devforge_clear_mode rimuove sentinel file"
   hook_ok=$((hook_ok + 1))
@@ -786,6 +803,7 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 rm -rf "$TEST_DIR"
+export DEVFORGE_STATE_DIR="$DEVFORGE_STATE_DIR_BAK"
 
 # Check: user-prompt-context emette JSON valido con sentinel
 TEST_DIR=$(mktemp -d)
@@ -841,9 +859,9 @@ else
 fi
 
 # Check 13: pre-commit tool counter incrementa e reset da session-start
-echo "0" > "${HOME}/.claude/.devforge-tool-counter"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-tool-counter"
 echo '{"command":"ls"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" >/dev/null 2>&1
-COUNTER_VAL=$(cat "${HOME}/.claude/.devforge-tool-counter" 2>/dev/null || echo "0")
+COUNTER_VAL=$(cat "${DEVFORGE_STATE_DIR}/.devforge-tool-counter" 2>/dev/null || echo "0")
 if [ "$COUNTER_VAL" = "1" ]; then
   echo "  PASS  hooks/pre-commit: tool counter incrementa (0 -> 1)"
   hook_ok=$((hook_ok + 1))
@@ -853,7 +871,7 @@ else
 fi
 # Verify session-start resets counter
 DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
-COUNTER_AFTER_RESET=$(cat "${HOME}/.claude/.devforge-tool-counter" 2>/dev/null || echo "X")
+COUNTER_AFTER_RESET=$(cat "${DEVFORGE_STATE_DIR}/.devforge-tool-counter" 2>/dev/null || echo "X")
 if [ "$COUNTER_AFTER_RESET" = "0" ]; then
   echo "  PASS  hooks/session-start: resetta tool counter a 0"
   hook_ok=$((hook_ok + 1))
@@ -863,8 +881,8 @@ else
 fi
 
 # Cleanup session state
-echo "" > "${HOME}/.claude/.devforge-session-skills"
-echo "0" > "${HOME}/.claude/.devforge-tool-counter"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-tool-counter"
 
 echo ""
 echo "  Hook totali: $((hook_ok + hook_fail)) | OK: ${hook_ok} | FAIL: ${hook_fail}"
@@ -985,11 +1003,11 @@ GUARD_LOG="/tmp/devforge-test-guard.jsonl"
 rm -f "$GUARD_LOG"
 export DEVFORGE_LOG_FILE="$GUARD_LOG"
 # Cleanup any stale guard
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 # Setup session state
-echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
-echo "1" > "${HOME}/.claude/.devforge-session-commits"
-echo "test-skill" > "${HOME}/.claude/.devforge-session-skills"
+echo "$(date +%s%N 2>/dev/null || echo 0)" > "${DEVFORGE_STATE_DIR}/.devforge-session-start-ns"
+echo "1" > "${DEVFORGE_STATE_DIR}/.devforge-session-commits"
+echo "test-skill" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 # Invoke stop-gate twice — session_end should appear only once
 stop_input='{"messages":[{"role":"assistant","content":"tutto fatto"}]}'
 echo "$stop_input" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true
@@ -1005,15 +1023,15 @@ else
   echo "  FAIL  session_end guard: emesso ${SESSION_END_COUNT} volte (atteso 1)"
   telfunc_fail=$((telfunc_fail + 1))
 fi
-rm -f "$GUARD_LOG" "${HOME}/.claude/.devforge-session-start-ns" "${HOME}/.claude/.devforge-session-commits" "${HOME}/.claude/.devforge-session-skills"
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+rm -f "$GUARD_LOG" "${DEVFORGE_STATE_DIR}/.devforge-session-start-ns" "${DEVFORGE_STATE_DIR}/.devforge-session-commits" "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 
 # Test: post-skill with empty SKILL_NAME produces no events
 EMPTY_SKILL_LOG="/tmp/devforge-test-empty-skill.jsonl"
 rm -f "$EMPTY_SKILL_LOG"
 export DEVFORGE_LOG_FILE="$EMPTY_SKILL_LOG"
 # Setup a previous skill timestamp to verify it does NOT get closed
-echo '1710000000000000000|should-not-close|2. Design' > "${HOME}/.claude/.devforge-skill-start"
+echo '1710000000000000000|should-not-close|2. Design' > "${DEVFORGE_STATE_DIR}/.devforge-skill-start"
 # Send input without skill field — SKILL_NAME should be empty
 empty_output=$(echo '{"not_a_skill":"true"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" 2>/dev/null; echo "exit:$?")
 if echo "$empty_output" | grep -q 'exit:0'; then
@@ -1028,19 +1046,19 @@ else
   echo "  FAIL  post-skill: crashed with empty SKILL_NAME"
   telfunc_fail=$((telfunc_fail + 1))
 fi
-rm -f "$EMPTY_SKILL_LOG" "${HOME}/.claude/.devforge-skill-start"
+rm -f "$EMPTY_SKILL_LOG" "${DEVFORGE_STATE_DIR}/.devforge-skill-start"
 
 # Test: session-start cleans up stale guard directory
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
-mkdir -p "${HOME}/.claude/.devforge-session-end-guard"  # simulate stale guard
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
+mkdir -p "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"  # simulate stale guard
 DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
-if [ ! -d "${HOME}/.claude/.devforge-session-end-guard" ]; then
+if [ ! -d "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard" ]; then
   echo "  PASS  session-start: cleans up stale session_end guard"
   telfunc_ok=$((telfunc_ok + 1))
 else
   echo "  FAIL  session-start: did not clean up stale session_end guard"
   telfunc_fail=$((telfunc_fail + 1))
-  rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+  rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 fi
 
 # Test: session-start injects VERSION_STATUS into additional_context JSON
@@ -1057,10 +1075,10 @@ fi
 F5_LOG="/tmp/devforge-test-f5.jsonl"
 rm -f "$F5_LOG"
 export DEVFORGE_LOG_FILE="$F5_LOG"
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
-echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
-echo "0" > "${HOME}/.claude/.devforge-session-commits"
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
+echo "$(date +%s%N 2>/dev/null || echo 0)" > "${DEVFORGE_STATE_DIR}/.devforge-session-start-ns"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-session-commits"
+echo "" > "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 F5_OUTPUT=$(echo "" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true)
 if [ -z "$F5_OUTPUT" ] && grep -q '"event":"session_end"' "$F5_LOG" 2>/dev/null; then
   echo "  PASS  stop-gate F5: empty stdin emits session_end, no verification JSON"
@@ -1069,8 +1087,8 @@ else
   echo "  FAIL  stop-gate F5: empty stdin — output='${F5_OUTPUT}', session_end=$(grep -c session_end "$F5_LOG" 2>/dev/null || echo 0)"
   telfunc_fail=$((telfunc_fail + 1))
 fi
-rm -f "$F5_LOG" "${HOME}/.claude/.devforge-session-start-ns" "${HOME}/.claude/.devforge-session-commits" "${HOME}/.claude/.devforge-session-skills"
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+rm -f "$F5_LOG" "${DEVFORGE_STATE_DIR}/.devforge-session-start-ns" "${DEVFORGE_STATE_DIR}/.devforge-session-commits" "${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+rm -rf "${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 
 # Test F2: commit_created detection via HEAD hash comparison
 F2_LOG="/tmp/devforge-test-f2.jsonl"
@@ -1078,12 +1096,12 @@ rm -f "$F2_LOG"
 export DEVFORGE_LOG_FILE="$F2_LOG"
 REAL_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "abc123")
 # Same hash → should NOT emit commit_created
-echo "$REAL_HEAD" > "${HOME}/.claude/.devforge-last-commit-hash"
+echo "$REAL_HEAD" > "${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash"
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
 F2_COUNT_SAME=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
 # Different hash → should emit commit_created
-echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash"
-echo "0" > "${HOME}/.claude/.devforge-session-commits"
+echo "0000000000000000000000000000000000000000" > "${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash"
+echo "0" > "${DEVFORGE_STATE_DIR}/.devforge-session-commits"
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
 F2_COUNT_DIFF=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
 if [ "$F2_COUNT_SAME" -eq 0 ] && [ "$F2_COUNT_DIFF" -eq 1 ]; then
@@ -1093,10 +1111,10 @@ else
   echo "  FAIL  post-commit-review F2: same_hash_events=$F2_COUNT_SAME (want 0), diff_hash_events=$F2_COUNT_DIFF (want 1)"
   telfunc_fail=$((telfunc_fail + 1))
 fi
-rm -f "$F2_LOG" "${HOME}/.claude/.devforge-last-commit-hash" "${HOME}/.claude/.devforge-session-commits"
+rm -f "$F2_LOG" "${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash" "${DEVFORGE_STATE_DIR}/.devforge-session-commits"
 
 # Test F3: user cache fallback in devforge_get_user
-F3_CACHE="${HOME}/.claude/.devforge-user"
+F3_CACHE="${DEVFORGE_STATE_DIR}/.devforge-user"
 F3_BACKUP=""
 [ -f "$F3_CACHE" ] && F3_BACKUP=$(cat "$F3_CACHE")
 echo "cached-test-user@siae.it" > "$F3_CACHE"

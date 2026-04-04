@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-STATE_DIR="${HOME}/.claude"
+STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
 RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
 
 # Read tool input from stdin (Claude passes JSON with tool_input)
@@ -91,7 +91,7 @@ fi
 
 # --- TDD State Machine: auto-advance phase based on test result ---
 # Only if siae-tdd is active in this session
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
