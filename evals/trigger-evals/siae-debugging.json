@@ -18,6 +18,17 @@
   {"query": "Il servizio e' lento solo in produzione. In locale risponde in 50ms, in prod 8 secondi. Stesso codice, stesso DB.", "should_trigger": true},
   {"query": "I test di regressione Appium falliscono su BrowserStack ma passano in locale. Timeout sul login screen.", "should_trigger": true},
 
+  {"query": "Il calcolo delle quote autore restituisce importi negativi per 3 titolari su 200. Non dovrebbe essere possibile.", "should_trigger": true},
+  {"query": "Mancano 1.247 opere nella riconciliazione tra sistema legacy e catalogo nuovo. I conteggi non coincidono.", "should_trigger": true},
+  {"query": "Dopo il job silver-to-gold ci sono record duplicati nella tabella ripartizioni. In bronze erano unici.", "should_trigger": true},
+  {"query": "Il totale ripartizioni in collaudo non coincide con il totale nel legacy. Differenza di 45.000 euro.", "should_trigger": true},
+  {"query": "Lo stato del contratto finisce a null dopo la chiamata al servizio di rinnovo. Dovrebbe essere ATTIVO.", "should_trigger": true},
+  {"query": "I numeri che escono dal report trimestrale non tornano: la somma delle quote per territorio supera il 100%.", "should_trigger": true},
+  {"query": "Nel Glue job di ingestion, alcune righe CSV vengono silenziosamente droppate. Il count in output e' inferiore all'input.", "should_trigger": true},
+  {"query": "Il campo data_scadenza risulta null per tutti i contratti importati dopo il 15 marzo. Prima funzionava.", "should_trigger": true},
+  {"query": "La riconciliazione SPORT mostra che 89 autori hanno ruoli duplicati nello stesso contratto. Stato impossibile.", "should_trigger": true},
+  {"query": "Divergenza tra legacy e nuovo sistema: in legacy ci sono 12.000 opere attive, nel catalogo nuovo 11.847. Serve capire cosa manca.", "should_trigger": true},
+
   {"query": "Vorrei aggiungere un nuovo endpoint per esportare le ripartizioni in formato Excel. Come lo progettiamo?", "should_trigger": false},
   {"query": "Come dovremmo strutturare il nuovo microservizio per le licenze di sincronizzazione?", "should_trigger": false},
   {"query": "Puoi fare review della mia implementazione del metodo calcolaQuoteAutore? Ho pushato su feature/SPORT-890.", "should_trigger": false},
