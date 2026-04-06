@@ -1,14 +1,18 @@
 ---
 name: siae-debugging
 description: >
-  Esegue root cause investigation prima di proporre qualsiasi fix.
-  Trigger: bug, errore, error, incident, test che fallisce, test failure,
-  comportamento inatteso, eccezione, exception, stacktrace, stack trace, crash,
-  errore di compilazione, build failure, 500, timeout, NullPointerException,
-  TypeError, non funziona, rotto, fallisce, non va, perche succede,
-  cosa e andato storto, regressione, regression, CrashLoopBackOff,
-  OutOfMemoryError, connection refused, CORS, loop infinito, deploy fallito,
-  pipeline rotta, il test fallisce, cosa non va, debug.
+  Use when there is a failure, regression, wrong output, env-only issue, or
+  the user asks to investigate why something breaks, crashes, times out, slows down,
+  or works locally but fails in collaudo/prod. ALWAYS invoke FIRST when failure
+  symptoms are present, BEFORE any domain skill (iac, data-engineering, frontend).
+  Trigger: debug, investiga, root cause, RCA, non capisco perche, solo in collaudo,
+  solo in produzione, down, lento, discrepanza, bug, errore, error, incident,
+  test che fallisce, test failure, eccezione, exception, stacktrace, crash,
+  build failure, 500, timeout, NullPointerException, TypeError, non funziona,
+  rotto, fallisce, non va, perche succede, cosa e andato storto, regressione,
+  regression, CrashLoopBackOff, OutOfMemoryError, connection refused, CORS,
+  loop infinito, deploy fallito, pipeline rotta, cosa non va, funziona in locale
+  ma non in collaudo, dopo il deploy, performance degradata.
 backbone_role: specialist
 backbone_stage: null
 hard_gate: false
