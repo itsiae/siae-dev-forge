@@ -2,11 +2,15 @@
 name: siae-debugging
 description: >
   Esegue root cause investigation prima di proporre qualsiasi fix.
-  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso,
-  eccezione, stacktrace, crash, errore di compilazione, build failure, 500,
-  timeout, NullPointerException, TypeError, non funziona, rotto, fallisce, non va.
+  Trigger: bug, errore, error, incident, test che fallisce, test failure,
+  comportamento inatteso, eccezione, exception, stacktrace, stack trace, crash,
+  errore di compilazione, build failure, 500, timeout, NullPointerException,
+  TypeError, non funziona, rotto, fallisce, non va, perche succede,
+  cosa e andato storto, regressione, regression, CrashLoopBackOff,
+  OutOfMemoryError, connection refused, CORS, loop infinito, deploy fallito,
+  pipeline rotta, il test fallisce, cosa non va, debug.
 backbone_role: specialist
-backbone_stage: verification
+backbone_stage: null
 hard_gate: false
 ---
 

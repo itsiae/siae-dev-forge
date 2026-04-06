@@ -139,4 +139,12 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     fi
 fi
 
+# Suggest debugging skill when test fails (regardless of TDD state)
+if [ "$EXIT_CODE" != "0" ]; then
+    SUGGESTED_FILE="${DEVFORGE_STATE_DIR}/.devforge-suggested-skills"
+    if [ ! -f "$SUGGESTED_FILE" ] || ! grep -qxF "siae-debugging" "$SUGGESTED_FILE" 2>/dev/null; then
+        echo "siae-debugging" >> "$SUGGESTED_FILE"
+    fi
+fi
+
 exit 0
