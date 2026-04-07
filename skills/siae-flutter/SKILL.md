@@ -5,9 +5,6 @@ description: >
   ObjectBox, auth Amplify/Cognito, Firebase, networking Dio, code generation.
   Trigger: Flutter, Dart, Riverpod, ObjectBox, Get_it, Amplify, Cognito, app mobile,
   widget, build_runner, Dio, Crashlytics, deep link, geolocation.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 # SIAE Flutter — DevForge

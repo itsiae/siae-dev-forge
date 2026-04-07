@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
+STATE_DIR="${HOME}/.claude"
 
 # ── Git State ───────────────────────────────────────────────────
 # Only if we're in a git repo
@@ -74,12 +74,7 @@ fi
 # ── Session Stats ───────────────────────────────────────────────
 STATS_SECTION=""
 COMMITS=$(cat "${STATE_DIR}/.devforge-session-commits" 2>/dev/null || echo "0")
-SKILLS_FILE="${STATE_DIR}/.devforge-session-skills"
-if [ -f "$SKILLS_FILE" ]; then
-    SKILLS=$(wc -l < "$SKILLS_FILE" | tr -d ' ')
-else
-    SKILLS=0
-fi
+SKILLS=$(cat "${STATE_DIR}/.devforge-session-skills" 2>/dev/null | grep -c '.' || echo "0")
 MSG_COUNT=$(cat "${STATE_DIR}/.devforge-message-counter" 2>/dev/null || echo "?")
 START_NS=$(cat "${STATE_DIR}/.devforge-session-start-ns" 2>/dev/null || echo "0")
 
@@ -116,16 +111,6 @@ if [ -f "$PLAN_SENTINEL" ] && [ -s "$PLAN_SENTINEL" ]; then
     PLAN_SECTION="Active plan: ${PLAN_CONTENT}"
 fi
 
-# ── Suggested Skills ────────────────────────────────────────────
-SUGGEST_SECTION=""
-SUGGESTED_FILE="${STATE_DIR}/.devforge-suggested-skills"
-if [ -f "$SUGGESTED_FILE" ] && [ -s "$SUGGESTED_FILE" ]; then
-    SUGGESTED=$(cat "$SUGGESTED_FILE" | tr '\n' ', ' | sed 's/,$//')
-    SUGGEST_SECTION="Skill suggerite: ${SUGGESTED} (invoca per procedere)"
-    # Clear after showing (one-shot suggestion)
-    rm -f "$SUGGESTED_FILE"
-fi
-
 # ── Build output ────────────────────────────────────────────────
 # Skip if nothing to report (e.g. not in a git repo, no stats)
 SECTIONS=""
@@ -134,7 +119,6 @@ SECTIONS=""
 [ -n "$STATS_SECTION" ] && SECTIONS="${SECTIONS}${STATS_SECTION}\\n"
 [ -n "$TEST_SECTION" ] && SECTIONS="${SECTIONS}${TEST_SECTION}\\n"
 [ -n "$PLAN_SECTION" ] && SECTIONS="${SECTIONS}${PLAN_SECTION}\\n"
-[ -n "$SUGGEST_SECTION" ] && SECTIONS="${SECTIONS}${SUGGEST_SECTION}\\n"
 
 if [ -z "$SECTIONS" ]; then
     exit 0

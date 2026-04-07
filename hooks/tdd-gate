@@ -7,11 +7,6 @@
 # Timeout:  5s — Solo check file flat + estensione
 # Formato:  decision:"block" se siae-tdd non invocata (HARD GATE)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
-# ─── GATE CONTRACT ───
-# Behavior:  fail-open
-# Requires:  SESSION_SKILLS_FILE (state)
-# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
-# On-missing: proceed (nessun path = non e' file edit)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -60,12 +55,12 @@ if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
 fi
 
 # Check if siae-tdd was invoked this session
-SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
-if echo "$SESSION_SKILLS" | grep -qxF "siae-tdd"; then
+if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     # siae-tdd invoked — check TDD phase state machine
-    TDD_STATE_FILE="${DEVFORGE_STATE_DIR}/.devforge-tdd-state"
+    TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
     TDD_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
     TDD_PHASE=$(echo "$TDD_STATE" | cut -d'|' -f1)
 

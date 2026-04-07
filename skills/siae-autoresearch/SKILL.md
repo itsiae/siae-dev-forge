@@ -6,9 +6,6 @@ description: >
   ottimizza prompt, /forge-autoresearch, analizza performance skill.
   NON usare per: scrivere nuove skill (usa siae-writing-skills), eseguire eval singoli
   (usa runner.py direttamente), debug skill (usa siae-debugging).
-backbone_role: support
-backbone_stage: null
-hard_gate: false
 ---
 
 # SIAE Autoresearch — Ottimizzazione Iterativa Skill

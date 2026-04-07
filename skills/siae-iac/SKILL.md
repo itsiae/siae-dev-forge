@@ -5,9 +5,6 @@ description: >
   infrastruttura AWS.
   Trigger: modulo Terraform, terragrunt, file .tf, .hcl, VPC, ECS, Lambda,
   DynamoDB table, S3 bucket, security group, API Gateway, infrastruttura AWS.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 # SIAE Infrastructure as Code

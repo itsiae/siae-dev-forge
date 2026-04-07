@@ -5,9 +5,6 @@ description: >
   sessione corrente.
   Trigger: /forge-implement, implementa il piano, dispatcha task, lancia implementer,
   subagent, controller-subagent, orchestrazione implementazione.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 # SIAE Subagent Development — Orchestratore Implementazione

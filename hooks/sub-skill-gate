@@ -7,11 +7,6 @@
 # Timeout:  5s — Check prerequisiti da mappa statica
 # Formato:  decision:"block" se REQUIRED SUB-SKILL prerequisite non invocate
 # History:  v1.4.0 NEW (determinismo SDLC — enforcement catena skill)
-# ─── GATE CONTRACT ───
-# Behavior:  fail-closed
-# Requires:  SESSION_SKILLS_FILE (state)
-# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
-# On-missing: block (prerequisiti non verificabili)
 # ─────────────────────────────────────────────────────────────────
 #
 # Mappa prerequisiti: skill che DEVONO essere invocate PRIMA di quella corrente.
@@ -35,49 +30,69 @@ fi
 # Strip plugin prefix if present (e.g., "siae-devforge:siae-tdd" → "siae-tdd")
 SKILL_NAME="${SKILL_NAME##*:}"
 
-# ─── SDLC Stage-Based Gate ───
-# Replaces hardcoded PREREQ_MAP with SDLC backbone stage checks.
-# Backbone skills: checked via SDLC_BACKBONE_MAP
-# Specialist skills: stage read from frontmatter backbone_stage
-# Support skills: no gate, always allowed
+# ─── Prerequisite Map ───
+# Format: "skill_name=prereq1,prereq2"
+# Only hard prerequisites (must be invoked BEFORE), not during-execution deps.
+PREREQ_MAP=(
+    "siae-git-workflow=siae-git-env"
+    "siae-finishing-branch=siae-git-env,siae-git-workflow"
+    "siae-git-worktrees=siae-git-env"
+    "siae-service-logic-map=siae-microservices-map"
+    "siae-writing-plans=siae-brainstorming"
+    "siae-executing-plans=siae-writing-plans"
+    "siae-requesting-review=siae-finishing-branch"
+)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-source "${PLUGIN_ROOT}/lib/logger.sh"
-source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
+# Find prerequisites for current skill
+REQUIRED_PREREQS=""
+for entry in "${PREREQ_MAP[@]}"; do
+    MAP_SKILL="${entry%%=*}"
+    MAP_PREREQS="${entry#*=}"
+    if [ "$MAP_SKILL" = "$SKILL_NAME" ]; then
+        REQUIRED_PREREQS="$MAP_PREREQS"
+        break
+    fi
+done
 
-# Look up backbone stage for this skill
-SKILL_STAGE=$(sdlc_lookup_stage "$SKILL_NAME")
-
-# If not a backbone skill, check if it's a specialist with a stage
-if [ -z "$SKILL_STAGE" ]; then
-    SKILL_STAGE=$(node -e "
-const {findSkillsInDir} = require('$PLUGIN_ROOT/lib/skills-core');
-const skills = findSkillsInDir('$PLUGIN_ROOT/skills');
-const s = skills.find(s => s.name === '$SKILL_NAME');
-console.log(s && s.backbone_stage ? s.backbone_stage : '');
-" 2>/dev/null || echo "")
-fi
-
-# No stage = support skill, no gate
-if [ -z "$SKILL_STAGE" ]; then
+# No prerequisites defined — allow
+if [ -z "$REQUIRED_PREREQS" ]; then
     echo '{}'
     exit 0
 fi
 
-# Check prerequisites for the target stage
-PREREQS=$(sdlc_check_prerequisites "$SKILL_STAGE")
-if [ "$PREREQS" != "ok" ]; then
-    MISSING="${PREREQS#missing:}"
-    devforge_log "stage_gate" "blocked" "{\"skill\":\"$SKILL_NAME\",\"stage\":\"$SKILL_STAGE\",\"missing\":\"$MISSING\"}"
-    cat <<EOF
-{
-  "decision": "block",
-  "reason": "DevForge Stage Gate — BLOCCATO. La skill ${SKILL_NAME} (fase: ${SKILL_STAGE}) richiede prima: ${MISSING}. Segui il backbone SDLC."
-}
-EOF
+# Check session skills
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+# Check each prerequisite
+MISSING_PREREQS=""
+IFS=',' read -ra PREREQS <<< "$REQUIRED_PREREQS"
+for prereq in "${PREREQS[@]}"; do
+    if ! echo "$SESSION_SKILLS" | grep -qF "$prereq"; then
+        if [ -z "$MISSING_PREREQS" ]; then
+            MISSING_PREREQS="$prereq"
+        else
+            MISSING_PREREQS="${MISSING_PREREQS}, ${prereq}"
+        fi
+    fi
+done
+
+# All prerequisites met — allow
+if [ -z "$MISSING_PREREQS" ]; then
+    echo '{}'
     exit 0
 fi
 
-echo '{}'
+# Prerequisites missing — BLOCK
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_log "sub_skill_gate" "blocked" "{\"skill\":\"${SKILL_NAME}\",\"missing_prereqs\":\"${MISSING_PREREQS}\"}"
+
+cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge Sub-Skill Gate — BLOCCATO. La skill ${SKILL_NAME} richiede come prerequisito: ${MISSING_PREREQS}. Invoca prima le skill mancanti, poi riprova ${SKILL_NAME}."
+}
+EOF
 exit 0

@@ -4,9 +4,6 @@ description: >
   Stabilisce il framework di discovery e invocazione skill DevForge all'inizio
   di ogni conversazione.
   Trigger: inizio sessione, apertura nuovo progetto, prima interazione.
-backbone_role: support
-backbone_stage: null
-hard_gate: false
 ---
 
 ## SUBAGENT-STOP — Gate Check
