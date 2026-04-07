@@ -8,9 +8,6 @@ description: >
   silver-to-gold, data quality, crawler, batch notturno, Iceberg, CDC,
   delta window, migrare dati da legacy, costruire pipeline, orchestrazione batch,
   implementa Medallion, ingestion file CSV.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 # SIAE Data Engineering

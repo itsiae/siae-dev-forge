@@ -6,9 +6,6 @@ description: >
   "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
   "quali servizi gestiscono X", impact analysis, /forge-logic-build,
   /forge-logic-search.
-backbone_role: specialist
-backbone_stage: brainstorming
-hard_gate: false
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map

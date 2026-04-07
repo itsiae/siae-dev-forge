@@ -11,7 +11,7 @@ FAIL=0
 
 # Helper: svuota session skills (simula siae-tdd NON invocata)
 reset_session() {
-    echo "" > "${DEVFORGE_STATE_DIR:-${HOME}/.claude}/.devforge-session-skills"
+    echo "" > "${HOME}/.claude/.devforge-session-skills"
 }
 
 # --- Test 1: file esterno al repo → ALLOW ---

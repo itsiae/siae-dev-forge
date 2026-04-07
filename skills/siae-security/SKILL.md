@@ -4,9 +4,6 @@ description: >
   Applica policy di sicurezza SIAE (OWASP Top 10, AWS security, PII copyright).
   Trigger: codice security-sensitive, gestione credenziali, IAM policy, encryption,
   dati personali autori/artisti, codici ISWC/ISRC.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 ```

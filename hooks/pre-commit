@@ -8,11 +8,6 @@
 # Formato:  decision:"block" se siae-git-workflow non invocata (HARD GATE)
 #           additional_context per quality gate (se skill presente)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK per git commit (determinismo SDLC)
-# ─── GATE CONTRACT ───
-# Behavior:  fail-closed (git commit), fail-open (checkout -b)
-# Requires:  SESSION_SKILLS_FILE (state), PLUGIN_ROOT (env)
-# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
-# On-missing: block commit (fail-closed)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -35,11 +30,11 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 
 # --- Session-aware enforcement + catalog re-injection ---
-SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
 # Tool counter for periodic catalog re-injection
-TOOL_COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-tool-counter"
+TOOL_COUNTER_FILE="${HOME}/.claude/.devforge-tool-counter"
 COUNTER=$(cat "$TOOL_COUNTER_FILE" 2>/dev/null || echo "0")
 COUNTER=$((COUNTER + 1))
 echo "$COUNTER" > "$TOOL_COUNTER_FILE"
@@ -71,8 +66,7 @@ escape_for_json() {
 # Route to appropriate check based on command
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     # Check if siae-git-workflow was invoked this session — HARD GATE
-    # Format: one skill per line (post D1 migration); -x = exact line match
-    if ! echo "$SESSION_SKILLS" | grep -qxF "siae-git-workflow"; then
+    if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
         devforge_log "pre_commit" "blocked" "{\"command\":\"${TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
         cat <<BLOCK_EOF
 {
@@ -85,7 +79,7 @@ BLOCK_EOF
     SKILL_REMINDER=""
 
     # Coverage Gate — HARD BLOCK if coverage below threshold
-    COVERAGE_FILE="${DEVFORGE_STATE_DIR}/.devforge-last-coverage"
+    COVERAGE_FILE="${HOME}/.claude/.devforge-last-coverage"
     if [ -f "$COVERAGE_FILE" ]; then
         COVERAGE_DATA=$(cat "$COVERAGE_FILE" 2>/dev/null || echo "")
         COVERAGE_PCT=$(echo "$COVERAGE_DATA" | cut -d'|' -f1)

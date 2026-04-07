@@ -4,9 +4,6 @@ description: >
   Guida la creazione e il miglioramento di skill DevForge.
   Trigger: nuova skill DevForge, migliora skill, scrivi skill, behaviour change,
   template skill, progetta skill.
-backbone_role: support
-backbone_stage: null
-hard_gate: false
 ---
 
 # Scrivere Skill DevForge Efficaci — Guida per Autori

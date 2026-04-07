@@ -15,7 +15,7 @@
 set -euo pipefail
 
 BATCH_SIZE=3
-STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
+STATE_DIR="${HOME}/.claude"
 BATCH_COUNTER_FILE="${STATE_DIR}/.devforge-batch-counter"
 BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"
 

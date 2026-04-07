@@ -50,11 +50,6 @@
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' close-gate",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-gate",
             "timeout": 15
           }
@@ -65,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' impl-gate",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
             "timeout": 5
           }
         ]
@@ -75,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' impl-gate",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
             "timeout": 5
           }
         ]
@@ -105,11 +100,6 @@
       {
         "matcher": "",
         "hooks": [
-          {
-            "type": "command",
-            "command": "DEVFORGE_CLOSE_GATE_STOP=1 bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' close-gate",
-            "timeout": 5
-          },
           {
             "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' stop-gate",

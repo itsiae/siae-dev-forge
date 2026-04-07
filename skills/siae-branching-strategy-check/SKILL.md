@@ -7,9 +7,6 @@ description: >
   Trigger: "branching check", "/branching-strategy-check",
   "PR verso main", "verifica branching strategy", "violazioni branching",
   "default branch errato", "release branch".
-backbone_role: support
-backbone_stage: null
-hard_gate: false
 ---
 
 # Branching Strategy Check — DevForge

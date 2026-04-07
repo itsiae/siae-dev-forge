@@ -5,9 +5,6 @@ description: >
   Trigger: "pronto per PR", "finisco il branch", "ready to merge", "apro la PR",
   gh pr create, git push + PR, apertura pull request, branch completato,
   implementazione finita, lavoro completato su branch, pre-merge checklist.
-backbone_role: backbone
-backbone_stage: finish
-hard_gate: true
 ---
 
 # SIAE Finishing Branch — Chiusura Sicura di un Branch

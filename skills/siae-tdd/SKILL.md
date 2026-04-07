@@ -6,9 +6,6 @@ description: >
   Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di
   codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi
   funzione, implementa, codifica, sviluppa.
-backbone_role: backbone
-backbone_stage: tdd
-hard_gate: true
 ---
 
 # SIAE TDD — Test-Driven Development

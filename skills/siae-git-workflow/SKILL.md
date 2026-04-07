@@ -6,9 +6,6 @@ description: >
   branch, naming branch, conventional commits, pre-flight card, inizio feature,
   preparazione deploy, promozione ambiente, hotfix, rollback, push remoto,
   tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
-backbone_role: specialist
-backbone_stage: finish
-hard_gate: false
 ---
 
 # SIAE Git Workflow

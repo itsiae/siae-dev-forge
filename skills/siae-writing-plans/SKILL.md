@@ -5,9 +5,6 @@ description: >
   e bite-sized.
   Trigger: scrivi piano implementativo, trasforma design in task, decomposizione
   step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
-backbone_role: backbone
-backbone_stage: plan
-hard_gate: true
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo

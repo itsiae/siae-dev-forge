@@ -6,9 +6,6 @@ description: >
   Trigger: ho ricevuto feedback su una PR, il reviewer ha lasciato commenti,
   CHANGES REQUESTED, commenti su PR, review ricevuta, fix richiesti dal reviewer,
   rispondi ai commenti, il reviewer ha chiesto modifiche.
-backbone_role: specialist
-backbone_stage: review
-hard_gate: false
 ---
 
 # SIAE Receiving Review — Elaborare il Feedback di Code Review

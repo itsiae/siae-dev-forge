@@ -5,9 +5,6 @@ description: >
   Trigger: automatizza test, setup Playwright, setup Cypress, test E2E,
   test di regressione automatici, CI/CD pipeline test, GitHub Actions test,
   /forge-automate.
-backbone_role: specialist
-backbone_stage: tdd
-hard_gate: false
 ---
 
 # SIAE Automation — E2E Test Generation & Xray Sync

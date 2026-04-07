@@ -5,9 +5,6 @@ description: >
   Trigger: review costi AWS, stima impatto PR, ottimizzazione risorse,
   tag compliance, budget analysis, /forge-cost, /forge-finops, Infracost,
   Steampipe, Cloud Custodian, risorse idle, sprechi.
-backbone_role: specialist
-backbone_stage: execution
-hard_gate: false
 ---
 
 # SIAE FinOps — Cost Visibility & Governance
