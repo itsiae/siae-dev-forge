@@ -7,6 +7,10 @@
 # Timeout:  5s — Telemetry + verification block
 # Formato:  decision:"block" se completion claim senza siae-verification (HARD GATE)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-open
+# Requires:  SESSION_SKILLS_FILE (state), session timestamps
+# On-missing: proceed (telemetria persa accettabile, bloccare stop no)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -19,11 +23,11 @@ source "${PLUGIN_ROOT}/lib/logger.sh"
 INPUT=$(cat)
 
 # --- BLOCCO 2: Telemetry sincrona (F1: no background, no kill, no disown) ---
-SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
+SESSION_END_GUARD="${DEVFORGE_STATE_DIR}/.devforge-session-end-guard"
 
 if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     # Close last skill via timestamp chaining
-    SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
+    SKILL_TS_FILE="${DEVFORGE_STATE_DIR}/.devforge-skill-start"
     if [ -f "$SKILL_TS_FILE" ]; then
         PREV_DATA=$(cat "$SKILL_TS_FILE")
         PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
@@ -40,16 +44,17 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     fi
 
     # Emit session_end event with aggregated counters
-    SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
-    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
-    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+    SESSION_START_NS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-start-ns"
+    SESSION_COMMITS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-commits"
+    SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 
     SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
     COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
     SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
     if [ -n "$SKILLS_LIST" ]; then
-        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
+        # Format: one skill per line (post D1 migration)
+        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | sort -u | wc -l | tr -d ' ')
     else
         SKILLS_USED_COUNT=0
     fi
@@ -153,12 +158,12 @@ fi
 # --- BLOCCO 5: Verification gate ---
 if echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
     # Verification invoked — all checks passed
-    rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+    rm -f "${DEVFORGE_STATE_DIR}/.devforge-retro-reminded" 2>/dev/null
     exit 0
 fi
 
 # Escape hatch: after 2 consecutive blocks, allow stop with strong warning
-STOP_BLOCK_COUNTER_FILE="${HOME}/.claude/.devforge-stop-block-count"
+STOP_BLOCK_COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-stop-block-count"
 STOP_BLOCK_COUNT=$(cat "$STOP_BLOCK_COUNTER_FILE" 2>/dev/null || echo "0")
 STOP_BLOCK_COUNT=$((STOP_BLOCK_COUNT + 1))
 echo "$STOP_BLOCK_COUNT" > "$STOP_BLOCK_COUNTER_FILE"

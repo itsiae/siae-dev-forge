@@ -5,6 +5,9 @@ description: >
   in cui il piano e' stato scritto (per la stessa sessione usa siae-subagent-development).
   Trigger: sessione nuova/separata con piano in docs/plans/, batch execution
   richiesta, piano con REQUIRED SUB-SKILL siae-executing-plans.
+backbone_role: backbone
+backbone_stage: execution
+hard_gate: false
 ---
 
 # SIAE Executing Plans — Esecuzione Piano in Sessione Separata

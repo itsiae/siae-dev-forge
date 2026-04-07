@@ -4,6 +4,9 @@ description: >
   Review cieca: riceve SOLO la spec, trova il codice autonomamente, valuta come auditor ostile.
   Trigger: "blind review", "review cieca", "audit spec", "verifica spec vs codice",
   "review senza diff", /forge-blind-review, REQUIRED SUB-SKILL da siae-finishing-branch.
+backbone_role: specialist
+backbone_stage: review
+hard_gate: false
 ---
 
 # SIAE Blind Review — Audit Ostile Spec vs Codice

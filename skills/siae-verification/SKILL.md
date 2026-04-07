@@ -6,6 +6,9 @@ description: >
   Trigger: prima di commit, PR, task complete, dichiarazioni di successo, "fatto",
   "fixato", "funziona", "completato", "pronto", "implementato", "risolto",
   "test passano", "build verde", "tutto ok", "finito".
+backbone_role: backbone
+backbone_stage: verification
+hard_gate: true
 ---
 
 # SIAE Verification — Protocollo di Verifica Pre-Completamento

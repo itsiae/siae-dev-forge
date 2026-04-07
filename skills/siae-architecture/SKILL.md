@@ -7,6 +7,9 @@ description: >
   per un sistema esistente o nuovo.
   Esempi: "valutiamo CQRS", "microservizi o monolite?", "crea il C4",
   "definisci i bounded context", "HLD per il sistema X".
+backbone_role: specialist
+backbone_stage: brainstorming
+hard_gate: false
 ---
 
 ```

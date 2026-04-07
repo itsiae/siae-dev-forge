@@ -1,10 +1,22 @@
 ---
 name: siae-debugging
 description: >
-  Esegue root cause investigation prima di proporre qualsiasi fix.
-  Trigger: bug, errore, incident, test che fallisce, comportamento inatteso,
-  eccezione, stacktrace, crash, errore di compilazione, build failure, 500,
-  timeout, NullPointerException, TypeError, non funziona, rotto, fallisce, non va.
+  Use when the user reports a bug, failure, regression, wrong output, data discrepancy,
+  missing/duplicate records, impossible state, env-specific issue, or asks to investigate
+  the root cause of why data or behaviour is wrong. ALWAYS invoke FIRST when failure
+  or data anomaly symptoms are present, BEFORE any domain skill.
+  Trigger: debug, debuggare, investigate, investigare, RCA, root cause,
+  non capisco perche, errore, crash, timeout, 500, test che fallisce, regressione,
+  output sbagliato, valori errati, dati incoerenti, discrepanza dati,
+  numeri che non tornano, record mancanti, record duplicati, conteggio sbagliato,
+  totale errato, riconciliazione, mismatch, null inatteso, stato impossibile,
+  solo in collaudo, solo in produzione, works locally but fails elsewhere,
+  non funziona, rotto, fallisce, non va, CrashLoopBackOff, OutOfMemoryError,
+  connection refused, CORS, deploy fallito, pipeline rotta, performance degradata,
+  importi negativi, quote negative, divergenza legacy.
+backbone_role: specialist
+backbone_stage: null
+hard_gate: false
 ---
 
 # SIAE Debugging Sistematico

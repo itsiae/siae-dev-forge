@@ -3,6 +3,9 @@ name: siae-git-env
 description: >
   Rileva la disponibilita' di GitHub CLI (gh) e stabilisce GH_MODE o FALLBACK_MODE.
   Trigger: REQUIRED SUB-SKILL da siae-git-workflow e siae-finishing-branch.
+backbone_role: support
+backbone_stage: null
+hard_gate: false
 ---
 
 # siae-git-env — GitHub CLI Environment Check

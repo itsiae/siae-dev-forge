@@ -4,6 +4,9 @@ description: >
   Stabilisce il contesto progetto all'inizio di una sessione SIAE.
   Trigger: inizio sessione, apertura nuovo progetto, cambio contesto.
 user-invocable: false
+backbone_role: support
+backbone_stage: null
+hard_gate: false
 ---
 
 ```

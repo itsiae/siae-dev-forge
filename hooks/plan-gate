@@ -7,15 +7,20 @@
 # Timeout:  5s — Solo check file flat
 # Formato:  decision:"block" se siae-brainstorming non invocata (HARD GATE)
 # History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
+# ─── GATE CONTRACT ───
+# Behavior:  fail-closed
+# Requires:  SESSION_SKILLS_FILE (state)
+# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-session-skills
+# On-missing: block (plan mode senza brainstorming = violazione)
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 # Check if siae-brainstorming was invoked this session
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
-if echo "$SESSION_SKILLS" | grep -qF "siae-brainstorming"; then
+if echo "$SESSION_SKILLS" | grep -qxF "siae-brainstorming"; then
     echo '{}'
     exit 0
 fi

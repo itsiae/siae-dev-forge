@@ -27,7 +27,7 @@ else
 fi
 
 # F2: Detect new commit by comparing HEAD hash with saved hash (robust for heredoc/complex commands)
-LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash"
+LAST_HASH_FILE="${DEVFORGE_STATE_DIR}/.devforge-last-commit-hash"
 CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
 SAVED_HASH=$(cat "$LAST_HASH_FILE" 2>/dev/null || echo "")
 
@@ -51,7 +51,7 @@ if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$SAVED_HASH" ]; then
         "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}}"
 
     # Increment session commit counter (atomic via temp file)
-    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
+    SESSION_COMMITS_FILE="${DEVFORGE_STATE_DIR}/.devforge-session-commits"
     CURRENT_COMMITS=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
     echo $((CURRENT_COMMITS + 1)) > "${SESSION_COMMITS_FILE}.tmp" && mv "${SESSION_COMMITS_FILE}.tmp" "$SESSION_COMMITS_FILE"
 

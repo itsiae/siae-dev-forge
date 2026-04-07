@@ -4,6 +4,9 @@ description: >
   Mappa la struttura di un codebase e genera CODEBASE_MAP.md per onboarding.
   Trigger: mappa codebase, struttura progetto, CODEBASE_MAP.md, /forge-map,
   analizza architettura repo, onboarding su repo, come e organizzato il codice.
+backbone_role: specialist
+backbone_stage: brainstorming
+hard_gate: false
 ---
 
 # SIAE Codebase Map

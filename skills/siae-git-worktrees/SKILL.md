@@ -5,6 +5,9 @@ description: >
   Trigger: prima di eseguire un piano implementativo, setup workspace isolato,
   implementazione su branch separato, /forge-implement, inizio feature
   multi-commit, isola lavoro, worktree, branch dedicato per implementazione.
+backbone_role: support
+backbone_stage: null
+hard_gate: false
 ---
 
 # SIAE Git Worktrees

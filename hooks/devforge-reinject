@@ -15,8 +15,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+DEVFORGE_STATE_DIR="${DEVFORGE_STATE_DIR:-${HOME}/.claude}"
 REINJECT_EVERY=20
-COUNTER_FILE="${HOME}/.claude/.devforge-message-counter"
+COUNTER_FILE="${DEVFORGE_STATE_DIR}/.devforge-message-counter"
 
 # Initialize counter if missing
 if [ ! -f "$COUNTER_FILE" ]; then
@@ -35,9 +36,38 @@ if [ $((COUNT % REINJECT_EVERY)) -ne 0 ]; then
     exit 0
 fi
 
-# ── Build compact DevForge context ──────────────────────────────
+# ── Build phase-based DevForge context ─────────────────────────
 
-# Generate dynamic skill catalog
+# Source SDLC state
+source "${PLUGIN_ROOT}/lib/logger.sh"
+source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
+
+CURRENT=$(sdlc_get_current_stage)
+COMPLETED=$(sdlc_get_completed_stages)
+
+# Get specialists for current stage
+SPECIALISTS=""
+if [ "$CURRENT" != "idle" ] && command -v node >/dev/null 2>&1; then
+    SPECIALISTS=$(sdlc_get_stage_specialists "$CURRENT" "$PLUGIN_ROOT" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
+fi
+
+# Determine open gates
+GATES=""
+if [ "$(sdlc_is_stage_completed "brainstorming")" != "yes" ]; then
+    GATES="brainstorming richiesto prima di qualsiasi implementazione"
+elif [ "$(sdlc_is_stage_completed "tdd")" != "yes" ] && [ "$CURRENT" != "tdd" ]; then
+    GATES="tdd richiesto prima di modificare codice produzione"
+elif [ "$(sdlc_is_stage_completed "review")" != "yes" ]; then
+    GATES="review richiesto prima di chiudere"
+fi
+
+# Build compact SDLC context
+SDLC_LINES="Fase SDLC attuale: ${CURRENT}"
+[ -n "$COMPLETED" ] && SDLC_LINES="${SDLC_LINES}\\nFasi completate: ${COMPLETED}"
+[ -n "$GATES" ] && SDLC_LINES="${SDLC_LINES}\\nGate aperti: ${GATES}"
+[ -n "$SPECIALISTS" ] && SDLC_LINES="${SDLC_LINES}\\nSkill specialistiche consigliate: ${SPECIALISTS}"
+
+# Generate skill catalog (still needed for skill discovery)
 skill_catalog=""
 if command -v node >/dev/null 2>&1; then
     skill_catalog=$(node "${PLUGIN_ROOT}/lib/skills-core.js" "${PLUGIN_ROOT}" 2>/dev/null || echo "")
@@ -59,24 +89,16 @@ escape_for_json() {
 
 skill_catalog_escaped=$(escape_for_json "$skill_catalog")
 
-# Compact context: essential rules + full catalog
-# Not the full using-devforge skill — just enough to keep Claude on track
-COMPACT_CONTEXT="<EXTREMELY_IMPORTANT>\\n\
-🔨 DevForge Context Refresh (messaggio #${COUNT})\\n\\n\
-**AZIONE IMMEDIATA:** Prima di rispondere a questo messaggio, stampa su una riga separata esattamente: '🔄 DevForge re-iniettato (msg #${COUNT})'\\n\\n\
-**OBBLIGO:** Per OGNI messaggio utente, scansiona il Dynamic Skill Catalog sotto. Se trovi un match anche parziale, invoca la skill PRIMA di rispondere.\\n\\n\
-**Git Operations Intercept:** Prima di QUALSIASI git command (checkout, commit, push, merge, tag, gh pr create), verifica di aver invocato siae-git-workflow. Prima di aprire una PR, verifica siae-finishing-branch.\\n\\n\
-**EnterPlanMode Intercept:** Prima di EnterPlanMode, verifica che il brainstorming sia stato fatto (siae-brainstorming).\\n\\n\
-**Verification:** Prima di dichiarare qualsiasi task fatto/completato/fixato, invoca siae-verification.\\n\\n\
-**Red Flags — STOP se pensi:**\\n\
-- 'E solo una domanda semplice' → Le domande sono task. Controlla le skill.\\n\
-- 'Posso controllare git velocemente' → Carica siae-git-workflow prima.\\n\
-- 'La skill e eccessiva' → Le cose semplici diventano complesse. Usala.\\n\
-- 'E solo un commit veloce' → Ogni commit senza siae-git-workflow = naming sbagliato.\\n\\n\
-**Dynamic Skill Catalog:**\\n\\n\
-${skill_catalog_escaped}\\n\\n\
-**Disambiguazione:** bug/errore/stacktrace → siae-debugging | git op → siae-git-workflow | C4/HLD/CQRS → siae-architecture | Terraform/ECS → siae-iac | Glue/PySpark/ETL → siae-data-engineering | Playwright/Cypress/E2E → siae-automation | brainstorming SEMPRE per QUALSIASI task implementativo (feature, bug fix, refactoring, config — escluse pure operazioni git).\\n\
-</EXTREMELY_IMPORTANT>"
+COMPACT_CONTEXT="<IMPORTANT>\\n\
+DevForge SDLC Context (msg #${COUNT})\\n\\n\
+${SDLC_LINES}\\n\\n\
+**3 Regole Madre:**\\n\
+1. Nessuna implementazione senza brainstorming + plan\\n\
+2. Nessun codice produzione senza tdd\\n\
+3. Nessuna chiusura senza review + verification + finish\\n\\n\
+**Skill Catalog:**\\n\\n\
+${skill_catalog_escaped}\\n\
+</IMPORTANT>"
 
 cat <<EOF
 {

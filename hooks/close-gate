@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# PreToolUse hook: BLOCCA chiusura (PR, push, stop) senza review + verification
+# ─── GATE CONTRACT ───
+# Behavior:  fail-closed per operazioni di chiusura
+# Requires:  SDLC state (review + verification completate)
+# Reads:     ${DEVFORGE_STATE_DIR}/.devforge-sdlc-stage
+# On-missing: block (regola 3 violata)
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+HOOK_INPUT=$(cat)
+
+# Detect if this is a close operation:
+# - Bash with git push/gh pr create/gh pr merge
+# - Stop event (called from Stop hook via hooks.json — DEVFORGE_CLOSE_GATE_STOP=1)
+TOOL_INPUT=$(echo "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+
+IS_CLOSE_OP=false
+if echo "$TOOL_INPUT" | grep -qE 'git push|gh pr create|gh pr merge'; then
+    IS_CLOSE_OP=true
+fi
+# Stop hook sets this env var to distinguish from Bash invocations
+if [ "${DEVFORGE_CLOSE_GATE_STOP:-}" = "1" ]; then
+    IS_CLOSE_OP=true
+fi
+
+if [ "$IS_CLOSE_OP" != "true" ]; then
+    echo '{}'
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh"
+source "${PLUGIN_ROOT}/lib/sdlc-state.sh"
+
+# Regola 3: review + verification + finish devono essere completate prima di push/PR.
+MISSING_STAGES=""
+for stage in review verification finish; do
+    if [ "$(sdlc_is_stage_completed "$stage")" != "yes" ]; then
+        MISSING_STAGES="${MISSING_STAGES:+$MISSING_STAGES, }$stage"
+    fi
+done
+
+if [ -n "$MISSING_STAGES" ]; then
+    devforge_log "close_gate" "blocked" "{\"missing_stages\":\"$MISSING_STAGES\"}"
+    cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge SDLC Gate — BLOCCATO. Per chiudere (push/PR), devi completare: ${MISSING_STAGES}. Segui il backbone: review → verification → poi finish."
+}
+EOF
+    exit 0
+fi
+
+echo '{}'
+exit 0

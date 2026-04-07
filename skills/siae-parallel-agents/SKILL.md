@@ -4,6 +4,9 @@ description: >
   Dispatcha agenti paralleli per debug o task indipendenti simultanei (2+).
   Trigger: failure indipendenti, task paralleli, fix paralleli, investigazione
   multi-dominio, agenti paralleli, bug indipendenti, moduli rotti contemporaneamente.
+backbone_role: specialist
+backbone_stage: execution
+hard_gate: false
 ---
 
 # SIAE Parallel Agents

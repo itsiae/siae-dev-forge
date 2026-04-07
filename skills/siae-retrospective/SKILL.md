@@ -6,6 +6,9 @@ description: >
   Trigger: fine sessione, lezioni apprese, cosa ho imparato, retrospettiva,
   salva per la prossima volta, /forge-retro, apertura PR, REQUIRED da post-commit-review
   hook su gh pr create.
+backbone_role: support
+backbone_stage: null
+hard_gate: false
 ---
 
 # SIAE Retrospective — Lezioni Apprese Cross-Sessione

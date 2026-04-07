@@ -4,6 +4,9 @@ description: >
   Applica standard di codifica SIAE multi-stack (Java, TypeScript, Python, HCL).
   Trigger: scrittura codice Java, TypeScript, Python, HCL/Terraform, naming
   conventions, struttura progetto, logging, error handling.
+backbone_role: specialist
+backbone_stage: execution
+hard_gate: false
 ---
 
 ```
