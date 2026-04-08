@@ -21,6 +21,9 @@
     },
     {
       "serverName": "siae-sport-oracle"
+    },
+    {
+      "serverName": "figma"
     }
   ],
   "attribution": {
@@ -61,6 +64,10 @@
     },
     {
       "repo": "itsiae/siae-sport-mcp",
+      "source": "github"
+    },
+    {
+      "repo": "figma/figma-developer-mcp",
       "source": "github"
     }
   ]
