@@ -69,6 +69,10 @@
     {
       "repo": "figma/figma-developer-mcp",
       "source": "github"
+    },
+    {
+      "repo": "anthropics/claude-plugins-official",
+      "source": "github"
     }
   ]
 }
