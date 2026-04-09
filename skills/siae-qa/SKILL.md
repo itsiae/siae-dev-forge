@@ -35,9 +35,9 @@ Stai per generare TC senza aver completato Phase 0 (Smart Req Typing)?
 FERMATI. Il tipo di requisito determina le domande contestuali — senza Phase 0 i TC
 coprono solo cio' che e' scritto negli AC, non cio' che puo' rompersi.
 
-Stai per scrivere TC senza aver compilato la matrice scenari (4a)?
-FERMATI. Tutti e 4 le categorie (positivi, edge, negativi, profilazioni) devono essere
-valutate PRIMA di generare qualsiasi TC.
+Stai per scrivere TC senza aver costruito la Coverage Matrix (Fase 1.5)?
+FERMATI. M_FINAL deve esistere PRIMA di generare qualsiasi TC.
+Ogni TC deve essere tracciabile a una riga di M_FINAL — nessun TC orfano, nessuna riga orfana.
 </EXTREMELY-IMPORTANT>
 
 > **Tipo:** Rigid | **Fase SDLC:** 5. Testing / QA
@@ -83,10 +83,35 @@ Prima di iniziare, verifica quale tier e' disponibile e annuncialo nella pre-fli
 
 | Tier | Condizione | Comportamento |
 |------|------------|---------------|
-| **Tier 1 — MCP Atlassian** | MCP `atlassian` disponibile | Legge AC da Jira, legge Confluence, crea TC e Test Plan in Xray via MCP, raccoglie chiavi Jira assegnate |
-| **Tier 3 — CSV export** | MCP non disponibile | Genera CSV semicolon-separated in formato Xray-importabile, import manuale, mappatura chiavi richiesta post-import |
+| **Tier 1 — Story Jira** | MCP `atlassian` disponibile | Legge AC da Jira, legge Confluence, crea TC e Test Plan in Xray via MCP, raccoglie chiavi Jira assegnate |
+| **Tier 2 — Documento utente** | Utente fornisce documento (spec, PDF, markdown, testo con requisiti grezzi) | Deriva AC dai requisiti, chiede validazione esplicita al developer, genera CSV o crea TC via MCP se disponibile |
+| **Tier 3 — Conversazione** | Nessuna fonte strutturata disponibile | Raccoglie AC via domande guidate una alla volta, genera CSV semicolon-separated importabile in Xray |
 
-Ogni operazione deve esplicitare il tier usato nella pre-flight card di apertura.
+Il tier viene scelto esplicitamente dall'utente nell'Opening Dialog. Ogni operazione esplicita il tier attivo nella pre-flight card.
+
+---
+
+## OPENING DIALOG [OBBLIGATORIO — prima di tutto]
+
+All'avvio mostra sempre questo dialog. **Non procedere senza risposta esplicita dell'utente.**
+
+```
+──────────────────────────────────────────────
+Cosa vuoi fare?
+
+[1] Story Jira       — ho un ticket PROJ-XXX da cui leggere i requisiti
+[2] Documento        — ho una specifica/doc da allegare o incollare
+[3] Conversazione    — descrivo i requisiti direttamente in chat
+──────────────────────────────────────────────
+```
+
+Attendi risposta prima di procedere.
+Non avviare la PRE-FLIGHT CARD finché l'utente non ha scelto il tier.
+**Non fare inferenze, non suggerire, non pre-selezionare. Solo chiedere.**
+
+Anti-razionalizzazione inline:
+- "So già il tier dal contesto, salto il dialog" → Non inferire. Chiedi sempre.
+- "L'utente ha già detto Tier 2, è confermato" → Il dialog non è opzionale. Mostralo e aspetta.
 
 ---
 
@@ -96,12 +121,12 @@ Prima di iniziare il workflow, mostra questa card con il tier rilevato:
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-qa |
 |:---|
-| 📡 Tier attivo: `Tier 1 MCP / Tier 3 CSV` · 🎫 Story Jira: `PROJ-XXX` |
-| ✅ AC disponibili: `Si / No` · 📚 Confluence: `Spazio QA trovato / Non configurato` |
+| 📡 Tier attivo: `Tier 1 Jira / Tier 2 Documento / Tier 3 Conversazione` · 🎫 Story/Fonte: `PROJ-XXX / [nome doc] / [topic]` |
+| ✅ AC: `Disponibili (Tier 1) / Da validare (Tier 2) / Da raccogliere (Tier 3)` · 📚 Confluence: `Spazio QA trovato / Non configurato` |
 | **▼ Azione** |
-| 1. 📋 Lettura AC da Jira + avvio workflow QA → `PROJ-XXX` |
-| 💡 Perche': Il tier determina come vengono sincronizzati i TC |
-| 🚫 Se NO: Se Tier 3: esporto CSV importabile manualmente in Xray |
+| 1. 📋 Avvio workflow QA con tier scelto nell'Opening Dialog |
+| 💡 Perche': Il tier determina come vengono letti i requisiti e sincronizzati i TC |
+| 🚫 Se NO: Tier 2/3 → genero CSV importabile manualmente in Xray |
 
 ---
 
@@ -123,6 +148,13 @@ Mostra la Req Profile Card. Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione 
 - **Se MEDIUM/LOW:** chiedi conferma con scelta multipla.
 
 ### 0c — Lancia le domande del tree contestuale
+
+**Prima di lanciare le domande:** usa Read tool per leggere `reference/question-trees.md`.
+Se il file non è trovato: segnala `⚠️ question-trees.md non trovato — uso domande generiche` e usa le seguenti domande di fallback:
+1. "Ci sono valori di lookup enumerati non elencati negli AC?"
+2. "Ci sono campi obbligatori la cui assenza deve produrre un errore esplicito?"
+3. "Ci sono regole condizionali dipendenti da più campi contemporaneamente?"
+4. "Ci sono ruoli utente con comportamenti distinti per questa funzionalità?"
 
 Usa le domande in `reference/question-trees.md` per il tipo confermato.
 
@@ -152,12 +184,211 @@ Non procedere alla Fase 2 senza AC o contesto sufficiente.
    - Se ancora non basta → segui i link a pagine Confluence collegate alla Story
    - Se ancora insufficiente → chiedi al developer con domande mirate UNA ALLA VOLTA
 
+**Tier 2 (Documento):**
+
+Il documento contiene **requisiti grezzi** — non AC strutturati. Formato libero,
+potenzialmente molti requisiti, nessun template garantito.
+
+1. Se il documento non è ancora presente in chat: chiedi all'utente di incollare il testo,
+   allegare il file o indicare il contenuto (qualunque formato: prosa, lista, tabelle,
+   normativa, capitolato, specifica tecnica)
+2. Leggi l'intero documento e **deriva** gli AC candidati dai requisiti
+   (step interpretativo: un requisito → 1+ AC testabili, espressi come comportamenti verificabili)
+   Granularità: per requisiti funzionali standard massimo 3 AC. Per specifiche **enumerative** (mapping CSV, lookup tables, campi con valori fissi, specifiche di migrazione dati): ogni valore/campo atomico è un AC distinto — il cap non si applica. Se il documento ha tabelle campo→valore o lookup esplicite, ogni riga della tabella è un AC separato.
+3. Presenta la lista AC derivati in forma numerata al developer per revisione
+4. **[HARD-GATE]** Attendi validazione/correzione esplicita dall'utente:
+   l'utente conferma, modifica o integra gli AC prima che il workflow proceda.
+   Non procedere alla Fase 2 senza questa conferma.
+   Se l'utente non risponde o risponde in modo ambiguo: **blocca e chiedi di nuovo esplicitamente** — "Confermato il testo: 'AC confermati' prima di procedere."
+   Un silenzio o un "ok" generico non è una conferma valida.
+5. Se Story ID o titolo feature sono assenti dal documento: chiedi esplicitamente
+   (necessario per collegare i TC a Xray)
+6. Gli AC confermati diventano l'input equivalente degli AC Jira per tutte le fasi successive
+
 **Tier 3 (no Jira):**
 - Chiedi la Story ID (es. `PROJ-123`) e il titolo della User Story
 - Poi chiedi gli AC con domande mirate, una alla volta, finche' il contesto e' completo
 - Esempio prima domanda: "Descrivi il comportamento principale che questa Story deve implementare."
 
 **Output atteso Fase 1:** lista strutturata di AC, ognuno identificabile come comportamento testabile.
+
+---
+
+### Fase 1.5 — Coverage Matrix Builder [OBBLIGATORIA — prima di generare qualsiasi TC]
+
+Dopo la lettura degli AC/requisiti (Fase 1), prima di qualsiasi generazione TC,
+costruisci la **Coverage Matrix (M_FINAL)** tramite 3 agenti in parallelo.
+**M_FINAL è l'unico driver della generazione TC in Fase 4b.**
+
+<EXTREMELY-IMPORTANT>
+Non avviare Fase 4b senza M_FINAL completata e approvata da Gate #1 (J1_MATRIX + J2_MATRIX).
+Generare TC dagli AC grezzi senza passare per la matrice produce TC generici.
+La matrice forza la sistematicità: ogni campo, ogni lookup, ogni combinazione di regola di business
+diventa una riga esplicita PRIMA che esista un TC.
+
+Stai per saltare questa fase perché i requisiti "sembrano semplici"?
+FERMATI. Ogni spec con lookup tables, campi obbligatori/opzionali o regole condizionali
+richiede la matrice. Senza di essa la generazione è narrativa, non sistematica.
+</EXTREMELY-IMPORTANT>
+
+#### Formato Coverage Matrix (schema M_FINAL)
+
+Ogni riga della matrice corrisponde esattamente a **1 TC da generare**:
+
+| matrix_row_id | entity | field | condition | test_type | source_ref |
+|---------------|--------|-------|-----------|-----------|------------|
+| ID univoco | entità (es. GENERAL_DATA) | campo (es. CATEGORY) | condizione concreta (es. `"F"→feature`) | POS/NEG/EDGE/ROLE | AC o paragrafo |
+
+#### Regole di esplosione (da campo a righe di matrice)
+
+| Tipo campo | Righe generate | Esempio |
+|-----------|----------------|---------|
+| **Lookup enumerato** (N valori) | N righe POS (1 per valore) + 1 riga NEG ("fuori lookup") | CATEGORY F/S/null → 3 POS + 1 NEG |
+| **Booleano/flag** | POS(true) + POS(false) + NEG(non parseable) | EVERGREEN data→true, null→false |
+| **Obbligatorio (mandatory)** | POS(valido) + NEG(assente/null) | DURATION mancante → errore |
+| **Opzionale (optional)** | POS(valido) + EDGE(null accettato) | ORDER null → ok |
+| **Formato (data/regex/ISO)** | POS(corretto) + NEG(formato errato) + EDGE(null se optional) | RELEASED ISO8601 |
+| **Valore fisso business** | POS(= costante) + NEG(≠ costante) | UNIQUEREF2 = "074" |
+| **Regola composita** (N campi interdipendenti) | Prodotto cartesiano ridotto (solo combinazioni con esito distinto, max 16) | account × IPI → 4 combinazioni |
+| **Cross-sezione** (chiave condivisa tra CSV/entità) | NEG per ogni sezione dipendente (chiave assente) | UNIQUEREF1 assente in TITLES |
+
+#### Serializzazione input per gli agenti (OBBLIGATORIA prima del lancio)
+
+Prima di invocare i 3 agenti, serializza i dati estratti dalla Fase 1:
+
+```
+ENTITÀ E CAMPI:
+[entità 1]:
+  - campo: TYPE | mandatory/optional | dominio: lookup CueType
+  - campo: CATEGORY | optional | lookup: F/S/null
+  ...
+[entità 2]:
+  ...
+
+LOOKUP TABLES:
+CATEGORY: F, S, null (Documentary)
+PRODUCTNAMETYPE: OT, SE, EP, AT, ET
+...
+
+REGOLE DI BUSINESS COMPOSTE:
+1. ACCOUNTNUMBER assente AND IPINAMENUMBER assente → genera nuovo IR
+2. PERFORMING SHARE NUM/DEN → re-proporzionamento in %
+...
+
+VINCOLI REFERENZIALI:
+UNIQUEREF1 è chiave condivisa tra: GENERAL_DATA, TITLES, NUMBERS, CONTRIBUTORS, WORK
+...
+```
+
+**Formato riga output atteso (schema uniforme obbligatorio per tutti e 3 gli agenti):**
+
+| matrix_row_id | entity | field | condition | test_type | source_ref |
+|---|---|---|---|---|---|
+| A-001 | GENERAL_DATA | CATEGORY | `"F"` → tipo feature | POS | AC-03 |
+| A-002 | GENERAL_DATA | CATEGORY | `"S"` → tipo serie | POS | AC-03 |
+| A-003 | GENERAL_DATA | CATEGORY | valore fuori lookup (es. `"X"`) | NEG | AC-03 |
+
+Ogni agente DEVE usare esattamente questi nomi di colonna. Variazioni nei nomi colonna rendono il merge M_A+M_B+M_C non valido.
+
+**[CHECKPOINT SERIALIZZAZIONE — OBBLIGATORIO prima del lancio]**
+
+Mostra al developer il blocco serializzato e chiedi:
+> "La serializzazione è completa? Entità, lookup tables, regole business e vincoli referenziali corrispondono alla specifica? Posso procedere con il lancio dei 3 agenti Matrix?"
+
+Non lanciare Matrix A/B/C senza risposta esplicita. Un "sì" o "ok" è sufficiente — la spec è già stata validata in Fase 1, questo è un sanity check sulla serializzazione.
+
+#### Lancio 3 agenti in parallelo (Agent tool — stesso turno)
+
+**Matrix Agent A — Field/Value Decomposer:**
+```
+Sei un QA Matrix Agent specializzato in decomposizione campo-valore.
+Input: {ENTITÀ E CAMPI serializzati} + {LOOKUP TABLES serializzate}
+Per ogni campo di ogni entità, applica le regole di esplosione:
+  - Lookup enumerato → 1 riga POS per ogni valore + 1 riga NEG "fuori lookup"
+  - Mandatory → POS(valido) + NEG(assente/null)
+  - Optional → POS(valido) + EDGE(null = accettato)
+  - Formato data/regex → POS(corretto) + NEG(errato) + EDGE(null se optional)
+  - Valore fisso business → POS(= costante) + NEG(≠ costante)
+Produci: tabella M_A con colonne matrix_row_id, entity, field, condition, test_type, source_ref
+```
+
+**Matrix Agent B — Rule Composer:**
+```
+Sei un QA Matrix Agent specializzato in regole di business composte e vincoli referenziali.
+Input: {REGOLE DI BUSINESS COMPOSTE serializzate} + {VINCOLI REFERENZIALI} + {LOOKUP TABLES serializzate}
+Per ogni regola composita: costruisci prodotto cartesiano ridotto
+  - Mantieni solo combinazioni con esiti DISTINTI
+  - Aggiungi 1 happy path (tutti i campi nominali validi)
+  - Aggiungi 1 worst case (tutti i campi edge contemporaneamente)
+  - Limite: max 16 combinazioni per regola; se superi, annota "ridotto per complessità"
+Per ogni vincolo referenziale: 1 riga NEG per ogni sezione dipendente (chiave assente)
+Produci: tabella M_B con colonne matrix_row_id, entity, field, condition, test_type, source_ref
+  (colonne aggiuntive: combo_fields[], combo_values[] per regole composite)
+```
+
+**Matrix Agent C — Role/Permission Mapper:**
+```
+Sei un QA Matrix Agent specializzato in copertura ruoli e permessi.
+Input: {ENTITÀ E CAMPI con info ruolo/permesso}
+Se il documento specifica ruoli diversi con comportamenti distinti:
+  → 1 riga ROLE per ogni coppia (ruolo, azione) semanticamente distinta
+  → Non duplicare se due ruoli hanno identici permessi
+Se non ci sono ruoli distinti → produci M_C vuota con nota "N/A — nessun ruolo distinto"
+Produci: tabella M_C con colonne matrix_row_id, entity, field, condition, test_type, source_ref
+```
+
+#### Gate #1 — J1_MATRIX + J2_MATRIX (bloccante, opera su M_A+M_B+M_C)
+
+<EXTREMELY-IMPORTANT>
+FERMATI. Stai per procedere a Fase 4b? Esegui prima Gate #1 con Agent tool.
+
+J1 e J2 operano QUI sulle matrici — NON sui TC (che non esistono ancora).
+Invoca J1 e J2 in parallelo con Agent tool dopo aver ricevuto M_A, M_B, M_C.
+NON procedere a Fase 4b senza PASS da entrambi.
+Un'autovalutazione interna di Claude NON è Gate #1 — è un'assunzione.
+
+**Criterio verificabile:** l'esecuzione di Gate #1 deve produrre 2 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #1 non è stato eseguito — è stato simulato.
+</EXTREMELY-IMPORTANT>
+
+**J1_MATRIX — Coverage Completeness:**
+```
+Sei un QA Judge per completezza della coverage matrix.
+Input: M_A + M_B + M_C + {ENTITÀ E CAMPI serializzati}
+Verifica:
+  1. Ogni entità ha almeno 1 riga POS + 1 riga NEG in M_A o M_B
+  2. Ogni lookup enumerato ha 1 riga per ogni valore (non collassate)
+  3. Ogni vincolo referenziale ha almeno 1 riga NEG cross-sezione in M_B
+Elenca entità/campi senza copertura. Soglia: 100% delle entità.
+Output: GIUDICE J1_MATRIX | PERCENTUALE: XX% | PASS/FAIL | GAP: [lista]
+```
+
+**J2_MATRIX — Deduplication:**
+```
+Sei un QA Judge per deduplicazione della coverage matrix.
+Input: M_A + M_B + M_C
+Identifica righe semanticamente identiche (stessa entità, campo, condizione, esito
+anche se formulate diversamente tra agenti diversi). Elencale.
+Output: GIUDICE J2_MATRIX | DUPLICATI: N | LISTA_DUPLICATI: [lista da rimuovere]
+```
+
+Dopo J1_MATRIX PASS e J2_MATRIX dedup applicato: merge M_A + M_B + M_C (senza duplicati) = **M_FINAL**.
+Assegna matrix_row_id univoco a ogni riga. M_FINAL è l'input esclusivo di Fase 4b.
+
+**[CHECKPOINT OBBLIGATORIO — salva M_FINAL su file prima di procedere]**
+
+Usa Write tool per salvare M_FINAL su `MFINAL.md` nella directory del progetto corrente.
+Dopo il salvataggio: **M_A, M_B, M_C non sono più necessarie** — non referenziarle nelle fasi successive.
+Tutte le fasi successive (4b, J3, J4, J5) leggono M_FINAL da `MFINAL.md` tramite Read tool.
+Questo protegge M_FINAL dalla compattazione automatica del context.
+
+**Partial failure handling:**
+
+- **Se un agente Matrix (A/B/C) restituisce errore o output vuoto:** rilancia quell'agente singolo una volta. Se il retry fallisce: segnala `⚠️ Matrix [A/B/C] non disponibile` e procedi con la matrice parziale — annota il gap in `MFINAL.md`.
+- **Se M_C è vuota (nessun ruolo distinto):** comportamento atteso — J1_MATRIX opera solo su M_A+M_B. Procedi normalmente.
+- **Se J1_MATRIX FAIL:** rilancia solo l'agente mancante (A o B) per le entità/campi scoperti. Poi ripeti J1_MATRIX. Max 2 iterazioni, poi escalation all'utente.
+- **Se J2_MATRIX identifica duplicati:** rimuovili da M_FINAL prima del salvataggio su file.
+
+**Output atteso Fase 1.5:** `MFINAL.md` su filesystem — tabella con N righe, ognuna = 1 TC atteso.
 
 ---
 
@@ -168,6 +399,13 @@ Non procedere alla Fase 2 senza AC o contesto sufficiente.
 - Naming convention attesa: `Test Strategy - {JIRA_PROJECT_KEY} - {Sprint/Release}`
 - Leggi le sezioni: `Scope`, `Approach`, `Test Types`
 - Se non trovata: registra WARNING e procedi senza questa sezione
+
+**Tier 2 (Documento):**
+- Verifica se il documento fornito dall'utente contiene già una sezione
+  Test Strategy, Approccio di Test, o Strategia di Verifica
+- Se sì: usa quella sezione come input per Scope/Approach/Test Types
+- Se no: segnala `⚠️ WARNING: Test Strategy non presente nel documento` e procedi
+  senza — identico al comportamento Tier 3
 
 **Tier 3 (no Confluence):**
 - Segnala: `⚠️ WARNING: Test Strategy Confluence non cercabile — nessuna integrazione MCP`
@@ -191,57 +429,248 @@ Test Plan: {Story summary}
 ```
 
 **Tier 1 (MCP):** crea il Test Plan in Xray via MCP tool
-**Tier 3:** mostra la struttura testuale, da importare manualmente
+**Tier 2 (Documento):** mostra la struttura testuale del Test Plan; usa `[nome documento]` come fonte al posto del link Jira; il Test Plan verrà esportato come CSV in Fase 5
+**Tier 3 (Conversazione):** mostra la struttura testuale, da importare manualmente
 
 ---
 
 ### Fase 4 — Generazione Test Case step-based
 
-#### 4a — Elicitazione scenari [OBBLIGATORIA prima di scrivere qualsiasi TC]
+#### 4a — Verifica e completamento M_FINAL [input: Fase 1.5]
 
-**Input:** Req Profile Card (Phase 0) + AC (Phase 1).
-Gli scenari raccolti nella Phase 0 (L1/L2/L3) vanno classificati nelle 4 categorie qui sotto
-PRIMA di generare i TC. Non ripetere domande gia' poste in Phase 0.
+**Input:** M_FINAL prodotta da Fase 1.5 (Gate #1 già PASS).
 
-Per ogni categoria ancora scoperta dopo aver assorbito il Req Profile e gli AC,
-fai domande esplicite al developer. UNA alla volta.
-Non procedere alla generazione finche' tutte e 4 le categorie non sono valutate.
+Non è più una fase di elicitazione scenari astratti. La matrice guida la generazione.
 
-**Categoria 1 — Scenari positivi (happy path)**
-Hai gia' questo dagli AC. Verifica solo che siano completi.
-Domanda tipo: "L'AC descrive il caso principale. C'e' qualche variante del flusso positivo che vuoi coprire esplicitamente?"
+1. **Mostra M_FINAL** al developer in forma tabellare compatta:
+   - Totale righe (= TC attesi)
+   - Distribuzione: N POS / N NEG / N EDGE / N ROLE
+   - Entità coperte
 
-**Categoria 2 — Edge case**
-Valori limite, stati vuoti, volumi estremi, timing. Se non emergono dagli AC, chiedi:
-- "Cosa succede con input al limite del range valido? (es. importo = 0, lista vuota, data = oggi)"
-- "Ci sono condizioni di gara o sequenze di eventi inattesi da coprire?"
-- "Il sistema e' idempotente? Cosa succede se l'operazione viene eseguita due volte?"
+2. **Chiedi una sola domanda:** "La matrice ha {N} righe, stimati {N} TC. Ci sono scenari specifici che conosci dal dominio ma non derivabili dalla struttura del documento? (es. comportamenti impliciti, business knowledge non scritta)"
 
-**Categoria 3 — Scenari alternativi / negativi**
-Flussi di errore, input non validi, permessi mancanti. Se non emergono dagli AC, chiedi:
-- "Quali input non validi deve rifiutare il sistema? Con quale messaggio/comportamento?"
-- "Cosa succede se una dipendenza esterna e' assente o risponde con errore?"
-- "Ci sono stati del sistema che impediscono l'operazione? (es. record gia' esistente, stato non compatibile)"
+3. Il developer può aggiungere righe manualmente. Registra aggiunte con `source_ref = "developer input"`.
 
-**Categoria 4 — Profilazioni / ruoli**
-Utenti diversi con permessi o dati diversi. Se la Story tocca autorizzazioni o ruoli, chiedi:
-- "Quale tipo di utente esegue questa operazione? Ci sono altri ruoli che possono o non possono farlo?"
-- "Il comportamento cambia in base al profilo? (es. autore vs editore, admin vs operatore)"
-- "Ci sono dati sensibili che solo alcuni ruoli possono vedere?"
+4. Se nessuna aggiunta: procedi immediatamente a Fase 4b.
 
-Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A -- confermato dal developer" e procedi.
-**Non puoi procedere alla generazione con categorie non valutate.**
-
-Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) per template Matrice Scenari e formato output.
+**M_FINAL aggiornata è l'input esclusivo per Fase 4b.**
 
 ---
 
-#### 4b — Generazione Test Case
+#### 4b — Generazione Test Case da M_FINAL
 
-Per ogni scenario della matrice (4a), genera 1+ Test Case step-based.
-Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step" e "Riepilogo Copertura" per formato completo, prefissi e template riepilogo.
+**Prima di iniziare:**
+1. Usa Read tool per ricaricare `MFINAL.md` dal filesystem (protegge dalla compattazione)
+2. Usa Read tool per leggere `XRAY-TEMPLATES.md` — sezioni "Formato Test Case Step-Based", "Prefissi di Categoria", "Regola Multi-Step"
+   Se `XRAY-TEMPLATES.md` non è trovato: segnala `⚠️ XRAY-TEMPLATES.md non trovato — uso formato inline` e usa il template minimo:
+   ```
+   Titolo: [test_type] descrizione
+   Description: matrix_row_id: {id} | entity: {entity} | field: {field}
+   Precondizioni: {condizione concreta dalla colonna condition}
+   Step 1 - Action: {azione concreta}
+   Step 1 - Expected Result: {risultato verificabile e non generico}
+   ```
 
-**Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.
+Per ogni riga di M_FINAL genera **esattamente 1 TC** step-based.
+
+**Vincolo di specificità (obbligatorio):** ogni TC deve contenere nei passi/precondizioni i valori concreti dalla colonna `condition` della riga matrice:
+- ❌ "Inserire una categoria valida"
+- ✅ "Impostare CATEGORY = `'F'` nel CSV GENERAL_DATA"
+- ❌ "Fornire una data non valida"
+- ✅ "Impostare RELEASED = `'01/01/2024'` (formato DD/MM/YYYY, non ISO 8601)"
+
+**Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description` (non nel titolo).
+
+Esempio di struttura TC corretta:
+```
+Titolo:        [POS] CATEGORY = "F" → migrazione come feature
+Description:   matrix_row_id: A-001 | entity: GENERAL_DATA | field: CATEGORY
+Precondizioni: CSV GENERAL_DATA contiene riga con CATEGORY = "F"
+Step 1 Action: Esegui la migrazione del record
+Step 1 Expected Result: Il record viene creato come tipo "feature" nel nuovo sistema
+```
+
+**Condizioni multi-valore nella colonna `condition`:** se la condizione contiene `AND`/`OR` tra più valori (es. `"importo > 1000 AND valuta IN (EUR, USD)"`), genera **1 TC** con un set di valori rappresentativo (es. importo=1500, valuta=EUR). Non espandere in TC multipli — l'esplosione combinatoria è già avvenuta in Fase 1.5 tramite le regole di Agent B.
+
+**Prefisso titolo:** usa il `test_type` della riga (`[POS]`, `[NEG]`, `[EDGE]`, `[ROLE]`).
+
+**[CHECKPOINT OBBLIGATORIO — salva TC su file prima di Gate #2]**
+
+Usa Write tool per salvare tutti i TC generati su `TC_DRAFT.md` nella directory del progetto.
+Gate #2 (J3+J4) leggerà da `TC_DRAFT.md` — garantisce dati integri anche dopo compattazione.
+
+**Riepilogo prima del gate:** mostra la tabella compatta al developer (TC-ID, titolo, matrix_row_id, test_type). Il developer puo' modificare `Automazione` e `NRT` prima di procedere.
+
+---
+
+### Fase 4c — Gate #2: TC vs Matrix Verification [bloccante — post-generazione]
+
+Dopo la generazione (Fase 4b), lancia **J3 e J4 in parallelo** con Agent tool.
+Verificano la bijection TC↔M_FINAL e la specificità dei TC.
+
+<EXTREMELY-IMPORTANT>
+FERMATI. Stai per procedere a Fase 4d senza Gate #2?
+
+J3 e J4 operano QUI sui TC prodotti — verificano che ogni riga di M_FINAL sia diventata
+un TC concreto e che ogni TC abbia dati di test specifici (non generici).
+Invoca J3 e J4 con Agent tool nello STESSO turno. Non sequenzialmente.
+Un'autovalutazione interna di Claude NON è Gate #2.
+
+**Criterio verificabile:** l'esecuzione di Gate #2 deve produrre 2 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #2 non è stato eseguito — è stato simulato.
+
+**Input per J3 e J4:** leggi M_FINAL da `MFINAL.md` e i TC da `TC_DRAFT.md` tramite Read tool — non usare il context direttamente, i file garantiscono dati integri dopo eventuale compattazione.
+</EXTREMELY-IMPORTANT>
+
+#### Serializzazione input (OBBLIGATORIA prima del lancio)
+
+```
+M_FINAL (da Fase 1.5):
+matrix_row_id | entity | field | condition | test_type
+{row_id_1} | {entity} | {field} | {condition} | {POS/NEG/EDGE}
+...
+
+TC GENERATI (da Fase 4b):
+TC-ID | Titolo | matrix_row_id | test_type
+TC-01 | {titolo} | {matrix_row_id} | {POS/NEG/EDGE}
+...
+```
+
+#### J3 — Bijection Check
+
+```
+Sei un QA Judge specializzato in tracciabilità TC↔matrice.
+Input: M_FINAL + TC GENERATI (serializzati sopra)
+Verifica:
+  1. Ogni riga di M_FINAL ha esattamente 1 TC con matrix_row_id corrispondente
+     (righe orfane = righe senza TC)
+  2. Ogni TC ha un matrix_row_id valido che esiste in M_FINAL
+     (TC orfani = TC senza riga matrice)
+Elenca righe orfane e TC orfani. Soglia: 100% bijection.
+Output: GIUDICE J3 | PASS/FAIL | RIGHE_ORFANE: [lista] | TC_ORFANI: [lista]
+```
+
+#### J4 — Specificity Check
+
+```
+Sei un QA Judge specializzato in qualità e specificità dei TC.
+Input: M_FINAL + TC GENERATI (serializzati sopra)
+Per ogni TC, recupera la riga M_FINAL corrispondente e verifica:
+  1. Passi/precondizioni contengono i valori concreti dalla colonna "condition"
+     (es. se condition = "'F'→feature" il TC deve menzionare il valore "F")
+  2. Expected result è verificabile e non generico (non "dovrebbe funzionare")
+  3. Precondizioni sono sufficienti per eseguire il test senza ambiguità
+Elenca TC con specificità insufficiente. Soglia: 75%.
+Output: GIUDICE J4 | PERCENTUALE: XX% | PASS/FAIL | TC_GENERICI: [lista con motivazione]
+```
+
+#### Comportamento Gate #2
+
+```
+1. Lancia J3 e J4 in parallelo (Agent tool, stesso turno)
+2. Valuta:
+   - J3 FAIL → rigenerazione selettiva solo per righe orfane (Fase 4b parziale)
+   - J4 < 75% → riformulazione selettiva dei TC generici identificati
+3. Rilancia SOLO i judge falliti con:
+   "Nel run precedente hai trovato questi problemi: [lista].
+   Valuta i TC aggiornati: [lista TC nuovi]."
+4. Max 2 iterazioni per gate, poi escalation all'utente
+
+Escalation asimmetrica: se un solo judge (J3 o J4) supera il max di iterazioni mentre
+l'altro è già PASS, l'escalation riguarda solo il judge fallito. Mostra il GATE #2
+REPORT parziale e chiedi: "J3/J4 non converge dopo 2 iterazioni — vuoi procedere
+con questo gap o rifai la generazione da zero per le righe coinvolte?"
+
+Se J3 PASS e J4 PASS: procedi a Fase 4d (J5 Final Audit)
+```
+
+#### Formato GATE #2 REPORT
+
+```
+GATE #2 REPORT
+──────────────
+J3 Bijection:   N/N righe coperte (100%) | N TC orfani   [PASS ✅ / FAIL ❌]
+J4 Specificità: XX% TC con dati concreti                  [PASS ✅ / FAIL ❌]
+
+Righe orfane (senza TC): [lista]
+TC orfani (senza riga matrice): [lista]
+TC generici da riformulare: [lista con motivazione]
+──────────────────────────────────────────────────
+```
+
+---
+
+### Fase 4d — Final Audit (J5) [non bloccante — run-once]
+
+Dopo Gate #2 PASS, lancia J5 con Agent tool come auditor finale con vista completa.
+
+```
+Sei un QA Judge specializzato in correttezza tecnica e audit finale.
+Input: M_FINAL (da MFINAL.md) + TC GENERATI (da TC_DRAFT.md) + REPORT J1_MATRIX + J2_MATRIX + GATE#2
+       + {TIPI E RANGE CAMPI: tipi dato, range validi, formati attesi dei campi dalla serializzazione Fase 1.5}
+Analizza:
+  1. Boundary conditions non catturate dalla matrice (valori al limite del range,
+     overflow numerico, timezone, caratteri speciali, encoding)
+  2. Edge case tecnici: idempotenza, race conditions, ordine di elaborazione CSV
+  3. Coerenza tra step Action e Expected Result per ogni TC
+  4. Gap residui rispetto alla specifica (comportamenti impliciti non documentati)
+Produci:
+  - coverage_score: % righe M_FINAL con TC di qualità verificata
+  - lista gap prioritizzata (ALTA / MEDIA / BASSA)
+  - coverage_certificate: { timestamp, score, total_tc, matrix_rows }
+Output: GIUDICE J5 | SCORE: XX% | CERTIFICATE: {dati} | GAP: [lista con priorità]
+```
+
+**J5 è run-once.** Non viene mai rilanciato. Il developer può accettare i gap o aggiungere TC.
+
+#### Comportamento post-J5
+
+```
+SE il developer sceglie di aggiungere TC per i gap J5:
+
+1. Aggiungi i nuovi TC alla lista (con matrix_row_id = "J5-gap-Gxx")
+2. PRIMA di esportare: RILANCIA Gate #2 (J3 + J4) in parallelo
+   sui TC AGGIORNATI (vecchi + nuovi)
+   Input aggiornato:
+     M_FINAL + nuove righe J5 (aggiunte come righe sintetiche)
+     TC aggiornati (vecchi + nuovi)
+3. Se Gate #2 PASS → procedi a Fase 5 (export)
+4. Se Gate #2 FAIL → fixa solo i TC falliti, ripeti Gate #2 (max 1 iterazione aggiuntiva)
+
+SE il developer sceglie di NON aggiungere TC (accetta i gap):
+→ Procedi direttamente a Fase 5 (export) con il certificate "CONDITIONAL PASS"
+
+NON esportare mai dopo aver aggiunto TC senza aver ripassato Gate #2.
+"Ho appena aggiunto i TC, sicuramente passano" → non è Gate #2. Il gate va eseguito.
+```
+
+<EXTREMELY-IMPORTANT>
+Hai aggiunto TC per i gap J5 e stai per esportare senza rilanciare Gate #2?
+FERMATI. I nuovi TC non sono stati verificati da J3 (bijection) né da J4 (specificità).
+Gate #2 va rilanciato sui TC aggiornati prima di qualsiasi export.
+</EXTREMELY-IMPORTANT>
+
+#### Formato COVERAGE CERTIFICATE
+
+```
+COVERAGE CERTIFICATE
+────────────────────
+Timestamp:        {data ora}
+M_FINAL righe:    N (+K righe J5-gap se aggiunte)
+TC generati:      N (+K nuovi se aggiunte)
+Coverage score:   XX%
+Gate #1 (matrix): PASS ✅
+Gate #2 (TC):     PASS ✅  [ri-eseguito post-J5 se TC aggiunti]
+J5 Gap ALTA risolti:  K/N
+J5 Gap MEDIA aperti:  N (sprint successivo)
+J5 Gap BASSA aperti:  N (opzionali)
+
+Gap aperti accettati:
+  MEDIA: [gap con impatto medio]
+  BASSA: [suggerimenti opzionali]
+────────────────────
+```
+
+Procedi a Fase 5 (export) con il certificate allegato.
 
 ---
 
@@ -252,7 +681,11 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezioni "Formato Test Case Step-Base
 2. Ogni TC creato ottiene automaticamente una chiave Jira (es. `PROJ-456`) — registrala nella mappatura (vedi Passo post-export)
 3. Dopo l'esecuzione dei test, aggiorna il Test Execution con i risultati
 
-**Tier 3 (CSV):**
+**Tier 2 (Documento):**
+- Output sempre CSV semicolon-separated in formato Xray-importabile — indipendentemente dalla disponibilità MCP
+- Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni
+
+**Tier 3 (Conversazione):**
 Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni import.
 
 **Passo post-export — Mappatura ID sequenziali -> chiavi Jira Xray [OBBLIGATORIO se si usa siae-automation]**
@@ -299,6 +732,19 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "Ho letto gli AC, so gia' il tipo — salto Phase 0" | Phase 0 non e' solo typing: e' la raccolta degli scenari contestuali che gli AC non esplicitano. Senza queste domande, i TC coprono solo cio' che e' scritto, non cio' che puo' rompersi. |
 | "Le domande del tree rallentano il workflow" | 4-6 domande mirate producono 2-3x piu' scenari edge rispetto alla matrice generica. Il piano di test finale e' piu' completo in meno iterazioni. |
 | "Il tipo e' ovvio, non serve inferire" | Ovvio per te. La Req Profile Card documenta il tipo e i segnali: e' evidenza, non burocrazia. Se sbagli il tipo, i TC coprono il dominio sbagliato. |
+| "Il documento ha i requisiti, non serve derivare gli AC" | I requisiti descrivono cosa fare, gli AC descrivono come verificarlo. Derivare gli AC è lo step interpretativo chiave — senza di esso i TC testano il documento, non il comportamento. |
+| "Ho già letto il documento, so quali AC ci sono" | La derivazione degli AC deve essere esplicita e validata dall'utente. Un'inferenza non validata è un'assunzione. |
+| "Il Coverage Gate rallenta il workflow" | Un TC che non copre un requisito è un buco nel collaudo. I judge in parallelo impiegano secondi. Un bug in produzione da AC non coperto costa ore. |
+| "J1_MATRIX al 100% è irraggiungibile con molti campi" | È raggiungibile: ogni entità/campo deve avere almeno 1 riga POS + 1 NEG in M_FINAL. Non tutte le combinazioni — solo quelle con esito distinto. |
+| "Salto la Coverage Matrix, tanto genero i TC dagli AC" | TC generati dagli AC grezzi sono narrativi: coprono i casi che vengono in mente, non tutti i casi. La matrice è sistematica: copre ogni campo, ogni lookup, ogni combinazione. |
+| "Il documento è semplice, non serve la Coverage Matrix" | Semplice per chi lo ha scritto. Ogni campo obbligatorio ha 2 TC (POS+NEG), ogni lookup ha N+1 TC. La matrice lo scopre in automatico; l'approccio narrativo lo dimentica. |
+| "Salto Fase 4c Gate #2, i TC li ho appena generati da M_FINAL" | La generazione produce TC tracciabili ma non garantisce specificità. Gate #2 verifica che i valori concreti della colonna 'condition' siano nei passi — non è ridondante. |
+| "J5 non blocca, non serve" | J5 produce il coverage_certificate e identifica boundary conditions che M_FINAL non cattura. Saltarlo significa non avere il certificate per il collaudo. |
+| "Ho scelto il tier sbagliato nell'Opening Dialog, è un problema" | Puoi cambiare tier prima che il workflow inizi: rilancia la skill e scegli di nuovo. Il dialog è il momento giusto per decidere, non dopo. |
+| "La Coverage Matrix è solo per spec di migrazione" | La matrice si applica a ogni spec con lookup, mandatory/optional, o regole condizionali. Anche un semplice form con 5 campi produce 15+ righe di matrice e TC sistematici. |
+| "Matrix Agent B rallenta per regole composte semplici" | Se la spec ha 0 regole composite, M_B è vuota in pochi secondi. Il costo è zero. Se le regole ci sono e non costruisci la matrice, mancano quei TC nel collaudo. |
+| "Ho appena aggiunto i TC per J5, Gate #2 è superfluo" | I TC aggiunti per J5 non sono stati verificati da J3 (bijection) né da J4 (specificità). Gate #2 va rilanciato. Un TC aggiunto senza matrix_row_id o con passi generici passa la generazione ma fallisce il gate. |
+| "Esporto subito dopo J5, poi se serve riciclo" | Non si esporta con TC non verificati. Gate #2 post-J5 costa secondi. Riciclare dopo l'export significa aggiornare il file CSV già distribuito al team — costo molto più alto. |
 
 ---
 
@@ -312,14 +758,18 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 ## VINCOLI NON NEGOZIABILI
 
 0. **Phase 0 e' sempre la prima fase** — nessun AC viene letto senza aver prima inferito il tipo e lanciato le domande del tree contestuale; la Req Profile Card deve essere prodotta prima di Phase 1
-1. **Nessun Test Case senza AC corrispondente** — ogni TC e' tracciabile a un comportamento specifico
-2. **La matrice 4a va compilata prima di scrivere qualsiasi TC** — non si genera senza aver valutato tutte e 4 le categorie
-3. **Le domande su edge case, negativi e profilazioni sono obbligatorie** — se non emergono dagli AC, si chiedono; non si assumono
-4. **Il campo `ID JIRA Story` e' obbligatorio** — senza di esso il TC non ha senso in Xray
-5. **Ogni step ha `Action` e `Expected Result`** — step senza Expected Result = step non valido
-6. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
-7. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
-8. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import. Ovunque altrove (documentazione, checklist, commenti) usare `Expected Result` (corretto).
+1. **Nessun Test Case senza riga M_FINAL corrispondente** — ogni TC è tracciabile a una riga della Coverage Matrix (matrix_row_id obbligatorio nel campo Description)
+2. **M_FINAL deve esistere PRIMA di generare qualsiasi TC** — Fase 1.5 e Gate #1 sono bloccanti; non si genera senza M_FINAL approvata da J1_MATRIX + J2_MATRIX
+3. **La generazione TC è 1:1 con M_FINAL** — ogni riga di M_FINAL produce esattamente 1 TC; nessun TC senza riga, nessuna riga senza TC
+4. **I TC devono contenere i valori concreti dalla colonna "condition" di M_FINAL** — nessuna formulazione generica ("inserire un valore valido")
+5. **Il campo `ID JIRA Story` e' obbligatorio** — senza di esso il TC non ha senso in Xray
+6. **Ogni step ha `Action` e `Expected Result`** — step senza Expected Result = step non valido
+7. **Il CSV usa separatore `;` (semicolon)** — non virgola, non tab
+8. **Righe con stesso ID = stesso Test Case** — i metadati solo nella prima riga, step multipli nelle righe successive
+9. **Nel CSV, il nome colonna e' `Expceted Result`** — typo storico del template importatore Xray SIAE. Usarlo esattamente per compatibilita' import.
+10. **Gate #1 (J1_MATRIX+J2_MATRIX) è obbligatorio prima di Fase 4b** — nessuna generazione senza M_FINAL validata
+11. **Gate #2 (J3+J4) è obbligatorio dopo Fase 4b** — nessun export senza bijection PASS e specificità ≥75%
+12. **J5 Final Audit è obbligatorio prima dell'export** — il coverage_certificate è il documento di chiusura del ciclo QA
 
 ---
 
@@ -348,8 +798,22 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 **Se MCP non disponibile (gia' gestito dal Tier system):**
 - Il Tier 3 (CSV) e' gia' il fallback — non richiede MCP
 
-**Fasi completabili senza permessi:** Fase 1-4 (conversazionali — lettura AC, elicitazione scenari, generazione TC)
-**Fasi che richiedono permessi:** Fase 5 (Write per CSV, MCP per Xray)
+**Se Agent tool viene negato (Matrix A/B/C o J1-J5):**
+
+<EXTREMELY-IMPORTANT>
+NON simulare il judge o l'agente Matrix internamente.
+Simulare un giudice senza Agent tool invalida l'intero meccanismo di verifica indipendente.
+</EXTREMELY-IMPORTANT>
+
+1. FERMATI. Il gate/fase non può essere eseguito senza Agent tool.
+2. Comunica esplicitamente: "Agent tool è necessario per [fase X] — senza invocazione reale il gate non è eseguito. Vuoi continuare con un piano QA non verificato da judge indipendente? Confermalo esplicitamente."
+3. **Se l'utente conferma consapevolmente:** procedi ma aggiungi nel Coverage Certificate: `⚠️ ATTENZIONE: [Gate X] non eseguito con Agent tool — validazione manuale richiesta prima del collaudo`
+4. **Se l'utente non conferma:** blocca. Attendi che Agent tool sia abilitato.
+
+**Fasi completabili senza permessi:** Fase 1 (conversazionale — lettura AC/requisiti, elicitazione scenari)
+**Fasi che richiedono Agent tool:** Fase 1.5 (Matrix A/B/C, J1_MATRIX/J2_MATRIX), Fase 4c (J3/J4), Fase 4d (J5)
+**Fasi che richiedono Write tool:** Fase 1.5 (MFINAL.md), Fase 4b (TC_DRAFT.md)
+**Fasi che richiedono MCP:** Fase 5 (Xray — solo Tier 1)
 
 Se i permessi sono negati:
 1. Completa tutte le fasi conversazionali (1-4)
