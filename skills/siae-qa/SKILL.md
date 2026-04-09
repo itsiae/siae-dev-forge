@@ -810,8 +810,10 @@ Simulare un giudice senza Agent tool invalida l'intero meccanismo di verifica in
 3. **Se l'utente conferma consapevolmente:** procedi ma aggiungi nel Coverage Certificate: `⚠️ ATTENZIONE: [Gate X] non eseguito con Agent tool — validazione manuale richiesta prima del collaudo`
 4. **Se l'utente non conferma:** blocca. Attendi che Agent tool sia abilitato.
 
-**Fasi completabili senza permessi:** Fase 1-4 (conversazionali — lettura AC, elicitazione scenari, generazione TC)
-**Fasi che richiedono permessi:** Fase 5 (Write per CSV, MCP per Xray)
+**Fasi completabili senza permessi:** Fase 1 (conversazionale — lettura AC/requisiti, elicitazione scenari)
+**Fasi che richiedono Agent tool:** Fase 1.5 (Matrix A/B/C, J1_MATRIX/J2_MATRIX), Fase 4c (J3/J4), Fase 4d (J5)
+**Fasi che richiedono Write tool:** Fase 1.5 (MFINAL.md), Fase 4b (TC_DRAFT.md)
+**Fasi che richiedono MCP:** Fase 5 (Xray — solo Tier 1)
 
 Se i permessi sono negati:
 1. Completa tutte le fasi conversazionali (1-4)
