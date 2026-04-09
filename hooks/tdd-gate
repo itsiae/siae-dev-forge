@@ -32,9 +32,18 @@ if [[ "$FILE_PATH" != /* ]]; then
 fi
 
 # Skip files not inside any git repository (temp scripts, /tmp/, one-shot generators).
-# Usa la git root del FILE, non dell'hook — l'hook gira in ~/.claude/plugins/ (non-git).
-FILE_GIT_ROOT="$(git -C "$(dirname "$FILE_PATH")" rev-parse --show-toplevel 2>/dev/null || true)"
+# Use the FILE's git root, not the hook dir — the hook runs from ~/.claude/plugins/ (non-git dir).
+FILE_DIR="$(dirname "$FILE_PATH")"
+FILE_GIT_ROOT="$(git -C "$FILE_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$FILE_GIT_ROOT" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Gate applies only to SIAE repos (itsiae org on GitHub).
+# Personal projects, forks, and unrelated repos are excluded.
+REMOTE_URL="$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)"
+if ! echo "$REMOTE_URL" | grep -qF "itsiae/"; then
     echo '{}'
     exit 0
 fi
