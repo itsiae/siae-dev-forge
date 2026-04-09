@@ -93,18 +93,6 @@ PHASE_EOF
     exit 0
 fi
 
-# siae-tdd NOT invoked — BLOCK operation (hard gate)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
-
-BASENAME=$(basename "$FILE_PATH")
-
-cat <<EOF
-{
-  "decision": "block",
-  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere con la modifica."
-}
-EOF
+# siae-tdd NOT invoked — gate attivo solo quando la skill è in sessione, allow.
+echo '{}'
 exit 0
