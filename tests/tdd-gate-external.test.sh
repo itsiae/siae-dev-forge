@@ -122,6 +122,28 @@ else
     FAIL=$((FAIL+1))
 fi
 
+# --- Test 10: repo non-itsiae → ALLOW (org filter esclude repo senza /itsiae/ nel remote) ---
+# Usa il repo locale dev-forge-main che ha remote itsiae → skip (è itsiae),
+# ma simuliamo un path interno con remote forzato a non-itsiae via un repo tmp.
+reset_session
+TMP_REPO=$(mktemp -d)
+mkdir -p "${TMP_REPO}/src"
+git -C "$TMP_REPO" init -q
+git -C "$TMP_REPO" remote add origin "https://github.com/acmecorp/some-service.git"
+cat > "${TMP_REPO}/src/service.py" << 'PYEOF'
+def hello(): pass
+PYEOF
+INPUT="{\"file_path\":\"${TMP_REPO}/src/service.py\"}"
+RESULT=$(echo "$INPUT" | bash "$HOOK")
+rm -rf "$TMP_REPO"
+if echo "$RESULT" | grep -q '"decision"'; then
+    echo "FAIL: test10 — repo non-itsiae bloccato (org filter non funziona)"
+    FAIL=$((FAIL+1))
+else
+    echo "PASS: test10 — repo non-itsiae non bloccato (org filter ok)"
+    PASS=$((PASS+1))
+fi
+
 # --- Riepilogo ---
 echo ""
 echo "Risultato: ${PASS} PASS, ${FAIL} FAIL"
