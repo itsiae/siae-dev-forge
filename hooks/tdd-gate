@@ -97,7 +97,8 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
         PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
         source "${PLUGIN_ROOT}/lib/logger.sh"
         BASENAME=$(basename "$FILE_PATH")
-        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
+        SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
 
         cat <<PHASE_EOF
 {
@@ -117,7 +118,8 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
+SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
 
 BASENAME=$(basename "$FILE_PATH")
 

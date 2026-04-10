@@ -101,6 +101,17 @@ SESSION_COMMITS="$(read_file "${DEVFORGE_DIR}/.devforge-session-commits")"
 SESSION_COMMITS="${SESSION_COMMITS//[!0-9]/}"
 SESSION_COMMITS="${SESSION_COMMITS:-0}"
 
+# Telemetry status
+TELEMETRY_STATUS=""
+PLUGIN_ROOT_SL="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." 2>/dev/null && pwd)"
+if [ -f "${PLUGIN_ROOT_SL}/lib/telemetry-upload.sh" ]; then
+    source "${PLUGIN_ROOT_SL}/lib/telemetry-upload.sh" 2>/dev/null || true
+    PENDING=$(devforge_pending_count 2>/dev/null || echo "0")
+    if [ "$PENDING" -gt 0 ] 2>/dev/null; then
+        TELEMETRY_STATUS="pending:${PENDING}"
+    fi
+fi
+
 # Batch counter and checkpoint (written by hooks/batch-checkpoint)
 BATCH_COUNTER="$(read_file "${DEVFORGE_DIR}/.devforge-batch-counter")"
 BATCH_COUNTER="${BATCH_COUNTER//[!0-9]/}"
@@ -263,6 +274,10 @@ if [ -n "$QUOTA_5H" ]; then
     QUOTA_COLOR="$YELLOW"
   fi
   LINE2="${LINE2} | 5h: ${QUOTA_COLOR}${QUOTA_INT}%${RESET}"
+fi
+
+if [ -n "$TELEMETRY_STATUS" ]; then
+    LINE2="${LINE2} | ${YELLOW}telem=${TELEMETRY_STATUS}${RESET}"
 fi
 
 # Prepend warnings

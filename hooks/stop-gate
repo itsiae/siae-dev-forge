@@ -15,6 +15,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session
+source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -57,10 +59,18 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
         "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT}}"
 
+    # Flush telemetry: create batch and upload
+    source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
+    devforge_upload_logs 2>/dev/null || true
+
     # Cleanup session files (guard persists until next session-start cleans it)
     rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
+    rm -f "${HOME}/.claude/.devforge-session-user" "${HOME}/.claude/.devforge-session-user-source"
 fi
 # --- End telemetry ---
+
+# Flush local telemetry so sessions without commits are still visible remotely.
+devforge_upload_logs 2>/dev/null || true
 
 # --- Default values if guard did not execute (guard already existed) ---
 COMMITS_COUNT="${COMMITS_COUNT:-0}"
