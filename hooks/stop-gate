@@ -21,10 +21,28 @@ source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
-# --- BLOCCO 2: Telemetry sincrona (F1: no background, no kill, no disown) ---
-SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
+# --- BLOCCO 2: Read counters EARLY (needed by gate checks), but do NOT emit session_end yet ---
+SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
+SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 
-if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
+SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
+COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
+SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if [ -n "$SKILLS_LIST" ]; then
+    SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
+else
+    SKILLS_USED_COUNT=0
+fi
+
+# --- Helper: emit session_end + flush (called ONLY when stop is actually permitted) ---
+SESSION_END_GUARD="${HOME}/.claude/.devforge-session-end-guard"
+_devforge_emit_session_end() {
+    if ! mkdir "$SESSION_END_GUARD" 2>/dev/null; then
+        return 0  # already emitted (guard exists)
+    fi
+
     # Close last skill via timestamp chaining
     SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"
     if [ -f "$SKILL_TS_FILE" ]; then
@@ -42,29 +60,13 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
         rm -f "$SKILL_TS_FILE"
     fi
 
-    # Emit session_end event with aggregated counters
-    SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
-    SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
-    SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
-
-    SESSION_START_NS=$(cat "$SESSION_START_NS_FILE" 2>/dev/null || echo "0")
-    COMMITS_COUNT=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
-    SKILLS_LIST=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
-
-    if [ -n "$SKILLS_LIST" ]; then
-        SKILLS_USED_COUNT=$(echo "$SKILLS_LIST" | tr ',' '\n' | sort -u | wc -l | tr -d ' ')
-    else
-        SKILLS_USED_COUNT=0
-    fi
-
-    # Refresh token stats before reading
+    # Refresh token stats
     python3 "${PLUGIN_ROOT}/lib/token-collector.py" update 2>/dev/null || true
 
     # Token stats for session_end enrichment
-    TOKEN_TOTAL=0
-    TOKEN_OUTPUT=0
-    TOKEN_COST_EUR="0"
-    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ]; then
+    local TOKEN_TOTAL=0 TOKEN_OUTPUT=0 TOKEN_COST_EUR="0"
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ]; then
+        local TDATA
         TDATA=$(python3 -c "
 import json,sys
 d=json.load(open(sys.argv[1]))
@@ -80,26 +82,17 @@ print(f'{d.get(\"total\",0)}\t{d.get(\"output\",0)}\t{d.get(\"cost_eur\",0)}')
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
         "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR}}"
 
-    # Flush telemetry: create batch and upload
-    source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
+    # Flush telemetry
     devforge_upload_logs 2>/dev/null || true
 
-    # Cleanup session files (guard persists until next session-start cleans it)
+    # Cleanup session files
     rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
     rm -f "${HOME}/.claude/.devforge-session-user" "${HOME}/.claude/.devforge-session-user-source"
-fi
-# --- End telemetry ---
-
-# Flush local telemetry so sessions without commits are still visible remotely.
-devforge_upload_logs 2>/dev/null || true
-
-# --- Default values if guard did not execute (guard already existed) ---
-COMMITS_COUNT="${COMMITS_COUNT:-0}"
-SKILLS_LIST="${SKILLS_LIST:-}"
-SKILLS_USED_COUNT="${SKILLS_USED_COUNT:-0}"
+}
 
 # --- BLOCCO 3: Verification reminder (F5: skip if stdin empty) ---
 if [ -z "$INPUT" ]; then
+    _devforge_emit_session_end
     exit 0
 fi
 
@@ -155,6 +148,7 @@ fi
 COMPLETION_KEYWORDS="fatto|fatti|fatta|fatte|fixato|fixata|completato|completata|completati|funziona|done|fixed|pass|implementato|implementata|risolto|risolta|aggiornato|creato|aggiunto|rimosso|corretto|pubblicato|deployato|mergeat|mergiato|finito|finita|concluso|conclusa|terminato|terminata|pronto|pronta"
 
 if ! echo "$LAST_ASSISTANT_MSG" | grep -qiE "$COMPLETION_KEYWORDS"; then
+    _devforge_emit_session_end
     exit 0
 fi
 
@@ -168,6 +162,7 @@ if [ "$SKILLS_USED_COUNT" -gt 0 ] || [ "$COMMITS_COUNT" -gt 0 ]; then
     if ! echo "$SKILLS_LIST" | grep -qF "siae-retrospective"; then
         if [ "${DEVFORGE_SKIP_RETRO_GATE:-0}" = "1" ]; then
             devforge_log "stop_gate" "skipped_retro" "{\"reason\":\"DEVFORGE_SKIP_RETRO_GATE=1\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
+            _devforge_emit_session_end
             exit 0
         fi
         devforge_log "stop_gate" "blocked_retro" "{\"reason\":\"retrospective_missing\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
@@ -183,8 +178,9 @@ fi
 
 # --- BLOCCO 5: Verification gate ---
 if echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
-    # Verification invoked — all checks passed
+    # Verification invoked — all checks passed, stop permitted
     rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+    _devforge_emit_session_end
     exit 0
 fi
 
@@ -198,6 +194,7 @@ if [ "$STOP_BLOCK_COUNT" -ge 2 ]; then
     # Escape hatch: allow stop but log as violation
     devforge_log "stop_gate" "escaped" "{\"reason\":\"escape_hatch_after_${STOP_BLOCK_COUNT}_blocks\"}"
     rm -f "$STOP_BLOCK_COUNTER_FILE"
+    _devforge_emit_session_end
     exit 0
 fi
 

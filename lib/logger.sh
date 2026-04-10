@@ -142,12 +142,30 @@ devforge_get_user() {
 }
 
 devforge_get_user_raw() {
+    # Prefer pinned session user.json
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+        local raw
+        raw=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        if [ -n "$raw" ]; then
+            printf '%s' "$raw"
+            return
+        fi
+    fi
     local resolved
     resolved=$(devforge_resolve_user_raw)
     printf '%s' "${resolved%%|*}"
 }
 
 devforge_get_user_source() {
+    # Prefer pinned session user.json
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+        local src
+        src=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('source',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        if [ -n "$src" ]; then
+            printf '%s' "$src"
+            return
+        fi
+    fi
     local resolved
     resolved=$(devforge_resolve_user_raw)
     printf '%s' "${resolved#*|}"
