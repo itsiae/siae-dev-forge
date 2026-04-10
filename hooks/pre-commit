@@ -67,7 +67,8 @@ escape_for_json() {
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
     # Check if siae-git-workflow was invoked this session — HARD GATE
     if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
-        devforge_log "pre_commit" "blocked" "{\"command\":\"${TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
+        SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
+        devforge_log "pre_commit" "blocked" "{\"command\":\"${SAFE_TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
         cat <<BLOCK_EOF
 {
   "decision": "block",
@@ -101,7 +102,8 @@ BLOCK_EOF
                 NOW_S=$(date +%s)
                 COVERAGE_AGE=$(( NOW_S - ${COVERAGE_TS:-0} ))
                 if [ "$COVERAGE_AGE" -lt 1800 ]; then
-                    devforge_log "coverage_gate" "blocked" "{\"coverage\":${COVERAGE_PCT},\"threshold\":${THRESHOLD},\"branch\":\"${CURRENT_BRANCH}\"}"
+                    SAFE_BRANCH=$(devforge_sanitize_json_str "$CURRENT_BRANCH")
+                    devforge_log "coverage_gate" "blocked" "{\"coverage\":${COVERAGE_PCT},\"threshold\":${THRESHOLD},\"branch\":\"${SAFE_BRANCH}\"}"
                     cat <<COV_BLOCK_EOF
 {
   "decision": "block",
@@ -175,7 +177,8 @@ EOF
 fi
 
 # Log quality gate activation
-devforge_log "quality_gate" "success" "{\"check_name\":\"pre_commit_activated\",\"command\":\"${TOOL_COMMAND}\"}"
+SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
+devforge_log "quality_gate" "success" "{\"check_name\":\"pre_commit_activated\",\"command\":\"${SAFE_TOOL_COMMAND}\"}"
 
 # Pre-commit quality gate instructions (embedded directly)
 read -r -d '' PRECOMMIT_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true

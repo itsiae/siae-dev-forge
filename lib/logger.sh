@@ -4,6 +4,13 @@
 
 DEVFORGE_LOG_FILE="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
 DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
+DEVFORGE_SESSION_USER_FILE="${HOME}/.claude/.devforge-session-user"
+DEVFORGE_SESSION_USER_SOURCE_FILE="${HOME}/.claude/.devforge-session-user-source"
+
+# Per-session state isolation & identity pinning
+DEVFORGE_SESSION_DIR=""
+DEVFORGE_PINNED_USER=""
+DEVFORGE_PINNED_SID=""
 
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
@@ -57,27 +64,101 @@ devforge_get_sdlc_phase() {
     esac
 }
 
-# Get user identity: repo email → global email → cache → $USER → whoami → unknown
-devforge_get_user() {
-    local user
-    # 1. Repo-local git config
-    user=$(git config user.email 2>/dev/null)
-    # 2. Global git config
-    [ -z "$user" ] && user=$(git config --global user.email 2>/dev/null)
-    # 3. Session cache (set by session-start) — only accept email-like values to
-    #    prevent stale-value promotion: a degraded $USER/whoami written in a
-    #    non-git session would otherwise shadow a later valid git config email.
-    if [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ]; then
-        _cached=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null || echo "")
-        echo "$_cached" | grep -q '@' && user="$_cached"
+# Normalize the user identifier so analytics do not split on case or GitHub numeric prefixes.
+devforge_canonicalize_user() {
+    local raw="${1:-}"
+    raw=$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+
+    if [ -z "$raw" ]; then
+        echo "unknown"
+        return
     fi
-    # 4. OS user
-    [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
-    echo "$user"
+
+    if [[ "$raw" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return
+    fi
+
+    if [[ "$raw" =~ ^([^@]+)@users\.noreply\.github\.com$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return
+    fi
+
+    echo "$raw"
+}
+
+# Resolve user identity and its source without mutating global state.
+devforge_resolve_user_raw() {
+    local user="" source="unknown"
+
+    if [ -f "$DEVFORGE_SESSION_USER_FILE" ]; then
+        user=$(cat "$DEVFORGE_SESSION_USER_FILE" 2>/dev/null || echo "")
+        source=$(cat "$DEVFORGE_SESSION_USER_SOURCE_FILE" 2>/dev/null || echo "session_cache")
+    fi
+
+    if [ -z "$user" ]; then
+        user=$(git config user.email 2>/dev/null)
+        [ -n "$user" ] && source="git_repo_email"
+    fi
+
+    if [ -z "$user" ]; then
+        user=$(git config --global user.email 2>/dev/null)
+        [ -n "$user" ] && source="git_global_email"
+    fi
+
+    if [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ]; then
+        user=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null || echo "")
+        [ -n "$user" ] && source="legacy_cache"
+    fi
+
+    if [ -z "$user" ]; then
+        user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
+        source="os_user"
+    fi
+
+    printf '%s|%s\n' "$user" "$source"
+}
+
+devforge_cache_user() {
+    local raw_user="${1:-}"
+    local source="${2:-unknown}"
+    printf '%s' "$raw_user" > "$DEVFORGE_SESSION_USER_FILE"
+    printf '%s' "$source" > "$DEVFORGE_SESSION_USER_SOURCE_FILE"
+    printf '%s' "$raw_user" > "${HOME}/.claude/.devforge-user"
+}
+
+# Get canonical user identity for analytics.
+devforge_get_user() {
+    if [ -n "$DEVFORGE_PINNED_USER" ]; then
+        echo "$DEVFORGE_PINNED_USER"
+        return
+    fi
+    local resolved raw_user
+    resolved=$(devforge_resolve_user_raw)
+    raw_user="${resolved%%|*}"
+    devforge_canonicalize_user "$raw_user"
+}
+
+devforge_get_user_raw() {
+    local resolved
+    resolved=$(devforge_resolve_user_raw)
+    printf '%s' "${resolved%%|*}"
+}
+
+devforge_get_user_source() {
+    local resolved
+    resolved=$(devforge_resolve_user_raw)
+    printf '%s' "${resolved#*|}"
 }
 
 # Get or generate session ID
 devforge_get_sid() {
+    if [ -n "$DEVFORGE_PINNED_SID" ]; then
+        echo "$DEVFORGE_PINNED_SID"
+        return
+    fi
     if [ -f "$DEVFORGE_SID_FILE" ]; then
         cat "$DEVFORGE_SID_FILE"
     else
@@ -91,6 +172,41 @@ devforge_new_sid() {
     sid=$(date +%s%N | md5sum 2>/dev/null | head -c 8 || date +%s | shasum | head -c 8)
     echo "$sid" > "$DEVFORGE_SID_FILE"
     echo "$sid"
+}
+
+# Initialize per-session state directory and pin identity for the session lifetime
+devforge_init_session() {
+    local sid=$(devforge_get_sid)
+    DEVFORGE_SESSION_DIR="${HOME}/.claude/devforge-state/${sid}"
+    DEVFORGE_PINNED_SID="$sid"
+    if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+        DEVFORGE_PINNED_USER=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+    fi
+    [ -z "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_get_user)
+    export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID
+}
+
+# Atomic sequence counter for per-session event ordering
+devforge_next_seq() {
+    local seq_file="${DEVFORGE_SESSION_DIR}/seq"
+    if [ -z "$DEVFORGE_SESSION_DIR" ] || [ ! -d "$DEVFORGE_SESSION_DIR" ]; then
+        echo "0"
+        return
+    fi
+    if command -v flock >/dev/null 2>&1; then
+        (
+            flock -n 9 || { echo "0"; return; }
+            local current=$(cat "$seq_file" 2>/dev/null || echo "0")
+            local next=$((current + 1))
+            echo "$next" > "$seq_file"
+            echo "$next"
+        ) 9>"${seq_file}.lock"
+    else
+        local current=$(cat "$seq_file" 2>/dev/null || echo "0")
+        local next=$((current + 1))
+        echo "$next" > "$seq_file"
+        echo "$next"
+    fi
 }
 
 # Sanitize a string for safe JSON embedding (escapes \, ", newlines, tabs)
@@ -122,14 +238,30 @@ devforge_log() {
     branch=$(echo "$git_ctx" | cut -d'|' -f1)
     jira_id=$(echo "$git_ctx" | cut -d'|' -f2)
     project=$(echo "$git_ctx" | cut -d'|' -f3)
-    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
+    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"$(devforge_sanitize_json_str "$jira_id")\""; fi
 
-    local user
+    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status
     user=$(devforge_get_user)
+    user_raw=$(devforge_get_user_raw)
+    user_source=$(devforge_get_user_source)
+    safe_user=$(devforge_sanitize_json_str "$user")
+    safe_user_raw=$(devforge_sanitize_json_str "$user_raw")
+    safe_user_source=$(devforge_sanitize_json_str "$user_source")
+    safe_sid=$(devforge_sanitize_json_str "$sid")
+    safe_branch=$(devforge_sanitize_json_str "$branch")
+    safe_project=$(devforge_sanitize_json_str "$project")
+    safe_event=$(devforge_sanitize_json_str "$event")
+    safe_status=$(devforge_sanitize_json_str "$status")
 
     # Atomic append — printf avoids echo quoting issues
-    printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
-        "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$meta" >> "$DEVFORGE_LOG_FILE"
+    printf '{"ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "$DEVFORGE_LOG_FILE"
+
+    # Dual write: session-specific activity log
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
+        printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+            "$ts" "$safe_user" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+    fi
 }
 
 # Log with duration measurement
@@ -156,13 +288,29 @@ devforge_log_timed() {
     branch=$(echo "$git_ctx" | cut -d'|' -f1)
     jira_id=$(echo "$git_ctx" | cut -d'|' -f2)
     project=$(echo "$git_ctx" | cut -d'|' -f3)
-    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"${jira_id}\""; fi
+    if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"$(devforge_sanitize_json_str "$jira_id")\""; fi
 
-    local user
+    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status
     user=$(devforge_get_user)
+    user_raw=$(devforge_get_user_raw)
+    user_source=$(devforge_get_user_source)
+    safe_user=$(devforge_sanitize_json_str "$user")
+    safe_user_raw=$(devforge_sanitize_json_str "$user_raw")
+    safe_user_source=$(devforge_sanitize_json_str "$user_source")
+    safe_sid=$(devforge_sanitize_json_str "$sid")
+    safe_branch=$(devforge_sanitize_json_str "$branch")
+    safe_project=$(devforge_sanitize_json_str "$project")
+    safe_event=$(devforge_sanitize_json_str "$event")
+    safe_status=$(devforge_sanitize_json_str "$status")
 
-    printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
-        "$ts" "$user" "$sid" "$branch" "$jira_json" "$project" "$event" "$status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+    printf '{"ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+
+    # Dual write: session-specific activity log (with duration)
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
+        printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+            "$ts" "$safe_user" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+    fi
 }
 
 # Set an active mode sentinel in the current working directory

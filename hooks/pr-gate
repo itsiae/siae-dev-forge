@@ -27,7 +27,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${TOOL_COMMAND}\"}"
+SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
+devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${SAFE_TOOL_COMMAND}\"}"
 
 escape_for_json() {
     local s="$1"
