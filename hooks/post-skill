@@ -21,6 +21,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 
 # Timestamp file for chaining
 SKILL_TS_FILE="${HOME}/.claude/.devforge-skill-start"

@@ -26,23 +26,23 @@ devforge_create_batch() {
     mkdir -p "${session_dir}/outbox" 2>/dev/null || return 0
 
     local cursor_file="${session_dir}/outbox/.cursor"
-    local cursor
-    cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
-    local file_size
-    file_size=$(stat -f%z "$activity" 2>/dev/null || stat -c%s "$activity" 2>/dev/null || echo "0")
+    local lock_file="${session_dir}/outbox/.batch.lock"
 
-    # Nothing new to batch
-    [ "$file_size" -le "$cursor" ] && return 0
+    (
+        # Try lock, skip if can't acquire (another process is batching)
+        if command -v flock >/dev/null 2>&1; then
+            flock -n 9 || return 0
+        fi
 
-    local batch_file="${session_dir}/outbox/batch-$(date +%s).jsonl"
-    tail -c +"$((cursor + 1))" "$activity" > "$batch_file" 2>/dev/null || return 0
+        local cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+        local file_size=$(stat -f%z "$activity" 2>/dev/null || stat -c%s "$activity" 2>/dev/null || echo "0")
 
-    # Only update cursor if batch file was actually written
-    if [ -s "$batch_file" ]; then
+        [ "$file_size" -le "$cursor" ] && return 0
+
+        local batch_file="${session_dir}/outbox/batch-$(date +%s%N 2>/dev/null || date +%s)-$$.jsonl"
+        tail -c +"$((cursor + 1))" "$activity" > "$batch_file" 2>/dev/null || return 0
         echo "$file_size" > "$cursor_file"
-    else
-        rm -f "$batch_file" 2>/dev/null
-    fi
+    ) 9>"$lock_file" 2>/dev/null
 }
 
 # devforge_upload_logs — creates a batch from current session + uploads all pending

@@ -57,6 +57,9 @@ if mkdir "$SESSION_END_GUARD" 2>/dev/null; then
         SKILLS_USED_COUNT=0
     fi
 
+    # Refresh token stats before reading
+    python3 "${PLUGIN_ROOT}/lib/token-collector.py" update 2>/dev/null || true
+
     # Token stats for session_end enrichment
     TOKEN_TOTAL=0
     TOKEN_OUTPUT=0

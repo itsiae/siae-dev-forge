@@ -29,6 +29,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
