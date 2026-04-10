@@ -130,8 +130,7 @@ cat <<EOF
 {
   "additional_context": "${session_context}",
   "hookSpecificOutput": {
-    "hookEventName": "UserPromptSubmit",
-    "additionalContext": "${session_context}"
+    "hookEventName": "UserPromptSubmit"
   }
 }
 EOF

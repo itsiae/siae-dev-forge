@@ -155,18 +155,38 @@ if [ -n "$BRANCHING_SUMMARY" ]; then
 fi
 # --- End branching compliance ---
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}\n</EXTREMELY_IMPORTANT>"
+# --- Global DevForge memory (cross-project feedback, applies to ALL repos) ---
+GLOBAL_MEMORY_DIR="${HOME}/.claude/devforge-global-memory"
+global_memory_section=""
+if [ -d "$GLOBAL_MEMORY_DIR" ]; then
+    global_memory_parts=""
+    shopt -s nullglob
+    for mf in "${GLOBAL_MEMORY_DIR}"/*.md; do
+        fname="$(basename "$mf")"
+        # Skip the index file
+        [ "$fname" = "MEMORY.md" ] && continue
+        content=$(cat "$mf" 2>/dev/null | head -c 2000 || echo "")
+        [ -z "$content" ] && continue
+        content_escaped=$(escape_for_json "$content")
+        global_memory_parts="${global_memory_parts}\\n---\\n${content_escaped}"
+    done
+    shopt -u nullglob
+    if [ -n "$global_memory_parts" ]; then
+        global_memory_section="\\n\\n**Global DevForge Memory (cross-project — si applica a TUTTI i repo):**${global_memory_parts}"
+    fi
+fi
+# --- End global memory ---
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
-# Keep both shapes for compatibility:
-# - Cursor hooks expect additional_context.
-# - Claude hooks expect hookSpecificOutput.additionalContext.
+# additional_context is the canonical field for Claude Code hooks.
+# hookSpecificOutput carries only metadata (no payload duplication).
 cat <<EOF
 {
   "additional_context": "${session_context}",
   "hookSpecificOutput": {
-    "hookEventName": "SessionStart",
-    "additionalContext": "${session_context}"
+    "hookEventName": "SessionStart"
   }
 }
 EOF
