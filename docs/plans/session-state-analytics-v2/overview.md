@@ -17,12 +17,12 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Logger refactor: state per-sessione + identity pinning | `task-01-logger-refactor.md` | [PENDING] |
-| 2 | Session-start: init dir sessione + cleanup | `task-02-session-start-init.md` | [PENDING] |
-| 3 | Telemetry upload: outbox model | `task-03-outbox-upload.md` | [PENDING] |
-| 4 | Stop-gate: flush + upload finale | `task-04-stop-gate-flush.md` | [PENDING] |
-| 5 | Post-commit-review: upload post-evento | `task-05-post-commit-upload.md` | [PENDING] |
-| 6 | Context + statusline: read da session dir | `task-06-context-statusline.md` | [PENDING] |
+| 1 | Logger refactor: state per-sessione + identity pinning | `task-01-logger-refactor.md` | [DONE] |
+| 2 | Session-start: init dir sessione + cleanup | `task-02-session-start-init.md` | [DONE] |
+| 3 | Telemetry upload: outbox model | `task-03-outbox-upload.md` | [DONE] |
+| 4 | Stop-gate: flush + upload finale | `task-04-stop-gate-flush.md` | [DONE] |
+| 5 | Post-commit-review: upload post-evento | `task-05-post-commit-upload.md` | [DONE] |
+| 6 | Context + statusline: read da session dir | `task-06-context-statusline.md` | [DONE] |
 
 ### Fase 2 — PR3: Analytics V2
 

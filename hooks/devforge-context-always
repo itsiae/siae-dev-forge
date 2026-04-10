@@ -14,6 +14,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
 
 STATE_DIR="${HOME}/.claude"
 
@@ -89,6 +91,15 @@ if [ "$START_NS" != "0" ] && [ -n "$START_NS" ]; then
 fi
 
 STATS_SECTION="Session: ${DURATION_MIN}min | messaggi=${MSG_COUNT} | commits=${COMMITS} | skills=${SKILLS}"
+
+# Telemetry pending indicator
+if [ -n "$DEVFORGE_SESSION_DIR" ]; then
+    source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
+    PENDING=$(devforge_pending_count 2>/dev/null || echo "0")
+    if [ "$PENDING" -gt 0 ] 2>/dev/null; then
+        STATS_SECTION="${STATS_SECTION} | telemetry=pending:${PENDING}"
+    fi
+fi
 
 # ── Last Test Results ───────────────────────────────────────────
 TEST_SECTION=""
