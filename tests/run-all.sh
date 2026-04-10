@@ -1083,7 +1083,8 @@ fi
 # Test Fix4-B: MEMORY.md index file is NOT injected (case-insensitive skip)
 printf '# Index\n- entry' > "${TEST_MEM_DIR}/MEMORY.md"
 SESSION_JSON_IDX=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
-if ! echo "$SESSION_JSON_IDX" | grep -q "# Index"; then
+SESSION_JSON_IDX_CLEAN=$(echo "$SESSION_JSON_IDX" | awk '/^\{/{f=1} f')
+if ! echo "$SESSION_JSON_IDX_CLEAN" | grep -q "# Index"; then
   echo "  PASS  session-start Fix4: MEMORY.md index file skipped"
   telfunc_ok=$((telfunc_ok + 1))
 else
@@ -1093,6 +1094,7 @@ fi
 
 # Test Fix4-C: exit 0 without crash when global memory directory does not exist
 SESSION_JSON_NODIR=$(HOME="${TEST_TMP}/no-such-dir" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null; echo "exit:$?") || true
+SESSION_JSON_NODIR_CLEAN=$(echo "$SESSION_JSON_NODIR" | awk '/^\{/{f=1} f')
 if echo "$SESSION_JSON_NODIR" | grep -q "exit:0"; then
   echo "  PASS  session-start Fix4: exits cleanly when devforge-global-memory dir absent"
   telfunc_ok=$((telfunc_ok + 1))
@@ -1102,17 +1104,21 @@ else
 fi
 
 # Test Fix4-D: symlinks in global memory dir are skipped (no info-disclosure)
+# Use a controlled target file with a unique marker — avoids dependency on /etc/hosts content
 if command -v ln >/dev/null 2>&1; then
-  ln -sf /etc/hosts "${TEST_MEM_DIR}/evil-symlink.md" 2>/dev/null || true
+  SYMLINK_TARGET="${TEST_TMP}/fake-secret.txt"
+  printf 'DEVFORGE_SYMLINK_LEAK_MARKER_XYZ' > "$SYMLINK_TARGET"
+  ln -sf "$SYMLINK_TARGET" "${TEST_MEM_DIR}/evil-symlink.md" 2>/dev/null || true
   SESSION_JSON_SYM=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
-  if ! echo "$SESSION_JSON_SYM" | grep -qi "localhost\|127.0.0.1"; then
+  SESSION_JSON_SYM_CLEAN=$(echo "$SESSION_JSON_SYM" | awk '/^\{/{f=1} f')
+  if ! echo "$SESSION_JSON_SYM_CLEAN" | grep -q "DEVFORGE_SYMLINK_LEAK_MARKER_XYZ"; then
     echo "  PASS  session-start Fix4: symlinks in global memory dir skipped"
     telfunc_ok=$((telfunc_ok + 1))
   else
     echo "  FAIL  session-start Fix4: symlink content leaked into context"
     telfunc_fail=$((telfunc_fail + 1))
   fi
-  rm -f "${TEST_MEM_DIR}/evil-symlink.md"
+  rm -f "${TEST_MEM_DIR}/evil-symlink.md" "$SYMLINK_TARGET"
 else
   echo "  SKIP  session-start Fix4 symlink: ln not available"
   TOTAL_SKIP=$((TOTAL_SKIP + 1))

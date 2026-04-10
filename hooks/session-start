@@ -174,7 +174,7 @@ if [ -d "$GLOBAL_MEMORY_DIR" ]; then
         fname="$(basename "$mf")"
         # Skip the index file (case-insensitive) — bash 3.2 compatible
         case "$fname" in [Mm][Ee][Mm][Oo][Rr][Yy].md) continue ;; esac
-        content=$(cat "$mf" 2>/dev/null | head -c "$GLOBAL_MEMORY_MAX_BYTES" || echo "")
+        content=$(head -c "$GLOBAL_MEMORY_MAX_BYTES" "$mf" 2>/dev/null || echo "")
         [ -z "$content" ] && continue
         content_escaped=$(escape_for_json "$content")
         global_memory_parts="${global_memory_parts}\\n---\\n${content_escaped}"
