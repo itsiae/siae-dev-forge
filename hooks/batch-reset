@@ -12,6 +12,7 @@
 # The user's message IS the feedback that unblocks the next batch.
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="batch-reset"
 
 STATE_DIR="${HOME}/.claude"
 BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"

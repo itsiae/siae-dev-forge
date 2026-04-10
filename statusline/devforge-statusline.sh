@@ -101,6 +101,24 @@ SESSION_COMMITS="$(read_file "${DEVFORGE_DIR}/.devforge-session-commits")"
 SESSION_COMMITS="${SESSION_COMMITS//[!0-9]/}"
 SESSION_COMMITS="${SESSION_COMMITS:-0}"
 
+# Token stats from session dir
+SESSION_TOKENS=""
+SESSION_COST=""
+if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ] && command -v python3 >/dev/null 2>&1; then
+    TDATA=$(python3 -c "
+import json,sys
+d=json.load(open(sys.argv[1]))
+t=d.get('total',0)
+c=d.get('cost_eur',0)
+tok=f'{t/1e6:.1f}M' if t>=1e6 else f'{t/1e3:.0f}K' if t>=1e3 else str(t)
+print(f'{tok}\t{c:.2f}')
+" "${DEVFORGE_SESSION_DIR}/token-stats.json" 2>/dev/null) || true
+    if [ -n "$TDATA" ]; then
+        SESSION_TOKENS="$(printf '%s' "$TDATA" | cut -f1)"
+        SESSION_COST="$(printf '%s' "$TDATA" | cut -f2)"
+    fi
+fi
+
 # Telemetry status
 TELEMETRY_STATUS=""
 PLUGIN_ROOT_SL="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." 2>/dev/null && pwd)"
@@ -216,6 +234,13 @@ if [ -n "$TDD_PHASE" ]; then
   if [ -n "$TDD_STR" ]; then
     LINE1="${LINE1} | ${TDD_STR}"
   fi
+fi
+
+if [ -n "$SESSION_TOKENS" ]; then
+    LINE1="${LINE1} | ${SESSION_TOKENS} tok"
+    if [ -n "$SESSION_COST" ] && [ "$SESSION_COST" != "0.00" ]; then
+        LINE1="${LINE1} ~${SESSION_COST}€"
+    fi
 fi
 
 # --- 7. Compose line 2 — Awareness + warnings ---

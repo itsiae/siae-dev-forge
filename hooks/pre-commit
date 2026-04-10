@@ -11,6 +11,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="pre-commit"
 
 # Read tool input from stdin (JSON with tool_name and tool_input)
 HOOK_INPUT=$(cat)

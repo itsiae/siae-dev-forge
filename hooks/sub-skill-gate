@@ -16,6 +16,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="sub-skill-gate"
 
 HOOK_INPUT=$(cat)
 

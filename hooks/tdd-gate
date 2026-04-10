@@ -10,6 +10,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="tdd-gate"
 
 HOOK_INPUT=$(cat)
 

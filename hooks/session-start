@@ -9,6 +9,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="session-start"
 
 # Determine plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"

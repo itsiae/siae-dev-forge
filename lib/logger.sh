@@ -240,7 +240,16 @@ devforge_log() {
     project=$(echo "$git_ctx" | cut -d'|' -f3)
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"$(devforge_sanitize_json_str "$jira_id")\""; fi
 
-    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status
+    # Schema v2 fields
+    local seq=$(devforge_next_seq)
+    local event_id="${sid}-${seq}"
+    local hook_name="${DEVFORGE_CURRENT_HOOK:-unknown}"
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+    local project_canonical
+    project_canonical=$(basename "$repo_root")
+
+    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status safe_repo_root safe_project_canonical
     user=$(devforge_get_user)
     user_raw=$(devforge_get_user_raw)
     user_source=$(devforge_get_user_source)
@@ -252,14 +261,18 @@ devforge_log() {
     safe_project=$(devforge_sanitize_json_str "$project")
     safe_event=$(devforge_sanitize_json_str "$event")
     safe_status=$(devforge_sanitize_json_str "$status")
+    safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
+    safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    # Atomic append — printf avoids echo quoting issues
-    printf '{"ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+    # Atomic append — printf avoids echo quoting issues (schema v2 + backward compat)
+    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+        "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "$DEVFORGE_LOG_FILE"
 
-    # Dual write: session-specific activity log
+    # Dual write: session-specific activity log (schema v2)
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
             "$ts" "$safe_user" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
     fi
 }
@@ -290,7 +303,16 @@ devforge_log_timed() {
     project=$(echo "$git_ctx" | cut -d'|' -f3)
     if [ "$jira_id" = "null" ]; then jira_json="null"; else jira_json="\"$(devforge_sanitize_json_str "$jira_id")\""; fi
 
-    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status
+    # Schema v2 fields
+    local seq=$(devforge_next_seq)
+    local event_id="${sid}-${seq}"
+    local hook_name="${DEVFORGE_CURRENT_HOOK:-unknown}"
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+    local project_canonical
+    project_canonical=$(basename "$repo_root")
+
+    local user user_raw user_source safe_user safe_user_raw safe_user_source safe_sid safe_branch safe_project safe_event safe_status safe_repo_root safe_project_canonical
     user=$(devforge_get_user)
     user_raw=$(devforge_get_user_raw)
     user_source=$(devforge_get_user_source)
@@ -302,13 +324,17 @@ devforge_log_timed() {
     safe_project=$(devforge_sanitize_json_str "$project")
     safe_event=$(devforge_sanitize_json_str "$event")
     safe_status=$(devforge_sanitize_json_str "$status")
+    safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
+    safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    printf '{"ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+        "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
 
-    # Dual write: session-specific activity log (with duration)
+    # Dual write: session-specific activity log (schema v2 with duration)
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
             "$ts" "$safe_user" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
     fi
 }

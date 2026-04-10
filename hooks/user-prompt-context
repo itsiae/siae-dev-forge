@@ -10,6 +10,7 @@
 # Inspired by: https://github.com/obra/autoresearch-claude-code
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="user-prompt-context"
 shopt -s nullglob
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"

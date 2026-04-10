@@ -13,6 +13,7 @@
 # until the batch report sentinel is cleared.
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="batch-checkpoint"
 
 BATCH_SIZE=3
 STATE_DIR="${HOME}/.claude"

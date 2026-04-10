@@ -10,6 +10,7 @@
 # to ~/.claude/.devforge-last-test-result for context injection.
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="capture-test-result"
 
 STATE_DIR="${HOME}/.claude"
 RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
