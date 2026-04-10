@@ -201,15 +201,16 @@ cat <<EOF
 }
 EOF
 
-# Log session start event
-devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
+# Cache resolved user BEFORE first devforge_log call (P0 fix: log at line 205 reads
+# devforge_get_user() internally — cache must exist first so non-git fallback works)
+RESOLVED_USER=$(devforge_get_user)
+echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
 
 # Save session start timestamp for duration calculation in session_end
 echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
 
-# Cache resolved user for non-git contexts (F3: fix user "unknown")
-RESOLVED_USER=$(devforge_get_user)
-echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
+# Log session start event (cache is now available as fallback for devforge_get_user)
+devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
 
 # F4: Detect PR merges in last 24h — use explicit --repo from git remote
 if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then

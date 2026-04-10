@@ -126,6 +126,8 @@ escape_for_json() {
 context_escaped=$(escape_for_json "$CONTEXT_LINES")
 session_context="<EXTREMELY_IMPORTANT>\n${context_escaped}\n</EXTREMELY_IMPORTANT>"
 
+# additional_context is the canonical field for Claude Code hooks.
+# hookSpecificOutput carries only metadata (no payload duplication).
 cat <<EOF
 {
   "additional_context": "${session_context}",

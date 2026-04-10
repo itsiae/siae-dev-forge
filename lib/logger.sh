@@ -64,8 +64,13 @@ devforge_get_user() {
     user=$(git config user.email 2>/dev/null)
     # 2. Global git config
     [ -z "$user" ] && user=$(git config --global user.email 2>/dev/null)
-    # 3. Session cache (set by session-start)
-    [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ] && user=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null)
+    # 3. Session cache (set by session-start) — only accept email-like values to
+    #    prevent stale-value promotion: a degraded $USER/whoami written in a
+    #    non-git session would otherwise shadow a later valid git config email.
+    if [ -z "$user" ] && [ -f "${HOME}/.claude/.devforge-user" ]; then
+        _cached=$(cat "${HOME}/.claude/.devforge-user" 2>/dev/null || echo "")
+        echo "$_cached" | grep -q '@' && user="$_cached"
+    fi
     # 4. OS user
     [ -z "$user" ] && user="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
     echo "$user"
