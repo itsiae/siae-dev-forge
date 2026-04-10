@@ -171,15 +171,23 @@ cat <<EOF
 }
 EOF
 
+# Cache resolved user for non-git contexts (F3: fix user "unknown")
+rm -f "${HOME}/.claude/.devforge-session-user" "${HOME}/.claude/.devforge-session-user-source"
+RESOLVED_USER_RAW=$(devforge_get_user_raw)
+RESOLVED_USER_SOURCE=$(devforge_get_user_source)
+devforge_cache_user "$RESOLVED_USER_RAW" "$RESOLVED_USER_SOURCE"
+
 # Log session start event
-devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"$(pwd)\",\"plugin_version\":\"${PLUGIN_VERSION}\"}"
+SAFE_PROJECT_DIR=$(devforge_sanitize_json_str "$(pwd)")
+SAFE_PLUGIN_VERSION=$(devforge_sanitize_json_str "$PLUGIN_VERSION")
+devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"${SAFE_PROJECT_DIR}\",\"plugin_version\":\"${SAFE_PLUGIN_VERSION}\"}"
 
 # Save session start timestamp for duration calculation in session_end
 echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
 
-# Cache resolved user for non-git contexts (F3: fix user "unknown")
-RESOLVED_USER=$(devforge_get_user)
-echo "$RESOLVED_USER" > "${HOME}/.claude/.devforge-user"
+# Opportunistic flush of any local backlog, including the fresh session_start event.
+source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
+devforge_upload_logs 2>/dev/null || true
 
 # F4: Detect PR merges in last 24h — use explicit --repo from git remote
 if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
@@ -187,14 +195,17 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
         | sed 's/\.git$//' | grep -oE '[^/:]+/[^/]+$' || echo "")
 
     if [ -n "$GH_REPO" ]; then
-        USER_EMAIL="$RESOLVED_USER"
+        USER_EMAIL="$RESOLVED_USER_RAW"
         MERGED_PRS=$(gh pr list --repo "$GH_REPO" --state merged --author "@me" \
             --json number,mergedAt,createdAt,reviews \
             --jq '[.[] | select((.mergedAt | fromdateiso8601) > (now - 86400))]' 2>/dev/null || echo "[]")
 
         if [ "$MERGED_PRS" != "[]" ] && [ -n "$MERGED_PRS" ]; then
+            SEEN_FILE="${HOME}/.claude/.devforge-seen-pr-merges"
+            touch "$SEEN_FILE"
             echo "$MERGED_PRS" | jq -c '.[]' 2>/dev/null | while IFS= read -r pr; do
                 PR_NUMBER=$(echo "$pr" | jq -r '.number' 2>/dev/null || echo "0")
+                if grep -qF "${GH_REPO}#${PR_NUMBER}" "$SEEN_FILE" 2>/dev/null; then continue; fi
                 CREATED_AT=$(echo "$pr" | jq -r '.createdAt' 2>/dev/null || echo "")
                 MERGED_AT=$(echo "$pr" | jq -r '.mergedAt' 2>/dev/null || echo "")
                 REVIEWERS_COUNT=$(echo "$pr" | jq '[.reviews[]? | .author.login] | unique | length' 2>/dev/null || echo "0")
@@ -211,6 +222,8 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 
                 devforge_log "pr_merged" "success" \
                     "{\"pr_number\":${PR_NUMBER},\"review_cycle_hours\":${REVIEW_CYCLE_HOURS},\"reviewers_count\":${REVIEWERS_COUNT}}"
+                echo "${GH_REPO}#${PR_NUMBER}" >> "$SEEN_FILE"
+                tail -200 "$SEEN_FILE" > "${SEEN_FILE}.tmp" && mv "${SEEN_FILE}.tmp" "$SEEN_FILE"
             done
         fi
     fi
@@ -223,7 +236,7 @@ if [ -f "$SESSION_LOCK_FILE" ]; then
     OLD_PID=$(cat "$SESSION_LOCK_FILE" 2>/dev/null || echo "0")
     # Check if old session is still running (kill -0 tests existence)
     if kill -0 "$OLD_PID" 2>/dev/null && [ "$OLD_PID" != "$CURRENT_PID" ]; then
-        devforge_log "session_start" "warning" "{\"reason\":\"concurrent_session_detected\",\"old_pid\":${OLD_PID},\"new_pid\":${CURRENT_PID}}"
+        devforge_log "session_conflict" "warning" "{\"reason\":\"concurrent_session_detected\",\"old_pid\":${OLD_PID},\"new_pid\":${CURRENT_PID}}"
     fi
 fi
 echo "$CURRENT_PID" > "$SESSION_LOCK_FILE"
@@ -243,6 +256,7 @@ rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 rm -f "${HOME}/.claude/.devforge-tdd-state"
 rm -f "${HOME}/.claude/.devforge-last-coverage"
 rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+rm -f "${HOME}/.claude/.devforge-skill-start"
 
 # Cleanup stale sentinel files (older than 24h) in working directory
 STALE_AGE=86400
@@ -251,7 +265,8 @@ shopt -s nullglob
 for sentinel in .devforge-active-*; do
     MTIME=$(stat -f%m "$sentinel" 2>/dev/null || stat -c%Y "$sentinel" 2>/dev/null || echo "0")
     if [ $((NOW - MTIME)) -gt "$STALE_AGE" ]; then
-        devforge_log "session_start_cleanup" "info" "{\"file\":\"${sentinel}\",\"age_hours\":$(( (NOW - MTIME) / 3600 ))}"
+        SAFE_SENTINEL=$(devforge_sanitize_json_str "$sentinel")
+        devforge_log "session_start_cleanup" "info" "{\"file\":\"${SAFE_SENTINEL}\",\"age_hours\":$(( (NOW - MTIME) / 3600 ))}"
         rm -f "$sentinel"
     fi
 done
