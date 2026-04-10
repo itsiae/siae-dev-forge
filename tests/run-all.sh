@@ -1094,7 +1094,7 @@ fi
 
 # Test Fix4-C: exit 0 without crash when global memory directory does not exist
 SESSION_JSON_NODIR=$(HOME="${TEST_TMP}/no-such-dir" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null; echo "exit:$?") || true
-SESSION_JSON_NODIR_CLEAN=$(echo "$SESSION_JSON_NODIR" | awk '/^\{/{f=1} f')
+# Use raw variable: "exit:0" is appended after the JSON block, so awk (from first '{') may strip it.
 if echo "$SESSION_JSON_NODIR" | grep -q "exit:0"; then
   echo "  PASS  session-start Fix4: exits cleanly when devforge-global-memory dir absent"
   telfunc_ok=$((telfunc_ok + 1))
