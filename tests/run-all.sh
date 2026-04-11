@@ -1053,6 +1053,79 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+# Test Fix1-A: hookSpecificOutput must NOT contain additionalContext (payload deduplication)
+# Extract only the JSON block — skip npm/tsc noise emitted by background processes on stdout
+SESSION_JSON_FIX1_CLEAN=$(echo "$SESSION_JSON" | awk '/^\{/{f=1} f')
+if echo "$SESSION_JSON_FIX1_CLEAN" | python3 -c "import sys,json; d=json.loads(sys.stdin.read(),strict=False); assert 'additionalContext' not in d.get('hookSpecificOutput',{})" 2>/dev/null; then
+  echo "  PASS  session-start Fix1: hookSpecificOutput does not contain additionalContext"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start Fix1: hookSpecificOutput contains additionalContext (payload duplication regression)"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
+# Test Fix4-A: global memory injected when directory contains .md files
+TEST_TMP=$(mktemp -d)
+TEST_MEM_DIR="${TEST_TMP}/.claude/devforge-global-memory"
+mkdir -p "$TEST_MEM_DIR"
+printf '# Test memory\nContenuto-globale-test-fixture' > "${TEST_MEM_DIR}/feedback-test.md"
+SESSION_JSON_GM=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+# Extract only the JSON block (skip npm/tsc noise from background processes)
+SESSION_JSON_GM_CLEAN=$(echo "$SESSION_JSON_GM" | awk '/^\{/{f=1} f')
+if echo "$SESSION_JSON_GM_CLEAN" | grep -q "Contenuto-globale-test-fixture"; then
+  echo "  PASS  session-start Fix4: global memory injected when directory exists"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start Fix4: global memory not injected"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
+# Test Fix4-B: MEMORY.md index file is NOT injected (case-insensitive skip)
+printf '# Index\n- entry' > "${TEST_MEM_DIR}/MEMORY.md"
+SESSION_JSON_IDX=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+SESSION_JSON_IDX_CLEAN=$(echo "$SESSION_JSON_IDX" | awk '/^\{/{f=1} f')
+if ! echo "$SESSION_JSON_IDX_CLEAN" | grep -q "# Index"; then
+  echo "  PASS  session-start Fix4: MEMORY.md index file skipped"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start Fix4: MEMORY.md index file incorrectly injected"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
+# Test Fix4-C: exit 0 without crash when global memory directory does not exist
+SESSION_JSON_NODIR=$(HOME="${TEST_TMP}/no-such-dir" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null; echo "exit:$?") || true
+# Use raw variable: "exit:0" is appended after the JSON block, so awk (from first '{') may strip it.
+if echo "$SESSION_JSON_NODIR" | grep -q "exit:0"; then
+  echo "  PASS  session-start Fix4: exits cleanly when devforge-global-memory dir absent"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  session-start Fix4: crash when devforge-global-memory dir absent"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
+# Test Fix4-D: symlinks in global memory dir are skipped (no info-disclosure)
+# Use a controlled target file with a unique marker — avoids dependency on /etc/hosts content
+if command -v ln >/dev/null 2>&1; then
+  SYMLINK_TARGET="${TEST_TMP}/fake-secret.txt"
+  printf 'DEVFORGE_SYMLINK_LEAK_MARKER_XYZ' > "$SYMLINK_TARGET"
+  ln -sf "$SYMLINK_TARGET" "${TEST_MEM_DIR}/evil-symlink.md" 2>/dev/null || true
+  SESSION_JSON_SYM=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+  SESSION_JSON_SYM_CLEAN=$(echo "$SESSION_JSON_SYM" | awk '/^\{/{f=1} f')
+  if ! echo "$SESSION_JSON_SYM_CLEAN" | grep -q "DEVFORGE_SYMLINK_LEAK_MARKER_XYZ"; then
+    echo "  PASS  session-start Fix4: symlinks in global memory dir skipped"
+    telfunc_ok=$((telfunc_ok + 1))
+  else
+    echo "  FAIL  session-start Fix4: symlink content leaked into context"
+    telfunc_fail=$((telfunc_fail + 1))
+  fi
+  rm -f "${TEST_MEM_DIR}/evil-symlink.md" "$SYMLINK_TARGET"
+else
+  echo "  SKIP  session-start Fix4 symlink: ln not available"
+  TOTAL_SKIP=$((TOTAL_SKIP + 1))
+fi
+
+rm -rf "$TEST_TMP"
+
 # Test F5: stop-gate with empty stdin emits telemetry but no verification JSON
 F5_LOG="/tmp/devforge-test-f5.jsonl"
 rm -f "$F5_LOG"
