@@ -139,6 +139,65 @@ def test_lock_path_uses_explicit_override(tmp_path, activity_file):
     assert custom.exists() or custom.parent.exists()  # lock file created or dir ready
 
 
+def test_rotate_at_bytes_rotates_under_lock(activity_file):
+    """Fix race condition post-PR-A: rotation must happen WITHIN the lock,
+    otherwise a concurrent writer can lose lines by writing into a file
+    that has just been mv'd to archived."""
+    activity_file.write_text("x" * 6000, encoding="utf-8")
+    assert activity_file.stat().st_size == 6000
+
+    atomic_write.atomic_append(activity_file, '{"after":"rotate"}', rotate_at_bytes=5000)
+
+    archived = list(activity_file.parent.glob("activity-*.archived.jsonl"))
+    assert len(archived) == 1, f"expected 1 archived, got {len(archived)}"
+    assert archived[0].stat().st_size == 6000
+    current_content = activity_file.read_text(encoding="utf-8")
+    assert current_content == '{"after":"rotate"}\n'
+
+
+def test_rotate_at_bytes_noop_below_threshold(activity_file):
+    """Under threshold: no rotation, just append."""
+    activity_file.write_text("small", encoding="utf-8")
+    atomic_write.atomic_append(activity_file, '{"ok":1}', rotate_at_bytes=10000)
+    archived = list(activity_file.parent.glob("activity-*.archived.jsonl"))
+    assert len(archived) == 0
+
+
+def test_concurrent_writes_with_rotation_no_lines_lost(activity_file):
+    """Critical: 50 concurrent writers + rotation threshold triggered.
+    Every line must end up either in activity.jsonl OR in archived — never lost.
+    Regression test for the rotation-outside-lock race (iter-post-PR-A review)."""
+    NUM = 50
+    # Pre-fill ends with newline so appended JSON lines start on own lines.
+    activity_file.write_text("x" * 3000 + "\n", encoding="utf-8")
+
+    def writer(idx: int) -> None:
+        line = json.dumps({"idx": idx, "pad": "y" * 50})
+        atomic_write.atomic_append(activity_file, line, rotate_at_bytes=3500)
+
+    threads = [threading.Thread(target=writer, args=(i,)) for i in range(NUM)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    all_idx = set()
+    for f in [activity_file] + list(activity_file.parent.glob("activity-*.archived.jsonl")):
+        content = f.read_text(encoding="utf-8")
+        for line in content.splitlines():
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+                if "idx" in obj:
+                    all_idx.add(obj["idx"])
+            except json.JSONDecodeError:
+                pass  # pre-fill data is not JSON, skip
+
+    assert all_idx == set(range(NUM)), \
+        f"lost indices: {set(range(NUM)) - all_idx} (found {len(all_idx)}/{NUM})"
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only signal semantics")
 def test_kill_during_write_no_partial_line(tmp_session_dir, activity_file):
     """Edge #2 (POSIX): subprocess that writes 50 events killed mid-stream.

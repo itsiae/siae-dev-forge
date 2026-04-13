@@ -28,7 +28,11 @@ fi
 # (root cause of the 6612 parse errors observed in S3 pre-PR187).
 _devforge_atomic_append() {
     local target_file="$1" line="$2"
-    python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" 2>/dev/null
+    # Post-PR-A review fix: pass rotate_at_bytes so rotation happens INSIDE
+    # the same lock as the append (previous bash _devforge_check_rotation was
+    # outside the lock — race condition). Default 5MB; override with env.
+    local rotate_bytes="${DEVFORGE_ROTATE_BYTES:-5242880}"
+    python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
 }
 
 # Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).
@@ -85,43 +89,49 @@ _devforge_disk_gate() {
 }
 
 _devforge_check_rotation() {
-    # Zero-loss PR-A: rotate at 5MB (was 50MB) into timestamped archived files.
-    # Pattern: activity-<unix_ts>.archived.jsonl (was single .1 backup overwrite).
-    # Batcher in telemetry-upload.sh reads both current + archived files in order.
-    # Enforces a 50MB total cap on activity + archived (drop oldest archived).
-    local max_bytes=5242880
+    # Post-PR-A review fix: rotation is now ATOMIC inside atomic_write.py
+    # (under the same flock as the append). This bash function kept ONLY to
+    # enforce the 50MB TOTAL CAP on activity + archived, and it does so SAFELY:
+    # drops ONLY fully-consumed archived (cursor_file == file_size). Archived
+    # not-yet-uploaded (cursor < size OR cursor file missing) are PRESERVED
+    # even if total > cap — better disk pressure than data loss.
     local cap_bytes=52428800  # 50MB total cap
     [ -z "${DEVFORGE_LOG_FILE:-}" ] && return 0
     local base dir
     base=$(basename "$DEVFORGE_LOG_FILE" .jsonl)
     dir=$(dirname "$DEVFORGE_LOG_FILE")
-    if [ -f "$DEVFORGE_LOG_FILE" ]; then
-        local file_size
-        file_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
-        if [ "$file_size" -gt "$max_bytes" ] 2>/dev/null; then
-            local ts
-            ts=$(date +%s)
-            mv "$DEVFORGE_LOG_FILE" "${dir}/${base}-${ts}.archived.jsonl"
-            : > "$DEVFORGE_LOG_FILE"  # create empty file for next append
-        fi
-    fi
 
-    # Enforce 50MB total cap: drop oldest archived files until total ≤ cap.
-    # Total includes current + all archived in same dir with same base.
-    local total=0 sz oldest
+    local total=0 sz
     for f in "${dir}/${base}.jsonl" "${dir}/${base}"-*.archived.jsonl; do
         [ -f "$f" ] || continue
         sz=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)
         total=$((total + sz))
     done
+
+    # Safe drop: only archived fully consumed by the batcher.
+    # Cursor file is in ${session_dir}/outbox/.cursor-<basename>.
+    local session_dir outbox cursor_file cursor archived_basename archived dropped
+    session_dir="${DEVFORGE_SESSION_DIR:-$dir}"
+    outbox="${session_dir}/outbox"
     while [ "$total" -gt "$cap_bytes" ] 2>/dev/null; do
-        # Find oldest archived (lowest ts in filename)
+        dropped=0
         # shellcheck disable=SC2012
-        oldest=$(ls -1 "${dir}/${base}"-*.archived.jsonl 2>/dev/null | sort | head -1)
-        [ -z "$oldest" ] && break
-        sz=$(stat -f%z "$oldest" 2>/dev/null || stat -c%s "$oldest" 2>/dev/null || echo 0)
-        rm -f "$oldest"
-        total=$((total - sz))
+        for archived in $(ls -1 "${dir}/${base}"-*.archived.jsonl 2>/dev/null | sort); do
+            [ -f "$archived" ] || continue
+            archived_basename=$(basename "$archived")
+            cursor_file="${outbox}/.cursor-${archived_basename}"
+            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            sz=$(stat -f%z "$archived" 2>/dev/null || stat -c%s "$archived" 2>/dev/null || echo 0)
+            # Only drop if fully consumed: cursor >= file_size
+            if [ "$cursor" -ge "$sz" ] 2>/dev/null && [ "$sz" -gt 0 ] 2>/dev/null; then
+                rm -f "$archived" "$cursor_file"
+                total=$((total - sz))
+                dropped=1
+                break  # re-check cap with fewer files
+            fi
+        done
+        # No safely-droppable archived found → stop (prefer disk pressure)
+        [ "$dropped" -eq 0 ] && break
     done
 }
 

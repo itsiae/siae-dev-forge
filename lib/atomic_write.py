@@ -55,6 +55,33 @@ else:
             pass
 
 
+def _rotate_if_needed(activity_path: Path, rotate_at_bytes: int) -> None:
+    """Rotate activity_path to archived if size > threshold. MUST hold lock.
+
+    Fix post-PR-A review: rotation OUTSIDE the lock creates race where a
+    concurrent writer can write into a file about to be renamed. Keeping
+    rotation inside makes rename atomic w.r.t. other writers.
+    """
+    if rotate_at_bytes <= 0:
+        return
+    try:
+        size = activity_path.stat().st_size
+    except FileNotFoundError:
+        return
+    if size <= rotate_at_bytes:
+        return
+    import time
+    ts = int(time.time())
+    archived = activity_path.parent / f"{activity_path.stem}-{ts}.archived.jsonl"
+    if archived.exists():
+        for i in range(1, 1000):
+            candidate = activity_path.parent / f"{activity_path.stem}-{ts}-{i}.archived.jsonl"
+            if not candidate.exists():
+                archived = candidate
+                break
+    os.rename(str(activity_path), str(archived))
+
+
 def lock_path_for(activity_file) -> Path:
     """Resolve the canonical lock file path for an activity.jsonl.
 
@@ -65,7 +92,8 @@ def lock_path_for(activity_file) -> Path:
     return Path(activity_file).parent / ".activity.lock"
 
 
-def atomic_append(activity_file, line: str, lock_path=None) -> None:
+def atomic_append(activity_file, line: str, lock_path=None,
+                  rotate_at_bytes: int = 0) -> None:
     """Append `line` to `activity_file` under exclusive lock + fsync.
 
     Args:
@@ -89,6 +117,7 @@ def atomic_append(activity_file, line: str, lock_path=None) -> None:
     with open(lp, "a") as lockfd:
         _acquire(lockfd)
         try:
+            _rotate_if_needed(activity_path, rotate_at_bytes)
             with open(activity_path, "a", encoding="utf-8") as af:
                 af.write(line)
                 af.flush()
@@ -98,13 +127,18 @@ def atomic_append(activity_file, line: str, lock_path=None) -> None:
 
 
 def _main(argv) -> int:
-    """CLI entrypoint: `python3 atomic_write.py append <file> <line>`."""
+    """CLI: `python3 atomic_write.py append <file> <line> [rotate_at_bytes]`."""
     if len(argv) < 4 or argv[1] != "append":
-        print("usage: atomic_write.py append <file> <line>", file=sys.stderr)
+        print("usage: atomic_write.py append <file> <line> [rotate_at_bytes]",
+              file=sys.stderr)
         return 2
-    _, _, file_arg, line_arg = argv[:4]
+    file_arg = argv[2]
+    line_arg = argv[3]
+    rotate_at = 0
+    if len(argv) >= 5 and argv[4].isdigit():
+        rotate_at = int(argv[4])
     try:
-        atomic_append(file_arg, line_arg)
+        atomic_append(file_arg, line_arg, rotate_at_bytes=rotate_at)
     except OSError as e:
         print(f"atomic_write error: {e}", file=sys.stderr)
         return 1
