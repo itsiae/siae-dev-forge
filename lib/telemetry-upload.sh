@@ -44,7 +44,7 @@ devforge_create_batch() {
         if [ -s "$batch_file" ]; then
             echo "$file_size" > "$cursor_file"
         else
-            rm -f "$batch_file" 2>/dev/null
+            rm -f "$batch_file"
         fi
     ) 9>"$lock_file" 2>/dev/null
 }

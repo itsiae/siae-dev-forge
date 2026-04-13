@@ -216,8 +216,8 @@ devforge_next_seq() {
         local locked_result
         locked_result=$(
             flock -n 9 || exit 1
-            local current=$(cat "$seq_file" 2>/dev/null || echo "0")
-            local next=$((current + 1))
+            current=$(cat "$seq_file" 2>/dev/null || echo "0")
+            next=$((current + 1))
             echo "$next" > "$seq_file"
             echo "$next"
         ) 9>"${seq_file}.lock"
@@ -225,7 +225,8 @@ devforge_next_seq() {
             echo "$locked_result"
             return
         fi
-        # flock contention — fall through to unlocked path
+        # flock contention or flock unavailable — fallback to unlocked increment
+        # (no atomicity guarantee; duplicate seq numbers possible under concurrency)
     fi
     local current=$(cat "$seq_file" 2>/dev/null || echo "0")
     local next=$((current + 1))
