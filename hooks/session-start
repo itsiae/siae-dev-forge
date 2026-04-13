@@ -40,7 +40,7 @@ else
     USER_RAW_EMAIL="${USER:-$(whoami 2>/dev/null || echo "unknown")}"
     USER_SOURCE="os-user"
 fi
-USER_CANONICAL="$USER_RAW_EMAIL"
+USER_CANONICAL=$(devforge_canonicalize_user "$USER_RAW_EMAIL")
 
 # Write user.json (pinned for entire session)
 if command -v python3 >/dev/null 2>&1; then

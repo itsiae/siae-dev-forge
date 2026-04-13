@@ -40,8 +40,12 @@ devforge_create_batch() {
         [ "$file_size" -le "$cursor" ] && return 0
 
         local batch_file="${session_dir}/outbox/batch-$(date +%s%N 2>/dev/null || date +%s)-$$.jsonl"
-        tail -c +"$((cursor + 1))" "$activity" > "$batch_file" 2>/dev/null || return 0
-        echo "$file_size" > "$cursor_file"
+        tail -c +"$((cursor + 1))" "$activity" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; return 0; }
+        if [ -s "$batch_file" ]; then
+            echo "$file_size" > "$cursor_file"
+        else
+            rm -f "$batch_file" 2>/dev/null
+        fi
     ) 9>"$lock_file" 2>/dev/null
 }
 

@@ -199,6 +199,7 @@ devforge_init_session() {
     DEVFORGE_PINNED_SID="$sid"
     if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
         DEVFORGE_PINNED_USER=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        [ -n "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_canonicalize_user "$DEVFORGE_PINNED_USER")
     fi
     [ -z "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_get_user)
     export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID
@@ -212,19 +213,24 @@ devforge_next_seq() {
         return
     fi
     if command -v flock >/dev/null 2>&1; then
-        (
-            flock -n 9 || { echo "0"; return; }
+        local locked_result
+        locked_result=$(
+            flock -n 9 || exit 1
             local current=$(cat "$seq_file" 2>/dev/null || echo "0")
             local next=$((current + 1))
             echo "$next" > "$seq_file"
             echo "$next"
         ) 9>"${seq_file}.lock"
-    else
-        local current=$(cat "$seq_file" 2>/dev/null || echo "0")
-        local next=$((current + 1))
-        echo "$next" > "$seq_file"
-        echo "$next"
+        if [ -n "$locked_result" ]; then
+            echo "$locked_result"
+            return
+        fi
+        # flock contention — fall through to unlocked path
     fi
+    local current=$(cat "$seq_file" 2>/dev/null || echo "0")
+    local next=$((current + 1))
+    echo "$next" > "$seq_file"
+    echo "$next"
 }
 
 # Sanitize a string for safe JSON embedding (escapes \, ", newlines, tabs)
