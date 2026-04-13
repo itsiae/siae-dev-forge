@@ -66,7 +66,11 @@ export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER="$USER_CANONICAL" DEVFORGE_PINN
 # Silent failure: any network issue → empty arg → no-op (no blocking).
 NTP_EPOCH=""
 if command -v curl >/dev/null 2>&1; then
-    NTP_HEADER=$(curl -sfI -m 2 https://time.cloudflare.com/ 2>/dev/null | grep -i '^date:' | head -1 | sed 's/^[Dd]ate:[[:space:]]*//;s/\r$//')
+    # Silent failure: curl timeout / no internet / grep no-match must not kill
+    # the hook. With `set -euo pipefail` a failing command in this pipeline
+    # would abort session-start before additional_context is emitted (manifests
+    # as "SessionStart hook error · No stderr output" in Claude Code).
+    NTP_HEADER=$(curl -sfI -m 2 https://time.cloudflare.com/ 2>/dev/null | grep -i '^date:' | head -1 | sed 's/^[Dd]ate:[[:space:]]*//;s/\r$//' || echo "")
     if [ -n "$NTP_HEADER" ]; then
         # Try BSD date format (macOS), then GNU date (Linux)
         NTP_EPOCH=$(date -j -f "%a, %d %b %Y %H:%M:%S %Z" "$NTP_HEADER" +%s 2>/dev/null \
@@ -78,13 +82,17 @@ _devforge_check_clock_skew "$NTP_EPOCH" 2>/dev/null || true
 PLUGIN_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "unknown")
 
 # Auto-install status line (idempotente)
-bash "${PLUGIN_ROOT}/statusline/install.sh" 2>/dev/null || true
+# NB: redirect completo — qualsiasi byte su stdout corromperebbe il JSON
+# additional_context emesso sotto (line ~255), rendendolo non parsabile.
+bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
 
 # Auto-install siae-mcp-kibana (idempotente, asincrono — non blocca la sessione)
-bash "${PLUGIN_ROOT}/hooks/setup-mcp-kibana" 2>/dev/null &
+# stdout/stderr soppressi: il background job puo' stampare output npm/tsc
+# durante la prima install e contaminerebbe il JSON del hook.
+bash "${PLUGIN_ROOT}/hooks/setup-mcp-kibana" >/dev/null 2>&1 &
 
 # Auto-install siae-sport-mcp (idempotente, asincrono — non blocca la sessione)
-bash "${PLUGIN_ROOT}/hooks/setup-mcp-sport" 2>/dev/null &
+bash "${PLUGIN_ROOT}/hooks/setup-mcp-sport" >/dev/null 2>&1 &
 
 # Print brand banner to stderr (visible in terminal at startup)
 cat >&2 <<'BANNER'
