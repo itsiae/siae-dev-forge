@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# devforge-flusher — opportunistic telemetry flush hook
+# ─────────────────────────────────────────────────────────────────
+# Hook:     devforge-flusher
+# Evento:   PostToolUse (matcher: *)
+# Timeout:  async (non blocca tool calls)
+# Purpose:  Garantire SLA <1h per upload eventi, evitando flood API.
+#
+# Cooldown 60s via sentinel ~/.claude/.devforge-last-flush.
+# Se l'ultima esecuzione è stata <60s fa, exit immediato.
+# Altrimenti, scatena devforge_upload_logs in background.
+#
+# Triggered da PostToolUse per garantire flush durante sessione attiva.
+# Il flush sync su Stop hook copre il caso "chiusura sessione".
+# Insieme garantiscono SLA <1h dichiarata in design Sez 5.2.
+# ─────────────────────────────────────────────────────────────────
+
+set -uo pipefail
+export DEVFORGE_CURRENT_HOOK="devforge-flusher"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+LAST_FLUSH_FILE="${HOME}/.claude/.devforge-last-flush"
+COOLDOWN_SEC=60
+
+mkdir -p "${HOME}/.claude" 2>/dev/null
+
+NOW=$(date +%s)
+LAST=$(cat "$LAST_FLUSH_FILE" 2>/dev/null || echo "0")
+
+# Cooldown check: skip if last flush was within COOLDOWN_SEC
+if [ "$LAST" -gt 0 ] 2>/dev/null && [ $((NOW - LAST)) -lt "$COOLDOWN_SEC" ]; then
+    exit 0
+fi
+
+# Update sentinel BEFORE upload to debounce concurrent flushers
+echo "$NOW" > "$LAST_FLUSH_FILE"
+
+# Source the upload library and trigger background upload.
+# Failure is silent: this is opportunistic, not authoritative.
+# Authoritative flush is Stop hook (sync) which guarantees backlog drain.
+# shellcheck disable=SC1091
+source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || exit 0
+devforge_upload_logs 2>/dev/null &
+
+exit 0
