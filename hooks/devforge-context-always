@@ -110,12 +110,16 @@ print(f'tokens={tok} | cost={c:.2f}€')
 fi
 [ -n "$TOKEN_DISPLAY" ] && STATS_SECTION="${STATS_SECTION} | ${TOKEN_DISPLAY}"
 
-# Telemetry pending indicator
+# Telemetry pending indicator + opportunistic flush (FIX MAJOR iter-5 review).
+# UserPromptSubmit è il terzo trigger della pipeline zero-loss <1h SLA:
+# se ci sono batch pendenti (probabile dev di rientro dopo pausa lunga),
+# scatena upload background non-blocking.
 if [ -n "$DEVFORGE_SESSION_DIR" ]; then
     source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
     PENDING=$(devforge_pending_count 2>/dev/null || echo "0")
     if [ "$PENDING" -gt 0 ] 2>/dev/null; then
         STATS_SECTION="${STATS_SECTION} | telemetry=pending:${PENDING}"
+        devforge_upload_logs 2>/dev/null &
     fi
 fi
 

@@ -19,6 +19,13 @@ source "${PLUGIN_ROOT}/lib/logger.sh"
 devforge_init_session
 source "${PLUGIN_ROOT}/lib/telemetry-upload.sh" 2>/dev/null || true
 
+# Zero-loss PR-A: flush SYNC PRIMA dei gate, garantisce backlog drained
+# anche se un gate (verification/retrospective) blocca lo stop.
+# Senza questo, gli eventi della sessione restano nell'outbox finché non riapri Claude.
+# Il flush dentro _devforge_emit_session_end() resta come secondo flush idempotente
+# per catturare gli eventi della session_end stessa.
+devforge_upload_logs 2>/dev/null || true
+
 INPUT=$(cat)
 
 # --- BLOCCO 2: Read counters EARLY (needed by gate checks), but do NOT emit session_end yet ---

@@ -59,6 +59,22 @@ python3 "${PLUGIN_ROOT}/lib/token-collector.py" init 2>/dev/null || true
 # Export session context for logger
 export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER="$USER_CANONICAL" DEVFORGE_PINNED_SID="$DEVFORGE_SID"
 
+# Zero-loss PR-A: NTP clock skew check (edge case #7 + #18 del design).
+# Fetch Date header from time.cloudflare.com (HTTPS, no admin required) with
+# 2s timeout. If >1h skew, flag force_received_at in session dir so Lambda
+# uses received_at instead of client ts for S3 partitioning.
+# Silent failure: any network issue → empty arg → no-op (no blocking).
+NTP_EPOCH=""
+if command -v curl >/dev/null 2>&1; then
+    NTP_HEADER=$(curl -sfI -m 2 https://time.cloudflare.com/ 2>/dev/null | grep -i '^date:' | head -1 | sed 's/^[Dd]ate:[[:space:]]*//;s/\r$//')
+    if [ -n "$NTP_HEADER" ]; then
+        # Try BSD date format (macOS), then GNU date (Linux)
+        NTP_EPOCH=$(date -j -f "%a, %d %b %Y %H:%M:%S %Z" "$NTP_HEADER" +%s 2>/dev/null \
+            || date -d "$NTP_HEADER" +%s 2>/dev/null || echo "")
+    fi
+fi
+_devforge_check_clock_skew "$NTP_EPOCH" 2>/dev/null || true
+
 PLUGIN_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "unknown")
 
 # Auto-install status line (idempotente)

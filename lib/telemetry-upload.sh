@@ -5,6 +5,13 @@
 #   activity.jsonl → outbox/batch-<ts>.jsonl → upload → outbox/acked/
 
 # Hardcoded endpoint — no dev configuration needed
+# TODO(security): API key hardcoded as fallback — pre-existing tech debt
+# documented in spec-reviewer iter-5 finding CRITICAL #1.
+# Action: move to AWS Secrets Manager or per-install env var.
+# Tracker: docs/plans/2026-04-13-telemetry-zero-loss-design.md Sez 8 (Secrets Manager
+# already in cost estimate $0.40/mese). Implementation rinviata a iniziativa
+# successiva (richiede plugin install hook che setta env per OGNI dev macchina).
+# Mitigation attuale: env var DEVFORGE_TELEMETRY_KEY ha precedenza sul default.
 DEVFORGE_TELEMETRY_ENDPOINT="${DEVFORGE_TELEMETRY_ENDPOINT:-https://5o6tu3hcei.execute-api.eu-west-1.amazonaws.com/v1/logs}"
 DEVFORGE_TELEMETRY_KEY="${DEVFORGE_TELEMETRY_KEY:-WhQioTyfb41PcvRrjD7ji6o8xF59quSd3OYvM1sz}"
 
@@ -13,19 +20,16 @@ DEVFORGE_TELEMETRY_ENDPOINT="${DEVFORGE_TELEMETRY_URL:-$DEVFORGE_TELEMETRY_ENDPO
 
 # --- Outbox functions --------------------------------------------------------
 
-# devforge_create_batch — copies new lines from activity.jsonl into a batch file
-# Uses a byte-offset cursor so we never re-send lines already batched.
+# devforge_create_batch — copies new lines into batch files.
+# Zero-loss PR-A: processes BOTH activity.jsonl AND activity-<ts>.archived.jsonl
+# (created by _devforge_check_rotation). Uses per-file byte-offset cursor in
+# outbox/.cursor-<basename>. Fully-consumed archived files are removed.
 devforge_create_batch() {
     local session_dir="${DEVFORGE_SESSION_DIR:-}"
     [ -z "$session_dir" ] || [ ! -d "$session_dir" ] && return 0
 
-    local activity="${session_dir}/activity.jsonl"
-    [ ! -f "$activity" ] || [ ! -s "$activity" ] && return 0
-
-    # Ensure outbox dir exists
     mkdir -p "${session_dir}/outbox" 2>/dev/null || return 0
 
-    local cursor_file="${session_dir}/outbox/.cursor"
     local lock_file="${session_dir}/outbox/.batch.lock"
 
     (
@@ -34,19 +38,54 @@ devforge_create_batch() {
             flock -n 9 || return 0
         fi
 
-        local cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
-        local file_size=$(stat -f%z "$activity" 2>/dev/null || stat -c%s "$activity" 2>/dev/null || echo "0")
+        # Process archived files first (oldest → newest by ts in filename), then current.
+        # shellcheck disable=SC2012
+        local files
+        files=$(ls -1 "${session_dir}"/activity-*.archived.jsonl 2>/dev/null | sort)
+        [ -f "${session_dir}/activity.jsonl" ] && files="${files}
+${session_dir}/activity.jsonl"
 
-        [ "$file_size" -le "$cursor" ] && return 0
+        local f basename cursor_file cursor file_size batch_file
+        for f in $files; do
+            [ -f "$f" ] && [ -s "$f" ] || { _devforge_maybe_remove_archived "$f" "${session_dir}/outbox"; continue; }
+            basename=$(basename "$f")
+            cursor_file="${session_dir}/outbox/.cursor-${basename}"
+            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
 
-        local batch_file="${session_dir}/outbox/batch-$(date +%s%N 2>/dev/null || date +%s)-$$.jsonl"
-        tail -c +"$((cursor + 1))" "$activity" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; return 0; }
-        if [ -s "$batch_file" ]; then
-            echo "$file_size" > "$cursor_file"
-        else
-            rm -f "$batch_file"
-        fi
+            if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
+                batch_file="${session_dir}/outbox/batch-$(date +%s%N 2>/dev/null || date +%s)-$$-${basename%.jsonl}.jsonl"
+                tail -c +"$((cursor + 1))" "$f" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; continue; }
+                if [ -s "$batch_file" ]; then
+                    echo "$file_size" > "$cursor_file"
+                else
+                    rm -f "$batch_file"
+                fi
+            fi
+
+            # Cleanup: remove archived file if fully consumed and cursor matches size
+            _devforge_maybe_remove_archived "$f" "${session_dir}/outbox"
+        done
     ) 9>"$lock_file" 2>/dev/null
+}
+
+# _devforge_maybe_remove_archived — remove an archived file if cursor == file_size
+# (means all lines have been batched). Also removes the cursor file.
+_devforge_maybe_remove_archived() {
+    local f="$1" outbox="$2"
+    local basename
+    basename=$(basename "$f")
+    case "$basename" in
+        activity-*.archived.jsonl) ;;
+        *) return 0 ;;  # only clean up archived files, never activity.jsonl
+    esac
+    local cursor_file="${outbox}/.cursor-${basename}"
+    local cursor file_size
+    cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+    file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
+    if [ "$cursor" -ge "$file_size" ] 2>/dev/null && [ "$file_size" -gt 0 ] 2>/dev/null; then
+        rm -f "$f" "$cursor_file"
+    fi
 }
 
 # devforge_upload_logs — creates a batch from current session + uploads all pending

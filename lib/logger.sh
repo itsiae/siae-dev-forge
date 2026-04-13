@@ -7,24 +7,132 @@ DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
 DEVFORGE_SESSION_USER_FILE="${HOME}/.claude/.devforge-session-user"
 DEVFORGE_SESSION_USER_SOURCE_FILE="${HOME}/.claude/.devforge-session-user-source"
 
-# Per-session state isolation & identity pinning
-DEVFORGE_SESSION_DIR=""
-DEVFORGE_PINNED_USER=""
-DEVFORGE_PINNED_SID=""
+# Per-session state isolation & identity pinning.
+# Preserve env-provided values to support multi-source from hooks and tests.
+DEVFORGE_SESSION_DIR="${DEVFORGE_SESSION_DIR:-}"
+DEVFORGE_PINNED_USER="${DEVFORGE_PINNED_USER:-}"
+DEVFORGE_PINNED_SID="${DEVFORGE_PINNED_SID:-}"
 
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
 # Log rotation: max 50MB, 1 backup
-_devforge_check_rotation() {
-    local max_bytes=52428800
-    if [ -f "$DEVFORGE_LOG_FILE" ]; then
-        local file_size
-        file_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
-        if [ "$file_size" -gt "$max_bytes" ] 2>/dev/null; then
-            mv "$DEVFORGE_LOG_FILE" "${DEVFORGE_LOG_FILE}.1"
-        fi
+# Zero-loss PR-A: resolve lib/ directory of this file for finding atomic_write.py.
+# Source-once guard: if already set (e.g. overridden by caller), keep it.
+if [ -z "${DEVFORGE_LIB_DIR:-}" ]; then
+    DEVFORGE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# Zero-loss PR-A: atomic append via Python (lock + fsync cross-OS).
+# Replaces raw `printf >> file` to eliminate race conditions on concurrent hook writes
+# (root cause of the 6612 parse errors observed in S3 pre-PR187).
+_devforge_atomic_append() {
+    local target_file="$1" line="$2"
+    # Post-PR-A review fix: pass rotate_at_bytes so rotation happens INSIDE
+    # the same lock as the append (previous bash _devforge_check_rotation was
+    # outside the lock — race condition). Default 5MB; override with env.
+    local rotate_bytes="${DEVFORGE_ROTATE_BYTES:-5242880}"
+    python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
+}
+
+# Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).
+# Args: ntp_epoch — unix ts from NTP source (empty if unreachable).
+# Side effects: if |local - ntp| > 3600s, writes clock-skew.json in
+# DEVFORGE_SESSION_DIR with force_received_at:true flag. Lambda side uses
+# this flag to prefer received_at over client ts for S3 partitioning.
+_devforge_check_clock_skew() {
+    local ntp_epoch="$1"
+    # NTP unreachable or empty arg: no-op
+    [ -z "$ntp_epoch" ] && return 0
+    # Non-numeric input: no-op
+    case "$ntp_epoch" in
+        ''|*[!0-9]*) return 0 ;;
+    esac
+    local session_dir="${DEVFORGE_SESSION_DIR:-}"
+    [ -z "$session_dir" ] || [ ! -d "$session_dir" ] && return 0
+
+    local local_epoch skew skew_abs
+    local_epoch=$(date -u +%s)
+    skew=$((local_epoch - ntp_epoch))
+    skew_abs=${skew#-}
+
+    if [ "$skew_abs" -gt 3600 ] 2>/dev/null; then
+        # Write flag file (JSON) — Lambda reads force_received_at from session user.json
+        # or from this sentinel via upload metadata
+        printf '{"force_received_at":true,"clock_skew_sec":%s,"ntp_source":"external","detected_at":"%s"}\n' \
+            "$skew" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${session_dir}/clock-skew.json"
     fi
+    return 0
+}
+
+# Zero-loss PR-A: disk space gate.
+# Overridable in tests. Returns free KB on the DEVFORGE_SESSION_DIR filesystem.
+_devforge_free_kb() {
+    local dir="${DEVFORGE_SESSION_DIR:-$HOME/.claude}"
+    df -k "$dir" 2>/dev/null | tail -1 | awk '{print $4}'
+}
+
+# Returns 0 if disk has >=100MB free, 1 otherwise.
+# On low disk, queues a timestamp line to .devforge-disk-full-events.tmp
+# so the next successful flush can emit a `local_disk_full` event.
+_devforge_disk_gate() {
+    local free_kb min_kb=102400  # 100MB
+    free_kb=$(_devforge_free_kb)
+    [ -z "$free_kb" ] && free_kb="999999999"  # no df output → assume ok
+    if [ "$free_kb" -lt "$min_kb" ] 2>/dev/null; then
+        local recovery_file="${HOME}/.claude/.devforge-disk-full-events.tmp"
+        mkdir -p "$(dirname "$recovery_file")" 2>/dev/null
+        printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)|free_kb=${free_kb}" >> "$recovery_file"
+        return 1
+    fi
+    return 0
+}
+
+_devforge_check_rotation() {
+    # Post-PR-A review fix: rotation is now ATOMIC inside atomic_write.py
+    # (under the same flock as the append). This bash function kept ONLY to
+    # enforce the 50MB TOTAL CAP on activity + archived, and it does so SAFELY:
+    # drops ONLY fully-consumed archived (cursor_file == file_size). Archived
+    # not-yet-uploaded (cursor < size OR cursor file missing) are PRESERVED
+    # even if total > cap — better disk pressure than data loss.
+    local cap_bytes=52428800  # 50MB total cap
+    [ -z "${DEVFORGE_LOG_FILE:-}" ] && return 0
+    local base dir
+    base=$(basename "$DEVFORGE_LOG_FILE" .jsonl)
+    dir=$(dirname "$DEVFORGE_LOG_FILE")
+
+    local total=0 sz
+    for f in "${dir}/${base}.jsonl" "${dir}/${base}"-*.archived.jsonl; do
+        [ -f "$f" ] || continue
+        sz=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)
+        total=$((total + sz))
+    done
+
+    # Safe drop: only archived fully consumed by the batcher.
+    # Cursor file is in ${session_dir}/outbox/.cursor-<basename>.
+    local session_dir outbox cursor_file cursor archived_basename archived dropped
+    session_dir="${DEVFORGE_SESSION_DIR:-$dir}"
+    outbox="${session_dir}/outbox"
+    while [ "$total" -gt "$cap_bytes" ] 2>/dev/null; do
+        dropped=0
+        # shellcheck disable=SC2012
+        for archived in $(ls -1 "${dir}/${base}"-*.archived.jsonl 2>/dev/null | sort); do
+            [ -f "$archived" ] || continue
+            archived_basename=$(basename "$archived")
+            cursor_file="${outbox}/.cursor-${archived_basename}"
+            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            sz=$(stat -f%z "$archived" 2>/dev/null || stat -c%s "$archived" 2>/dev/null || echo 0)
+            # Only drop if fully consumed: cursor >= file_size
+            if [ "$cursor" -ge "$sz" ] 2>/dev/null && [ "$sz" -gt 0 ] 2>/dev/null; then
+                rm -f "$archived" "$cursor_file"
+                total=$((total - sz))
+                dropped=1
+                break  # re-check cap with fewer files
+            fi
+        done
+        # No safely-droppable archived found → stop (prefer disk pressure)
+        [ "$dropped" -eq 0 ] && break
+    done
 }
 
 # Extract git context for cross-session correlation
@@ -250,6 +358,9 @@ devforge_sanitize_json_str() {
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'
 devforge_log() {
+    # Zero-loss: skip write if disk space is critically low. Recovery event
+    # is queued for emission at the next successful write.
+    _devforge_disk_gate || return 0
     _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
@@ -289,22 +400,30 @@ devforge_log() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    # Atomic append — printf avoids echo quoting issues (schema v2 + backward compat)
-    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+    # Zero-loss PR-A: build the JSON line once, then atomic append via Python
+    # (lock + fsync, cross-OS). Replaces raw `>> file` to eliminate race.
+    local json_line
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "$DEVFORGE_LOG_FILE"
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta")
 
-    # Dual write: session-specific activity log (schema v2)
+    _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
+
+    # Dual write: session-specific activity log (schema v2).
+    # Skip if the session activity file is the same path as DEVFORGE_LOG_FILE
+    # (resolved with realpath if available) to avoid duplicate lines.
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
-            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-            "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+        local session_activity="${DEVFORGE_SESSION_DIR}/activity.jsonl"
+        if [ "$session_activity" != "$DEVFORGE_LOG_FILE" ]; then
+            _devforge_atomic_append "$session_activity" "$json_line"
+        fi
     fi
 }
 
 # Log with duration measurement
 # Usage: devforge_log_timed <event_type> <status> <start_time_epoch_ns> [meta_json]
 devforge_log_timed() {
+    _devforge_disk_gate || return 0
     _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
@@ -352,15 +471,22 @@ devforge_log_timed() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+    # Zero-loss PR-A: atomic append via Python (lock + fsync)
+    local json_line
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta")
 
-    # Dual write: session-specific activity log (schema v2 with duration)
+    _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
+
+    # Dual write: session-specific activity log (schema v2 with duration).
+    # Skip if same path as DEVFORGE_LOG_FILE to avoid duplicates (FIX CRITICAL
+    # iter-5 review: parità con devforge_log che già aveva questa guard).
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
-            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-            "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+        local session_activity_t="${DEVFORGE_SESSION_DIR}/activity.jsonl"
+        if [ "$session_activity_t" != "$DEVFORGE_LOG_FILE" ]; then
+            _devforge_atomic_append "$session_activity_t" "$json_line"
+        fi
     fi
 }
 
