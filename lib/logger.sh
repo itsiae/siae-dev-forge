@@ -7,15 +7,30 @@ DEVFORGE_SID_FILE="${HOME}/.claude/.devforge-session-id"
 DEVFORGE_SESSION_USER_FILE="${HOME}/.claude/.devforge-session-user"
 DEVFORGE_SESSION_USER_SOURCE_FILE="${HOME}/.claude/.devforge-session-user-source"
 
-# Per-session state isolation & identity pinning
-DEVFORGE_SESSION_DIR=""
-DEVFORGE_PINNED_USER=""
-DEVFORGE_PINNED_SID=""
+# Per-session state isolation & identity pinning.
+# Preserve env-provided values to support multi-source from hooks and tests.
+DEVFORGE_SESSION_DIR="${DEVFORGE_SESSION_DIR:-}"
+DEVFORGE_PINNED_USER="${DEVFORGE_PINNED_USER:-}"
+DEVFORGE_PINNED_SID="${DEVFORGE_PINNED_SID:-}"
 
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
 # Log rotation: max 50MB, 1 backup
+# Zero-loss PR-A: resolve lib/ directory of this file for finding atomic_write.py.
+# Source-once guard: if already set (e.g. overridden by caller), keep it.
+if [ -z "${DEVFORGE_LIB_DIR:-}" ]; then
+    DEVFORGE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# Zero-loss PR-A: atomic append via Python (lock + fsync cross-OS).
+# Replaces raw `printf >> file` to eliminate race conditions on concurrent hook writes
+# (root cause of the 6612 parse errors observed in S3 pre-PR187).
+_devforge_atomic_append() {
+    local target_file="$1" line="$2"
+    python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" 2>/dev/null
+}
+
 # Zero-loss PR-A: disk space gate.
 # Overridable in tests. Returns free KB on the DEVFORGE_SESSION_DIR filesystem.
 _devforge_free_kb() {
@@ -323,16 +338,23 @@ devforge_log() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    # Atomic append — printf avoids echo quoting issues (schema v2 + backward compat)
-    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
+    # Zero-loss PR-A: build the JSON line once, then atomic append via Python
+    # (lock + fsync, cross-OS). Replaces raw `>> file` to eliminate race.
+    local json_line
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "$DEVFORGE_LOG_FILE"
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta")
 
-    # Dual write: session-specific activity log (schema v2)
+    _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
+
+    # Dual write: session-specific activity log (schema v2).
+    # Skip if the session activity file is the same path as DEVFORGE_LOG_FILE
+    # (resolved with realpath if available) to avoid duplicate lines.
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}\n' \
-            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-            "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+        local session_activity="${DEVFORGE_SESSION_DIR}/activity.jsonl"
+        if [ "$session_activity" != "$DEVFORGE_LOG_FILE" ]; then
+            _devforge_atomic_append "$session_activity" "$json_line"
+        fi
     fi
 }
 
@@ -387,15 +409,17 @@ devforge_log_timed() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
-    printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
+    # Zero-loss PR-A: atomic append via Python (lock + fsync)
+    local json_line
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "$DEVFORGE_LOG_FILE"
+        "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta")
+
+    _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
 
     # Dual write: session-specific activity log (schema v2 with duration)
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}\n' \
-            "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-            "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta" >> "${DEVFORGE_SESSION_DIR}/activity.jsonl" || true
+        _devforge_atomic_append "${DEVFORGE_SESSION_DIR}/activity.jsonl" "$json_line"
     fi
 }
 
