@@ -85,6 +85,30 @@ assert "T4: two archived files after two rotations" \
     "$multi_count" "2"
 
 # --------------------------------------------------------------
+# --------------------------------------------------------------
+echo "TEST 5 — 50MB total cap drops oldest archived"
+rm -f "$WORK"/*.jsonl "$WORK"/*.archived.jsonl
+# Create 11 fake archived files of ~5MB each = 55MB total
+for i in 1 2 3 4 5 6 7 8 9 10 11; do
+    dd if=/dev/zero of="$WORK/activity-$i.archived.jsonl" bs=1024 count=5000 2>/dev/null
+    sleep 0.01  # ensure mtime differs
+done
+# Touch current activity to small size
+echo "{}" > "$DEVFORGE_LOG_FILE"
+# Trigger rotation check (will not rotate current — too small — but should enforce cap)
+_devforge_check_rotation
+# Total should now be <= 50MB after dropping oldest
+remaining_archived=$(find "$WORK" -name "activity-*.archived.jsonl" 2>/dev/null | wc -l | tr -d ' ')
+# 11 * 5MB = 55MB → should drop at least 1 to stay ≤50MB
+if [ "$remaining_archived" -lt 11 ]; then
+    echo "  PASS: T5: oldest archived dropped to enforce 50MB cap (remaining=$remaining_archived)"
+    pass=$((pass + 1))
+else
+    echo "  FAIL: T5: cap not enforced, all 11 archived still present"
+    fail=$((fail + 1))
+fi
+
+# --------------------------------------------------------------
 echo ""
 echo "SUMMARY: $pass passed, $fail failed"
 exit $fail

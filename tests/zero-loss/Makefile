@@ -1,8 +1,18 @@
 .PHONY: test-unit test-integration test-chaos test-acceptance test-all
 
-# Unit tests — pure python, no external dependencies, fast
-test-unit:
+# Bash unit tests — verifica logger.sh, hooks, telemetry-upload.sh integration
+test-bash:
+	@for t in unit/test_*.sh; do \
+		echo "=== $$(basename $$t) ==="; \
+		bash "$$t" || exit 1; \
+	done
+
+# Python unit tests — atomic_write.py
+test-python:
 	cd ../.. && python3 -m pytest tests/zero-loss/unit -x -v
+
+# Unit tests — combined bash + python (FIX MAJOR iter-5 review: bash test ora wired)
+test-unit: test-bash test-python
 
 # Integration tests — require LocalStack via docker-compose
 test-integration:

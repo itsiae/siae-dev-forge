@@ -88,19 +88,41 @@ _devforge_check_rotation() {
     # Zero-loss PR-A: rotate at 5MB (was 50MB) into timestamped archived files.
     # Pattern: activity-<unix_ts>.archived.jsonl (was single .1 backup overwrite).
     # Batcher in telemetry-upload.sh reads both current + archived files in order.
+    # Enforces a 50MB total cap on activity + archived (drop oldest archived).
     local max_bytes=5242880
+    local cap_bytes=52428800  # 50MB total cap
+    [ -z "${DEVFORGE_LOG_FILE:-}" ] && return 0
+    local base dir
+    base=$(basename "$DEVFORGE_LOG_FILE" .jsonl)
+    dir=$(dirname "$DEVFORGE_LOG_FILE")
     if [ -f "$DEVFORGE_LOG_FILE" ]; then
         local file_size
         file_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
         if [ "$file_size" -gt "$max_bytes" ] 2>/dev/null; then
-            local base dir ts
-            base=$(basename "$DEVFORGE_LOG_FILE" .jsonl)
-            dir=$(dirname "$DEVFORGE_LOG_FILE")
+            local ts
             ts=$(date +%s)
             mv "$DEVFORGE_LOG_FILE" "${dir}/${base}-${ts}.archived.jsonl"
             : > "$DEVFORGE_LOG_FILE"  # create empty file for next append
         fi
     fi
+
+    # Enforce 50MB total cap: drop oldest archived files until total ≤ cap.
+    # Total includes current + all archived in same dir with same base.
+    local total=0 sz oldest
+    for f in "${dir}/${base}.jsonl" "${dir}/${base}"-*.archived.jsonl; do
+        [ -f "$f" ] || continue
+        sz=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)
+        total=$((total + sz))
+    done
+    while [ "$total" -gt "$cap_bytes" ] 2>/dev/null; do
+        # Find oldest archived (lowest ts in filename)
+        # shellcheck disable=SC2012
+        oldest=$(ls -1 "${dir}/${base}"-*.archived.jsonl 2>/dev/null | sort | head -1)
+        [ -z "$oldest" ] && break
+        sz=$(stat -f%z "$oldest" 2>/dev/null || stat -c%s "$oldest" 2>/dev/null || echo 0)
+        rm -f "$oldest"
+        total=$((total - sz))
+    done
 }
 
 # Extract git context for cross-session correlation
@@ -447,9 +469,14 @@ devforge_log_timed() {
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
 
-    # Dual write: session-specific activity log (schema v2 with duration)
+    # Dual write: session-specific activity log (schema v2 with duration).
+    # Skip if same path as DEVFORGE_LOG_FILE to avoid duplicates (FIX CRITICAL
+    # iter-5 review: parità con devforge_log che già aveva questa guard).
     if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -d "$DEVFORGE_SESSION_DIR" ]; then
-        _devforge_atomic_append "${DEVFORGE_SESSION_DIR}/activity.jsonl" "$json_line"
+        local session_activity_t="${DEVFORGE_SESSION_DIR}/activity.jsonl"
+        if [ "$session_activity_t" != "$DEVFORGE_LOG_FILE" ]; then
+            _devforge_atomic_append "$session_activity_t" "$json_line"
+        fi
     fi
 }
 

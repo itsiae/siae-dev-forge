@@ -5,6 +5,13 @@
 #   activity.jsonl → outbox/batch-<ts>.jsonl → upload → outbox/acked/
 
 # Hardcoded endpoint — no dev configuration needed
+# TODO(security): API key hardcoded as fallback — pre-existing tech debt
+# documented in spec-reviewer iter-5 finding CRITICAL #1.
+# Action: move to AWS Secrets Manager or per-install env var.
+# Tracker: docs/plans/2026-04-13-telemetry-zero-loss-design.md Sez 8 (Secrets Manager
+# already in cost estimate $0.40/mese). Implementation rinviata a iniziativa
+# successiva (richiede plugin install hook che setta env per OGNI dev macchina).
+# Mitigation attuale: env var DEVFORGE_TELEMETRY_KEY ha precedenza sul default.
 DEVFORGE_TELEMETRY_ENDPOINT="${DEVFORGE_TELEMETRY_ENDPOINT:-https://5o6tu3hcei.execute-api.eu-west-1.amazonaws.com/v1/logs}"
 DEVFORGE_TELEMETRY_KEY="${DEVFORGE_TELEMETRY_KEY:-WhQioTyfb41PcvRrjD7ji6o8xF59quSd3OYvM1sz}"
 
