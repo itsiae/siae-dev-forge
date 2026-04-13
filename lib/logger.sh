@@ -16,6 +16,29 @@ DEVFORGE_PINNED_SID=""
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
 # Log rotation: max 50MB, 1 backup
+# Zero-loss PR-A: disk space gate.
+# Overridable in tests. Returns free KB on the DEVFORGE_SESSION_DIR filesystem.
+_devforge_free_kb() {
+    local dir="${DEVFORGE_SESSION_DIR:-$HOME/.claude}"
+    df -k "$dir" 2>/dev/null | tail -1 | awk '{print $4}'
+}
+
+# Returns 0 if disk has >=100MB free, 1 otherwise.
+# On low disk, queues a timestamp line to .devforge-disk-full-events.tmp
+# so the next successful flush can emit a `local_disk_full` event.
+_devforge_disk_gate() {
+    local free_kb min_kb=102400  # 100MB
+    free_kb=$(_devforge_free_kb)
+    [ -z "$free_kb" ] && free_kb="999999999"  # no df output → assume ok
+    if [ "$free_kb" -lt "$min_kb" ] 2>/dev/null; then
+        local recovery_file="${HOME}/.claude/.devforge-disk-full-events.tmp"
+        mkdir -p "$(dirname "$recovery_file")" 2>/dev/null
+        printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)|free_kb=${free_kb}" >> "$recovery_file"
+        return 1
+    fi
+    return 0
+}
+
 _devforge_check_rotation() {
     # Zero-loss PR-A: rotate at 5MB (was 50MB) into timestamped archived files.
     # Pattern: activity-<unix_ts>.archived.jsonl (was single .1 backup overwrite).
@@ -258,6 +281,9 @@ devforge_sanitize_json_str() {
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'
 devforge_log() {
+    # Zero-loss: skip write if disk space is critically low. Recovery event
+    # is queued for emission at the next successful write.
+    _devforge_disk_gate || return 0
     _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
@@ -313,6 +339,7 @@ devforge_log() {
 # Log with duration measurement
 # Usage: devforge_log_timed <event_type> <status> <start_time_epoch_ns> [meta_json]
 devforge_log_timed() {
+    _devforge_disk_gate || return 0
     _devforge_check_rotation
     local event="$1"
     local status="${2:-success}"
