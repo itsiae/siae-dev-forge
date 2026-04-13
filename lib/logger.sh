@@ -31,6 +31,36 @@ _devforge_atomic_append() {
     python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" 2>/dev/null
 }
 
+# Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).
+# Args: ntp_epoch — unix ts from NTP source (empty if unreachable).
+# Side effects: if |local - ntp| > 3600s, writes clock-skew.json in
+# DEVFORGE_SESSION_DIR with force_received_at:true flag. Lambda side uses
+# this flag to prefer received_at over client ts for S3 partitioning.
+_devforge_check_clock_skew() {
+    local ntp_epoch="$1"
+    # NTP unreachable or empty arg: no-op
+    [ -z "$ntp_epoch" ] && return 0
+    # Non-numeric input: no-op
+    case "$ntp_epoch" in
+        ''|*[!0-9]*) return 0 ;;
+    esac
+    local session_dir="${DEVFORGE_SESSION_DIR:-}"
+    [ -z "$session_dir" ] || [ ! -d "$session_dir" ] && return 0
+
+    local local_epoch skew skew_abs
+    local_epoch=$(date -u +%s)
+    skew=$((local_epoch - ntp_epoch))
+    skew_abs=${skew#-}
+
+    if [ "$skew_abs" -gt 3600 ] 2>/dev/null; then
+        # Write flag file (JSON) — Lambda reads force_received_at from session user.json
+        # or from this sentinel via upload metadata
+        printf '{"force_received_at":true,"clock_skew_sec":%s,"ntp_source":"external","detected_at":"%s"}\n' \
+            "$skew" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${session_dir}/clock-skew.json"
+    fi
+    return 0
+}
+
 # Zero-loss PR-A: disk space gate.
 # Overridable in tests. Returns free KB on the DEVFORGE_SESSION_DIR filesystem.
 _devforge_free_kb() {
