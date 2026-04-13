@@ -14,3 +14,9 @@ variable "bucket_name" {
   type        = string
   default     = "siae-devforge-telemetry"
 }
+
+variable "primary_owner_email" {
+  description = "Email address for DevForge telemetry alerts (DLQ non-empty, silent users report). Leave empty to disable email subscription."
+  type        = string
+  default     = ""
+}
