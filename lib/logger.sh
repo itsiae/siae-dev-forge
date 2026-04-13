@@ -26,13 +26,35 @@ fi
 # Zero-loss PR-A: atomic append via Python (lock + fsync cross-OS).
 # Replaces raw `printf >> file` to eliminate race conditions on concurrent hook writes
 # (root cause of the 6612 parse errors observed in S3 pre-PR187).
+#
+# Fallback bash-only path: if python3 is NOT available (e.g. Windows Git Bash
+# without Python installed), degrade to unlocked `printf >>` and emit a one-shot
+# warning. Keeps the plugin functional on python-less environments instead of
+# dropping events silently. Zero-loss guarantees are reduced in that mode:
+# no fsync, no lock, no in-lock rotation. Users are strongly encouraged to
+# install python3 — see docs/plans/ for roadmap of auto-install Python-Standalone.
 _devforge_atomic_append() {
     local target_file="$1" line="$2"
     # Post-PR-A review fix: pass rotate_at_bytes so rotation happens INSIDE
     # the same lock as the append (previous bash _devforge_check_rotation was
     # outside the lock — race condition). Default 5MB; override with env.
     local rotate_bytes="${DEVFORGE_ROTATE_BYTES:-5242880}"
-    python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
+    # DEVFORGE_FORCE_BASH_FALLBACK=1 forces the degraded path for testing.
+    if [ -z "${DEVFORGE_FORCE_BASH_FALLBACK:-}" ] && command -v python3 >/dev/null 2>&1; then
+        python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
+        return $?
+    fi
+    # --- DEGRADED PATH: no python3 available ---
+    # Append without lock/fsync. Events still land in activity.jsonl but
+    # concurrent writers may produce truncated lines (same risk as pre-PR187).
+    printf '%s\n' "$line" >> "$target_file" 2>/dev/null
+    # Warn once per session via sentinel file (avoids per-call noise).
+    local warned="${HOME}/.claude/.devforge-no-python-warned"
+    if [ ! -f "$warned" ]; then
+        mkdir -p "$(dirname "$warned")" 2>/dev/null
+        touch "$warned"
+        printf '[DevForge] WARNING: python3 not found — telemetry degraded to bash-only (no lock/fsync). Install python3 for full zero-loss guarantees.\n' >&2
+    fi
 }
 
 # Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).

@@ -109,6 +109,31 @@ timed_lines=$(wc -l < "$DEVFORGE_LOG_FILE" | tr -d ' ')
 assert "T4: devforge_log_timed produces 1 line (no dual-write duplicate)" "$timed_lines" "1"
 
 # --------------------------------------------------------------
+echo "TEST 5 — bash fallback when python3 unavailable (cross-OS safety)"
+rm -f "$DEVFORGE_LOG_FILE" "$DEVFORGE_SESSION_DIR/.activity.lock" "$HOME/.claude/.devforge-no-python-warned"
+touch "$DEVFORGE_LOG_FILE"
+# Simulate python3 absence via env var override (no PATH tampering — keeps
+# standard utilities working).
+STDERR_OUT=$(DEVFORGE_FORCE_BASH_FALLBACK=1 devforge_log "bash_fallback_test" "success" '{"m":"x"}' 2>&1 >/dev/null)
+fallback_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
+if [ "$fallback_size" -gt 0 ]; then
+    echo "  PASS: T5: bash fallback writes event (size=$fallback_size bytes)"
+    pass=$((pass + 1))
+else
+    echo "  FAIL: T5: bash fallback produced 0 bytes"
+    fail=$((fail + 1))
+fi
+assert "T5b: one-shot warning sentinel exists" \
+    "$([ -f "$HOME/.claude/.devforge-no-python-warned" ] && echo yes || echo no)" "yes"
+if echo "$STDERR_OUT" | grep -qi "python3"; then
+    echo "  PASS: T5c: stderr warning mentions python3"
+    pass=$((pass + 1))
+else
+    echo "  FAIL: T5c: stderr missing python3 warning (got: '$STDERR_OUT')"
+    fail=$((fail + 1))
+fi
+
+# --------------------------------------------------------------
 echo ""
 echo "SUMMARY: $pass passed, $fail failed"
 exit $fail
