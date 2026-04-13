@@ -17,12 +17,20 @@ mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
 # Log rotation: max 50MB, 1 backup
 _devforge_check_rotation() {
-    local max_bytes=52428800
+    # Zero-loss PR-A: rotate at 5MB (was 50MB) into timestamped archived files.
+    # Pattern: activity-<unix_ts>.archived.jsonl (was single .1 backup overwrite).
+    # Batcher in telemetry-upload.sh reads both current + archived files in order.
+    local max_bytes=5242880
     if [ -f "$DEVFORGE_LOG_FILE" ]; then
         local file_size
         file_size=$(stat -f%z "$DEVFORGE_LOG_FILE" 2>/dev/null || stat -c%s "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
         if [ "$file_size" -gt "$max_bytes" ] 2>/dev/null; then
-            mv "$DEVFORGE_LOG_FILE" "${DEVFORGE_LOG_FILE}.1"
+            local base dir ts
+            base=$(basename "$DEVFORGE_LOG_FILE" .jsonl)
+            dir=$(dirname "$DEVFORGE_LOG_FILE")
+            ts=$(date +%s)
+            mv "$DEVFORGE_LOG_FILE" "${dir}/${base}-${ts}.archived.jsonl"
+            : > "$DEVFORGE_LOG_FILE"  # create empty file for next append
         fi
     fi
 }
