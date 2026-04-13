@@ -11,6 +11,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="post-commit-review"
 
 # Read tool input from stdin (JSON with tool_name, tool_input, tool_output)
 HOOK_INPUT=$(cat)
@@ -46,8 +47,26 @@ if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$SAVED_HASH" ]; then
         HAS_TESTS="true"
     fi
 
+    # Token update and delta for commit
+    python3 "${PLUGIN_ROOT}/lib/token-collector.py" update 2>/dev/null || true
+    TOKEN_META=""
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ] && command -v python3 >/dev/null 2>&1; then
+        PREV_STATS="${DEVFORGE_SESSION_DIR}/token-at-last-commit.json"
+        TOKEN_META=$(python3 -c "
+import json,sys,os
+curr = json.load(open(sys.argv[1])) if os.path.isfile(sys.argv[1]) else {}
+prev = json.load(open(sys.argv[2])) if os.path.isfile(sys.argv[2]) else {}
+do=curr.get('output',0)-prev.get('output',0)
+dt=curr.get('total',0)-prev.get('total',0)
+dc=round(curr.get('cost_eur',0)-prev.get('cost_eur',0),4)
+cum=curr.get('total',0)
+print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_eur\":{dc},\"session_tokens_cumulative\":{cum}')
+" "${DEVFORGE_SESSION_DIR}/token-stats.json" "$PREV_STATS" 2>/dev/null) || true
+        cp "${DEVFORGE_SESSION_DIR}/token-stats.json" "$PREV_STATS" 2>/dev/null || true
+    fi
+
     devforge_log "commit_created" "success" \
-        "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}}"
+        "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}${TOKEN_META}}"
 
     # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
@@ -66,6 +85,7 @@ fi
 # Emit pr_opened event after push if a PR exists (requires gh CLI)
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
     source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+    devforge_init_session 2>/dev/null || true
     if command -v gh >/dev/null 2>&1; then
         PR_JSON=$(gh pr view --json number,baseRefName,changedFiles,commits 2>/dev/null || echo "")
         if [ -n "$PR_JSON" ]; then
@@ -106,6 +126,7 @@ fi
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
 
 # Log PR review trigger (sanitize command for JSON safety)
 SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")

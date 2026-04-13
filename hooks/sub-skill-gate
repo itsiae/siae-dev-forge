@@ -16,6 +16,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="sub-skill-gate"
 
 HOOK_INPUT=$(cat)
 
@@ -87,6 +88,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 SAFE_SKILL_NAME=$(devforge_sanitize_json_str "$SKILL_NAME")
 SAFE_MISSING_PREREQS=$(devforge_sanitize_json_str "$MISSING_PREREQS")
 devforge_log "sub_skill_gate" "blocked" "{\"skill\":\"${SAFE_SKILL_NAME}\",\"missing_prereqs\":\"${SAFE_MISSING_PREREQS}\"}"

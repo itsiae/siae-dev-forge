@@ -10,6 +10,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="tdd-gate"
 
 HOOK_INPUT=$(cat)
 
@@ -96,6 +97,7 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
         PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
         source "${PLUGIN_ROOT}/lib/logger.sh"
+        devforge_init_session 2>/dev/null || true
         BASENAME=$(basename "$FILE_PATH")
         SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
         devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
@@ -118,6 +120,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
 devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
 

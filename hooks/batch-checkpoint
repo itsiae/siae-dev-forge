@@ -13,6 +13,7 @@
 # until the batch report sentinel is cleared.
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="batch-checkpoint"
 
 BATCH_SIZE=3
 STATE_DIR="${HOME}/.claude"
@@ -49,6 +50,7 @@ if [ -f "$BATCH_CHECKPOINT_FILE" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
     PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
     source "${PLUGIN_ROOT}/lib/logger.sh"
+    devforge_init_session 2>/dev/null || true
     COMPLETED=$(cat "$BATCH_COUNTER_FILE" 2>/dev/null || echo "0")
     devforge_log "batch_checkpoint" "blocked" "{\"completed_tasks\":${COMPLETED},\"batch_size\":${BATCH_SIZE}}"
 
@@ -75,6 +77,7 @@ if [ "$CURRENT" -ge "$BATCH_SIZE" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
     PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
     source "${PLUGIN_ROOT}/lib/logger.sh"
+    devforge_init_session 2>/dev/null || true
     devforge_log "batch_checkpoint" "triggered" "{\"completed_tasks\":${CURRENT},\"batch_size\":${BATCH_SIZE}}"
 
     escape_for_json() {

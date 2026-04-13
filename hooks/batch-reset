@@ -12,6 +12,7 @@
 # The user's message IS the feedback that unblocks the next batch.
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="batch-reset"
 
 STATE_DIR="${HOME}/.claude"
 BATCH_CHECKPOINT_FILE="${STATE_DIR}/.devforge-batch-checkpoint"
@@ -38,6 +39,7 @@ echo "0" > "$BATCH_COUNTER_FILE"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 devforge_log "batch_checkpoint" "reset" "{\"reason\":\"user_feedback_received\"}"
 
 exit 0

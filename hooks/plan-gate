@@ -24,6 +24,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 devforge_log "plan_gate" "blocked" "{\"skill_missing\":\"siae-brainstorming\"}"
 
 cat <<EOF

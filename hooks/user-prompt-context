@@ -10,11 +10,13 @@
 # Inspired by: https://github.com/obra/autoresearch-claude-code
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="user-prompt-context"
 shopt -s nullglob
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 
 # Max bytes to read from a sentinel file
 MAX_SENTINEL_SIZE=200

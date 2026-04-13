@@ -9,6 +9,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="pr-gate"
 
 HOOK_INPUT=$(cat)
 if command -v jq >/dev/null 2>&1; then
@@ -27,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
 devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${SAFE_TOOL_COMMAND}\"}"
 

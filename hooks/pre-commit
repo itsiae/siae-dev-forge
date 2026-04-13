@@ -11,6 +11,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="pre-commit"
 
 # Read tool input from stdin (JSON with tool_name and tool_input)
 HOOK_INPUT=$(cat)
@@ -28,6 +29,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger
 source "${PLUGIN_ROOT}/lib/logger.sh"
+devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
