@@ -78,6 +78,24 @@ echo "  Skill totali: ${skill_count} | OK: ${skill_ok} | FAIL: ${skill_fail}"
 TOTAL_PASS=$((TOTAL_PASS + skill_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + skill_fail))
 
+# --- Meta-Skill Backbone Validation ---
+echo ""
+echo "=== Meta-Skill Backbone Validation ==="
+echo ""
+
+if command -v node >/dev/null 2>&1; then
+  if node "${PLUGIN_ROOT}/tests/using-devforge-backbone.test.js" >/dev/null 2>&1; then
+    echo "  PASS  using-devforge: backbone corta e senza duplicazioni"
+    TOTAL_PASS=$((TOTAL_PASS + 1))
+  else
+    echo "  FAIL  using-devforge: backbone regressa o troppo lunga"
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
+  fi
+else
+  echo "  SKIP  node non disponibile, meta-skill backbone non testabile"
+  TOTAL_SKIP=$((TOTAL_SKIP + 1))
+fi
+
 # --- Subagent Prompt Content Validation ---
 echo ""
 echo "=== Subagent Prompt Content Validation ==="

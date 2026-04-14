@@ -55,4 +55,14 @@ assert.ok(reinjectContent.includes('escluse pure operazioni git'),
   'hooks/devforge-reinject non menziona eccezione per operazioni git pure');
 console.log('PASS: hooks/devforge-reinject coerente con skills-core.js su eccezione git');
 
+// 8. Reinject must reinforce security as always-on companion
+assert.ok(reinjectContent.includes('siae-security'),
+  'hooks/devforge-reinject non rinforza siae-security');
+console.log('PASS: hooks/devforge-reinject rinforza siae-security');
+
+// 9. Reinject must reinforce review workflow as always-on companion
+assert.ok(reinjectContent.includes('workflow review') || reinjectContent.includes('siae-blind-review'),
+  'hooks/devforge-reinject non rinforza il workflow review');
+console.log('PASS: hooks/devforge-reinject rinforza il workflow review');
+
 console.log('\nTutti i test passano');

@@ -1,5 +1,6 @@
 ---
 name: siae-jasper-from-pdf
+sdlc_phase: "4. Implementation"
 description: >
   Ricostruisce template JasperReports (JRXML) identici a un PDF di riferimento.
   Iterazione automatica: estrae font, bbox, layout dal PDF, genera JRXML,

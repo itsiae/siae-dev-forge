@@ -252,7 +252,7 @@ if [ -d "$GLOBAL_MEMORY_DIR" ]; then
 fi
 # --- End global memory ---
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the full content of your 'siae-devforge:using-devforge' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # additional_context is the canonical field for Claude Code hooks.

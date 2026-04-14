@@ -144,9 +144,13 @@ if [ -f "$PLAN_SENTINEL" ] && [ -s "$PLAN_SENTINEL" ]; then
     PLAN_SECTION="Active plan: ${PLAN_CONTENT}"
 fi
 
+# ── Backbone Reminder ───────────────────────────────────────────
+BACKBONE_SECTION="Backbone: match skill -> invoke before action | implementation = skill di dominio + security + tdd | review/PR = workflow review + security + verification"
+
 # ── Build output ────────────────────────────────────────────────
 # Skip if nothing to report (e.g. not in a git repo, no stats)
 SECTIONS=""
+[ -n "$BACKBONE_SECTION" ] && SECTIONS="${SECTIONS}${BACKBONE_SECTION}\\n"
 [ -n "$GIT_SECTION" ] && SECTIONS="${SECTIONS}${GIT_SECTION}\\n"
 [ -n "$PR_SECTION" ] && SECTIONS="${SECTIONS}${PR_SECTION}\\n"
 [ -n "$STATS_SECTION" ] && SECTIONS="${SECTIONS}${STATS_SECTION}\\n"
