@@ -206,6 +206,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 - "Glue job", "PySpark", "ETL", "Medallion", "pipeline ingestion" → invoca `siae-data-engineering`
 - "Terraform", "terragrunt", "VPC", "ECS", "Lambda" → invoca `siae-iac`
 - "Flutter", "Dart", "Riverpod", "ObjectBox", "Get_it", "Amplify", "app mobile", "widget Flutter" → invoca `siae-flutter`
+- "JRXML", "JasperReports", "jrxml da pdf", "ricostruisci jasper", "pdf to jrxml", "genera template jasper", "replica pdf in jasper", "/forge-jasper" → invoca `siae-jasper-from-pdf`
 
 "Costruiamo X" → brainstorming prima, poi skill di implementazione.
 "Fix questo bug" → debugging prima, poi skill specifiche del dominio.
@@ -219,6 +220,7 @@ Se la query contiene keyword esplicite di una skill specializzata, quella skill 
 - Query su .robot, .resource, Robot Framework, AppiumLibrary, pabot, porting test Android/iOS, UIAutomator2, XCUITest, NoSuchElementException Appium, SessionNotCreatedException, adb dump, BrowserStack mobile → `siae-robot-framework` (NON siae-automation, NON siae-debugging)
 - Query su Xray report + test .robot, Test Execution risultati RF → `siae-automation` (NON siae-robot-framework)
 - Query su "automatizza test RF su CI/CD GitHub Actions" → `siae-robot-framework` per il codice RF + `siae-automation` per la pipeline CI (gap noto: nessun reference file per workflow GitHub Actions RF — futuro `siae-robot-framework/reference/ci-pipeline.md`)
+- Query su JRXML, JasperReports, pdf to jrxml, template jasper da pdf → `siae-jasper-from-pdf` (NON siae-documentation, NON brainstorming)
 
 ## Rule Priority — Quando le Skill Confliggono
 
@@ -273,6 +275,7 @@ digraph skill_deps {
     flutter [label="siae-flutter", fillcolor="#cce5ff"];
     iac [label="siae-iac", fillcolor="#cce5ff"];
     data_eng [label="siae-data-engineering", fillcolor="#cce5ff"];
+    jasper [label="siae-jasper-from-pdf", fillcolor="#cce5ff"];
 
     // Verification chain (rosso)
     verification [label="siae-verification", fillcolor="#f8d7da"];
