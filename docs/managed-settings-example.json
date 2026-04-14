@@ -24,6 +24,9 @@
     },
     {
       "serverName": "figma"
+    },
+    {
+      "serverName": "browserstack"
     }
   ],
   "attribution": {
