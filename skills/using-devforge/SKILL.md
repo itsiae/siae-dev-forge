@@ -297,6 +297,7 @@ digraph skill_deps {
     tdd -> flutter [label="se Flutter", style=dashed];
     tdd -> iac [label="se IaC", style=dashed];
     tdd -> data_eng [label="se ETL", style=dashed];
+    tdd -> jasper [label="se JRXML", style=dashed];
 
     // Completion chain
     tdd -> verification [label="task fatto", style=bold, color=red];
@@ -341,7 +342,7 @@ Il contesto parent e' sempre la fonte meno autorevole.
 
 ## Tipi di Skill
 
-**Rigid** (TDD, debugging, brainstorming, git-workflow): Segui esattamente. Non adattare. Non saltare passi. La disciplina e' il valore.
+**Rigid** (TDD, debugging, brainstorming, git-workflow, jasper-from-pdf): Segui esattamente. Non adattare. Non saltare passi. La disciplina e' il valore.
 
 **Flexible** (architecture, code-standards, security, iac, data-engineering, frontend, documentation): Adatta i principi al contesto. Usa il giudizio su quali sezioni applicare, ma non ignorare la skill.
 
@@ -358,6 +359,7 @@ L'ordine e' sacro. Non saltare fasi. Il catalogo skill mostra quale skill si app
 | siae-robot-framework | file .robot, file .resource, AppiumLibrary, pabot, test mobile Appium, UIAutomator2, XCUITest, adb dump, adb logcat, locatore mancante, NoSuchElementException Appium, SessionNotCreatedException, BrowserStack mobile, porting Android↔iOS test RF, debug test Appium | Rigid | 5. Testing / 4. Implementation |
 | siae-bug-hunter | bug proattivo, caccia ai bug, /forge-bugs, trova bug nel codice, bug latenti, analisi statica bug, cosa è già rotto, scansione bug, bug prima di produzione, pattern anti, codice rotto | Rigid | 6. QA Gate |
 | siae-blind-review | "blind review", "review cieca", "audit spec", "verifica spec vs codice", "review senza diff", /forge-blind-review | Rigid | 6. QA Gate |
+| siae-jasper-from-pdf | JRXML, JasperReports, jrxml da pdf, ricostruisci jasper, pdf to jrxml, /forge-jasper | Rigid | 4. Implementation |
 | siae-retrospective | fine sessione, lezioni apprese, cosa ho imparato, retrospettiva, salva per la prossima volta, /forge-retro, stop-gate hook | Rigid | Cross-cutting |
 
 ## DevForge Visual Design System

@@ -20,10 +20,19 @@ description: >
 ║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
 ║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
 ║              🔨  DevForge  ·  Jasper From PDF                    ║
+║         "Il codice si forgia. Il developer cresce."              ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
 > **Tipo:** Rigid | **Fase SDLC:** 4. Implementation
+
+---
+
+## Panoramica
+
+Reverse-engineering di template JasperReports (JRXML) da PDF di riferimento, tipicamente per documenti contabili e modulistica SIAE. Iterazione automatica con convergenza pixel-per-pixel.
+
+**Principio fondamentale:** Il PDF reference e' la verita'. Misura, non stimare. Itera fino a convergenza.
 
 ---
 
@@ -199,7 +208,7 @@ REPEAT:
 - Ogni iterazione deve ridurre il diff O cambiare strategia
 - Log il diff % ad ogni iterazione
 - Se il diff AUMENTA, revert e analizza perche'
-- MAX 20 iterazioni. Se non convergente, segnala il floor tecnico
+- Escalation a 10 iterazioni (vedi Strategie di Escalation). Hard stop a 20
 
 ### FASE 4 — Validazione Finale 🟢 Sicuro
 
