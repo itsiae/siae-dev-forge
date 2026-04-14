@@ -34,6 +34,15 @@
         "ORACLE_PORT": "1521",
         "ORACLE_SERVICE_NAME": "SPORTPRD.NET.SIAE"
       }
+    },
+    "browserstack": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@browserstack/mcp-server@1.2.14"],
+      "env": {
+        "BROWSERSTACK_USERNAME": "${BROWSERSTACK_USERNAME}",
+        "BROWSERSTACK_ACCESS_KEY": "${BROWSERSTACK_ACCESS_KEY}"
+      }
     }
   }
 }
