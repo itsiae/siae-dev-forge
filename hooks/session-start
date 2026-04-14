@@ -17,7 +17,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger and start session
 source "${PLUGIN_ROOT}/lib/logger.sh"
-START_NS=$(date +%s%N 2>/dev/null || echo "0")
+START_NS=$(_devforge_epoch_ns)
 DEVFORGE_SID=$(devforge_new_sid)
 
 # Create session state directory
@@ -266,6 +266,11 @@ cat <<EOF
 }
 EOF
 
+# Defence-in-depth: clear session_end guard BEFORE any call that can crash
+# (e.g. devforge_log_timed on macOS < 26). Without this, a stale guard from
+# a crashed session prevents session_end from firing in ALL subsequent sessions.
+rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+
 # Cache resolved user for non-git contexts (F3: fix user "unknown")
 rm -f "${HOME}/.claude/.devforge-session-user" "${HOME}/.claude/.devforge-session-user-source"
 RESOLVED_USER_RAW=$(devforge_get_user_raw)
@@ -346,7 +351,7 @@ git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null ||
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 echo "0" > "${HOME}/.claude/.devforge-message-counter"
-rm -rf "${HOME}/.claude/.devforge-session-end-guard"
+# (guard cleanup moved before devforge_log_timed — see line ~269)
 # Reset TDD state machine and coverage for new session
 rm -f "${HOME}/.claude/.devforge-tdd-state"
 rm -f "${HOME}/.claude/.devforge-last-coverage"

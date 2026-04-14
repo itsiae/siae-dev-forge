@@ -41,7 +41,7 @@ devforge_create_batch() {
         # Process archived files first (oldest → newest by ts in filename), then current.
         # shellcheck disable=SC2012
         local files
-        files=$(ls -1 "${session_dir}"/activity-*.archived.jsonl 2>/dev/null | sort)
+        files=$(ls -1 "${session_dir}"/activity-*.archived.jsonl 2>/dev/null | sort) || files=""
         [ -f "${session_dir}/activity.jsonl" ] && files="${files}
 ${session_dir}/activity.jsonl"
 
@@ -54,7 +54,10 @@ ${session_dir}/activity.jsonl"
             file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
 
             if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
-                batch_file="${session_dir}/outbox/batch-$(date +%s%N 2>/dev/null || date +%s)-$$-${basename%.jsonl}.jsonl"
+                local epoch_ns
+                epoch_ns=$(date +%s%N 2>/dev/null || date +%s)
+                case "$epoch_ns" in *[!0-9]*) epoch_ns=$(date +%s) ;; esac
+                batch_file="${session_dir}/outbox/batch-${epoch_ns}-$$-${basename%.jsonl}.jsonl"
                 tail -c +"$((cursor + 1))" "$f" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; continue; }
                 if [ -s "$batch_file" ]; then
                     echo "$file_size" > "$cursor_file"
@@ -88,9 +91,42 @@ _devforge_maybe_remove_archived() {
     fi
 }
 
+# devforge_batch_global — batch events from the global activity file.
+# The global file (~/.claude/devforge-activity.jsonl) receives ALL events via
+# dual-write in devforge_log(), but is never read by devforge_create_batch
+# (which processes only session-specific files). If session-start crashes
+# before creating the session dir, events land ONLY in the global file and
+# are permanently stranded. This function provides a fallback drain with a
+# dedicated cursor so events are batched exactly once.
+devforge_batch_global() {
+    local global_file="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
+    [ -f "$global_file" ] && [ -s "$global_file" ] || return 0
+
+    local state_root="${HOME}/.claude/devforge-state"
+    mkdir -p "${state_root}/.global-outbox/acked" 2>/dev/null || return 0
+
+    local cursor_file="${state_root}/.global-outbox/.cursor-global"
+    local cursor file_size batch_file epoch_ns
+    cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+    file_size=$(stat -f%z "$global_file" 2>/dev/null || stat -c%s "$global_file" 2>/dev/null || echo "0")
+
+    if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
+        epoch_ns=$(date +%s%N 2>/dev/null || date +%s)
+        case "$epoch_ns" in *[!0-9]*) epoch_ns=$(date +%s) ;; esac
+        batch_file="${state_root}/.global-outbox/batch-${epoch_ns}-$$.jsonl"
+        tail -c +"$((cursor + 1))" "$global_file" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; return 0; }
+        if [ -s "$batch_file" ]; then
+            echo "$file_size" > "$cursor_file"
+        else
+            rm -f "$batch_file"
+        fi
+    fi
+}
+
 # devforge_upload_logs — creates a batch from current session + uploads all pending
 devforge_upload_logs() {
     devforge_create_batch 2>/dev/null || true
+    devforge_batch_global 2>/dev/null || true
     devforge_upload_backlog 2>/dev/null || true
 }
 
@@ -104,7 +140,8 @@ devforge_upload_backlog() {
     local state_root="${HOME}/.claude/devforge-state"
     [ -d "$state_root" ] || return 0
 
-    for outbox_dir in "$state_root"/*/outbox; do
+    # Include both session-specific outboxes AND the global fallback outbox
+    for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
         [ -d "$outbox_dir" ] || continue
         for batch in "$outbox_dir"/batch-*.jsonl; do
             [ -f "$batch" ] || continue
@@ -129,7 +166,7 @@ devforge_pending_count() {
     local state_root="${HOME}/.claude/devforge-state"
     [ -d "$state_root" ] || { echo "0"; return; }
     local count=0
-    for batch in "$state_root"/*/outbox/batch-*.jsonl; do
+    for batch in "$state_root"/*/outbox/batch-*.jsonl "$state_root/.global-outbox"/batch-*.jsonl; do
         [ -f "$batch" ] && count=$((count + 1))
     done
     echo "$count"
