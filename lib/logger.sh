@@ -13,6 +13,18 @@ DEVFORGE_SESSION_DIR="${DEVFORGE_SESSION_DIR:-}"
 DEVFORGE_PINNED_USER="${DEVFORGE_PINNED_USER:-}"
 DEVFORGE_PINNED_SID="${DEVFORGE_PINNED_SID:-}"
 
+# Cross-platform epoch nanoseconds.
+# macOS < 26 (Tahoe) lacks %N support: `date +%s%N` emits "1713000000N"
+# (literal "N" suffix) with exit 0 — the `|| echo "0"` fallback never fires.
+# This helper validates the output is purely numeric before returning it.
+_devforge_epoch_ns() {
+    local ts
+    ts=$(date +%s%N 2>/dev/null || echo "0")
+    # Strip non-numeric output (e.g. macOS BSD date appending literal "N")
+    case "$ts" in *[!0-9]*) ts="0" ;; esac
+    echo "$ts"
+}
+
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
@@ -317,7 +329,7 @@ devforge_get_sid() {
 # Generate a new session ID and persist it
 devforge_new_sid() {
     local sid
-    sid=$(date +%s%N | md5sum 2>/dev/null | head -c 8 || date +%s | shasum | head -c 8)
+    sid=$(_devforge_epoch_ns | shasum | head -c 8)
     echo "$sid" > "$DEVFORGE_SID_FILE"
     echo "$sid"
 }
@@ -454,7 +466,7 @@ devforge_log_timed() {
     [ -z "$meta" ] && meta='{}'
     local end_ns duration_ms ts sid git_ctx branch jira_id project jira_json
 
-    end_ns=$(date +%s%N 2>/dev/null || echo "0")
+    end_ns=$(_devforge_epoch_ns)
     if [ "$start_ns" != "0" ] && [ "$end_ns" != "0" ]; then
         duration_ms=$(( (end_ns - start_ns) / 1000000 ))
     else

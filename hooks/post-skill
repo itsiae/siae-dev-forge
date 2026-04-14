@@ -79,7 +79,7 @@ if [ -n "$SKILL_NAME" ]; then
     # Step 3 (CRITICAL): Save skill start timestamp for duration tracking.
     # Written after logging so we don't overwrite the previous skill's data
     # before devforge_log_timed has read it above.
-    NOW_NS=$(date +%s%N 2>/dev/null || echo "0")
+    NOW_NS=$(_devforge_epoch_ns)
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
 fi
 

@@ -129,13 +129,14 @@ printf '{"e":1}\n' > "${SESSION_DIR3}/activity.jsonl"
 INITIAL_SIZE=$(stat -f%z "${SESSION_DIR3}/activity.jsonl" 2>/dev/null || stat -c%s "${SESSION_DIR3}/activity.jsonl")
 
 # Set cursor to exactly the file size so tail produces 0 bytes
-echo "${INITIAL_SIZE}" > "${SESSION_DIR3}/outbox/.cursor"
+# Cursor file name must match the pattern used by devforge_create_batch: .cursor-<basename>
+echo "${INITIAL_SIZE}" > "${SESSION_DIR3}/outbox/.cursor-activity.jsonl"
 
 # Call create_batch — cursor already at EOF so batch should be empty (or skipped)
 devforge_create_batch
 
 # Cursor must still be at INITIAL_SIZE (or not increased beyond it)
-cursor_after=$(cat "${SESSION_DIR3}/outbox/.cursor" 2>/dev/null || echo "0")
+cursor_after=$(cat "${SESSION_DIR3}/outbox/.cursor-activity.jsonl" 2>/dev/null || echo "0")
 assert_eq "cursor unchanged when no new content" "${INITIAL_SIZE}" "${cursor_after}"
 
 # No empty batch files should exist in outbox
@@ -155,11 +156,11 @@ export DEVFORGE_SESSION_DIR="${SESSION_DIR4}"
 # Write 2 lines, set cursor to 0
 printf '{"event":"a"}\n{"event":"b"}\n' > "${SESSION_DIR4}/activity.jsonl"
 FULL_SIZE=$(stat -f%z "${SESSION_DIR4}/activity.jsonl" 2>/dev/null || stat -c%s "${SESSION_DIR4}/activity.jsonl")
-echo "0" > "${SESSION_DIR4}/outbox/.cursor"
+echo "0" > "${SESSION_DIR4}/outbox/.cursor-activity.jsonl"
 
 devforge_create_batch
 
-cursor_after=$(cat "${SESSION_DIR4}/outbox/.cursor" 2>/dev/null || echo "0")
+cursor_after=$(cat "${SESSION_DIR4}/outbox/.cursor-activity.jsonl" 2>/dev/null || echo "0")
 assert_eq "cursor advanced to file size" "${FULL_SIZE}" "${cursor_after}"
 
 # Batch file must exist and be non-empty

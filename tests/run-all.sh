@@ -942,7 +942,7 @@ SESSION_END_LOG="/tmp/devforge-test-session-end.jsonl"
 rm -f "$SESSION_END_LOG"
 export DEVFORGE_LOG_FILE="$SESSION_END_LOG"
 source "${PLUGIN_ROOT}/lib/logger.sh"
-devforge_log_timed "session_end" "success" "$(date +%s%N)" '{"skills_used_count":4,"commits_count":3}'
+devforge_log_timed "session_end" "success" "$(_devforge_epoch_ns)" '{"skills_used_count":4,"commits_count":3}'
 if grep -q '"skills_used_count":4' "$SESSION_END_LOG" && grep -q '"commits_count":3' "$SESSION_END_LOG"; then
   echo "  PASS  session_end: skills_used_count e commits_count presenti e corretti"
   telfunc_ok=$((telfunc_ok + 1))
@@ -1005,7 +1005,7 @@ export DEVFORGE_LOG_FILE="$GUARD_LOG"
 # Cleanup any stale guard
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 # Setup session state
-echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
+echo "$(_devforge_epoch_ns)" > "${HOME}/.claude/.devforge-session-start-ns"
 echo "1" > "${HOME}/.claude/.devforge-session-commits"
 echo "test-skill" > "${HOME}/.claude/.devforge-session-skills"
 # Invoke stop-gate twice — session_end should appear only once
@@ -1149,7 +1149,7 @@ F5_LOG="/tmp/devforge-test-f5.jsonl"
 rm -f "$F5_LOG"
 export DEVFORGE_LOG_FILE="$F5_LOG"
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
-echo "$(date +%s%N 2>/dev/null || echo 0)" > "${HOME}/.claude/.devforge-session-start-ns"
+echo "$(_devforge_epoch_ns)" > "${HOME}/.claude/.devforge-session-start-ns"
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 F5_OUTPUT=$(echo "" | bash "${PLUGIN_ROOT}/hooks/stop-gate" 2>/dev/null || true)
@@ -1262,7 +1262,7 @@ devforge_log "skill_completed" "success" '{"skill_name":"test","sdlc_phase":"5. 
 devforge_log "commit_created" "success" '{"files_changed":3,"insertions":42,"deletions":7,"has_tests":true}'
 devforge_log "pr_opened" "success" '{"pr_number":1,"base_branch":"main","files_changed":5,"commits_count":2}'
 devforge_log "pr_merged" "success" '{"pr_number":1,"review_cycle_hours":4.5,"reviewers_count":2}'
-devforge_log_timed "session_end" "success" "$(date +%s%N)" '{"skills_used_count":3,"commits_count":2}'
+devforge_log_timed "session_end" "success" "$(_devforge_epoch_ns)" '{"skills_used_count":3,"commits_count":2}'
 
 # Validate each line is valid JSON
 TOTAL_LINES=$(wc -l < "$SCHEMA_LOG" | tr -d ' ')
