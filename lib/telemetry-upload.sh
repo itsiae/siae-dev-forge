@@ -55,8 +55,7 @@ ${session_dir}/activity.jsonl"
 
             if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
                 local epoch_ns
-                epoch_ns=$(date +%s%N 2>/dev/null || date +%s)
-                case "$epoch_ns" in *[!0-9]*) epoch_ns=$(date +%s) ;; esac
+                epoch_ns=$(command -v _devforge_epoch_ns >/dev/null 2>&1 && _devforge_epoch_ns || date +%s)
                 batch_file="${session_dir}/outbox/batch-${epoch_ns}-$$-${basename%.jsonl}.jsonl"
                 tail -c +"$((cursor + 1))" "$f" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; continue; }
                 if [ -s "$batch_file" ]; then
@@ -111,8 +110,7 @@ devforge_batch_global() {
     file_size=$(stat -f%z "$global_file" 2>/dev/null || stat -c%s "$global_file" 2>/dev/null || echo "0")
 
     if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
-        epoch_ns=$(date +%s%N 2>/dev/null || date +%s)
-        case "$epoch_ns" in *[!0-9]*) epoch_ns=$(date +%s) ;; esac
+        epoch_ns=$(command -v _devforge_epoch_ns >/dev/null 2>&1 && _devforge_epoch_ns || date +%s)
         batch_file="${state_root}/.global-outbox/batch-${epoch_ns}-$$.jsonl"
         tail -c +"$((cursor + 1))" "$global_file" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; return 0; }
         if [ -s "$batch_file" ]; then

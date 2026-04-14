@@ -103,7 +103,7 @@ fi
 echo "TEST 4 — devforge_log_timed dual-write dedup (CRITICAL fix iter-5)"
 rm -f "$DEVFORGE_LOG_FILE" "$DEVFORGE_SESSION_DIR/.activity.lock"
 touch "$DEVFORGE_LOG_FILE"
-START_NS=$(date +%s%N 2>/dev/null || echo 0)
+START_NS=$(_devforge_epoch_ns)
 devforge_log_timed "test_timed" "success" "$START_NS" '{"x":1}' 2>/dev/null
 timed_lines=$(wc -l < "$DEVFORGE_LOG_FILE" | tr -d ' ')
 assert "T4: devforge_log_timed produces 1 line (no dual-write duplicate)" "$timed_lines" "1"

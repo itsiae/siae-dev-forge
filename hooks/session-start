@@ -351,7 +351,7 @@ git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null ||
 echo "" > "${HOME}/.claude/.devforge-session-skills"
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 echo "0" > "${HOME}/.claude/.devforge-message-counter"
-# (guard cleanup moved before devforge_log_timed — see line ~269)
+# (guard cleanup moved before devforge_log_timed call, after EOF output)
 # Reset TDD state machine and coverage for new session
 rm -f "${HOME}/.claude/.devforge-tdd-state"
 rm -f "${HOME}/.claude/.devforge-last-coverage"
