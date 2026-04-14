@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-REINJECT_EVERY=20
+REINJECT_EVERY=10
 COUNTER_FILE="${HOME}/.claude/.devforge-message-counter"
 
 # Initialize counter if missing
@@ -57,25 +57,54 @@ escape_for_json() {
     printf '%s' "$s"
 }
 
+extract_md_section() {
+    local file="$1"
+    local start_heading="$2"
+    local end_heading="${3:-}"
+    awk -v start="$start_heading" -v end="$end_heading" '
+        $0 == start {capture=1}
+        capture && end != "" && $0 == end {exit}
+        capture {print}
+    ' "$file" 2>/dev/null || true
+}
+
+USING_DEVFORGE_FILE="${PLUGIN_ROOT}/skills/using-devforge/SKILL.md"
+BACKBONE_TEXT=""
+if [ -f "$USING_DEVFORGE_FILE" ]; then
+    RULE_SECTION=$(extract_md_section "$USING_DEVFORGE_FILE" "## La Regola" "## DevForge Backbone Core")
+    CORE_SECTION=$(extract_md_section "$USING_DEVFORGE_FILE" "## DevForge Backbone Core" "## Skill Priority")
+    PRIORITY_SECTION=$(extract_md_section "$USING_DEVFORGE_FILE" "## Skill Priority" "## Gate Operativi")
+    GATE_SECTION=$(extract_md_section "$USING_DEVFORGE_FILE" "## Gate Operativi" "## Regole Operative Brevi")
+    BACKBONE_TEXT="${RULE_SECTION}\n\n${CORE_SECTION}\n\n${PRIORITY_SECTION}\n\n${GATE_SECTION}"
+fi
+
+if [ -z "$(printf '%s' "$BACKBONE_TEXT" | tr -d '[:space:]')" ]; then
+    read -r -d '' BACKBONE_TEXT <<'EOF' || true
+## La Regola
+Se c'e' anche l'1% di probabilita' che una skill si applichi, invocala prima di rispondere.
+Controlla sempre il Dynamic Skill Catalog.
+
+## DevForge Backbone Core
+- Task implementativo -> `siae-brainstorming`, poi `siae-writing-plans`
+- Bug/failure -> `siae-debugging` prima del fix
+- Implementazione -> skill di dominio + `siae-security` + `siae-tdd`
+- Review/pre-PR -> skill di dominio + workflow review + `siae-security`
+- Completamento -> `siae-verification`
+EOF
+fi
+
+backbone_text_escaped=$(escape_for_json "$BACKBONE_TEXT")
 skill_catalog_escaped=$(escape_for_json "$skill_catalog")
 
-# Compact context: essential rules + full catalog
-# Not the full using-devforge skill — just enough to keep Claude on track
+# Compact context: backbone from using-devforge + full catalog
 COMPACT_CONTEXT="<EXTREMELY_IMPORTANT>\\n\
 🔨 DevForge Context Refresh (messaggio #${COUNT})\\n\\n\
-**AZIONE IMMEDIATA:** Prima di rispondere a questo messaggio, stampa su una riga separata esattamente: '🔄 DevForge re-iniettato (msg #${COUNT})'\\n\\n\
-**OBBLIGO:** Per OGNI messaggio utente, scansiona il Dynamic Skill Catalog sotto. Se trovi un match anche parziale, invoca la skill PRIMA di rispondere.\\n\\n\
-**Git Operations Intercept:** Prima di QUALSIASI git command (checkout, commit, push, merge, tag, gh pr create), verifica di aver invocato siae-git-workflow. Prima di aprire una PR, verifica siae-finishing-branch.\\n\\n\
-**EnterPlanMode Intercept:** Prima di EnterPlanMode, verifica che il brainstorming sia stato fatto (siae-brainstorming).\\n\\n\
-**Verification:** Prima di dichiarare qualsiasi task fatto/completato/fixato, invoca siae-verification.\\n\\n\
-**Red Flags — STOP se pensi:**\\n\
-- 'E solo una domanda semplice' → Le domande sono task. Controlla le skill.\\n\
-- 'Posso controllare git velocemente' → Carica siae-git-workflow prima.\\n\
-- 'La skill e eccessiva' → Le cose semplici diventano complesse. Usala.\\n\
-- 'E solo un commit veloce' → Ogni commit senza siae-git-workflow = naming sbagliato.\\n\\n\
+**Backbone Meta-Skill Refresh:**\\n\\n\
+${backbone_text_escaped}\\n\\n\
+**Always-On Companion Rule:** skill specifica di dominio -> aggancia SEMPRE siae-security; task che va in review/PR -> aggancia SEMPRE workflow review + siae-verification; brainstorming SEMPRE per QUALSIASI task implementativo (escluse pure operazioni git).\\n\\n\
 **Dynamic Skill Catalog:**\\n\\n\
 ${skill_catalog_escaped}\\n\\n\
-**Disambiguazione:** bug/errore/stacktrace → siae-debugging | git op → siae-git-workflow | C4/HLD/CQRS → siae-architecture | Terraform/ECS → siae-iac | Glue/PySpark/ETL → siae-data-engineering | Playwright/Cypress/E2E → siae-automation | brainstorming SEMPRE per QUALSIASI task implementativo (feature, bug fix, refactoring, config — escluse pure operazioni git).\\n\
+**Disambiguazione:** bug/errore/stacktrace → siae-debugging | git op → siae-git-workflow | C4/HLD/CQRS → siae-architecture | Terraform/ECS → siae-iac | Glue/PySpark/ETL → siae-data-engineering | Playwright/Cypress/E2E → siae-automation | brainstorming SEMPRE per QUALSIASI task implementativo.\\n\
 </EXTREMELY_IMPORTANT>"
 
 cat <<EOF
