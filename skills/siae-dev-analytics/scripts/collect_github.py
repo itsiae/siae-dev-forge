@@ -14,12 +14,22 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 CACHE_DIR = Path(".cache/github")
+CACHE_TTL_DAYS = 7
 
 
 def _ensure_cache_dir() -> Path:
     """Lazy create cache dir. Avoid side effects at module import time."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR
+
+
+def _is_cache_fresh(cache_file: Path) -> bool:
+    """True se il file cache è stato modificato meno di CACHE_TTL_DAYS giorni fa."""
+    import time
+    if not cache_file.exists():
+        return False
+    age_seconds = time.time() - cache_file.stat().st_mtime
+    return age_seconds < (CACHE_TTL_DAYS * 86400)
 
 GRAPHQL_QUERY = """
 query($owner: String!, $name: String!, $since: GitTimestamp!) {
@@ -95,9 +105,11 @@ def fetch_repo_data(
     key = cache_key(repo, since, until)
     cache_dir = _ensure_cache_dir()
     cache_file = cache_dir / f"{key}.json"
-    if cache_file.exists():
-        log.debug("cache hit: %s", repo)
+    if _is_cache_fresh(cache_file):
+        log.debug("cache hit (fresh): %s", repo)
         return json.loads(cache_file.read_text())
+    if cache_file.exists():
+        log.debug("cache expired (>%d days): %s — refetching", CACHE_TTL_DAYS, repo)
 
     owner, name = repo.split("/", 1)
     variables = {"owner": owner, "name": name, "since": f"{since}T00:00:00Z"}
@@ -120,6 +132,8 @@ def fetch_repo_data(
             data = json.loads(stdout)
             if "data" in data:
                 data = data["data"]
+            # Warn on potential pagination truncation (v1 uses first: 100)
+            _warn_if_truncated(data, repo)
             cache_file.write_text(json.dumps(data, indent=2))
             return data
 
@@ -145,6 +159,27 @@ def fetch_repo_data(
 
 def _parse_iso(s: str) -> datetime:
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+PAGE_SIZE = 100
+
+
+def _warn_if_truncated(raw: dict, repo: str) -> None:
+    """Log WARNING quando conteggio nodes raggiunge PAGE_SIZE (possibile truncation)."""
+    repo_data = raw.get("repository") or {}
+    prs = (repo_data.get("pullRequests") or {}).get("nodes") or []
+    if len(prs) >= PAGE_SIZE:
+        log.warning(
+            "repo %s returned %d PRs (page size max) — results may be truncated. "
+            "Consider narrowing the time window.", repo, len(prs)
+        )
+    history = ((repo_data.get("defaultBranchRef") or {}).get("target") or {}).get("history") or {}
+    commits = history.get("nodes") or []
+    if len(commits) >= PAGE_SIZE:
+        log.warning(
+            "repo %s returned %d commits (page size max) — results may be truncated. "
+            "Consider narrowing the time window.", repo, len(commits)
+        )
 
 
 def extract_pr_records(raw: dict) -> list[dict]:

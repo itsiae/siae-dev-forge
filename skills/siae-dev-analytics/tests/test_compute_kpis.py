@@ -294,3 +294,16 @@ def test_q2_rework_ratio_documented_as_deferred():
     # In v1, senza colonna force_pushes_after_review -> 0.0 per tutti (documentato)
     assert result == {"alice": 0.0, "bob": 0.0}
     # Q2 e marcato come deferred nel catalog -- il report espone "N/A v1" nella descrizione
+
+
+def test_verification_override_takes_precedence(sample_prs, sample_commits, sample_tags, window):
+    """verification_override da S3 telemetry sovrascrive Q4 calcolato da trailer."""
+    prs_df = pd.DataFrame(sample_prs)
+    commits_df = pd.DataFrame(sample_commits)
+    tags_df = pd.DataFrame(sample_tags)
+    override = {"alice": 0.95, "bob": 0.80}
+    result = ck.compute_all(prs_df, commits_df, tags_df, window, verification_override=override)
+    assert result.loc["alice", "verification_rate"] == 0.95
+    assert result.loc["bob", "verification_rate"] == 0.80
+    # Carol non nell'override -> mantiene valore da commits (0.0)
+    assert result.loc["carol", "verification_rate"] == 0.0

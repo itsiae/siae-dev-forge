@@ -147,6 +147,65 @@ def test_extract_deploy_tags_attributes_to_commit_author(sample_pr_data):
     assert names["PRODUZIONE-v1.0.0"] == "alice"
 
 
+def test_cache_expired_refetches(tmp_cache, sample_pr_data, monkeypatch):
+    """Cache file più vecchio di CACHE_TTL_DAYS → re-fetch (invalidazione)."""
+    import os, time as time_mod
+    key = cg.cache_key("itsiae/sample", "2026-03-01", "2026-03-31")
+    cache_file = tmp_cache / f"{key}.json"
+    cache_file.write_text(json.dumps({"repository": {"nameWithOwner": "stale"}}))
+    # Set mtime a 10 giorni fa
+    old_time = time_mod.time() - (10 * 86400)
+    os.utime(cache_file, (old_time, old_time))
+
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(sample_pr_data))
+        data = cg.fetch_repo_data("itsiae/sample", "2026-03-01", "2026-03-31")
+
+    assert mock_run.called, "Cache scaduta doveva triggerare re-fetch"
+    assert data["repository"]["nameWithOwner"] != "stale"
+
+
+def test_cache_fresh_hit_no_refetch(tmp_cache, sample_pr_data):
+    """Cache file <= CACHE_TTL_DAYS → cache hit normale."""
+    import os, time as time_mod
+    key = cg.cache_key("itsiae/sample", "2026-03-01", "2026-03-31")
+    cache_file = tmp_cache / f"{key}.json"
+    cache_file.write_text(json.dumps(sample_pr_data))
+    # mtime a 1 giorno fa (fresh)
+    recent = time_mod.time() - 86400
+    os.utime(cache_file, (recent, recent))
+
+    with patch("subprocess.run") as mock_run:
+        data = cg.fetch_repo_data("itsiae/sample", "2026-03-01", "2026-03-31")
+
+    assert not mock_run.called
+    assert data["repository"]["nameWithOwner"] == "itsiae/sample-repo"
+
+
+def test_fetch_logs_warning_on_truncation(tmp_cache, caplog):
+    """Se PR nodes count == 100, log WARNING su possibile truncation."""
+    import logging
+    truncated_data = {
+        "repository": {
+            "nameWithOwner": "itsiae/big-repo",
+            "pullRequests": {"nodes": [{"number": i, "author": {"login": "x"},
+                                        "createdAt": "2026-03-01T10:00:00Z",
+                                        "mergedAt": "2026-03-01T14:00:00Z",
+                                        "commits": {"nodes": []},
+                                        "reviews": {"nodes": []},
+                                        "files": {"nodes": []}, "body": ""}
+                                       for i in range(100)]},
+            "defaultBranchRef": {"target": {"history": {"nodes": []}}},
+            "refs": {"nodes": []},
+        }
+    }
+    with patch("subprocess.run") as mock_run, caplog.at_level(logging.WARNING):
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(truncated_data))
+        cg.fetch_repo_data("itsiae/big-repo", "2026-03-01", "2026-03-31")
+    assert any("truncat" in r.message.lower() or "page" in r.message.lower()
+               for r in caplog.records), f"No truncation warning in: {[r.message for r in caplog.records]}"
+
+
 def test_extract_deploy_tags_filters_non_siae_tags():
     """Tag non-SIAE ignorati (es. 'v1.0.0' da lib)."""
     raw = {

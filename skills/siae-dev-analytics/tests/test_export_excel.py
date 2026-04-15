@@ -63,13 +63,112 @@ def test_export_creates_file(tmp_path, sample_kpis_df, sample_prs_df, sample_sou
     assert out.stat().st_size > 0
 
 
-def test_export_has_4_sheets(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
-    """Xlsx contiene 4 sheet: Summary, Per Developer, Raw Data, Data Sources."""
+def test_export_has_5_sheets_with_executive_summary(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
+    """Xlsx contiene 5 sheet: Executive Summary prima di tutti."""
     out = tmp_path / "report.xlsx"
     ee.export(sample_kpis_df, sample_prs_df, sample_source_report,
               ("2026-03-01", "2026-03-31"), out)
     wb = load_workbook(out)
-    assert set(wb.sheetnames) == {"Summary", "Per Developer", "Raw Data", "Data Sources"}
+    assert set(wb.sheetnames) == {"Executive Summary", "Summary", "Per Developer", "Raw Data", "Data Sources"}
+    # Executive Summary deve essere il PRIMO sheet (tab leftmost)
+    assert wb.sheetnames[0] == "Executive Summary"
+
+
+def test_executive_summary_has_health_score(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
+    """Executive Summary contiene Team Health Score 0-100 + tier label."""
+    out = tmp_path / "report.xlsx"
+    ee.export(sample_kpis_df, sample_prs_df, sample_source_report,
+              ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    text = " ".join(str(c.value) for row in wb["Executive Summary"].iter_rows() for c in row if c.value)
+    assert "Health" in text or "Salute" in text
+    # Uno dei tier label deve essere presente
+    assert any(t in text for t in ["Eccellente", "Buono", "Adeguato", "Da migliorare", "Critico", "N/A"])
+
+
+def test_executive_summary_has_dora_tier(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
+    """Executive Summary dichiara DORA tier (Elite/High/Medium/Low)."""
+    out = tmp_path / "report.xlsx"
+    ee.export(sample_kpis_df, sample_prs_df, sample_source_report,
+              ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    text = " ".join(str(c.value) for row in wb["Executive Summary"].iter_rows() for c in row if c.value)
+    assert "DORA" in text
+    assert any(t in text for t in ["Elite", "High", "Medium", "Low"])
+
+
+def test_executive_summary_has_data_quality_warnings(tmp_path, sample_source_report):
+    """Se deploy_frequency=0 per tutti → warning SPECIFICO su tag convention SIAE."""
+    # Tutti i KPI a 0 → trigger warnings specifici
+    df = pd.DataFrame({
+        "pr_cycle_time_p50": {"a": 10.0},
+        "lead_time_to_merge_p50": {"a": 15.0},
+        "pr_throughput_weekly": {"a": 1.0},
+        "time_to_first_review_p50": {"a": 2.0},
+        "deploy_frequency_monthly": {"a": 0.0},
+        "review_comments_p50": {"a": 1.0},
+        "rework_ratio": {"a": 0.0},
+        "test_presence_rate": {"a": 0.5},
+        "verification_rate": {"a": 0.0},
+        "design_driven_rate": {"a": 0.0},
+        "revert_rate": {"a": 0.0},
+        "velocity_score": {"a": 0.0},
+        "quality_score": {"a": 0.0},
+        "roi_index": {"a": 0.0},
+    })
+    out = tmp_path / "report.xlsx"
+    ee.export(df, pd.DataFrame(), sample_source_report, ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    text = " ".join(str(c.value) for row in wb["Executive Summary"].iter_rows() for c in row if c.value)
+    # Assertion specifica: il messaggio deploy warning DEVE apparire
+    assert "tag convention SIAE" in text, f"Missing specific deploy warning. Text: {text[:500]}"
+    assert "verified-by" in text, f"Missing verification warning. Text: {text[:500]}"
+
+
+def test_health_score_insufficient_sample_with_n_lt_3(tmp_path, sample_source_report):
+    """N<3 dev → health score dichiara 'campione insufficiente' (z-score instabile)."""
+    df = pd.DataFrame({
+        "pr_cycle_time_p50": {"a": 5.0, "b": 10.0},
+        "velocity_score": {"a": 0.5, "b": -0.5},
+        "quality_score": {"a": 0.3, "b": -0.3},
+        "roi_index": {"a": 0.15, "b": 0.15},
+    })
+    out = tmp_path / "report.xlsx"
+    ee.export(df, pd.DataFrame(), sample_source_report,
+              ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    text = " ".join(str(c.value) for row in wb["Executive Summary"].iter_rows() for c in row if c.value)
+    assert "campione insufficiente" in text
+
+
+def test_dora_tier_zero_cycle_time_is_elite_not_na(tmp_path, sample_source_report):
+    """Cycle time 0.0 (instant merge) → Elite, non N/A."""
+    df = pd.DataFrame({
+        "pr_cycle_time_p50": {"a": 0.0, "b": 0.0, "c": 0.0},
+        "velocity_score": {"a": 0.5, "b": 0.5, "c": 0.5},
+        "quality_score": {"a": 0.5, "b": 0.5, "c": 0.5},
+        "roi_index": {"a": 0.25, "b": 0.25, "c": 0.25},
+    })
+    out = tmp_path / "report.xlsx"
+    ee.export(df, pd.DataFrame(), sample_source_report,
+              ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    text = " ".join(str(c.value) for row in wb["Executive Summary"].iter_rows() for c in row if c.value)
+    # Cycle 0 deve essere Elite (auto-merge è legittimo)
+    assert "Elite" in text
+
+
+def test_per_developer_has_italian_labels(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
+    """Per Developer header usa label italiani executive-friendly."""
+    out = tmp_path / "report.xlsx"
+    ee.export(sample_kpis_df, sample_prs_df, sample_source_report,
+              ("2026-03-01", "2026-03-31"), out)
+    wb = load_workbook(out)
+    header = [str(c.value) for c in wb["Per Developer"][1]]
+    # Almeno 3 label italiane attese
+    italian_labels = ["Tempo mediano PR (h)", "PR per settimana", "% PR con test", "Indice ROI"]
+    found = sum(1 for lbl in italian_labels if lbl in header)
+    assert found >= 3, f"Mancano label italiane. Header: {header}"
 
 
 def test_summary_has_mode_and_window(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
@@ -96,15 +195,16 @@ def test_summary_has_confidential_header(tmp_path, sample_kpis_df, sample_prs_df
 
 
 def test_per_developer_has_all_kpi_columns(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
-    """Sheet Per Developer ha 14 colonne KPI + 1 col dev."""
+    """Sheet Per Developer ha 14 colonne KPI + 1 col dev (con label italiani)."""
     out = tmp_path / "report.xlsx"
     ee.export(sample_kpis_df, sample_prs_df, sample_source_report,
               ("2026-03-01", "2026-03-31"), out)
     wb = load_workbook(out)
     header = [c.value for c in wb["Per Developer"][1]]
-    assert "dev" in header
-    for kpi in ["pr_cycle_time_p50", "velocity_score", "quality_score", "roi_index"]:
-        assert kpi in header
+    assert "Sviluppatore" in header
+    # Label italiani per KPI principali
+    for label in ["Tempo mediano PR (h)", "Indice velocità", "Indice qualità", "Indice ROI"]:
+        assert label in header, f"Missing label: {label}"
 
 
 def test_data_sources_sheet_declares_mode(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
