@@ -28,11 +28,22 @@ class SourceReport:
     s3_blend: bool
 
     def mode(self) -> Mode:
+        """Mode coerente con design matrix §4.
+
+        github=OK + s3_devforge=OK + s3_blend=OK → FULL
+        github=OK + s3_devforge=OK + s3_blend=KO → HYBRID
+        github=OK + s3_devforge=KO + s3_blend=* → GITHUB-ONLY
+        github=KO → ABORT
+
+        s3_blend-only senza s3_devforge ricade in GITHUB-ONLY: senza
+        telemetry events non c'è accuracy superior su Q4 verification_rate,
+        quindi la presenza di blend-usage sola non giustifica HYBRID.
+        """
         if not self.github:
             return "ABORT"
         if self.s3_devforge and self.s3_blend:
             return "FULL"
-        if self.s3_devforge or self.s3_blend:
+        if self.s3_devforge:
             return "HYBRID"
         return "GITHUB-ONLY"
 

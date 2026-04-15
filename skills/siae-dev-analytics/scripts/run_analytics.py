@@ -9,12 +9,14 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime
 
 import yaml
 import pandas as pd
+from pydantic import BaseModel, Field, ValidationError
 
 import autodetect_sources as ad
 import collect_github as cg
@@ -24,17 +26,80 @@ import export_excel as ee
 
 log = logging.getLogger(__name__)
 
+# Bot e account di servizio esclusi di default (sempre applicato + merge con config)
+DEFAULT_BOT_EXCLUDE = {
+    "dependabot[bot]", "renovate[bot]", "github-actions[bot]",
+    "github-actions", "copilot[bot]", "pre-commit-ci[bot]",
+    "codecov[bot]", "snyk-bot", "unknown",
+}
+
+
+# ────────────────────────────────────────────────────────
+# Pydantic models per config validation (AC01 conformance)
+# ────────────────────────────────────────────────────────
+
+class ScopeConfig(BaseModel):
+    repos: list[str] = Field(default_factory=list)
+    teams: list[str] = Field(default_factory=list)
+    topics: list[str] = Field(default_factory=list)
+
+
+class TimeWindowConfig(BaseModel):
+    from_: str = Field(alias="from")
+    to: str = Field(default="today")
+
+    class Config:
+        populate_by_name = True
+
+
+class DevelopersConfig(BaseModel):
+    include: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+
+
+class OptionsConfig(BaseModel):
+    anonymize: bool = False
+    min_commits_threshold: int = 5
+    parallel_fetch: int = 4
+
+
+class OutputConfig(BaseModel):
+    format: str = Field(default="xlsx", pattern="^(xlsx|csv|both)$")
+    path: str = "./devforge-analytics-report.xlsx"
+
+
+class AnalyticsConfig(BaseModel):
+    version: int = 1
+    scope: ScopeConfig
+    time_window: TimeWindowConfig
+    developers: DevelopersConfig = Field(default_factory=DevelopersConfig)
+    options: OptionsConfig = Field(default_factory=OptionsConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+
 
 def load_config(path: Path) -> dict:
-    """Load + minimal validate YAML config."""
-    data = yaml.safe_load(path.read_text())
-    required = ["scope", "time_window"]
-    for k in required:
-        if k not in data:
-            raise ValueError(f"config missing required key: {k}")
-    if not (data["scope"].get("repos") or data["scope"].get("teams") or data["scope"].get("topics")):
+    """Load + validate YAML config via Pydantic (AC01).
+
+    Raises ValueError con errori dettagliati riga+campo se validazione fallisce.
+    """
+    try:
+        raw = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        raise ValueError(f"invalid YAML in {path}: {e}")
+    if raw is None:
+        raise ValueError(f"config {path} is empty")
+
+    try:
+        cfg = AnalyticsConfig(**raw)
+    except ValidationError as e:
+        raise ValueError(f"config validation failed:\n{e}")
+
+    # Constraint business: scope deve definire almeno una fonte
+    if not (cfg.scope.repos or cfg.scope.teams or cfg.scope.topics):
         raise ValueError("scope must define at least one of: repos, teams, topics")
-    return data
+
+    # Ritorna dict per retrocompatibilità (il resto del codice usa dict access)
+    return cfg.model_dump(by_alias=True)
 
 
 def resolve_repos(scope: dict) -> list[str]:
@@ -42,28 +107,25 @@ def resolve_repos(scope: dict) -> list[str]:
     repos = list(scope.get("repos", []))
     # teams/topics richiedono gh CLI — best effort
     for team in scope.get("teams", []):
-        # es. "itsiae/team-backend" → gh api orgs/itsiae/teams/team-backend/repos
         try:
-            import subprocess
             org, slug = team.split("/", 1)
             result = subprocess.run(
                 ["gh", "api", f"orgs/{org}/teams/{slug}/repos", "--jq", ".[].full_name"],
                 capture_output=True, text=True, timeout=30,
             )
-            if result.returncode == 0:
+            if result.returncode == 0 and result.stdout.strip():
                 repos.extend(result.stdout.strip().split("\n"))
         except Exception as e:
             log.warning("failed to resolve team %s: %s", team, e)
 
     for topic in scope.get("topics", []):
         try:
-            import subprocess
             result = subprocess.run(
                 ["gh", "search", "repos", "--topic", topic, "--json", "nameWithOwner",
                  "--jq", ".[].nameWithOwner"],
                 capture_output=True, text=True, timeout=30,
             )
-            if result.returncode == 0:
+            if result.returncode == 0 and result.stdout.strip():
                 repos.extend(result.stdout.strip().split("\n"))
         except Exception as e:
             log.warning("failed to resolve topic %s: %s", topic, e)
@@ -97,7 +159,8 @@ def cmd_run(config_path: Path, output_override: Path | None = None,
     if until == "today":
         until = datetime.today().date().isoformat()
 
-    excluded = set(cfg.get("developers", {}).get("exclude", []))
+    # Default bot exclusion (module-level const) + config user
+    excluded = DEFAULT_BOT_EXCLUDE | set(cfg.get("developers", {}).get("exclude", []))
     include_filter = cfg.get("developers", {}).get("include", [])
     min_commits = cfg.get("options", {}).get("min_commits_threshold", 5)
 
@@ -140,14 +203,15 @@ def cmd_run(config_path: Path, output_override: Path | None = None,
 
     # Collect S3 telemetry if available
     cost_scores = {}
+    verification_override: dict[str, float] = {}
     if source_report.s3_devforge:
         events = ct.fetch_devforge_logs(since, until)
         if events:
-            # Override Q4 con telemetry (piu' accurate)
-            verif = ct.verification_rate_from_events(events)
-            if verif and not commits_df.empty:
-                # Annota — non fondamentale per la MVP
-                log.info("S3 verification_rate override for %d devs", len(verif))
+            # Override Q4 con telemetry (più accurate di commit trailer grep)
+            verification_override = ct.verification_rate_from_events(events)
+            if verification_override:
+                log.info("S3 verification_rate override applied for %d devs",
+                         len(verification_override))
 
     if source_report.s3_blend:
         costs = ct.fetch_blend_usage(since, until)
@@ -159,7 +223,11 @@ def cmd_run(config_path: Path, output_override: Path | None = None,
         log.warning("no data to compute")
         kpis_df = pd.DataFrame()
     else:
-        kpis_df = ck.compute_all(prs_df, commits_df, tags_df, window_tuple, cost_scores=cost_scores)
+        kpis_df = ck.compute_all(
+            prs_df, commits_df, tags_df, window_tuple,
+            cost_scores=cost_scores,
+            verification_override=verification_override or None,
+        )
 
     # Export
     output_cfg = cfg.get("output", {})

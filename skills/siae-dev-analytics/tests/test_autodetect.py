@@ -59,6 +59,16 @@ def test_mode_github_only_no_s3():
     assert report.mode() == "GITHUB-ONLY"
 
 
+def test_mode_s3_blend_only_without_devforge_is_github_only():
+    """github + s3_blend SENZA s3_devforge → GITHUB-ONLY.
+
+    Senza telemetry events (s3_devforge) non c'è accuracy superior su Q4
+    verification_rate. Avere solo blend-usage non giustifica HYBRID.
+    """
+    report = ad.SourceReport(github=True, s3_devforge=False, s3_blend=True)
+    assert report.mode() == "GITHUB-ONLY"
+
+
 def test_mode_abort_no_github():
     """github mancante → ABORT."""
     report = ad.SourceReport(github=False, s3_devforge=False, s3_blend=False)

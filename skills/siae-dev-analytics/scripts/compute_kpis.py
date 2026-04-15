@@ -172,8 +172,20 @@ def compute_all(
     tags: pd.DataFrame,
     window: tuple[str, str],
     cost_scores: dict[str, float] | None = None,
+    verification_override: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    """Calcola tutti i KPI + score + ROI per ogni dev."""
+    """Calcola tutti i KPI + score + ROI per ogni dev.
+
+    Se `verification_override` è fornito (da S3 devforge-logs in FULL/HYBRID mode),
+    sostituisce il valore di Q4 calcolato da commit message trailer con la source
+    superior accuracy dagli eventi telemetry.
+    """
+    # Q4: preferisci S3 telemetry se disponibile (merge con trailer fallback)
+    if verification_override:
+        q4 = {**kpi_verification_rate(commits), **verification_override}
+    else:
+        q4 = kpi_verification_rate(commits)
+
     kpis = {
         "pr_cycle_time_p50": kpi_pr_cycle_time_p50(prs),
         "lead_time_to_merge_p50": kpi_lead_time_to_merge_p50(prs),
@@ -183,7 +195,7 @@ def compute_all(
         "review_comments_p50": kpi_review_comments_p50(prs),
         "rework_ratio": kpi_rework_ratio(prs),
         "test_presence_rate": kpi_test_presence_rate(prs),
-        "verification_rate": kpi_verification_rate(commits),
+        "verification_rate": q4,
         "design_driven_rate": kpi_design_driven_rate(prs),
         "revert_rate": kpi_revert_rate(commits),
     }

@@ -41,7 +41,7 @@ def test_integration_github_only_produces_excel(tmp_config, sample_pr_data, tmp_
 
     from openpyxl import load_workbook
     wb = load_workbook(output)
-    assert set(wb.sheetnames) == {"Summary", "Per Developer", "Raw Data", "Data Sources"}
+    assert set(wb.sheetnames) == {"Executive Summary", "Summary", "Per Developer", "Raw Data", "Data Sources"}
 
 
 def test_integration_abort_if_no_github(tmp_config):
