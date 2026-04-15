@@ -1,0 +1,21 @@
+version: 2
+scope:
+  repos: [itsiae/example-repo]
+time_window:
+  baseline: {from: "2026-01-01", to: "2026-02-14"}
+  current:  {from: "2026-02-15", to: "today"}
+  enable_ai_impact: true
+developers:
+  exclude: ["dependabot[bot]", "renovate[bot]"]
+options:
+  anonymize: false
+  min_commits_threshold: 5
+  parallel_fetch: 4
+  enable_branch_tracking: true
+  enable_review_tracking: true
+  enable_cost_metrics: true
+  anthropic_org_id: null
+  cost_per_dev_override: {}
+output:
+  format: xlsx
+  path: ./devforge-analytics-report.xlsx

@@ -1,6 +1,6 @@
 ---
 name: siae-dev-analytics
-description: Misura velocità e qualità degli sviluppatori SIAE che usano Claude Code + DevForge. Genera report Excel con 11 KPI (DORA + DX AI Measurement) + ROI Index. Trigger keywords, "misura produttività dev", "ROI Claude Code", "KPI sviluppatori", "analytics dev", "report performance team", "/forge-analytics", "dev metrics", "velocity quality report", "dashboard produttività", "cosa fanno gli sviluppatori", "benchmark dev", "ROI AI coding".
+description: Misura velocità e qualità degli sviluppatori SIAE che usano Claude Code + DevForge. Genera report Excel con 68 KPI v2 (DORA + DX AI Measurement + branch tracking + review activity + AI Impact dual-window) + ROI Index v2. Trigger keywords, "misura produttività dev", "ROI Claude Code", "KPI sviluppatori", "analytics dev", "report performance team", "/forge-analytics", "dev metrics", "velocity quality report", "dashboard produttività", "cosa fanno gli sviluppatori", "benchmark dev", "ROI AI coding", "AI Impact report", "before/after Claude Code", "branch analytics", "WIP dev".
 ---
 
 # siae-dev-analytics — Developer Analytics & ROI Report
@@ -21,6 +21,11 @@ Analizza repository GitHub SIAE per calcolare KPI velocity + quality per svilupp
 - GitHub (sempre obbligatorio, ground truth)
 - S3 telemetria DevForge (opzionale, se disponibile blend con costi Claude Code)
 - Git trailers locali (se repo clonato)
+- Anthropic Console API (v2, opzionale) — fallback per costo se S3 assente, richiede `ANTHROPIC_API_KEY` env var
+
+**Prerequisiti v2 (opzionali):**
+- `AWS_PROFILE=siae-dev-forge` per accesso S3 telemetry DevForge
+- `ANTHROPIC_API_KEY` env var per fallback cost metrics via Anthropic Console API
 
 ## Flow
 
@@ -79,6 +84,11 @@ Run:
 python3 skills/siae-dev-analytics/scripts/run_analytics.py run --config <path> [--anonymize] [--format xlsx|csv|both]
 ```
 
+**IF `time_window.enable_ai_impact: true`** (dual-window v2):
+la pipeline esegue un doppio loop fetch+compute su `baseline` e `current`,
+poi genera sheet dedicato "AI Impact" con delta%, significance flag e attribution
+(commit/PR con trailer `Co-Authored-By: SIAE DevForge` o `Co-Authored-By: Claude`).
+
 ### Step 6 — Report narrativo
 
 Dopo produzione Excel, Claude genera markdown summary con:
@@ -101,6 +111,10 @@ Dopo produzione Excel, Claude genera markdown summary con:
 - "cosa fanno gli sviluppatori"
 - "benchmark dev"
 - "ROI AI coding"
+- "AI Impact report"
+- "before/after Claude Code"
+- "branch analytics"
+- "WIP dev"
 
 ## Limiti Operativi
 
