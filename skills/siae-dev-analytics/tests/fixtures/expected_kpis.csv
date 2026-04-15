@@ -1,0 +1,4 @@
+dev,pr_cycle_time_p50,lead_time_to_merge_p50,pr_throughput_weekly,time_to_first_review_p50,deploy_frequency_monthly,review_comments_p50,rework_ratio,test_presence_rate,verification_rate,design_driven_rate,revert_rate
+alice,30.0,39.5,0.467,13.0,1.0,3.5,0.0,0.5,0.5,0.5,0.0
+bob,7.0,13.5,0.467,1.5,1.0,1.5,0.0,0.5,0.5,0.5,0.5
+carol,20.0,21.0,0.233,2.0,0.0,1.0,0.0,1.0,0.0,0.0,0.0

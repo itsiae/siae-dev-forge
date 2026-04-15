@@ -23,3 +23,9 @@ infra/**/handler.zip
 # Eval reports (generati da reporter.py)
 evals/reports/*
 !evals/reports/.gitkeep
+
+# siae-dev-analytics cache (dati GitHub PR/commit — confidenziali)
+.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
