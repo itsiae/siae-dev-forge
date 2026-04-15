@@ -1,0 +1,32 @@
+# DevForge Analytics — Config Template
+# Copia questo file nel tuo progetto e personalizzalo.
+# Path finale: <progetto>/devforge-analytics.yml
+
+version: 1
+
+scope:
+  repos:
+    - itsiae/catalogo-service
+    - itsiae/diritti-service
+  teams: []                           # es. "itsiae/team-backend"
+  topics: []                          # es. "siae-microservice"
+
+time_window:
+  from: "2026-01-01"                  # ISO date, REQUIRED
+  to: "today"                         # "today" o ISO date
+
+developers:
+  include: []                         # vuoto = tutti
+  exclude:
+    - "dependabot[bot]"
+    - "renovate[bot]"
+    - "github-actions[bot]"
+
+options:
+  anonymize: false                    # true = hash SHA256(login)[:8]
+  min_commits_threshold: 5
+  parallel_fetch: 4
+
+output:
+  format: xlsx                        # xlsx | csv | both
+  path: ./devforge-analytics-report.xlsx

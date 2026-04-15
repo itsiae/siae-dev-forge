@@ -1,0 +1,78 @@
+{
+  "repository": {
+    "nameWithOwner": "itsiae/sample-repo",
+    "pullRequests": {
+      "nodes": [
+        {
+          "number": 101,
+          "author": {"login": "alice"},
+          "createdAt": "2026-03-01T10:00:00Z",
+          "mergedAt": "2026-03-01T14:00:00Z",
+          "commits": {"nodes": [{"commit": {"committedDate": "2026-03-01T09:00:00Z"}}]},
+          "reviews": {"nodes": [{"createdAt": "2026-03-01T11:00:00Z", "comments": {"totalCount": 2}}]},
+          "files": {"nodes": [{"path": "src/auth.py"}, {"path": "tests/test_auth.py"}]},
+          "body": "Fixes bug, see docs/plans/2026-02-28-auth-design.md"
+        },
+        {
+          "number": 102,
+          "author": {"login": "alice"},
+          "createdAt": "2026-03-05T09:00:00Z",
+          "mergedAt": "2026-03-07T17:00:00Z",
+          "commits": {"nodes": [{"commit": {"committedDate": "2026-03-04T15:00:00Z"}}]},
+          "reviews": {"nodes": [{"createdAt": "2026-03-06T10:00:00Z", "comments": {"totalCount": 5}}]},
+          "files": {"nodes": [{"path": "src/billing.py"}]},
+          "body": "Refactor billing"
+        },
+        {
+          "number": 103,
+          "author": {"login": "bob"},
+          "createdAt": "2026-03-10T12:00:00Z",
+          "mergedAt": "2026-03-10T16:00:00Z",
+          "commits": {"nodes": [{"commit": {"committedDate": "2026-03-10T11:00:00Z"}}]},
+          "reviews": {"nodes": [{"createdAt": "2026-03-10T13:00:00Z", "comments": {"totalCount": 0}}]},
+          "files": {"nodes": [{"path": "src/ui.py"}, {"path": "tests/test_ui.py"}]},
+          "body": "Add UI feature per docs/plans/2026-03-01-ui-design.md"
+        },
+        {
+          "number": 104,
+          "author": {"login": "bob"},
+          "createdAt": "2026-03-15T08:00:00Z",
+          "mergedAt": "2026-03-15T18:00:00Z",
+          "commits": {"nodes": [{"commit": {"committedDate": "2026-03-14T20:00:00Z"}}]},
+          "reviews": {"nodes": [{"createdAt": "2026-03-15T10:00:00Z", "comments": {"totalCount": 3}}]},
+          "files": {"nodes": [{"path": "src/api.py"}]},
+          "body": "Quick fix"
+        },
+        {
+          "number": 105,
+          "author": {"login": "carol"},
+          "createdAt": "2026-03-20T14:00:00Z",
+          "mergedAt": "2026-03-21T10:00:00Z",
+          "commits": {"nodes": [{"commit": {"committedDate": "2026-03-20T13:00:00Z"}}]},
+          "reviews": {"nodes": [{"createdAt": "2026-03-20T16:00:00Z", "comments": {"totalCount": 1}}]},
+          "files": {"nodes": [{"path": "src/report.py"}, {"path": "tests/test_report.py"}]},
+          "body": "New report"
+        }
+      ]
+    },
+    "defaultBranchRef": {
+      "target": {
+        "history": {
+          "nodes": [
+            {"oid": "abc1", "author": {"user": {"login": "alice"}}, "committedDate": "2026-03-01T09:00:00Z", "message": "feat: auth\n\nverified-by: siae-verification"},
+            {"oid": "abc2", "author": {"user": {"login": "alice"}}, "committedDate": "2026-03-04T15:00:00Z", "message": "refactor: billing"},
+            {"oid": "abc3", "author": {"user": {"login": "bob"}}, "committedDate": "2026-03-10T11:00:00Z", "message": "feat: ui\n\nverified-by: siae-verification"},
+            {"oid": "abc4", "author": {"user": {"login": "bob"}}, "committedDate": "2026-03-14T20:00:00Z", "message": "Revert \"some previous change\""},
+            {"oid": "abc5", "author": {"user": {"login": "carol"}}, "committedDate": "2026-03-20T13:00:00Z", "message": "feat: report"}
+          ]
+        }
+      }
+    },
+    "refs": {
+      "nodes": [
+        {"name": "COLLAUDO-v1.0.0", "target": {"oid": "abc3"}},
+        {"name": "PRODUZIONE-v1.0.0", "target": {"oid": "abc1"}}
+      ]
+    }
+  }
+}
