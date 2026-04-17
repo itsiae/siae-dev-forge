@@ -180,6 +180,9 @@ Quando un file contiene pattern sospetti, mostra la card:
 | 💡 Perche': Il file contiene potenziali credenziali |
 | 🚫 Se NO: Le credenziali potrebbero finire nel repository |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ### 4.2 Pattern Regex da Intercettare
 
 ```regex
@@ -340,6 +343,9 @@ causare downtime immediato su tutti i servizi dipendenti.
 | 1. ⚠️ Azione: Rotazione credenziale / aggiornamento secret → `aws secretsmanager update-secret --secret-id <id>` |
 | 💡 Perche': Secret scaduto/compromesso, rotazione necessaria |
 | 🚫 Se NO: STOP — il secret resta invariato, valuta rischio manuale |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 **Checklist pre-rotazione:**
 - [ ] Backup del secret corrente

@@ -204,6 +204,9 @@ Non lasciare nessun commento senza risposta. Ogni commento = una risposta.
 | 💡 Perche': Fix review completati, test verdi, pronto per re-review |
 | 🚫 Se NO: I fix restano locali, il reviewer non vede le modifiche |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ---
 
 ## Casi Speciali

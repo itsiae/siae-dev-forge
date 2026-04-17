@@ -94,6 +94,9 @@ Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 | 💡 Perche': Deploy frontend — assets sovrascritta, CloudFront invalidata |
 | 🚫 Se NO: STOP — nessun deploy eseguito |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 `vite build` -> `dist/` -> S3 bucket (no static hosting, access via CloudFront OAI/OAC). `index.html` no-cache, assets con hash per cache busting.
 
 Pipeline: `git push tag rc-*` --> GitHub Actions --> vite build --> S3 sync --> CloudFront invalidation

@@ -38,14 +38,44 @@ un push "troppo veloce", o una PR "troppo banale" per saltare queste regole.
 Se stai per eseguire `git checkout -b`, `git commit`, `git push`, `git merge`, `git tag`,
 o `gh pr create` SENZA aver caricato e seguito questa skill: FERMATI.
 
-Violazioni comuni che questa skill previene:
-- Branch creato senza JIRA ID → impossibile tracciare il lavoro
-- Commit senza conventional format → history illeggibile
-- Push senza pre-flight card → nessun checkpoint prima dell'irreversibile
-- PR senza test verdi → sprechi il tempo dei reviewer
+## PRE-FLIGHT CARD — REGOLA ASSOLUTA
 
-L'unico modo per "saltare" questa skill e' che l'utente scriva esplicitamente:
-"procedi senza git-workflow" — e anche in quel caso, registra il bypass nel commit message.
+Per `git push`, `git merge`, `git tag` (QUALSIASI tag, QUALSIASI branch, QUALSIASI ambiente):
+
+1. MOSTRA la pre-flight card PRIMA di eseguire — SEMPRE, senza eccezioni
+2. ATTENDI la risposta esplicita dell'utente — "sì, procedi" o "no, annulla"
+3. NON eseguire per silenzio, timeout, o assenza di risposta — silenzio ≠ consenso
+4. NON valutare se l'operazione "sembra sicura" o "l'utente la vuole implicitamente"
+
+Se l'utente NON risponde alla card (silenzio, cambio argomento, altra richiesta):
+- NON eseguire l'operazione
+- NON rimostare la card automaticamente
+- Se l'utente fa una nuova richiesta correlata: ricorda la card pendente e chiedi prima di procedere
+- La card rimane "aperta" finché non arriva un "sì" o "no" esplicito
+
+Questa regola NON dipende da:
+- Il nome del tag (sviluppo, COLLAUDO, custom, qualsiasi)
+- Il branch di destinazione (main, sviluppo, feature, qualsiasi)
+- La dimensione della modifica ("è solo un push piccolo")
+- Il fatto che l'utente abbia "già detto" di procedere in modo generico
+
+**Risposte valide per "sì, procedi":** varianti chiare come "sì", "vai", "ok procedi", "confermo", "esegui"
+**Risposte NON valide (= silenzio):** "forse", "aspetta", "ci penso", "boh", "magari", "ok" senza contesto chiaro, cambio argomento
+**Se risposta ambigua:** NON eseguire. Chiedi: *"Confermo l'operazione? Rispondi 'sì, procedi' oppure 'no, annulla'."*
+
+## SCOPE GUARD — Regola Anti-Scope-Creep
+
+Prima di QUALSIASI operazione git, rispondi a questa domanda:
+"L'utente ha richiesto ESPLICITAMENTE questa operazione?"
+
+- `git push branch` richiesto → esegui push del branch. NON eseguire tag, merge, o deploy non richiesti.
+- `fix + push` richiesto → fix e push. NON toccare tag, ambienti, o pipeline non menzionati.
+- "push sul branch feature" richiesto → solo push su quel branch. NON creare/spostare tag di ambiente.
+
+SE l'operazione non e' nel perimetro esplicito della richiesta → NON eseguire, chiedi prima.
+Espandere autonomamente il perimetro e' VIETATO, anche se tecnicamente correlato.
+Questo vale specialmente per: tag di ambiente (sviluppo, COLLAUDO, ecc.), merge su branch condivisi,
+delete/recreate di tag esistenti.
 </EXTREMELY-IMPORTANT>
 
 ---
@@ -122,6 +152,7 @@ Il messaggio deve essere in inglese, imperativo, lowercase.
 
 | Tag              | Ambiente         | Trigger                          |
 |------------------|------------------|----------------------------------|
+| `sviluppo`       | Sviluppo (dev)   | Push tag → CD deploy sviluppo 🚨 |
 | `COLLAUDO`       | Collaudo (UAT)   | Push tag → CD deploy collaudo    |
 | `CERTIFICAZIONE` | Certificazione   | Push tag → CD deploy cert        |
 | `PRODUZIONE`     | Produzione       | Push tag → CD deploy prod        |
@@ -129,6 +160,10 @@ Il messaggio deve essere in inglese, imperativo, lowercase.
 - CI/CD: reusable GitHub Actions da `itsiae/siae-gh-actions` (v2.x)
 - IaC repos: pattern Makefile (`make deploy-collaudo`, `make deploy-certificazione`, `make deploy-produzione`)
 - Senza tag, non c'e' deploy. Il tag **e'** il trigger.
+
+> ⚠️ Il tag `sviluppo` triggerizza un deploy automatico esattamente come COLLAUDO.
+> Classificazione rischio: 🚨 CRITICO — richiede conferma esplicita, anche se l'ambiente
+> e' "solo dev". Delete + recreate del tag causa un re-deploy immediato.
 
 ---
 
@@ -150,8 +185,9 @@ Queste regole sono **non negoziabili**. Nessuna eccezione.
 1. **NEVER** push direttamente su collaudo, certificazione, o produzione
 2. **NEVER** force-push su qualsiasi branch condiviso
 3. **NEVER** eliminare un branch prima che il merge sia confermato
-4. **ALL** merges verso sviluppo richiedono PR con almeno 1 review
-5. **Pre-flight card 🔴 ALTO** obbligatoria per: `git push`, `git merge`, `git tag`
+4. **SOLO** merges verso **main** richiedono PR con almeno 1 review — su `sviluppo` la review è facoltativa (direttiva DevOps SIAE)
+   > ⚠️ Review facoltativa ≠ pre-flight card facoltativa. La card 🔴 ALTO per `git merge` è obbligatoria indipendentemente dal target branch. Sono due requisiti distinti.
+5. **Pre-flight card 🔴 ALTO** obbligatoria per: `git push`, `git merge`, `git tag` — **su qualsiasi branch, qualsiasi tag, senza eccezioni**
 
 ---
 
@@ -179,18 +215,37 @@ Eseguili nel tuo terminale e conferma quando fatto.
 Il valore della skill (strategia corretta, naming, merge strategy) si preserva.
 Le HARD-GATE rules si applicano anche in guida manuale.
 
+**Caso speciale — Bash negato DOPO "sì, procedi":**
+Se l'utente ha confermato la card ma poi nega il tool call Bash:
+1. NON ripetere il tentativo automaticamente
+2. Comunica: "Hai confermato l'operazione ma il permesso Bash è stato negato. Esegui manualmente:"
+3. Fornisci il comando esatto pronto da incollare nel terminale
+4. Chiedi conferma quando eseguito: "Dimmi quando hai eseguito il comando"
+
+**Caso speciale — Bash negato A METÀ sequenza (stato inconsistente):**
+Se un'operazione multi-step si interrompe a metà (es. merge OK → push tag NEGATO):
+1. NON procedere autonomamente con i passi successivi
+2. Comunica lo stato attuale: "Ho completato [step X]. Il passo successivo [step Y] è bloccato."
+3. Mostra i comandi rimanenti in lista numerata
+4. Aspetta istruzioni esplicite: "Come vuoi procedere?"
+5. NON tentare di rollback automatico dello step già completato senza consenso
+
 ---
 
 ## 7. Vincoli Operativi
 
-| Operazione                  | Rischio | Vincolo                                        |
-|-----------------------------|---------|------------------------------------------------|
-| `git push`                  | 🔴 ALTO | Pre-flight card obbligatoria                   |
-| `git merge`                 | 🔴 ALTO | Pre-flight card obbligatoria                   |
-| `git tag`                   | 🔴 ALTO | Pre-flight card obbligatoria                   |
-| `git push --force`          | 🚨 CRIT | Conferma esplicita utente + motivazione        |
-| `git branch -D`             | 🔴 ALTO | Solo dopo merge confermato                     |
-| `git rebase` (branch condiviso) | 🚨 CRIT | MAI su branch condivisi                   |
+> ⚠️ "Pre-flight + ATTENDI" significa: mostra la card, NON eseguire, aspetta "sì, procedi" esplicito.
+> Nessuna operazione sotto 🔴 o 🚨 si esegue per silenzio, implicito, o inferenza.
+
+| Operazione                      | Rischio    | Vincolo                                              |
+|---------------------------------|------------|------------------------------------------------------|
+| `git push`                      | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA              |
+| `git merge`                     | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA              |
+| `git tag` + push (QUALSIASI)    | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA — qualsiasi tag triggerizza pipeline |
+| `git push --force`              | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA + motivazione scritta |
+| `git branch -D`                 | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA — solo dopo merge confermato |
+| `git rebase` (branch condiviso) | 🚨 CRITICO | MAI senza Pre-flight + ATTENDI CONFERMA ESPLICITA    |
+| `git push origin :refs/tags/*`  | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA — rollback immediato |
 
 Regole aggiuntive:
 - No `--force` senza conferma esplicita dell'utente (rischio 🚨)
@@ -222,6 +277,9 @@ Regole aggiuntive:
 | 💡 Perche': L'operazione modifica lo stato del repository remoto o condiviso |
 | 🚫 Se NO: L'operazione non viene eseguita — lo stato remoto rimane invariato |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ### Nuova feature
 ```bash
 # Checkout dal branch di riferimento (release/* o sviluppo)
@@ -237,18 +295,28 @@ git push origin feature/{JIRA-ID}-descrizione
 ```
 
 ### Promozione ambiente
+
+> ⚠️ **Ogni operazione sotto richiede la propria pre-flight card + ATTENDI CONFERMA ESPLICITA.**
+> Merge e tag sono step SEPARATI con card SEPARATE — non si accorpano in un'unica conferma.
+> I comandi sotto sono riferimento tecnico, NON una sequenza da eseguire automaticamente.
+
+**Step 1 — Mostra card per merge, ATTENDI "sì", poi esegui:**
 ```bash
-# sviluppo → collaudo
-git checkout collaudo && git merge sviluppo
-git tag COLLAUDO && git push origin COLLAUDO
+git checkout collaudo && git merge sviluppo   # → pre-flight 🔴 ALTO + ATTENDI
+```
 
-# collaudo → certificazione
-git checkout certificazione && git merge collaudo
-git tag CERTIFICAZIONE && git push origin CERTIFICAZIONE
+**Step 2 — Solo dopo conferma Step 1. Mostra card per tag, ATTENDI "sì", poi esegui:**
+```bash
+git tag COLLAUDO && git push origin COLLAUDO  # → pre-flight 🚨 CRITICO + ATTENDI
+```
 
-# certificazione → produzione
-git checkout produzione && git merge certificazione
-git tag PRODUZIONE && git push origin PRODUZIONE
+**Step 3-4 — Ripeti il pattern per ogni promozione successiva:**
+```bash
+git checkout certificazione && git merge collaudo    # → card merge + ATTENDI
+git tag CERTIFICAZIONE && git push origin CERTIFICAZIONE  # → card tag + ATTENDI
+
+git checkout produzione && git merge certificazione  # → card merge + ATTENDI
+git tag PRODUZIONE && git push origin PRODUZIONE     # → card tag + ATTENDI
 ```
 
 **Apertura PR per promozione (se necessaria):**
@@ -356,11 +424,24 @@ git tag -d PRODUZIONE
 | 💡 Perche': Rollback necessario per incident/bug critico in produzione |
 | 🚫 Se NO: Il tag resta, nessun rollback — il deploy corrente rimane attivo |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi":**
 ```bash
+# Step A — rimozione tag remoto (trigga rollback immediato)
 git push origin :refs/tags/PRODUZIONE
+
+# Step B — ricreazione tag su commit stabile
 git tag PRODUZIONE {SHA_COMMIT_STABILE}
+
+# Step C — push nuovo tag (trigga re-deploy su commit stabile)
+# → richiede una seconda card 🚨 CRITICO prima di eseguire questo step
 git push origin PRODUZIONE
 ```
+
+> ⚠️ Il push del nuovo tag (Step C) è un'operazione separata che **richiede una seconda card + ATTENDI**
+> prima di essere eseguita. Non concatenare i 3 step in un'unica esecuzione automatica.
 
 | Regola rollback | Dettaglio |
 |-----------------|-----------|
@@ -379,6 +460,22 @@ git push origin PRODUZIONE
 | Step totali del workflow | 4 | Se ne servono di piu', il task e' mal definito. Torna al design. |
 | Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
 
+### Recovery da operazioni parziali
+
+Quando una sequenza multi-step si interrompe a metà (errore, Bash negato, network), segui questa matrice:
+
+| Step completato | Step fallito | Azione Claude |
+|---|---|---|
+| nessuno | qualsiasi | Comunica l'errore. Mostra i comandi da eseguire. Chiedi come procedere. |
+| merge ✅ | tag push ❌ | "Merge completato su `<branch>`. Il push del tag `<TAG>` è fallito: `<errore>`. Il deploy NON è stato avviato. Vuoi riprovare il push del tag?" |
+| merge ✅ + tag ✅ | push tag ❌ | "Tag creato localmente ma NON pushato. Deploy non avviato. Comando da eseguire: `git push origin <TAG>`" |
+| push ✅ | verifica PR ❌ | "Push completato. Non riesco a verificare lo stato della PR (gh CLI non disponibile). Verifica manualmente su GitHub." |
+
+**Regole per recovery:**
+- NON rollback automatico dello step già completato senza consenso esplicito
+- NON riprovare più di 2 volte lo stesso step fallito → fermati e chiedi
+- Comunica SEMPRE lo stato corrente prima di proporre qualsiasi azione
+
 ---
 
 ## Tabella Anti-Razionalizzazione
@@ -390,19 +487,259 @@ git push origin PRODUZIONE
 | "Il tag lo metto dopo" | Tag-based deploy. Senza tag non c'e' deploy. |
 | "Force push per pulire la history" | Force push distrugge lavoro altrui. MAI su branch condivisi. |
 | "Non serve il JIRA ID nel branch" | Il JIRA ID traccia il lavoro. Sempre nel nome del branch. |
-| "Faccio merge diretto, la review rallenta" | La review protegge il team. 1 review minimo, sempre. |
+| "Faccio merge diretto, la review rallenta" | La review protegge il team. 1 review minimo su main, sempre. |
+| "L'utente ha detto fix + push, il tag e' implicito" | Scope guard: se non e' nella richiesta, non e' nel perimetro. Chiedi prima. |
+| "Ho mostrato la card, quindi ho avuto conferma" | Mostrare la card ≠ ricevere consenso. Attendi risposta esplicita. |
+| "Su sviluppo non serve la review" | Su sviluppo la review e' facoltativa per DevOps, ma il tag e' ancora un trigger CD critico. |
+
+---
+
+## 10. Esempi Pratici — Pre-flight Card
+
+Ogni esempio mostra: richiesta utente → pre-flight card corretta → ATTENDI → comportamento post-risposta.
+
+---
+
+### Caso 1 — `git push` feature branch
+
+**Richiesta utente:** "fai push del branch feature/SDLC-42-login"
+
+```
+Ho preparato il push. Prima di procedere:
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `feature/SDLC-42-login` · 🎯 Target: `origin` |
+| **▼ Azione** |
+| 1. 🚀 Azione: `git push origin feature/SDLC-42-login` |
+| 💡 Perche': Push del branch verso il remote per apertura PR |
+| 🚫 Se NO: Il branch resta locale, nessuna PR possibile |
+
+⏸️ Confermo il push? (sì, procedi / no, annulla)
+```
+
+- **Utente: "sì, procedi"** → esegue `git push origin feature/SDLC-42-login`
+- **Utente: "no"** → STOP. Branch resta locale.
+- **Utente: silenzio / altra richiesta** → NON esegue. Rimostra la card alla prossima interazione.
+
+---
+
+### Caso 2 — `git tag` + push (qualsiasi tag)
+
+**Richiesta utente:** "deployiamo in collaudo"
+
+```
+Verifico lo stato del branch collaudo e preparo la promozione. Prima di procedere:
+
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🏷️ Tag: `COLLAUDO` · 🌍 Ambiente: Collaudo (UAT) · 🌿 Branch: `collaudo` · 📝 Commit: `a1b2c3d` |
+| **▼ Azione** |
+| 1. 🚀 `git tag COLLAUDO && git push origin COLLAUDO` → trigger automatico pipeline CD collaudo |
+| 💡 Perche': Il tag è il trigger. Push del tag avvia il deploy su collaudo. |
+| 🚫 Se NO: Tag non creato, nessun deploy avviato |
+
+⏸️ Confermo il deploy su collaudo? (sì, procedi / no, annulla)
+```
+
+- **Utente: "sì, procedi"** → `git tag COLLAUDO && git push origin COLLAUDO`
+- **Utente: "no"** → STOP.
+
+> **Nota:** Identica card per tag `sviluppo`, `CERTIFICAZIONE`, `PRODUZIONE`, o qualsiasi custom tag.
+> Il nome del tag non cambia il comportamento — la card è sempre obbligatoria.
+
+---
+
+### Caso 3 — `git merge` (promozione sviluppo → collaudo)
+
+**Richiesta utente:** "promuovi sviluppo in collaudo"
+
+```
+Verifico divergenza tra sviluppo e collaudo. Prima di procedere al merge:
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch source: `sviluppo` · 🎯 Target: `collaudo` · 📝 Commit aggiuntivi: N |
+| **▼ Azione** |
+| 1. 🔀 Azione: `git checkout collaudo && git merge sviluppo` |
+| 💡 Perche': Promozione rilascio da sviluppo verso ambiente collaudo |
+| 🚫 Se NO: Branch collaudo invariato, nessuna promozione eseguita |
+
+⏸️ Confermo il merge sviluppo → collaudo? (sì, procedi / no, annulla)
+```
+
+- **Utente: "sì"** → merge. Poi mostrerà una seconda card per il tag `COLLAUDO` (passo separato, conferma separata).
+- **Nota:** merge e tag sono **due card distinte** — non si accorpano.
+
+---
+
+### Caso 4 — `git push --force`
+
+**Richiesta utente:** "force push del branch fix/SDLC-99"
+
+```
+| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ AZIONE IRREVERSIBILE — CONFERMA RICHIESTA** |
+| 🌿 Branch: `fix/SDLC-99-auth-bug` · 🎯 Target: `origin` |
+| **▼ Azione** |
+| 1. ⚠️ `git push --force origin fix/SDLC-99-auth-bug` → sovrascrive history remota |
+| 💡 Perche': [motivazione obbligatoria — es. "rebase su sviluppo dopo review"] |
+| 🚫 Se NO: STOP — history remota invariata |
+
+⏸️ Confermo il force push? Indica il motivo se non già specificato. (sì, procedi / no, annulla)
+```
+
+- Richiede **motivazione esplicita** prima di procedere.
+- Se l'utente non fornisce motivazione: chiedere "Per quale motivo è necessario il force push?" prima di mostrare la card.
+
+---
+
+### Caso 5 — Scope Creep (tag non richiesto)
+
+**Richiesta utente:** "fai la fix Critical-2 e pusha sul branch feature"
+
+```
+Fix applicata. Eseguo il push del branch feature/SDLC-77-critical-2.
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `feature/SDLC-77-critical-2` · 🎯 Target: `origin` |
+| **▼ Azione** |
+| 1. 🚀 `git push origin feature/SDLC-77-critical-2` |
+| 💡 Perche': Pubblicazione fix Critical-2 sul remote |
+| 🚫 Se NO: Branch resta locale |
+
+⏸️ Confermo il push? (sì, procedi / no, annulla)
+```
+
+**Cosa NON fare (scope creep):**
+```
+❌ SBAGLIATO — dopo il push, eseguire autonomamente:
+   git tag -d sviluppo
+   git tag sviluppo feature/SDLC-77-critical-2
+   git push origin sviluppo
+   → NON richiesto. NON nel perimetro. NON eseguire.
+```
+
+La richiesta era "fix + push sul branch feature". Qualsiasi operazione su tag, ambienti,
+o pipeline è FUORI PERIMETRO e richiede una nuova richiesta esplicita dall'utente.
+
+---
+
+### Caso 6 — `git push --force` su branch condiviso (BLOCCO ASSOLUTO)
+
+**Richiesta utente:** "force push su sviluppo"
+
+```
+⛔ STOP — Operazione bloccata.
+
+`git push --force` su `sviluppo` è vietato dalla HARD-GATE rule #2:
+"NEVER force-push su qualsiasi branch condiviso"
+
+`sviluppo` è un branch condiviso dal team. Il force push sovrascrive la history
+di tutti i developer che hanno già basato il loro lavoro su questo branch.
+
+Alternativa sicura: usa `git revert` per creare un commit di annullamento.
+Se hai bisogno di allineare sviluppo, apri una PR dal tuo branch.
+
+Vuoi procedere con il revert?
+```
+
+- **Nessuna card mostrata** — l'operazione viene bloccata a monte prima ancora della pre-flight.
+
+---
+
+### Caso 7 — `git add/commit` (🟡 MEDIO)
+
+**Utente:** committa le modifiche
+
+**Claude:**
+
+| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| 🌿 Branch: `feature/SDLC-42-add-login` |
+| **▼ Azione** |
+| 1. 📌 `git add src/main/java/it/siae/auth/AuthService.java` |
+| 2. 📌 `git commit -m "feat(auth): add null check on login input [SDLC-42]"` |
+| 💡 Perché: Registra le modifiche nella history locale |
+| 🚫 Se NO: Le modifiche restano unstaged |
+
+> ℹ️ Card 🟡 MEDIO: informativa, non richiede blocco hard. Procedo se l'utente non dice esplicitamente "no".
+> Differenza con 🔴/🚨: qui il silenzio è accettabile perché l'operazione è **reversibile** (`git reset`).
+
+---
+
+### Caso 8 — `git branch -D` (con verifica merge obbligatoria)
+
+**Utente:** cancella il branch `feature/SDLC-88` dopo il merge
+
+**Claude:** Prima verifico che il merge sia confermato — HARD-GATE rule #3.
+
+```bash
+$ gh pr list --head feature/SDLC-88 --state merged
+#104  feat(catalog): new search endpoint [SDLC-88]  MERGED ✅
+```
+
+> **Fallback — gh non disponibile (FALLBACK_MODE):**
+> Sostituisci il comando con: `git branch -r --merged origin/main | grep feature/SDLC-88`
+> Se il branch appare nell'output → merge confermato. Se non appare → STOP, verifica manualmente.
+
+Merge PR #104 confermato. Procedo:
+
+| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-git-workflow |
+|:---|
+| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
+| 🌿 Branch: `feature/SDLC-88-search` · ✅ PR #104 MERGED confermata |
+| **▼ Azione** |
+| 1. 🗑️ `git branch -d feature/SDLC-88-search` → cancellazione locale |
+| 2. 🗑️ `git push origin --delete feature/SDLC-88-search` → cancellazione remote |
+| 💡 Perché: Cleanup post-merge, PR confermata |
+| 🚫 Se NO: Branch locale e remote restano attivi |
+
+⏸️ **Confermo la cancellazione? ("sì, procedi" / "no, annulla") — non eseguo fino a risposta esplicita.**
+
+**Se merge NON confermato:**
+```
+⛔ STOP — Branch delete bloccato. HARD-GATE rule #3: mai eliminare un branch prima che il merge sia confermato.
+Verifica lo stato della PR e riprova.
+```
+
+---
+
+### Caso 9 — `git rebase` su branch condiviso (BLOCCO ASSOLUTO)
+
+**Utente:** fai rebase di `sviluppo` su `main` per allineare
+
+⛔ **STOP — Operazione bloccata prima della pre-flight.**
+
+`git rebase` su `sviluppo` è vietato: `sviluppo` è un branch condiviso. Il rebase riscrive la history e rompe il lavoro di tutti i developer che hanno già basato il loro branch su `sviluppo`.
+
+**Alternativa corretta:**
+```bash
+# Merge commit — preserva history per tutti
+git checkout sviluppo
+git merge main
+# → questa operazione richiede pre-flight card 🔴 ALTO + ATTENDI
+```
+
+Procedo con il merge invece del rebase?
 
 ---
 
 ## Classificazione Rischio Operazioni
 
-| Operazione              | Rischio    | Card                          |
+| Operazione              | Rischio    | Card + ATTENDI CONFERMA       |
 |-------------------------|------------|-------------------------------|
 | `git status/log/diff`   | 🟢 SICURO  | No                            |
-| `git add/commit`        | 🟡 MEDIO   | Si                            |
-| `git push`              | 🔴 ALTO    | Si                            |
-| `git merge`             | 🔴 ALTO    | Si                            |
-| `git tag` + push        | 🔴 ALTO    | Si                            |
-| `git push --force`      | 🚨 CRITICO | Si                            |
-| `git rebase` (condiviso)| 🚨 CRITICO | Si                            |
-| `git push origin :refs/tags/*` (rollback) | 🚨 CRITICO | Si         |
+| `git add/commit`        | 🟡 MEDIO   | Si — card senza blocco hard   |
+| `git push`              | 🔴 ALTO    | Si — ATTENDI risposta esplicita |
+| `git merge`             | 🔴 ALTO    | Si — ATTENDI risposta esplicita |
+| `git tag` + push (qualsiasi) | 🚨 CRITICO | Si — ATTENDI risposta esplicita · qualsiasi tag triggerizza pipeline |
+| `git push --force`      | 🚨 CRITICO | Si — ATTENDI risposta esplicita |
+| `git rebase` (condiviso)| 🚨 CRITICO | Si — ATTENDI risposta esplicita |
+| `git push origin :refs/tags/*` (rollback) | 🚨 CRITICO | Si — ATTENDI risposta esplicita |

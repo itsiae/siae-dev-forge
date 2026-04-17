@@ -149,6 +149,9 @@ class NomeJob(IcebergGlueJob, DatePartitionedGlueJob):
 | 💡 Perche': Job aggiornato, test locali verdi |
 | 🚫 Se NO: STOP — job non deployato, versione precedente resta attiva |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 **🔴 Operazione ALTO rischio — pre-flight card prima di modifica schema:**
 
 | 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
@@ -159,6 +162,9 @@ class NomeJob(IcebergGlueJob, DatePartitionedGlueJob):
 | 1. 🔧 Azione: Modifica schema Glue Catalog (backward compatibility) → `<file schema/terraform>` |
 | 💡 Perche': Schema da aggiornare per nuovi requisiti dati |
 | 🚫 Se NO: Schema invariato, downstream non impattati |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 ---
 
@@ -238,6 +244,9 @@ RetrieveTablesToUpdate (Lambda)
 | 💡 Perche': Esecuzione manuale necessaria per `<motivazione>` |
 | 🚫 Se NO: Job non eseguito, nessun dato processato |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ---
 
 ## 5. EventBridge
@@ -302,6 +311,9 @@ Per dati raw prima dell'ingestion nel bronze.
 | 1. 🗑️ Azione: Cancellazione dati S3 (irreversibile senza backup) → `s3://<bucket>/<prefix>` |
 | 💡 Perche': Dati obsoleti/corrotti da rimuovere |
 | 🚫 Se NO: STOP — dati preservati, nessuna cancellazione |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 ---
 

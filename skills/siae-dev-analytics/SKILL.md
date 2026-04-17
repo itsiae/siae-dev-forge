@@ -70,7 +70,8 @@ Mostra card con N dev, N repo, finestra, mode. Richiedi conferma esplicita.
 | 🚫 Se NO: Abort. Nessun fetch, nessun file prodotto. |
 | 🔒 Alternativa: rerun con `--anonymize` → hash SHA256 dei login |
 
-Solo dopo conferma esplicita utente → procedi.
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 ### Step 5 — Pipeline
 

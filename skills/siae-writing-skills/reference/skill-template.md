@@ -78,6 +78,13 @@ Costruisci la pre-flight card come markdown table inline:
 | 🚫 Se NO: <cosa succede se rifiutato> |
 ```
 
+Per card **🔴 ALTO** e **🚨 CRITICO**, aggiungi SEMPRE questa istruzione dopo la tabella:
+
+```
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente (es. "sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+```
+
 <Istruzioni per lo step.>
 
 ### Step 3 — <Nome Step>
@@ -87,6 +94,31 @@ Costruisci la pre-flight card come markdown table inline:
 <Istruzioni per lo step.>
 
 <!-- Aggiungi step secondo necessita'. Max 7-8 step. -->
+
+---
+
+## Fallback Obbligatori
+<!-- Obbligatorio per skill con card 🔴/🚨. Rimuovi per skill senza operazioni irreversibili. -->
+
+### Risposta ambigua dell'utente alla card
+Se l'utente non risponde con "sì, procedi" o "no, annulla" ma usa frasi ambigue
+("forse", "aspetta", "va bene", cambio argomento): NON eseguire.
+Chiedere: *"Confermo l'operazione? Rispondi 'sì, procedi' oppure 'no, annulla'."*
+
+### Tool call negato dopo conferma
+Se l'utente ha confermato la card ma poi nega il tool call:
+1. NON riprovare automaticamente
+2. Comunicare: "Hai confermato ma il permesso è stato negato. Esegui manualmente:"
+3. Fornire il comando esatto pronto da incollare
+4. Aspettare conferma: "Dimmi quando hai eseguito"
+
+### Operazione fallita a runtime
+Se il comando critico fallisce dopo l'esecuzione:
+1. Comunicare lo stato attuale con precisione (cosa è riuscito, cosa no)
+2. NON procedere autonomamente ai passi successivi
+3. NON eseguire rollback automatico senza consenso
+4. Presentare le opzioni: retry / rollback manuale / skip
+5. Aspettare istruzioni esplicite
 
 ---
 

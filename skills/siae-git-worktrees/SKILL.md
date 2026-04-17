@@ -186,6 +186,9 @@ git worktree remove .worktrees/{branch-name}
 | 💡 Perche': Worktree non rimovibile normalmente (file non committati presenti) |
 | 🚫 Se NO: Il worktree resta attivo, commit o stash prima di rimuovere |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ```bash
 # Forza rimozione (se ci sono file non committati)
 git worktree remove --force .worktrees/{branch-name}
@@ -216,6 +219,9 @@ per gli altri developer che hanno gia' basato il loro lavoro su questo branch.
 | 1. ⚠️ Azione: Rebase interattivo su branch condiviso (riscrive history) → `<branch-name>` |
 | 💡 Perche': Rebase necessario per allineare al branch base |
 | 🚫 Se NO: STOP — usa merge invece di rebase su branch condivisi |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 **Regola:** Se il branch è condiviso (altri developer ci lavorano), preferisci SEMPRE `git merge` a `git rebase`. Il rebase è sicuro solo su branch personali.
 

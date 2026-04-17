@@ -350,6 +350,9 @@ Questo e' un gap nel processo — il lavoro e' stato fatto senza spec scritta.
 | 💡 Perche': Branch pronto, test verdi, diff revisionato |
 | 🚫 Se NO: Il branch resta locale, nessuna PR aperta |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 **Dopo la conferma:**
 
 **Se GH_MODE:**
@@ -434,8 +437,9 @@ Su SIAE, la strategia default per feature → parent branch e' **squash merge** 
 
 ### Quanti reviewer?
 
-Minimo 1 reviewer obbligatorio per merge (regola SIAE).
-Per modifiche ad architettura o moduli condivisi: almeno 2.
+Minimo 1 reviewer obbligatorio per PR verso **main** (regola SIAE).
+Per PR verso **sviluppo**: review facoltativa per direttiva DevOps SIAE.
+Per modifiche ad architettura o moduli condivisi: almeno 2 reviewer (indipendente dal target).
 
 ### La PR e' troppo grande?
 
