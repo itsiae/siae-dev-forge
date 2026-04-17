@@ -59,8 +59,8 @@ Questa regola NON dipende da:
 - La dimensione della modifica ("è solo un push piccolo")
 - Il fatto che l'utente abbia "già detto" di procedere in modo generico
 
-**Risposte valide per "sì, procedi":** varianti chiare come "sì", "vai", "ok procedi", "confermo", "esegui"
-**Risposte NON valide (= silenzio):** "forse", "aspetta", "ci penso", "boh", "magari", "ok" senza contesto chiaro, cambio argomento
+**Risposte valide per conferma:** "sì", "vai", "procedi", "confermo", "esegui"
+**Risposte NON valide (= silenzio):** "forse", "aspetta", "ci penso", "boh", "magari", "ok" da solo, cambio argomento
 **Se risposta ambigua:** NON eseguire. Chiedi: *"Confermo l'operazione? Rispondi 'sì, procedi' oppure 'no, annulla'."*
 
 ## SCOPE GUARD — Regola Anti-Scope-Creep
@@ -150,20 +150,20 @@ Il messaggio deve essere in inglese, imperativo, lowercase.
 
 ## 4. Tag-Based Deployment
 
-| Tag              | Ambiente         | Trigger                          |
-|------------------|------------------|----------------------------------|
-| `sviluppo`       | Sviluppo (dev)   | Push tag → CD deploy sviluppo 🚨 |
-| `COLLAUDO`       | Collaudo (UAT)   | Push tag → CD deploy collaudo    |
-| `CERTIFICAZIONE` | Certificazione   | Push tag → CD deploy cert        |
-| `PRODUZIONE`     | Produzione       | Push tag → CD deploy prod        |
+| Tag              | Ambiente         | Rischio    | Trigger                        |
+|------------------|------------------|------------|--------------------------------|
+| `sviluppo`       | Sviluppo (dev)   | 🚨 CRITICO | Push tag → CD deploy sviluppo  |
+| `COLLAUDO`       | Collaudo (UAT)   | 🔴 ALTO    | Push tag → CD deploy collaudo  |
+| `CERTIFICAZIONE` | Certificazione   | 🔴 ALTO    | Push tag → CD deploy cert      |
+| `PRODUZIONE`     | Produzione       | 🚨 CRITICO | Push tag → CD deploy prod      |
+
+> ⚠️ Qualsiasi tag triggerizza una pipeline CD automatica. Il tag `sviluppo` causa un
+> re-deploy immediato esattamente come COLLAUDO. Delete + recreate del tag = re-deploy.
+> Classificazione rischio: **tutti i tag richiedono pre-flight card + ATTENDI CONFERMA ESPLICITA**.
 
 - CI/CD: reusable GitHub Actions da `itsiae/siae-gh-actions` (v2.x)
 - IaC repos: pattern Makefile (`make deploy-collaudo`, `make deploy-certificazione`, `make deploy-produzione`)
 - Senza tag, non c'e' deploy. Il tag **e'** il trigger.
-
-> ⚠️ Il tag `sviluppo` triggerizza un deploy automatico esattamente come COLLAUDO.
-> Classificazione rischio: 🚨 CRITICO — richiede conferma esplicita, anche se l'ambiente
-> e' "solo dev". Delete + recreate del tag causa un re-deploy immediato.
 
 ---
 
@@ -187,7 +187,7 @@ Queste regole sono **non negoziabili**. Nessuna eccezione.
 3. **NEVER** eliminare un branch prima che il merge sia confermato
 4. **SOLO** merges verso **main** richiedono PR con almeno 1 review — su `sviluppo` la review è facoltativa (direttiva DevOps SIAE)
    > ⚠️ Review facoltativa ≠ pre-flight card facoltativa. La card 🔴 ALTO per `git merge` è obbligatoria indipendentemente dal target branch. Sono due requisiti distinti.
-5. **Pre-flight card 🔴 ALTO** obbligatoria per: `git push`, `git merge`, `git tag` — **su qualsiasi branch, qualsiasi tag, senza eccezioni**
+5. **Pre-flight card + ATTENDI CONFERMA ESPLICITA** obbligatoria per: `git push`, `git merge`, `git tag` — **su qualsiasi branch, qualsiasi tag, senza eccezioni**
 
 ---
 
@@ -228,23 +228,23 @@ Se un'operazione multi-step si interrompe a metà (es. merge OK → push tag NEG
 2. Comunica lo stato attuale: "Ho completato [step X]. Il passo successivo [step Y] è bloccato."
 3. Mostra i comandi rimanenti in lista numerata
 4. Aspetta istruzioni esplicite: "Come vuoi procedere?"
-5. NON tentare di rollback automatico dello step già completato senza consenso
+5. NON tentare rollback automatico dello step già completato senza consenso
 
 ---
 
 ## 7. Vincoli Operativi
 
-> ⚠️ "Pre-flight + ATTENDI" significa: mostra la card, NON eseguire, aspetta "sì, procedi" esplicito.
+> ⚠️ "Pre-flight + ATTENDI" significa: mostra la card, NON eseguire, aspetta risposta esplicita.
 > Nessuna operazione sotto 🔴 o 🚨 si esegue per silenzio, implicito, o inferenza.
 
-| Operazione                      | Rischio    | Vincolo                                              |
-|---------------------------------|------------|------------------------------------------------------|
-| `git push`                      | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA              |
-| `git merge`                     | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA              |
+| Operazione                      | Rischio    | Vincolo                                                      |
+|---------------------------------|------------|--------------------------------------------------------------|
+| `git push`                      | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA                      |
+| `git merge`                     | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA                      |
 | `git tag` + push (QUALSIASI)    | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA — qualsiasi tag triggerizza pipeline |
 | `git push --force`              | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA + motivazione scritta |
 | `git branch -D`                 | 🔴 ALTO    | Pre-flight + ATTENDI CONFERMA ESPLICITA — solo dopo merge confermato |
-| `git rebase` (branch condiviso) | 🚨 CRITICO | MAI senza Pre-flight + ATTENDI CONFERMA ESPLICITA    |
+| `git rebase` (branch condiviso) | 🚨 CRITICO | MAI senza Pre-flight + ATTENDI CONFERMA ESPLICITA            |
 | `git push origin :refs/tags/*`  | 🚨 CRITICO | Pre-flight + ATTENDI CONFERMA ESPLICITA — rollback immediato |
 
 Regole aggiuntive:
@@ -296,27 +296,26 @@ git push origin feature/{JIRA-ID}-descrizione
 
 ### Promozione ambiente
 
-> ⚠️ **Ogni operazione sotto richiede la propria pre-flight card + ATTENDI CONFERMA ESPLICITA.**
+> ⚠️ **Ogni operazione richiede la propria pre-flight card + ATTENDI CONFERMA ESPLICITA.**
 > Merge e tag sono step SEPARATI con card SEPARATE — non si accorpano in un'unica conferma.
-> I comandi sotto sono riferimento tecnico, NON una sequenza da eseguire automaticamente.
 
-**Step 1 — Mostra card per merge, ATTENDI "sì", poi esegui:**
+**Step 1 — Mostra card 🔴 ALTO per merge, ATTENDI "sì", poi esegui:**
 ```bash
-git checkout collaudo && git merge sviluppo   # → pre-flight 🔴 ALTO + ATTENDI
+git checkout collaudo && git merge sviluppo
 ```
 
-**Step 2 — Solo dopo conferma Step 1. Mostra card per tag, ATTENDI "sì", poi esegui:**
+**Step 2 — Solo dopo conferma Step 1. Mostra card 🚨 CRITICO per tag, ATTENDI "sì", poi esegui:**
 ```bash
-git tag COLLAUDO && git push origin COLLAUDO  # → pre-flight 🚨 CRITICO + ATTENDI
+git tag COLLAUDO && git push origin COLLAUDO
 ```
 
 **Step 3-4 — Ripeti il pattern per ogni promozione successiva:**
 ```bash
-git checkout certificazione && git merge collaudo    # → card merge + ATTENDI
-git tag CERTIFICAZIONE && git push origin CERTIFICAZIONE  # → card tag + ATTENDI
+git checkout certificazione && git merge collaudo    # → card merge 🔴 + ATTENDI
+git tag CERTIFICAZIONE && git push origin CERTIFICAZIONE  # → card tag 🚨 + ATTENDI
 
-git checkout produzione && git merge certificazione  # → card merge + ATTENDI
-git tag PRODUZIONE && git push origin PRODUZIONE     # → card tag + ATTENDI
+git checkout produzione && git merge certificazione  # → card merge 🔴 + ATTENDI
+git tag PRODUZIONE && git push origin PRODUZIONE     # → card tag 🚨 + ATTENDI
 ```
 
 **Apertura PR per promozione (se necessaria):**
@@ -436,12 +435,12 @@ git push origin :refs/tags/PRODUZIONE
 git tag PRODUZIONE {SHA_COMMIT_STABILE}
 
 # Step C — push nuovo tag (trigga re-deploy su commit stabile)
-# → richiede una seconda card 🚨 CRITICO prima di eseguire questo step
+# → richiede una seconda card 🚨 CRITICO + ATTENDI prima di eseguire
 git push origin PRODUZIONE
 ```
 
-> ⚠️ Il push del nuovo tag (Step C) è un'operazione separata che **richiede una seconda card + ATTENDI**
-> prima di essere eseguita. Non concatenare i 3 step in un'unica esecuzione automatica.
+> ⚠️ Step C è un'operazione separata — richiede una seconda card + ATTENDI.
+> Non concatenare i 3 step automaticamente.
 
 | Regola rollback | Dettaglio |
 |-----------------|-----------|
@@ -466,15 +465,14 @@ Quando una sequenza multi-step si interrompe a metà (errore, Bash negato, netwo
 
 | Step completato | Step fallito | Azione Claude |
 |---|---|---|
-| nessuno | qualsiasi | Comunica l'errore. Mostra i comandi da eseguire. Chiedi come procedere. |
-| merge ✅ | tag push ❌ | "Merge completato su `<branch>`. Il push del tag `<TAG>` è fallito: `<errore>`. Il deploy NON è stato avviato. Vuoi riprovare il push del tag?" |
-| merge ✅ + tag ✅ | push tag ❌ | "Tag creato localmente ma NON pushato. Deploy non avviato. Comando da eseguire: `git push origin <TAG>`" |
-| push ✅ | verifica PR ❌ | "Push completato. Non riesco a verificare lo stato della PR (gh CLI non disponibile). Verifica manualmente su GitHub." |
+| nessuno | qualsiasi | Comunica l'errore. Mostra i comandi. Chiedi come procedere. |
+| merge ✅ | tag push ❌ | "Merge completato su `<branch>`. Il push del tag `<TAG>` è fallito. Deploy NON avviato. Vuoi riprovare?" |
+| merge ✅ + tag ✅ | push tag ❌ | "Tag creato localmente ma NON pushato. Deploy non avviato. Comando: `git push origin <TAG>`" |
+| push ✅ | verifica PR ❌ | "Push completato. Verifica PR manualmente su GitHub." |
 
-**Regole per recovery:**
-- NON rollback automatico dello step già completato senza consenso esplicito
-- NON riprovare più di 2 volte lo stesso step fallito → fermati e chiedi
-- Comunica SEMPRE lo stato corrente prima di proporre qualsiasi azione
+**Regole recovery:**
+- NON rollback automatico senza consenso esplicito
+- NON riprovare più di 2 volte lo stesso step → fermati e chiedi
 
 ---
 
@@ -490,7 +488,7 @@ Quando una sequenza multi-step si interrompe a metà (errore, Bash negato, netwo
 | "Faccio merge diretto, la review rallenta" | La review protegge il team. 1 review minimo su main, sempre. |
 | "L'utente ha detto fix + push, il tag e' implicito" | Scope guard: se non e' nella richiesta, non e' nel perimetro. Chiedi prima. |
 | "Ho mostrato la card, quindi ho avuto conferma" | Mostrare la card ≠ ricevere consenso. Attendi risposta esplicita. |
-| "Su sviluppo non serve la review" | Su sviluppo la review e' facoltativa per DevOps, ma il tag e' ancora un trigger CD critico. |
+| "Su sviluppo non serve la review" | Su sviluppo la review e' facoltativa ma il tag triggerizza CD. La card e' sempre obbligatoria. |
 
 ---
 
