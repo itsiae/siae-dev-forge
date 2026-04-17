@@ -32,7 +32,7 @@
 | 10 | F4e — ROI v2 index + validators.py Pydantic models | `task-10-roi-v2-validators.md` | [DONE] | 1 | 15 |
 | 11 | F5a — Excel glossary sheet + kpi-glossary-data.yaml | `task-11-excel-glossary.md` | [DONE] | 1 | 5 |
 | 12 | F5b — Excel charts + tooltip + conditional formatting pro + 8-sheet refactor | `task-12-excel-ux-pro.md` | [DONE] | 2 | 14 |
-| 13 | F6 — Robustness: property-based + AST audit + mutation testing + integration | `task-13-robustness-gates.md` | [PENDING] | 1 | 54 |
+| 13 | F6 — Robustness: property-based + AST audit + mutation testing + integration | `task-13-robustness-gates.md` | [DONE] | 1 | 54 |
 
 **Totale test nuovi:** 197 → suite finale **272 test**.
 

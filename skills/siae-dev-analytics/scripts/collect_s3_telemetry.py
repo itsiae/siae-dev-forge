@@ -52,8 +52,8 @@ def _list_objects(prefix: str, since: str, until: str) -> list[str]:
                 if since_dt <= key_date <= until_dt:
                     filtered.append(k)
                 continue
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("S3 key date parse skip: %s — %s", k, e)
         filtered.append(k)
     return filtered
 

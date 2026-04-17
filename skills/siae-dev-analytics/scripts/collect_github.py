@@ -85,6 +85,7 @@ REVERT_PATTERN = re.compile(r"^Revert\b", re.IGNORECASE | re.MULTILINE)
 try:
     from compute_kpis import SIAE_TAG_REGEX  # noqa: E402
 except ImportError:
+    log.debug("compute_kpis.SIAE_TAG_REGEX import fallback — usa regex locale")
     SIAE_TAG_REGEX = re.compile(r"^(COLLAUDO|CERTIFICAZIONE|PRODUZIONE)[-_/].+$", re.IGNORECASE)
 
 
