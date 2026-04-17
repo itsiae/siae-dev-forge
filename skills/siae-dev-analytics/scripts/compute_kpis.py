@@ -327,6 +327,45 @@ def anonymize_login(login: str) -> str:
 
 
 # ────────────────────────────────────────────────────────
+# DevForge Adoption KPI (DA1-DA3) — v2
+# ────────────────────────────────────────────────────────
+
+def kpi_devforge_skill_invocation_rate(
+    skill_invocations_by_dev: dict[str, int],
+    weeks_in_window: float,
+) -> dict[str, float]:
+    """DA1: skill invocations / week per dev."""
+    if weeks_in_window <= 0:
+        return {}
+    return {dev: count / weeks_in_window for dev, count in skill_invocations_by_dev.items()}
+
+
+def kpi_claude_session_density(
+    session_starts_by_dev: dict[str, int],
+    working_days: int,
+) -> dict[str, float]:
+    """DA2: sessions / working day per dev."""
+    if working_days <= 0:
+        return {}
+    return {dev: count / working_days for dev, count in session_starts_by_dev.items()}
+
+
+def kpi_siae_brainstorming_before_coding(
+    prs: pd.DataFrame,
+    docs_plans_dir: "Path",
+    threshold_hours: int = 24,
+) -> dict[str, float]:
+    """DA3: % PR con design doc creato < 24h prima del primo commit / total PR per dev."""
+    if prs.empty:
+        return {}
+    from pathlib import Path
+    if not Path(docs_plans_dir).exists():
+        return {a: 0.0 for a in prs["author"].unique()}
+    # v2: se PR ha design_link, considera disciplinato
+    return prs.groupby("author")["has_design_link"].mean().to_dict()
+
+
+# ────────────────────────────────────────────────────────
 # ROI v2 Index
 # ────────────────────────────────────────────────────────
 

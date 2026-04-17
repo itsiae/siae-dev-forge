@@ -144,6 +144,32 @@ def normalize_cost_score(costs: dict[str, float]) -> dict[str, float]:
     return {dev: max(0.25, min(4.0, v / med)) for dev, v in costs.items()}
 
 
+def extract_skill_invocations(events: list[dict]) -> dict[str, int]:
+    """Count event_type='skill_invoked' per actor."""
+    from collections import Counter
+    c: Counter = Counter()
+    for ev in events:
+        if ev.get("event_type") != "skill_invoked":
+            continue
+        actor = ev.get("actor_canonical")
+        if actor:
+            c[actor] += 1
+    return dict(c)
+
+
+def extract_session_starts(events: list[dict]) -> dict[str, int]:
+    """Count event_type='session_start' per actor."""
+    from collections import Counter
+    c: Counter = Counter()
+    for ev in events:
+        if ev.get("event_type") != "session_start":
+            continue
+        actor = ev.get("actor_canonical")
+        if actor:
+            c[actor] += 1
+    return dict(c)
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()

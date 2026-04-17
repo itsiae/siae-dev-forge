@@ -387,3 +387,23 @@ def test_kpi_oldest_open_pr_age_days():
     assert "alice" in result
     assert result["alice"] >= 21  # At least 21 days old
     assert "bob" not in result  # Bob has no open PRs
+
+
+# ────────────────────────────────────────────────────────
+# Task 09: DevForge Adoption KPI (DA1-DA3)
+# ────────────────────────────────────────────────────────
+
+def test_devforge_skill_invocation_rate():
+    result = ck.kpi_devforge_skill_invocation_rate({"alice": 10, "bob": 5}, weeks_in_window=2.0)
+    assert result == {"alice": 5.0, "bob": 2.5}
+
+
+def test_claude_session_density_zero_days():
+    assert ck.kpi_claude_session_density({"alice": 5}, working_days=0) == {}
+
+
+def test_brainstorming_before_coding_no_docs_plans():
+    from pathlib import Path
+    prs = pd.DataFrame([{"author": "alice", "has_design_link": True}])
+    result = ck.kpi_siae_brainstorming_before_coding(prs, Path("/nonexistent"))
+    assert result["alice"] == 0.0

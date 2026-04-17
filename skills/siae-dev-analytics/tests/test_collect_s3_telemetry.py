@@ -79,3 +79,22 @@ def test_default_cost_score_when_empty():
     """Nessun cost data → ogni dev ha cost_score = 1.0."""
     result = ct.normalize_cost_score({})
     assert result == {}
+
+
+# ────────────────────────────────────────────────────────
+# Task 09: DevForge Adoption extraction
+# ────────────────────────────────────────────────────────
+
+def test_extract_skill_invocations_counts_per_actor():
+    events = [
+        {"event_type": "skill_invoked", "actor_canonical": "alice"},
+        {"event_type": "skill_invoked", "actor_canonical": "alice"},
+        {"event_type": "skill_invoked", "actor_canonical": "bob"},
+        {"event_type": "session_start", "actor_canonical": "alice"},
+    ]
+    result = ct.extract_skill_invocations(events)
+    assert result == {"alice": 2, "bob": 1}
+
+
+def test_extract_session_starts_empty_returns_empty():
+    assert ct.extract_session_starts([]) == {}
