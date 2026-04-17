@@ -4,7 +4,7 @@
 # Hook:     capture-test-result
 # Evento:   PostToolUse
 # Matcher:  Bash
-# Timeout:  5s
+# Timeout:  10s
 # ─────────────────────────────────────────────────────────────────
 # Detects test-related commands and saves a summary of results
 # to ~/.claude/.devforge-last-test-result for context injection.
@@ -19,20 +19,87 @@ RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
 INPUT=$(cat)
 
 # Extract fields using jq (handles escaped quotes in JSON values correctly)
-# Fallback to grep for environments without jq
+# Fallback to grep for environments without jq.
+# Claude Code PostToolUse schema: tool_input.command, tool_response.exit_code,
+# tool_response.stdout (or tool_response.output depending on version).
 if command -v jq >/dev/null 2>&1; then
-    COMMAND=$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || echo "")
-    EXIT_CODE=$(echo "$INPUT" | jq -r '.exit_code // .tool_output.exit_code // empty' 2>/dev/null || echo "?")
-    STDOUT=$(echo "$INPUT" | jq -r '.stdout // .tool_output.stdout // empty' 2>/dev/null || echo "")
+    COMMAND=$(echo "$INPUT" | jq -r '.command // .tool_input.command // ""' 2>/dev/null || echo "")
+    # Claude Code PostToolUse Bash payload has no exit_code field: derive it from
+    # tool_response.is_error (false=0, true=1) when the numeric field is absent.
+    EXIT_CODE=$(echo "$INPUT" | jq -r '
+      .exit_code //
+      .tool_output.exit_code //
+      .tool_response.exit_code //
+      (if .tool_response.is_error == true then "1"
+       elif .tool_response.is_error == false then "0"
+       else "" end)
+    ' 2>/dev/null || echo "")
+    STDOUT=$(echo "$INPUT" | jq -r '.stdout // .tool_output.stdout // .tool_response.stdout // .tool_response.output // ""' 2>/dev/null || echo "")
 else
     COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
-    EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$' || echo "?")
+    EXIT_CODE=$(echo "$INPUT" | grep -o '"exit_code"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$' || echo "")
+    # Fallback: derive exit code from is_error when exit_code absent
+    if [ -z "$EXIT_CODE" ]; then
+        IS_ERROR=$(echo "$INPUT" | grep -o '"is_error"[[:space:]]*:[[:space:]]*[a-z]*' | head -1 | grep -o '[a-z]*$' || echo "")
+        [ "$IS_ERROR" = "false" ] && EXIT_CODE="0" || EXIT_CODE=""
+    fi
     STDOUT=$(echo "$INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"stdout"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 fi
 
 # Only care about test-related commands
 if ! echo "$COMMAND" | grep -qiE '(test|jest|vitest|pytest|mvn.*test|gradle.*test|npm.*test|yarn.*test|go test|cargo test|run-all\.sh|\.spec\.|\.test\.)'; then
     exit 0
+fi
+
+# --- TDD State Machine: FIRST — critical path, must survive before any I/O ---
+# Positioned before RESULT_FILE write and coverage extraction to ensure it
+# completes within timeout even when stdout is large.
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
+
+if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
+    TDD_STATE_FILE="${STATE_DIR}/.devforge-tdd-state"
+    CURRENT_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
+    CURRENT_PHASE=$(echo "$CURRENT_STATE" | cut -d'|' -f1)
+
+    if [ "$EXIT_CODE" = "0" ]; then
+        # Test PASS
+        case "$CURRENT_PHASE" in
+            INIT)
+                # INIT + PASS = test passed immediately → not TDD (test existed already)
+                # Stay INIT — user needs to write a NEW failing test
+                ;;
+            RED)
+                # RED + PASS = transition to GREEN (implementation code made test pass)
+                echo "GREEN|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|$(echo "$CURRENT_STATE" | cut -d'|' -f3)|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + PASS = stay GREEN (refactor safe, tests still passing)
+                ;;
+            REFACTOR)
+                # REFACTOR + PASS = stay REFACTOR (refactor safe)
+                ;;
+        esac
+    else
+        # Test FAIL (EXIT_CODE non-zero or empty when field not found in payload)
+        case "$CURRENT_PHASE" in
+            ""|NONE|INIT)
+                # INIT/empty + FAIL = first failing test confirmed → enter RED
+                echo "RED|unknown|test-confirmed|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            GREEN)
+                # GREEN + FAIL = regression! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            REFACTOR)
+                # REFACTOR + FAIL = regression during refactor! Back to RED
+                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|refactor-regression|$(date +%s)" > "$TDD_STATE_FILE"
+                ;;
+            RED)
+                # RED + FAIL = expected, stay RED
+                ;;
+        esac
+    fi
 fi
 
 # Build summary
@@ -88,56 +155,6 @@ fi
 
 if [ -n "$COVERAGE_PCT" ]; then
     echo "${COVERAGE_PCT}|$(date +%s)|${COMMAND}" > "$COVERAGE_FILE"
-fi
-
-# --- TDD State Machine: auto-advance phase based on test result ---
-# Only if siae-tdd is active in this session
-SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
-SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
-
-if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
-    TDD_STATE_FILE="${STATE_DIR}/.devforge-tdd-state"
-    CURRENT_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
-    CURRENT_PHASE=$(echo "$CURRENT_STATE" | cut -d'|' -f1)
-
-    if [ "$EXIT_CODE" = "0" ]; then
-        # Test PASS
-        case "$CURRENT_PHASE" in
-            INIT)
-                # INIT + PASS = test passed immediately → not TDD (test existed already)
-                # Stay INIT — user needs to write a NEW failing test
-                ;;
-            RED)
-                # RED + PASS = transition to GREEN (implementation code made test pass)
-                echo "GREEN|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|$(echo "$CURRENT_STATE" | cut -d'|' -f3)|$(date +%s)" > "$TDD_STATE_FILE"
-                ;;
-            GREEN)
-                # GREEN + PASS = stay GREEN (refactor safe, tests still passing)
-                ;;
-            REFACTOR)
-                # REFACTOR + PASS = stay REFACTOR (refactor safe)
-                ;;
-        esac
-    else
-        # Test FAIL
-        case "$CURRENT_PHASE" in
-            ""|NONE|INIT)
-                # INIT/empty + FAIL = first failing test confirmed → enter RED
-                echo "RED|unknown|test-confirmed|$(date +%s)" > "$TDD_STATE_FILE"
-                ;;
-            GREEN)
-                # GREEN + FAIL = regression! Back to RED
-                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|regression|$(date +%s)" > "$TDD_STATE_FILE"
-                ;;
-            REFACTOR)
-                # REFACTOR + FAIL = regression during refactor! Back to RED
-                echo "RED|$(echo "$CURRENT_STATE" | cut -d'|' -f2)|refactor-regression|$(date +%s)" > "$TDD_STATE_FILE"
-                ;;
-            RED)
-                # RED + FAIL = expected, stay RED
-                ;;
-        esac
-    fi
 fi
 
 exit 0
