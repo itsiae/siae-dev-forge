@@ -1,4 +1,343 @@
-# Source of truth per sheet Glossario KPI.
-# Popolato in task-11.
+# Source of truth per sheet Glossario KPI — DevForge Dev Analytics v2
+# Ogni voce mappa a una colonna nel report Excel "Per Developer".
 version: 1
-kpi: []
+kpi:
+  # ── Velocity (V1-V6) ──
+  - id: pr_cycle_time_p50
+    label_it: "Tempo mediano PR (h)"
+    formula: "median(merged_at - opened_at) in ore"
+    interpretation: "Tempo da apertura PR a merge. Riflette velocita review + merge team."
+    good_if: "< 24 ore (DORA Elite)"
+    benchmark: "DORA 2023: Elite <1gg, High <1sett, Medium <1mese, Low >1mese"
+  - id: lead_time_to_merge_p50
+    label_it: "Lead time mediano (h)"
+    formula: "median(merged_at - first_commit_at)"
+    interpretation: "Tempo dal primo commit al merge — include development + review."
+    good_if: "< 48 ore"
+    benchmark: "DORA: dipende tier team"
+  - id: pr_throughput_weekly
+    label_it: "PR per settimana"
+    formula: "count(merged_pr) / weeks_in_window"
+    interpretation: "Volume output. Varia con complexity PR — leggere insieme a net_loc."
+    good_if: "> 3 PR/sett per dev"
+    benchmark: "Industry average: 2-5 PR/sett"
+  - id: time_to_first_review_p50
+    label_it: "Tempo prima review (h)"
+    formula: "median(first_review_at - created_at)"
+    interpretation: "Quanto aspetta una PR prima di ricevere attenzione."
+    good_if: "< 4 ore"
+    benchmark: "Industry: 2-8 ore"
+  - id: deploy_frequency_monthly
+    label_it: "Deploy mensili"
+    formula: "count(deploy_tags) / months_in_window"
+    interpretation: "Frequenza rilasci in produzione."
+    good_if: "> 4/mese (DORA Elite)"
+    benchmark: "DORA: Elite on-demand, High 1/sett-1/mese"
+  - id: review_comments_p50
+    label_it: "Commenti review mediani"
+    formula: "median(review_comments_count)"
+    interpretation: "Engagement nella review. Troppi = code quality bassa, zero = review superficiale."
+    good_if: "1-5 commenti"
+    benchmark: "Google: 2-4 commenti/PR media"
+
+  # ── Quality (Q1-Q6) ──
+  - id: rework_ratio
+    label_it: "Tasso rework"
+    formula: "review_comments / (review_comments + approvals)"
+    interpretation: "Quanto lavoro richiede iterazione post-review."
+    good_if: "< 0.3"
+    benchmark: "Industry: 0.15-0.35"
+  - id: test_presence_rate
+    label_it: "Presenza test"
+    formula: "PR con test file / total PR"
+    interpretation: "Disciplina testing: ogni PR cambia codice E test?"
+    good_if: "> 0.8"
+    benchmark: "Best practice: 100% per feature PR"
+  - id: verification_rate
+    label_it: "Tasso verifica"
+    formula: "commits con 'Verified-by' trailer / total"
+    interpretation: "Quanto il dev verifica manualmente prima del commit."
+    good_if: "> 0.5"
+    benchmark: "SIAE internal target"
+  - id: design_driven_rate
+    label_it: "Tasso design-driven"
+    formula: "PR con link a design doc / total PR"
+    interpretation: "Disciplina progettuale: si progetta prima di codare?"
+    good_if: "> 0.6"
+    benchmark: "SIAE target: 80%+"
+  - id: revert_rate
+    label_it: "Tasso revert"
+    formula: "commits revert / total commits"
+    interpretation: "Instabilita: codice committato e poi annullato."
+    good_if: "< 0.05"
+    benchmark: "Industry: < 3%"
+  - id: health_score
+    label_it: "Punteggio salute"
+    formula: "0.5*velocity_z + 0.5*quality_z (normalizzati)"
+    interpretation: "Score composito: bilancia velocita e qualita."
+    good_if: "> 0 (sopra media team)"
+    benchmark: "Distribuzione normale: 68% tra -1 e +1"
+
+  # ── In-Flight (IF1-IF6) ──
+  - id: open_prs_count
+    label_it: "PR aperte"
+    formula: "count(PR state=OPEN)"
+    interpretation: "Work-in-progress: PR non ancora mergiate."
+    good_if: "< 5 per dev"
+    benchmark: "Team sani: 2-4 PR aperte simultanee"
+  - id: draft_prs_count
+    label_it: "PR draft"
+    formula: "count(PR state=OPEN AND isDraft)"
+    interpretation: "Lavoro in fase iniziale, non pronto per review."
+    good_if: "< 3"
+    benchmark: "N/A"
+  - id: stuck_prs_count
+    label_it: "PR bloccate"
+    formula: "count(PR OPEN AND last_update > 7gg)"
+    interpretation: "PR ferme: possibile blocco, conflitto, o abbandono."
+    good_if: "0"
+    benchmark: "Ideale: zero"
+  - id: closed_unmerged_count
+    label_it: "PR chiuse senza merge"
+    formula: "count(PR CLOSED AND merged_at IS NULL)"
+    interpretation: "Lavoro abbandonato o duplicato."
+    good_if: "< 10% delle PR totali"
+    benchmark: "Industry: 5-15%"
+  - id: reopen_count
+    label_it: "PR riaperte"
+    formula: "sum(REOPENED_EVENT count)"
+    interpretation: "PR chiuse prematuramente e riaperte."
+    good_if: "0"
+    benchmark: "Segnale di process issues se > 5%"
+  - id: oldest_open_pr_age_days
+    label_it: "PR aperta piu vecchia (gg)"
+    formula: "max(now - created_at) per PR OPEN"
+    interpretation: "Segnala PR dimenticate o bloccate da lungo tempo."
+    good_if: "< 14 gg"
+    benchmark: "Sano: < 7gg, Warning: > 30gg"
+
+  # ── Branch (B1-B8) ──
+  - id: active_branches_per_dev
+    label_it: "Branch attivi"
+    formula: "count(branch con commit < 7gg)"
+    interpretation: "Carico di lavoro parallelo."
+    good_if: "1-3"
+    benchmark: "Troppi = context switching"
+  - id: branches_without_pr
+    label_it: "Branch senza PR"
+    formula: "count(branch con pr_count=0)"
+    interpretation: "Lavoro non visibile al team — possibile shadow work."
+    good_if: "0"
+    benchmark: "Best practice: ogni branch ha PR"
+  - id: branches_age_p50_days
+    label_it: "Eta mediana branch (gg)"
+    formula: "median(now - first_commit_date)"
+    interpretation: "Long-lived branches accumulano conflitti."
+    good_if: "< 7 gg"
+    benchmark: "Trunk-based: < 2gg"
+  - id: branches_size_p50_commits
+    label_it: "Size mediana branch (commit)"
+    formula: "median(commit_count)"
+    interpretation: "Branch grandi = rischio alto al merge."
+    good_if: "< 20 commit"
+    benchmark: "Small PR movement: < 10 commit"
+  - id: branches_loc_p50
+    label_it: "LOC mediana branch"
+    formula: "median(additions - deletions)"
+    interpretation: "Dimensione del cambiamento."
+    good_if: "< 500 LOC"
+    benchmark: "Google: PR < 400 LOC optimal review"
+  - id: stale_branches_count
+    label_it: "Branch stale (team)"
+    formula: "count(branch > 30gg, non merged)"
+    interpretation: "Debito tecnico organizzativo — branch da pulire."
+    good_if: "< 5 team-level"
+    benchmark: "Ideale: zero"
+  - id: branch_naming_compliance_rate
+    label_it: "Compliance naming"
+    formula: "branch matching ^(feat|fix|refactor|hotfix|chore|docs)/ / total"
+    interpretation: "Aderenza alla convenzione branch SIAE."
+    good_if: "> 0.9"
+    benchmark: "SIAE target: 100%"
+  - id: hotfix_branches_count
+    label_it: "Hotfix count"
+    formula: "count(branch ^hotfix/)"
+    interpretation: "Indicatore instabilita produzione."
+    good_if: "< 2/mese"
+    benchmark: "Stabile: 0-1/mese"
+
+  # ── Review (R1-R5) ──
+  - id: reviews_given_count
+    label_it: "Review fatte"
+    formula: "count(review dove reviewer != PR author)"
+    interpretation: "Contributo come reviewer al team."
+    good_if: "> 5/sett per tech lead"
+    benchmark: "Industry: 2-5/sett"
+  - id: review_turnaround_p50_h
+    label_it: "Turnaround review (h)"
+    formula: "median(review_created - pr_latest_commit)"
+    interpretation: "Reattivita come reviewer."
+    good_if: "< 8 ore"
+    benchmark: "Google: < 4h per first review"
+  - id: approvals_given_count
+    label_it: "Approvazioni date"
+    formula: "count(review APPROVED, excl DISMISSED)"
+    interpretation: "Gate-keeping: quanto il reviewer approva."
+    good_if: "proporzionale a reviews_given"
+    benchmark: "Ratio approvals/reviews sano: 0.6-0.9"
+  - id: co_authored_prs_count
+    label_it: "PR co-authored"
+    formula: "count(PR con Co-Authored-By trailer)"
+    interpretation: "Pair programming / AI collaboration."
+    good_if: "> 0"
+    benchmark: "Con Claude Code: target > 50%"
+  - id: onboarding_flag
+    label_it: "Dev in onboarding"
+    formula: "first_commit_date > window_start - 60gg"
+    interpretation: "Dev nuovo: le metriche vanno contestualizzate."
+    good_if: "N/A"
+    benchmark: "Onboarding = metriche piu basse attese"
+
+  # ── Cost (C1-C4) ──
+  - id: eur_per_merged_pr
+    label_it: "EUR per PR mergiata"
+    formula: "costo_dev / count(merged_pr)"
+    interpretation: "Quanto costa (in AI credits) ogni PR mergiata."
+    good_if: "< 15 EUR/PR"
+    benchmark: "Varia per complessita"
+  - id: eur_per_accepted_loc
+    label_it: "EUR per LOC"
+    formula: "costo_dev / net_loc_shipped"
+    interpretation: "Costo unitario per linea di codice accettata."
+    good_if: "< 0.5 EUR/LOC"
+    benchmark: "Dipende da linguaggio"
+  - id: tokens_per_completed_pr
+    label_it: "Token per PR"
+    formula: "tokens_consumed / merged_pr_count"
+    interpretation: "Consumo AI per unita di output."
+    good_if: "< 500K token/PR"
+    benchmark: "N/A — metrica nuova"
+  - id: cost_per_story_point
+    label_it: "Costo per SP"
+    formula: "costo_dev / story_points_closed"
+    interpretation: "Efficienza costo per complessita."
+    good_if: "< 50 EUR/SP"
+    benchmark: "N/A — richiede dati JIRA"
+
+  # ── Value (VA1-VA7) ──
+  - id: features_shipped
+    label_it: "Feature rilasciate"
+    formula: "count(commit type=feat)"
+    interpretation: "Volume feature — proxy per valore prodotto."
+    good_if: "> 5/sett"
+    benchmark: "Varia per team size"
+  - id: bugs_fixed
+    label_it: "Bug fixati"
+    formula: "count(commit type=fix)"
+    interpretation: "Volume bug fix — alto = debito, basso = stabilita."
+    good_if: "Trend decrescente"
+    benchmark: "N/A"
+  - id: tech_debt_reduced
+    label_it: "Tech debt ridotto"
+    formula: "count(commit type=refactor|perf)"
+    interpretation: "Investimento in qualita codebase."
+    good_if: "> 10% dei commit"
+    benchmark: "Industry: 15-20% tempo su tech debt"
+  - id: net_loc_shipped
+    label_it: "LOC nette shipped"
+    formula: "sum(additions - deletions) per PR mergiate"
+    interpretation: "Volume output — leggere con cautela (LOC != valore)."
+    good_if: "Context-dependent"
+    benchmark: "N/A — metrica di volume"
+  - id: compliance_bundle_rate
+    label_it: "Compliance bundle"
+    formula: "(has_tests AND has_design_link AND has_verified) / total_pr"
+    interpretation: "PR che rispettano tutti gli standard quality."
+    good_if: "> 0.6"
+    benchmark: "SIAE target: 80%+"
+  - id: first_shot_quality
+    label_it: "First-shot quality"
+    formula: "PR senza force-push post-review / total"
+    interpretation: "Codice giusto al primo tentativo."
+    good_if: "> 0.7"
+    benchmark: "Industry: 60-80%"
+  - id: design_adherence_rate
+    label_it: "Aderenza design"
+    formula: "PR con design link / total"
+    interpretation: "Disciplina design-first."
+    good_if: "> 0.6"
+    benchmark: "SIAE target: 80%+"
+
+  # ── Delivery DORA (D1-D4) ──
+  - id: time_to_production_p50
+    label_it: "Time to production (gg)"
+    formula: "median(tag_PRODUZIONE - PR_merge)"
+    interpretation: "Quanto velocemente il codice mergiato raggiunge produzione."
+    good_if: "< 7 gg"
+    benchmark: "DORA Elite: < 1 giorno"
+  - id: change_failure_rate
+    label_it: "Tasso fallimento cambio"
+    formula: "revert_count / deploy_count"
+    interpretation: "DORA CFR: quanto spesso un deploy causa problemi."
+    good_if: "< 0.15 (DORA Elite)"
+    benchmark: "DORA: Elite <15%, High 16-30%"
+  - id: incident_free_days
+    label_it: "Giorni senza incidenti"
+    formula: "days since last revert (team-level)"
+    interpretation: "Stabilita produzione."
+    good_if: "> 30 gg"
+    benchmark: "Stabile: > 30gg tra revert"
+  - id: deploy_lead_time_p50
+    label_it: "Deploy lead time (gg)"
+    formula: "median(commit → tag PRODUZIONE)"
+    interpretation: "Pipeline end-to-end."
+    good_if: "< 14 gg"
+    benchmark: "DORA: dipende tier"
+
+  # ── DevForge Adoption (DA1-DA3) ──
+  - id: devforge_skill_invocation_rate
+    label_it: "Skill DevForge/sett"
+    formula: "skill_invocations / weeks_in_window"
+    interpretation: "Quanto il dev usa le skill DevForge (brainstorming, tdd, ...)."
+    good_if: "> 10/sett (dev attivo)"
+    benchmark: "N/A — metrica interna"
+  - id: claude_session_density
+    label_it: "Sessioni Claude/gg lav"
+    formula: "session_starts / working_days"
+    interpretation: "Frequenza uso Claude Code."
+    good_if: "> 2 sessioni/gg"
+    benchmark: "N/A — metrica interna"
+  - id: brainstorming_before_coding
+    label_it: "Brainstorming rate"
+    formula: "PR con design doc / total PR"
+    interpretation: "Disciplina: si progetta prima di codare?"
+    good_if: "> 0.6"
+    benchmark: "SIAE target: 80%+"
+
+  # ── AI Impact (AI1-AI5) ──
+  - id: ai_assisted_pr_rate
+    label_it: "PR AI-assisted rate"
+    formula: "% commit con Co-Authored-By AI"
+    interpretation: "Penetrazione AI nel workflow dev."
+    good_if: "> 0.5 post adozione"
+    benchmark: "N/A — metrica nuova"
+  - id: ai_velocity_multiplier
+    label_it: "Moltiplicatore AI"
+    formula: "median(manual_cycle) / median(ai_cycle)"
+    interpretation: "Quante volte piu veloce il lavoro AI-assisted vs manuale."
+    good_if: "> 1.5x"
+    benchmark: "Studi Claude Code 2025: 1.5-3x boilerplate, 1.2-1.5x logica"
+  - id: skill_usage_correlation
+    label_it: "Correlazione skill-ROI"
+    formula: "Pearson(skill_invocations, roi_index)"
+    interpretation: "Chi usa piu DevForge ha ROI piu alto?"
+    good_if: "> 0.3 (correlazione moderata)"
+    benchmark: "N/A"
+
+  # ── ROI (R1) ──
+  - id: roi_v2_index
+    label_it: "Indice ROI v2"
+    formula: "(features_shipped x complexity x compliance) / (cost x seasonality_adj)"
+    interpretation: "Valore prodotto per euro AI speso, aggiustato qualita + periodo lavorativo."
+    good_if: "> 1.0 (break-even); > 2.0 ottimo"
+    benchmark: "N/A — metrica custom SIAE"
