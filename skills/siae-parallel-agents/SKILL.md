@@ -147,6 +147,9 @@ Ogni agente riceve:
 | 💡 Perche': Tutti gli agenti completati, integrazione necessaria |
 | 🚫 Se NO: Output agenti non integrati, verifiche manuali necessarie |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 Dopo che tutti gli agenti completano:
 
 1. **Leggi ogni report** — non fidarti del "success" senza verificare

@@ -155,6 +155,9 @@ Ogni modulo ha: `_input.tf`, `_local.tf`, `_output.tf` + resource file specifici
 | 💡 Perche': Modifica necessaria per `<motivazione>` |
 | 🚫 Se NO: STOP — policy invariata, accessi non modificati |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ---
 
 ## 5. CI/CD
@@ -194,6 +197,9 @@ Queste regole sono **OBBLIGATORIE**. Violarne una significa bloccare la review.
 | 1. ⚠️ Azione: Applicazione modifiche infrastruttura AWS → `<modulo terraform>` |
 | 💡 Perche': Plan verificato, risorse da creare/modificare |
 | 🚫 Se NO: STOP — nessuna modifica applicata all'infrastruttura |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 ---
 

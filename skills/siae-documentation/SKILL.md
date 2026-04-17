@@ -140,6 +140,9 @@ Se MCP Atlassian e' disponibile, la documentazione puo' essere pubblicata dirett
 | 💡 Perche': Crea/aggiorna pagina visibile a tutto il team |
 | 🚫 Se NO: Il documento resta solo in locale (Markdown) |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 4. Pubblica via `createConfluencePage` o `updateConfluencePage`
 
 ---
