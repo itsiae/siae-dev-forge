@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Test: capture-test-result hook — TDD state machine transitions
+# Test: capture-test-result hook — TDD state machine transitions (22 scenari)
 # Covers the real Claude Code PostToolUse Bash payload schema:
 #   tool_input.command + tool_response.is_error (no exit_code field)
 # Validates both bugs fixed in fix/hook-tdd:
 #   Bug 1: INIT→RED not triggered for failing tests (timeout + wrong jq path)
 #   Bug 2: INIT→RED false positive for passing tests (EXIT_CODE="" treated as FAIL)
+# T21-T22: REFACTOR branch coverage added per code review
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -177,6 +178,20 @@ reset_state INIT
 make_payload "rspec spec/" "true" "1 failure" \
     | bash "$HOOK"
 assert_phase "T19 rspec (not in regex) → INIT unchanged (early exit)" "INIT"
+
+# ─────────────────────────────────────────────────────────
+# REFACTOR transitions
+# ─────────────────────────────────────────────────────────
+
+reset_state REFACTOR
+make_payload "pytest test.py" "true" "1 failed" \
+    | bash "$HOOK"
+assert_phase "T21 REFACTOR+FAIL → RED (refactor-regression)" "RED"
+
+reset_state REFACTOR
+make_payload "pytest test.py" "false" "1 passed" \
+    | bash "$HOOK"
+assert_phase "T22 REFACTOR+PASS → stays REFACTOR" "REFACTOR"
 
 # ─────────────────────────────────────────────────────────
 # siae-tdd not active: no state changes

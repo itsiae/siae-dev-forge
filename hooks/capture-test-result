@@ -20,8 +20,9 @@ INPUT=$(cat)
 
 # Extract fields using jq (handles escaped quotes in JSON values correctly)
 # Fallback to grep for environments without jq.
-# Claude Code PostToolUse schema: tool_input.command, tool_response.exit_code,
-# tool_response.stdout (or tool_response.output depending on version).
+# Claude Code PostToolUse schema: tool_input.command, tool_response.is_error (boolean).
+# Note: tool_response.exit_code does NOT exist in real Claude Code payloads — it is
+# present only in synthetic/test payloads. Exit status is derived from is_error.
 if command -v jq >/dev/null 2>&1; then
     COMMAND=$(echo "$INPUT" | jq -r '.command // .tool_input.command // ""' 2>/dev/null || echo "")
     # Claude Code PostToolUse Bash payload has no exit_code field: derive it from
@@ -41,7 +42,7 @@ else
     # Fallback: derive exit code from is_error when exit_code absent
     if [ -z "$EXIT_CODE" ]; then
         IS_ERROR=$(echo "$INPUT" | grep -o '"is_error"[[:space:]]*:[[:space:]]*[a-z]*' | head -1 | grep -o '[a-z]*$' || echo "")
-        [ "$IS_ERROR" = "false" ] && EXIT_CODE="0" || EXIT_CODE=""
+        if [ "$IS_ERROR" = "false" ]; then EXIT_CODE="0"; elif [ "$IS_ERROR" = "true" ]; then EXIT_CODE="1"; fi
     fi
     STDOUT=$(echo "$INPUT" | grep -o '"stdout"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/"stdout"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 fi
