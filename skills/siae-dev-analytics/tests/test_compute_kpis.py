@@ -307,3 +307,83 @@ def test_verification_override_takes_precedence(sample_prs, sample_commits, samp
     assert result.loc["bob", "verification_rate"] == 0.80
     # Carol non nell'override -> mantiene valore da commits (0.0)
     assert result.loc["carol", "verification_rate"] == 0.0
+
+
+# ────────────────────────────────────────────────────────
+# Task 03: In-Flight KPI (IF1-IF6)
+# ────────────────────────────────────────────────────────
+
+def test_kpi_open_prs_count():
+    """IF1: Count open PRs per author."""
+    prs = pd.DataFrame([
+        {"state": "OPEN", "is_draft": False, "author": "alice", "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "is_draft": False, "author": "alice", "reopen_count": 0, "is_stuck": False},
+        {"state": "MERGED", "is_draft": False, "author": "alice", "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "is_draft": False, "author": "bob", "reopen_count": 0, "is_stuck": False},
+        {"state": "CLOSED", "is_draft": False, "author": "carol", "reopen_count": 0, "is_stuck": False},
+    ])
+    result = ck.kpi_open_prs_count(prs)
+    assert result == {"alice": 2, "bob": 1}
+
+
+def test_kpi_draft_prs_count():
+    """IF2: Count draft PRs per author (OPEN + isDraft)."""
+    prs = pd.DataFrame([
+        {"state": "OPEN", "is_draft": True, "author": "alice", "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "is_draft": False, "author": "alice", "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "is_draft": True, "author": "bob", "reopen_count": 0, "is_stuck": False},
+        {"state": "MERGED", "is_draft": False, "author": "carol", "reopen_count": 0, "is_stuck": False},
+    ])
+    result = ck.kpi_draft_prs_count(prs)
+    assert result == {"alice": 1, "bob": 1}
+
+
+def test_kpi_stuck_prs_count():
+    """IF3: Count stuck PRs (OPEN + updated > 7d ago)."""
+    prs = pd.DataFrame([
+        {"state": "OPEN", "is_stuck": True, "author": "alice", "is_draft": False, "reopen_count": 0},
+        {"state": "OPEN", "is_stuck": False, "author": "alice", "is_draft": False, "reopen_count": 0},
+        {"state": "CLOSED", "is_stuck": False, "author": "bob", "is_draft": False, "reopen_count": 0},
+    ])
+    result = ck.kpi_stuck_prs_count(prs)
+    assert result == {"alice": 1}
+
+
+def test_kpi_closed_unmerged_count():
+    """IF4: Count closed-but-not-merged PRs per author."""
+    prs = pd.DataFrame([
+        {"state": "CLOSED", "merged_at": None, "author": "carol", "is_draft": False, "reopen_count": 0, "is_stuck": False},
+        {"state": "CLOSED", "merged_at": None, "author": "carol", "is_draft": False, "reopen_count": 0, "is_stuck": False},
+        {"state": "MERGED", "merged_at": "2026-03-01T14:00:00+00:00", "author": "alice", "is_draft": False, "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "merged_at": None, "author": "bob", "is_draft": False, "reopen_count": 0, "is_stuck": False},
+    ])
+    result = ck.kpi_closed_unmerged_count(prs)
+    assert result == {"carol": 2}
+
+
+def test_kpi_reopen_count():
+    """IF5: Sum reopen_count per author."""
+    prs = pd.DataFrame([
+        {"author": "alice", "reopen_count": 2, "state": "OPEN", "is_draft": False, "is_stuck": False},
+        {"author": "alice", "reopen_count": 0, "state": "MERGED", "is_draft": False, "is_stuck": False},
+        {"author": "bob", "reopen_count": 1, "state": "OPEN", "is_draft": False, "is_stuck": False},
+    ])
+    result = ck.kpi_reopen_count(prs)
+    assert result == {"alice": 2, "bob": 1}
+
+
+def test_kpi_oldest_open_pr_age_days():
+    """IF6: Oldest open PR age in days per author."""
+    prs = pd.DataFrame([
+        {"state": "OPEN", "author": "alice", "created_at": "2026-03-01T10:00:00+00:00",
+         "is_draft": False, "reopen_count": 0, "is_stuck": False},
+        {"state": "OPEN", "author": "alice", "created_at": "2026-03-25T10:00:00+00:00",
+         "is_draft": False, "reopen_count": 0, "is_stuck": False},
+        {"state": "MERGED", "author": "bob", "created_at": "2026-03-01T10:00:00+00:00",
+         "is_draft": False, "reopen_count": 0, "is_stuck": False},
+    ])
+    result = ck.kpi_oldest_open_pr_age_days(prs)
+    # alice has an open PR from March 1, so age should be >= 21 days (as of "now")
+    assert "alice" in result
+    assert result["alice"] >= 21  # At least 21 days old
+    assert "bob" not in result  # Bob has no open PRs

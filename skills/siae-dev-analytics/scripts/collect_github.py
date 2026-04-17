@@ -35,15 +35,20 @@ GRAPHQL_QUERY = """
 query($owner: String!, $name: String!, $since: GitTimestamp!) {
   repository(owner: $owner, name: $name) {
     nameWithOwner
-    pullRequests(states: MERGED, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(states: [OPEN, MERGED, CLOSED], first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
         number
         author { login }
         createdAt
         mergedAt
+        closedAt
+        updatedAt
+        state
+        isDraft
+        timelineItems(itemTypes: [REOPENED_EVENT], first: 5) { totalCount }
         commits(first: 1) { nodes { commit { committedDate } } }
         reviews(first: 50) { nodes { author { login } state createdAt comments { totalCount } } }
-        files(first: 100) { nodes { path } }
+        files(first: 100) { nodes { path additions deletions } }
         body
       }
     }
@@ -182,15 +187,24 @@ def _warn_if_truncated(raw: dict, repo: str) -> None:
         )
 
 
+_STUCK_THRESHOLD_DAYS = 7
+
+
 def extract_pr_records(raw: dict) -> list[dict]:
-    """Normalizza PR nodes in dict flat per pandas."""
+    """Normalizza PR nodes in dict flat per pandas.
+
+    v2: include state, is_draft, updated_at, closed_at, reopen_count, is_stuck.
+    """
     repo_name = raw.get("repository", {}).get("nameWithOwner", "")
     prs = raw.get("repository", {}).get("pullRequests", {}).get("nodes", [])
+    now = datetime.now(tz=__import__("datetime").timezone.utc)
     records = []
     for pr in prs:
         author = (pr.get("author") or {}).get("login") or "unknown"
         created = _parse_iso(pr["createdAt"])
         merged = _parse_iso(pr["mergedAt"]) if pr.get("mergedAt") else None
+        closed = _parse_iso(pr["closedAt"]) if pr.get("closedAt") else None
+        updated = _parse_iso(pr["updatedAt"]) if pr.get("updatedAt") else created
         first_commit = None
         commit_nodes = (pr.get("commits") or {}).get("nodes", [])
         if commit_nodes:
@@ -213,12 +227,27 @@ def extract_pr_records(raw: dict) -> list[dict]:
         lead_time = (merged - first_commit).total_seconds() / 3600 if (merged and first_commit) else None
         ttfr = (first_review - created).total_seconds() / 3600 if first_review else None
 
+        # v2 fields
+        state = pr.get("state", "MERGED")  # default MERGED for v1 compat
+        is_draft = bool(pr.get("isDraft", False))
+        reopen_count = (pr.get("timelineItems") or {}).get("totalCount", 0)
+        is_stuck = (
+            state == "OPEN"
+            and (now - updated).days > _STUCK_THRESHOLD_DAYS
+        )
+
         records.append({
             "repo": repo_name,
             "number": pr["number"],
             "author": author,
             "created_at": created.isoformat(),
             "merged_at": merged.isoformat() if merged else None,
+            "closed_at": closed.isoformat() if closed else None,
+            "updated_at": updated.isoformat(),
+            "state": state,
+            "is_draft": is_draft,
+            "reopen_count": reopen_count,
+            "is_stuck": is_stuck,
             "cycle_time_hours": cycle_time,
             "lead_time_hours": lead_time,
             "time_to_first_review_hours": ttfr,

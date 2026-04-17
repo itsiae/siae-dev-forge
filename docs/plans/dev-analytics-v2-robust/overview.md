@@ -22,7 +22,7 @@
 |---|------|------|-------|:------:|:----------:|
 | 1 | Scaffold nuovi moduli + requirements + SKILL.md v2 | `task-01-scaffold-v2.md` | [DONE] | 0.5 | 2 |
 | 2 | F0 — AWS profile + Anthropic API client + CLI override | `task-02-sources-always-on.md` | [DONE] | 1.5 | 17 |
-| 3 | F1 — PR states (OPEN/DRAFT/CLOSED/REOPENED) + 6 KPI | `task-03-pr-states.md` | [PENDING] | 1 | 19 |
+| 3 | F1 — PR states (OPEN/DRAFT/CLOSED/REOPENED) + 6 KPI | `task-03-pr-states.md` | [DONE] | 1 | 19 |
 | 4 | F1b — Branch tracking + 8 KPI + compute_branches | `task-04-branch-tracking.md` | [DONE] | 1 | 13 |
 | 5 | F2 — Review activity + co-authored + 5 KPI + compute_reviews | `task-05-review-activity.md` | [DONE] | 1 | 11 |
 | 6 | F3 — Seasonality IT + complexity KPI + stale branches | `task-06-seasonality-complexity.md` | [PENDING] | 1 | 8 |

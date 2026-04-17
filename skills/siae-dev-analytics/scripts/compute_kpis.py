@@ -137,6 +137,75 @@ def kpi_revert_rate(commits: pd.DataFrame) -> dict[str, float]:
 
 
 # ────────────────────────────────────────────────────────
+# In-Flight KPI (IF1-IF6) — v2
+# ────────────────────────────────────────────────────────
+
+def kpi_open_prs_count(prs: pd.DataFrame) -> dict[str, int]:
+    """IF1: Count of OPEN PRs per author."""
+    if prs.empty:
+        return {}
+    open_prs = prs[prs["state"] == "OPEN"]
+    if open_prs.empty:
+        return {}
+    return open_prs.groupby("author").size().to_dict()
+
+
+def kpi_draft_prs_count(prs: pd.DataFrame) -> dict[str, int]:
+    """IF2: Count of draft PRs per author (OPEN + isDraft)."""
+    if prs.empty:
+        return {}
+    drafts = prs[(prs["state"] == "OPEN") & (prs["is_draft"] == True)]  # noqa: E712
+    if drafts.empty:
+        return {}
+    return drafts.groupby("author").size().to_dict()
+
+
+def kpi_stuck_prs_count(prs: pd.DataFrame, threshold_days: int = 7) -> dict[str, int]:
+    """IF3: Count of stuck PRs per author (OPEN + not updated > threshold_days)."""
+    if prs.empty:
+        return {}
+    stuck = prs[prs["is_stuck"] == True]  # noqa: E712
+    if stuck.empty:
+        return {}
+    return stuck.groupby("author").size().to_dict()
+
+
+def kpi_closed_unmerged_count(prs: pd.DataFrame) -> dict[str, int]:
+    """IF4: Count of closed-but-not-merged PRs per author."""
+    if prs.empty:
+        return {}
+    closed_unmerged = prs[(prs["state"] == "CLOSED") & (prs["merged_at"].isna())]
+    if closed_unmerged.empty:
+        return {}
+    return closed_unmerged.groupby("author").size().to_dict()
+
+
+def kpi_reopen_count(prs: pd.DataFrame) -> dict[str, int]:
+    """IF5: Total reopen events per author."""
+    if prs.empty:
+        return {}
+    reopened = prs[prs["reopen_count"] > 0]
+    if reopened.empty:
+        return {}
+    return reopened.groupby("author")["reopen_count"].sum().to_dict()
+
+
+def kpi_oldest_open_pr_age_days(prs: pd.DataFrame) -> dict[str, float]:
+    """IF6: Age in days of the oldest open PR per author."""
+    if prs.empty:
+        return {}
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    open_prs = prs[prs["state"] == "OPEN"].copy()
+    if open_prs.empty:
+        return {}
+    open_prs["age_days"] = open_prs["created_at"].apply(
+        lambda s: (now - pd.Timestamp(s)).days if pd.notna(s) else 0
+    )
+    return open_prs.groupby("author")["age_days"].max().to_dict()
+
+
+# ────────────────────────────────────────────────────────
 # z-score + ROI
 # ────────────────────────────────────────────────────────
 
