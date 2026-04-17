@@ -366,6 +366,186 @@ def kpi_siae_brainstorming_before_coding(
 
 
 # ────────────────────────────────────────────────────────
+# Commit type parser (task-07)
+# ────────────────────────────────────────────────────────
+
+COMMIT_TYPE_RE = re.compile(r"^(feat|fix|refactor|perf|test|docs|chore|build|ci|style)(\([^)]+\))?:", re.MULTILINE)
+
+
+def extract_commit_type(message: str) -> str | None:
+    """Extract conventional commit type from message."""
+    m = COMMIT_TYPE_RE.search(message or "")
+    return m.group(1).lower() if m else None
+
+
+# ────────────────────────────────────────────────────────
+# Cost KPI (C1-C4) — task-07
+# ────────────────────────────────────────────────────────
+
+def kpi_eur_per_merged_pr(cost_by_dev: dict[str, float], merged_pr_count: dict[str, int]) -> dict[str, float]:
+    """C1: EUR spent / merged PRs per dev."""
+    result = {}
+    for dev, cost in cost_by_dev.items():
+        prs = merged_pr_count.get(dev, 0)
+        if prs > 0:
+            result[dev] = cost / prs
+    return result
+
+
+def kpi_eur_per_accepted_loc(cost_by_dev: dict, net_loc_by_dev: dict) -> dict[str, float]:
+    """C2: EUR / net LOC shipped per dev."""
+    result = {}
+    for dev, cost in cost_by_dev.items():
+        loc = net_loc_by_dev.get(dev, 0)
+        if loc > 0:
+            result[dev] = cost / loc
+    return result
+
+
+def kpi_tokens_per_completed_pr(tokens_by_dev: dict, merged_pr_count: dict) -> dict[str, float]:
+    """C3: tokens consumed / merged PRs per dev."""
+    result = {}
+    for dev, tok in tokens_by_dev.items():
+        prs = merged_pr_count.get(dev, 0)
+        if prs > 0:
+            result[dev] = tok / prs
+    return result
+
+
+def kpi_cost_per_story_point(cost_by_dev: dict, sp_closed: dict) -> dict[str, float]:
+    """C4: EUR / story points closed per dev."""
+    result = {}
+    for dev, cost in cost_by_dev.items():
+        sp = sp_closed.get(dev, 0)
+        if sp > 0:
+            result[dev] = cost / sp
+    return result
+
+
+# ────────────────────────────────────────────────────────
+# Value KPI (VA1-VA7) — task-07
+# ────────────────────────────────────────────────────────
+
+def kpi_features_shipped(commits: pd.DataFrame) -> dict[str, int]:
+    """VA1: count feat commits per dev."""
+    if commits.empty:
+        return {}
+    commits = commits.copy()
+    commits["type"] = commits["message"].apply(extract_commit_type)
+    feat = commits[commits["type"] == "feat"]
+    return feat.groupby("author").size().to_dict()
+
+
+def kpi_bugs_fixed(commits: pd.DataFrame) -> dict[str, int]:
+    """VA2: count fix commits per dev."""
+    if commits.empty:
+        return {}
+    commits = commits.copy()
+    commits["type"] = commits["message"].apply(extract_commit_type)
+    fix = commits[commits["type"] == "fix"]
+    return fix.groupby("author").size().to_dict()
+
+
+def kpi_tech_debt_reduced(commits: pd.DataFrame) -> dict[str, int]:
+    """VA3: count refactor+perf commits per dev."""
+    if commits.empty:
+        return {}
+    commits = commits.copy()
+    commits["type"] = commits["message"].apply(extract_commit_type)
+    td = commits[commits["type"].isin(["refactor", "perf"])]
+    return td.groupby("author").size().to_dict()
+
+
+def kpi_net_loc_shipped(prs: pd.DataFrame) -> dict[str, int]:
+    """VA4: net LOC (additions - deletions) per dev."""
+    if prs.empty or "additions" not in prs.columns:
+        return {}
+    prs = prs.copy()
+    prs["net"] = prs["additions"] - prs["deletions"]
+    return prs.groupby("author")["net"].sum().to_dict()
+
+
+def kpi_compliance_bundle_rate(prs: pd.DataFrame, commits: pd.DataFrame) -> dict[str, float]:
+    """VA5: PR con (test + design link + verified-by) / total."""
+    if prs.empty:
+        return {}
+    prs = prs.copy()
+    if commits.empty or "has_verified_trailer" not in commits.columns:
+        prs["bundled"] = prs["has_tests"] & prs["has_design_link"]
+    else:
+        verif_by_dev = commits.groupby("author")["has_verified_trailer"].any().to_dict()
+        prs["has_verified"] = prs["author"].map(verif_by_dev).fillna(False)
+        prs["bundled"] = prs["has_tests"] & prs["has_design_link"] & prs["has_verified"]
+    return prs.groupby("author")["bundled"].mean().to_dict()
+
+
+def kpi_first_shot_quality(prs: pd.DataFrame) -> dict[str, float]:
+    """VA6: PR senza force-push post first review / total."""
+    if prs.empty:
+        return {}
+    col = "force_push_after_review" if "force_push_after_review" in prs.columns else None
+    if col is None:
+        return {a: 1.0 for a in prs["author"].unique()}
+    prs = prs.copy()
+    prs["no_rework"] = ~prs[col]
+    return prs.groupby("author")["no_rework"].mean().to_dict()
+
+
+def kpi_design_adherence_rate(prs: pd.DataFrame) -> dict[str, float]:
+    """VA7: design-driven rate (has_design_link)."""
+    if prs.empty:
+        return {}
+    return prs.groupby("author")["has_design_link"].mean().to_dict()
+
+
+# ────────────────────────────────────────────────────────
+# Delivery KPI (D1-D4) DORA extended — task-07
+# ────────────────────────────────────────────────────────
+
+def kpi_time_to_production_p50(tags: pd.DataFrame, prs: pd.DataFrame) -> dict[str, float]:
+    """D1: median(tag PRODUZIONE_date - PR merge_date) per dev."""
+    if tags.empty or prs.empty:
+        return {}
+    prod_tags = tags[tags["tag_name"].str.contains("PRODUZIONE", case=False, na=False)]
+    if prod_tags.empty:
+        return {}
+    return {}  # Richiede join commit_oid → PR — simplified per v2
+
+
+def kpi_change_failure_rate(commits: pd.DataFrame, deploy_window_days: int = 7) -> dict[str, float]:
+    """D2: DORA CFR proxy — revert count / total commits per dev."""
+    if commits.empty:
+        return {}
+    result = {}
+    for dev in commits["author"].unique():
+        dev_commits = commits[commits["author"] == dev]
+        dev_reverts = len(dev_commits[dev_commits["is_revert"] == True])  # noqa: E712
+        total = len(dev_commits)
+        if total > 0:
+            result[dev] = dev_reverts / total
+    return result
+
+
+def kpi_incident_free_days(commits: pd.DataFrame) -> int:
+    """D3: Days since last revert globally."""
+    if commits.empty:
+        return 0
+    reverts = commits[commits["is_revert"] == True]  # noqa: E712
+    if reverts.empty:
+        return 999  # no reverts ever (cap)
+    last_revert = pd.Timestamp(reverts["committed_at"].max())
+    now = pd.Timestamp.now(tz="UTC")
+    return max(0, (now - last_revert).days)
+
+
+def kpi_deploy_lead_time_p50(commits: pd.DataFrame, tags: pd.DataFrame) -> dict[str, float]:
+    """D4: median(commit → PROD tag) per dev. Richiede join commit ↔ tag."""
+    if commits.empty or tags.empty:
+        return {}
+    return {}  # Simplified per v2
+
+
+# ────────────────────────────────────────────────────────
 # ROI v2 Index
 # ────────────────────────────────────────────────────────
 

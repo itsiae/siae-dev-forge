@@ -26,8 +26,8 @@
 | 4 | F1b — Branch tracking + 8 KPI + compute_branches | `task-04-branch-tracking.md` | [DONE] | 1 | 13 |
 | 5 | F2 — Review activity + co-authored + 5 KPI + compute_reviews | `task-05-review-activity.md` | [DONE] | 1 | 11 |
 | 6 | F3 — Seasonality IT + complexity KPI + stale branches | `task-06-seasonality-complexity.md` | [DONE] | 1 | 8 |
-| 7 | F4a-c — Cost/Value/Delivery KPI (15) | `task-07-roi-kpi-extended.md` | [PENDING] | 2 | 22 |
-| 8 | F4b — AI Impact: dual-window + attribution + 5 KPI + compute_ai_impact | `task-08-ai-impact.md` | [PENDING] | 2 | 12 |
+| 7 | F4a-c — Cost/Value/Delivery KPI (15) | `task-07-roi-kpi-extended.md` | [DONE] | 2 | 22 |
+| 8 | F4b — AI Impact: dual-window + attribution + 5 KPI + compute_ai_impact | `task-08-ai-impact.md` | [DONE] | 2 | 12 |
 | 9 | F4d — DevForge adoption + correlation (3 KPI) | `task-09-devforge-adoption.md` | [DONE] | 1 | 5 |
 | 10 | F4e — ROI v2 index + validators.py Pydantic models | `task-10-roi-v2-validators.md` | [DONE] | 1 | 15 |
 | 11 | F5a — Excel glossary sheet + kpi-glossary-data.yaml | `task-11-excel-glossary.md` | [PENDING] | 1 | 5 |

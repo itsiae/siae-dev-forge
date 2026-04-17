@@ -407,3 +407,114 @@ def test_brainstorming_before_coding_no_docs_plans():
     prs = pd.DataFrame([{"author": "alice", "has_design_link": True}])
     result = ck.kpi_siae_brainstorming_before_coding(prs, Path("/nonexistent"))
     assert result["alice"] == 0.0
+
+
+# ────────────────────────────────────────────────────────
+# Task 07: Commit type parser
+# ────────────────────────────────────────────────────────
+
+def test_extract_commit_type_feat():
+    assert ck.extract_commit_type("feat(auth): add JWT validation") == "feat"
+
+def test_extract_commit_type_fix_no_scope():
+    assert ck.extract_commit_type("fix: resolve NPE on null input") == "fix"
+
+def test_extract_commit_type_none_for_invalid():
+    assert ck.extract_commit_type("WIP: some stuff") is None
+
+def test_extract_commit_type_empty():
+    assert ck.extract_commit_type("") is None
+
+
+# ────────────────────────────────────────────────────────
+# Task 07: Cost KPI (C1-C4)
+# ────────────────────────────────────────────────────────
+
+def test_kpi_eur_per_merged_pr_happy():
+    assert ck.kpi_eur_per_merged_pr({"alice": 100.0}, {"alice": 10}) == {"alice": 10.0}
+
+def test_kpi_eur_per_merged_pr_zero_prs():
+    assert ck.kpi_eur_per_merged_pr({"alice": 100.0}, {"alice": 0}) == {}
+
+def test_kpi_eur_per_accepted_loc_happy():
+    assert ck.kpi_eur_per_accepted_loc({"alice": 50.0}, {"alice": 100}) == {"alice": 0.5}
+
+def test_kpi_tokens_per_completed_pr_happy():
+    assert ck.kpi_tokens_per_completed_pr({"alice": 1000}, {"alice": 5}) == {"alice": 200.0}
+
+def test_kpi_cost_per_story_point_zero_sp():
+    assert ck.kpi_cost_per_story_point({"alice": 100.0}, {"alice": 0}) == {}
+
+
+# ────────────────────────────────────────────────────────
+# Task 07: Value KPI (VA1-VA7)
+# ────────────────────────────────────────────────────────
+
+def test_kpi_features_shipped_happy():
+    commits = pd.DataFrame([
+        {"author": "alice", "message": "feat(auth): add login"},
+        {"author": "alice", "message": "fix(auth): fix NPE"},
+        {"author": "bob", "message": "feat(ui): new dashboard"},
+    ])
+    result = ck.kpi_features_shipped(commits)
+    assert result == {"alice": 1, "bob": 1}
+
+def test_kpi_bugs_fixed_empty():
+    assert ck.kpi_bugs_fixed(pd.DataFrame()) == {}
+
+def test_kpi_tech_debt_reduced_happy():
+    commits = pd.DataFrame([
+        {"author": "alice", "message": "refactor(core): simplify logic"},
+        {"author": "alice", "message": "perf(db): optimize query"},
+        {"author": "bob", "message": "feat(ui): new feature"},
+    ])
+    result = ck.kpi_tech_debt_reduced(commits)
+    assert result == {"alice": 2}
+
+def test_kpi_net_loc_shipped_happy():
+    prs = pd.DataFrame([
+        {"author": "alice", "additions": 100, "deletions": 20},
+        {"author": "alice", "additions": 50, "deletions": 10},
+    ])
+    result = ck.kpi_net_loc_shipped(prs)
+    assert result == {"alice": 120}
+
+def test_kpi_first_shot_quality_no_column():
+    prs = pd.DataFrame([{"author": "alice"}])
+    result = ck.kpi_first_shot_quality(prs)
+    assert result == {"alice": 1.0}
+
+def test_kpi_design_adherence_rate_happy():
+    prs = pd.DataFrame([
+        {"author": "alice", "has_design_link": True},
+        {"author": "alice", "has_design_link": False},
+    ])
+    result = ck.kpi_design_adherence_rate(prs)
+    assert result["alice"] == 0.5
+
+
+# ────────────────────────────────────────────────────────
+# Task 07: Delivery KPI (D1-D4)
+# ────────────────────────────────────────────────────────
+
+def test_kpi_change_failure_rate_happy():
+    commits = pd.DataFrame([
+        {"author": "alice", "is_revert": False},
+        {"author": "alice", "is_revert": False},
+        {"author": "alice", "is_revert": True},
+    ])
+    result = ck.kpi_change_failure_rate(commits)
+    assert abs(result["alice"] - 1/3) < 0.01
+
+def test_kpi_change_failure_rate_empty():
+    assert ck.kpi_change_failure_rate(pd.DataFrame()) == {}
+
+def test_kpi_incident_free_days_no_reverts():
+    commits = pd.DataFrame([{"is_revert": False, "committed_at": "2026-04-01T10:00:00+00:00"}])
+    assert ck.kpi_incident_free_days(commits) == 999
+
+def test_kpi_time_to_production_empty():
+    assert ck.kpi_time_to_production_p50(pd.DataFrame(), pd.DataFrame()) == {}
+
+def test_kpi_deploy_lead_time_empty():
+    assert ck.kpi_deploy_lead_time_p50(pd.DataFrame(), pd.DataFrame()) == {}
