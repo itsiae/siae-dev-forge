@@ -149,6 +149,9 @@ Servizi AWS approvati e in uso nei repository SIAE.
 | 💡 Perche': Modificare architettura esistente impatta sistemi dipendenti, integrations e contratti API. |
 | 🚫 Se NO: La modifica non viene applicata. Documentare la decisione come ADR con stato Rejected. |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 1. **Solo pattern reali** — non proporre architetture non presenti nel catalogo (sezione 2).
    Ogni design deve mappare su uno o piu' dei 5 pattern documentati.
 2. **IaC obbligatoria** — ogni risorsa AWS va gestita con Terragrunt (pattern 2.4).

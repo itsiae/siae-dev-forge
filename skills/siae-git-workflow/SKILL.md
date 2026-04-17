@@ -153,8 +153,8 @@ Il messaggio deve essere in inglese, imperativo, lowercase.
 | Tag              | Ambiente         | Rischio    | Trigger                        |
 |------------------|------------------|------------|--------------------------------|
 | `sviluppo`       | Sviluppo (dev)   | 🚨 CRITICO | Push tag → CD deploy sviluppo  |
-| `COLLAUDO`       | Collaudo (UAT)   | 🔴 ALTO    | Push tag → CD deploy collaudo  |
-| `CERTIFICAZIONE` | Certificazione   | 🔴 ALTO    | Push tag → CD deploy cert      |
+| `COLLAUDO`       | Collaudo (UAT)   | 🚨 CRITICO | Push tag → CD deploy collaudo  |
+| `CERTIFICAZIONE` | Certificazione   | 🚨 CRITICO | Push tag → CD deploy cert      |
 | `PRODUZIONE`     | Produzione       | 🚨 CRITICO | Push tag → CD deploy prod      |
 
 > ⚠️ Qualsiasi tag triggerizza una pipeline CD automatica. Il tag `sviluppo` causa un
@@ -519,7 +519,7 @@ Ho preparato il push. Prima di procedere:
 
 - **Utente: "sì, procedi"** → esegue `git push origin feature/SDLC-42-login`
 - **Utente: "no"** → STOP. Branch resta locale.
-- **Utente: silenzio / altra richiesta** → NON esegue. Rimostra la card alla prossima interazione.
+- **Utente: silenzio / altra richiesta** → NON esegue. La card rimane aperta — verrà ricordata alla prossima interazione correlata, ma NON rimostrata automaticamente.
 
 ---
 

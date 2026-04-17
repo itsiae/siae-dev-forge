@@ -530,6 +530,9 @@ Se l'utente conferma, mostra la pre-flight card e poi crea il ticket con `create
 | 💡 Perche': Il ticket viene creato nel sistema JIRA del team — visibile a tutti |
 | 🚫 Se NO: Il ticket non viene creato — il lavoro resta non tracciato in JIRA |
 
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
 ---
 
 ## Il Processo nel Dettaglio
