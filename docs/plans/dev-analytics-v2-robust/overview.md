@@ -21,15 +21,15 @@
 | # | Task | File | Stato | SP-Aug | Test nuovi |
 |---|------|------|-------|:------:|:----------:|
 | 1 | Scaffold nuovi moduli + requirements + SKILL.md v2 | `task-01-scaffold-v2.md` | [DONE] | 0.5 | 2 |
-| 2 | F0 — AWS profile + Anthropic API client + CLI override | `task-02-sources-always-on.md` | [PENDING] | 1.5 | 17 |
+| 2 | F0 — AWS profile + Anthropic API client + CLI override | `task-02-sources-always-on.md` | [DONE] | 1.5 | 17 |
 | 3 | F1 — PR states (OPEN/DRAFT/CLOSED/REOPENED) + 6 KPI | `task-03-pr-states.md` | [PENDING] | 1 | 19 |
-| 4 | F1b — Branch tracking + 8 KPI + compute_branches | `task-04-branch-tracking.md` | [PENDING] | 1 | 13 |
-| 5 | F2 — Review activity + co-authored + 5 KPI + compute_reviews | `task-05-review-activity.md` | [PENDING] | 1 | 11 |
+| 4 | F1b — Branch tracking + 8 KPI + compute_branches | `task-04-branch-tracking.md` | [DONE] | 1 | 13 |
+| 5 | F2 — Review activity + co-authored + 5 KPI + compute_reviews | `task-05-review-activity.md` | [DONE] | 1 | 11 |
 | 6 | F3 — Seasonality IT + complexity KPI + stale branches | `task-06-seasonality-complexity.md` | [PENDING] | 1 | 8 |
 | 7 | F4a-c — Cost/Value/Delivery KPI (15) | `task-07-roi-kpi-extended.md` | [PENDING] | 2 | 22 |
 | 8 | F4b — AI Impact: dual-window + attribution + 5 KPI + compute_ai_impact | `task-08-ai-impact.md` | [PENDING] | 2 | 12 |
 | 9 | F4d — DevForge adoption + correlation (3 KPI) | `task-09-devforge-adoption.md` | [PENDING] | 1 | 5 |
-| 10 | F4e — ROI v2 index + validators.py Pydantic models | `task-10-roi-v2-validators.md` | [PENDING] | 1 | 15 |
+| 10 | F4e — ROI v2 index + validators.py Pydantic models | `task-10-roi-v2-validators.md` | [DONE] | 1 | 15 |
 | 11 | F5a — Excel glossary sheet + kpi-glossary-data.yaml | `task-11-excel-glossary.md` | [PENDING] | 1 | 5 |
 | 12 | F5b — Excel charts + tooltip + conditional formatting pro + 8-sheet refactor | `task-12-excel-ux-pro.md` | [PENDING] | 2 | 14 |
 | 13 | F6 — Robustness: property-based + AST audit + mutation testing + integration | `task-13-robustness-gates.md` | [PENDING] | 1 | 54 |

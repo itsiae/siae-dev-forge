@@ -42,7 +42,7 @@ query($owner: String!, $name: String!, $since: GitTimestamp!) {
         createdAt
         mergedAt
         commits(first: 1) { nodes { commit { committedDate } } }
-        reviews(first: 50) { nodes { createdAt comments { totalCount } } }
+        reviews(first: 50) { nodes { author { login } state createdAt comments { totalCount } } }
         files(first: 100) { nodes { path } }
         body
       }
@@ -275,6 +275,166 @@ def extract_deploy_tags(raw: dict, commit_records: list[dict], pr_records: list[
             "attributed_to": attributed_dev,
         })
     return tag_records
+
+
+# ────────────────────────────────────────────────────────
+# Branch tracking (task-04)
+# ────────────────────────────────────────────────────────
+
+BRANCHES_GRAPHQL = """
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    refs(refPrefix: "refs/heads/", first: 200, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
+      nodes {
+        name
+        target { ... on Commit {
+          oid
+          committedDate
+          author { user { login } }
+          history(first: 1) { totalCount }
+          associatedPullRequests(first: 3) {
+            nodes { number state isDraft }
+          }
+        }}
+      }
+    }
+  }
+}
+"""
+
+
+def fetch_branches(
+    repo: str,
+    since: str,
+    *,
+    max_retries: int = 3,
+) -> list[dict]:
+    """Fetch branch refs for repo via GraphQL.
+
+    Returns list of normalized branch dicts with keys:
+    name, author, last_commit_at, commit_count, pr_count, prs.
+
+    Raises RuntimeError on auth failure or unrecoverable errors.
+    """
+    owner, name = repo.split("/", 1)
+
+    for attempt in range(max_retries):
+        result = subprocess.run(
+            [
+                "gh", "api", "graphql",
+                "-f", f"query={BRANCHES_GRAPHQL}",
+                "-F", f"owner={owner}",
+                "-F", f"name={name}",
+            ],
+            capture_output=True, text=True, timeout=120,
+        )
+        stderr = result.stderr or ""
+        stdout = result.stdout or ""
+
+        if result.returncode == 0:
+            data = json.loads(stdout)
+            if "data" in data:
+                data = data["data"]
+            return _extract_branch_records(data, since)
+
+        if "rate limit" in stderr.lower():
+            sleep_s = 60 * (2 ** attempt)
+            log.warning("fetch_branches: rate limit hit, sleep %ds", sleep_s)
+            time.sleep(sleep_s)
+            continue
+
+        if "authent" in stderr.lower():
+            raise RuntimeError("gh not authenticated. Run `gh auth login`.")
+
+        if "could not resolve" in stderr.lower() or "not found" in stderr.lower():
+            log.warning("fetch_branches: repo %s inaccessible: %s", repo, stderr.strip())
+            return []
+
+        log.error("fetch_branches: gh graphql error (attempt %d): %s", attempt + 1, stderr)
+
+    raise RuntimeError(f"fetch_branches failed after {max_retries} attempts for {repo}")
+
+
+def _extract_branch_records(raw: dict, since: str) -> list[dict]:
+    """Normalize refs nodes into flat branch dicts."""
+    refs = (raw.get("repository") or {}).get("refs", {}).get("nodes", [])
+    since_dt = _parse_iso(f"{since}T00:00:00Z") if since else None
+    records = []
+    for ref in refs:
+        name = ref.get("name", "")
+        target = ref.get("target") or {}
+        committed_date = target.get("committedDate")
+        if not committed_date:
+            continue
+        if since_dt and _parse_iso(committed_date) < since_dt:
+            continue
+        author = ((target.get("author") or {}).get("user") or {}).get("login") or "unknown"
+        commit_count = (target.get("history") or {}).get("totalCount", 0)
+        prs_nodes = (target.get("associatedPullRequests") or {}).get("nodes", [])
+        records.append({
+            "name": name,
+            "author": author,
+            "last_commit_at": committed_date,
+            "commit_count": commit_count,
+            "pr_count": len(prs_nodes),
+            "prs": [{"number": p["number"], "state": p["state"], "isDraft": p.get("isDraft", False)}
+                    for p in prs_nodes],
+        })
+    return records
+
+
+# ────────────────────────────────────────────────────────
+# Co-Authored-By trailer extraction (task-05)
+# ────────────────────────────────────────────────────────
+
+CO_AUTHORED_RE = re.compile(
+    r"^Co-Authored-By:\s*(.+?)\s*<(.+?)>",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def extract_co_authored(commit_message: str) -> list:
+    """Returns list of co-author emails from Co-Authored-By trailers."""
+    if not commit_message:
+        return []
+    matches = CO_AUTHORED_RE.findall(commit_message)
+    return [m[1] for m in matches]  # email
+
+
+# ────────────────────────────────────────────────────────
+# Review records extraction (task-05)
+# ────────────────────────────────────────────────────────
+
+def extract_review_records(raw: dict) -> list:
+    """Estrai review records from PR GraphQL response.
+
+    Returns list of dicts: {reviewer, pr_number, state, created_at,
+    target_author, pr_latest_commit_at}.
+    """
+    prs = raw.get("repository", {}).get("pullRequests", {}).get("nodes", [])
+    records = []
+    for pr in prs:
+        pr_author = (pr.get("author") or {}).get("login") or "unknown"
+        pr_number = pr.get("number")
+
+        # Latest commit date on the PR
+        commit_nodes = (pr.get("commits") or {}).get("nodes", [])
+        pr_latest_commit_at = None
+        if commit_nodes:
+            pr_latest_commit_at = commit_nodes[0]["commit"]["committedDate"]
+
+        reviews = (pr.get("reviews") or {}).get("nodes", [])
+        for review in reviews:
+            reviewer_login = (review.get("author") or {}).get("login") or "unknown"
+            records.append({
+                "reviewer": reviewer_login,
+                "pr_number": pr_number,
+                "state": review.get("state", "COMMENTED"),
+                "created_at": review.get("createdAt", ""),
+                "target_author": pr_author,
+                "pr_latest_commit_at": pr_latest_commit_at,
+            })
+    return records
 
 
 if __name__ == "__main__":

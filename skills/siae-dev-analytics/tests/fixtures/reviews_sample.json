@@ -1,0 +1,58 @@
+[
+  {
+    "reviewer": "bob",
+    "pr_number": 101,
+    "state": "APPROVED",
+    "created_at": "2026-03-01T16:00:00+00:00",
+    "target_author": "alice",
+    "pr_latest_commit_at": "2026-03-01T14:00:00+00:00"
+  },
+  {
+    "reviewer": "carol",
+    "pr_number": 101,
+    "state": "COMMENTED",
+    "created_at": "2026-03-01T15:00:00+00:00",
+    "target_author": "alice",
+    "pr_latest_commit_at": "2026-03-01T14:00:00+00:00"
+  },
+  {
+    "reviewer": "alice",
+    "pr_number": 103,
+    "state": "CHANGES_REQUESTED",
+    "created_at": "2026-03-10T18:00:00+00:00",
+    "target_author": "bob",
+    "pr_latest_commit_at": "2026-03-10T15:00:00+00:00"
+  },
+  {
+    "reviewer": "alice",
+    "pr_number": 104,
+    "state": "APPROVED",
+    "created_at": "2026-03-15T12:00:00+00:00",
+    "target_author": "bob",
+    "pr_latest_commit_at": "2026-03-15T10:00:00+00:00"
+  },
+  {
+    "reviewer": "bob",
+    "pr_number": 105,
+    "state": "APPROVED",
+    "created_at": "2026-03-21T08:00:00+00:00",
+    "target_author": "carol",
+    "pr_latest_commit_at": "2026-03-20T16:00:00+00:00"
+  },
+  {
+    "reviewer": "alice",
+    "pr_number": 105,
+    "state": "DISMISSED",
+    "created_at": "2026-03-20T20:00:00+00:00",
+    "target_author": "carol",
+    "pr_latest_commit_at": "2026-03-20T16:00:00+00:00"
+  },
+  {
+    "reviewer": "dependabot[bot]",
+    "pr_number": 106,
+    "state": "APPROVED",
+    "created_at": "2026-03-22T10:00:00+00:00",
+    "target_author": "alice",
+    "pr_latest_commit_at": "2026-03-22T09:00:00+00:00"
+  }
+]

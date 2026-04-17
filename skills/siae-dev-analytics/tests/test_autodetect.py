@@ -91,3 +91,45 @@ def test_autodetect_returns_report_full_mode():
     assert report.github is True
     assert report.s3_devforge is True
     assert report.s3_blend is True
+
+
+# ── Task 02: check_aws_profile + check_anthropic_api ──
+
+
+def test_check_aws_profile_missing(monkeypatch):
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    ok, msg = ad.check_aws_profile()
+    assert ok is False
+    assert "AWS_PROFILE" in msg
+
+
+def test_check_aws_profile_set(monkeypatch):
+    monkeypatch.setenv("AWS_PROFILE", "test-profile")
+    ok, msg = ad.check_aws_profile()
+    assert ok is True
+    assert "test-profile" in msg
+
+
+def test_check_anthropic_api_key_missing(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    ok, msg = ad.check_anthropic_api()
+    assert ok is False
+
+
+def test_check_anthropic_api_key_set(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    ok, msg = ad.check_anthropic_api()
+    assert ok is True
+
+
+def test_autodetect_dict_includes_aws_anthropic_status(monkeypatch):
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    with patch.object(ad, "check_gh_auth", return_value=True), \
+         patch.object(ad, "check_s3_prefix", return_value=False):
+        report = ad.autodetect()
+    d = report.as_dict()
+    assert "aws_profile" in d
+    assert "anthropic_api" in d
+    assert d["anthropic_api"] is True
+    assert d["aws_profile"] is False

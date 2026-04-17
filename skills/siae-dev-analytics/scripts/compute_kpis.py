@@ -255,3 +255,31 @@ def filter_by_min_commits(commits: pd.DataFrame, threshold: int = 5) -> pd.DataF
 def anonymize_login(login: str) -> str:
     """SHA256[:8] -- deterministico."""
     return hashlib.sha256(login.encode()).hexdigest()[:8]
+
+
+# ────────────────────────────────────────────────────────
+# ROI v2 Index
+# ────────────────────────────────────────────────────────
+
+def kpi_roi_v2_index(
+    features_shipped: dict,
+    complexity_weight_by_dev: dict,
+    compliance_rate_by_dev: dict,
+    cost_by_dev: dict,
+    seasonality_adj: float,
+) -> dict:
+    """roi_v2 = (features * complexity * compliance) / (cost * seasonality_adj)."""
+    from validators import assert_finite
+    result = {}
+    if seasonality_adj <= 0:
+        seasonality_adj = 1.0
+    for dev in set(features_shipped) | set(cost_by_dev):
+        feat = features_shipped.get(dev, 0)
+        cw = complexity_weight_by_dev.get(dev, 1.0)
+        cr = compliance_rate_by_dev.get(dev, 0.0)
+        cost = cost_by_dev.get(dev, 1.0) or 1.0
+        value = feat * cw * cr
+        roi = value / (cost * seasonality_adj)
+        assert_finite(roi, f"roi_v2[{dev}]")
+        result[dev] = roi
+    return result

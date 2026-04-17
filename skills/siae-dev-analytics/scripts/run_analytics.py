@@ -138,9 +138,28 @@ def cmd_autodetect(config_path: Path) -> dict:
     return report.as_dict()
 
 
+def _parse_cost_per_dev(raw: list[str]) -> dict[str, float]:
+    """Parse --cost-per-dev alice=50.0 bob=35.0 into dict."""
+    result: dict[str, float] = {}
+    for item in raw:
+        if "=" not in item:
+            raise RuntimeError(
+                f"Invalid --cost-per-dev format '{item}'. Expected dev=eur, e.g. alice=50.0"
+            )
+        dev, val = item.split("=", 1)
+        try:
+            result[dev.strip()] = float(val.strip())
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid --cost-per-dev value '{val}' for dev '{dev}'. Must be a number."
+            )
+    return result
+
+
 def cmd_run(config_path: Path, output_override: Path | None = None,
             format_override: str | None = None, anonymize_override: bool | None = None,
-            generated_at_override: str | None = None) -> Path:
+            generated_at_override: str | None = None,
+            cost_per_dev: dict[str, float] | None = None) -> Path:
     cfg = load_config(config_path)
 
     # Autodetect
@@ -217,6 +236,12 @@ def cmd_run(config_path: Path, output_override: Path | None = None,
         costs = ct.fetch_blend_usage(since, until)
         cost_scores = ct.normalize_cost_score(costs)
 
+    # CLI --cost-per-dev override (highest priority)
+    if cost_per_dev:
+        cost_scores.update(cost_per_dev)
+        log.info("CLI --cost-per-dev override applied for %d devs: %s",
+                 len(cost_per_dev), list(cost_per_dev.keys()))
+
     # Compute KPIs
     window_tuple = (since, until)
     if prs_df.empty and commits_df.empty:
@@ -270,6 +295,8 @@ def main():
     p_run.add_argument("--output")
     p_run.add_argument("--format", choices=["xlsx", "csv", "both"])
     p_run.add_argument("--anonymize", action="store_true")
+    p_run.add_argument("--cost-per-dev", action="append", default=[],
+                        help="Override cost: --cost-per-dev alice=50.0 --cost-per-dev bob=35.0")
 
     args = parser.parse_args()
 
@@ -277,11 +304,13 @@ def main():
         result = cmd_autodetect(Path(args.config))
         print(json.dumps(result, indent=2))
     elif args.cmd == "run":
+        cost_overrides = _parse_cost_per_dev(args.cost_per_dev) if args.cost_per_dev else None
         out = cmd_run(
             Path(args.config),
             output_override=Path(args.output) if args.output else None,
             format_override=args.format,
             anonymize_override=args.anonymize if args.anonymize else None,
+            cost_per_dev=cost_overrides,
         )
         print(f"Report saved to: {out}")
 

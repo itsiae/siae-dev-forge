@@ -1,0 +1,82 @@
+[
+  {
+    "name": "feat/auth-v2",
+    "author": "alice",
+    "last_commit_at": "2026-04-14T10:00:00+00:00",
+    "age_days": 3,
+    "commit_count": 5,
+    "loc_delta": 120,
+    "pr_count": 1,
+    "merged": false
+  },
+  {
+    "name": "fix/login-bug",
+    "author": "alice",
+    "last_commit_at": "2026-04-10T08:00:00+00:00",
+    "age_days": 7,
+    "commit_count": 2,
+    "loc_delta": 30,
+    "pr_count": 1,
+    "merged": false
+  },
+  {
+    "name": "hotfix/critical-crash",
+    "author": "bob",
+    "last_commit_at": "2026-04-13T15:00:00+00:00",
+    "age_days": 2,
+    "commit_count": 1,
+    "loc_delta": 10,
+    "pr_count": 0,
+    "merged": false
+  },
+  {
+    "name": "refactor/db-layer",
+    "author": "bob",
+    "last_commit_at": "2026-03-01T12:00:00+00:00",
+    "age_days": 45,
+    "commit_count": 12,
+    "loc_delta": 500,
+    "pr_count": 0,
+    "merged": false
+  },
+  {
+    "name": "experiment-spike",
+    "author": "carol",
+    "last_commit_at": "2026-04-12T09:00:00+00:00",
+    "age_days": 5,
+    "commit_count": 3,
+    "loc_delta": 80,
+    "pr_count": 0,
+    "merged": false
+  },
+  {
+    "name": "chore/update-deps",
+    "author": "carol",
+    "last_commit_at": "2026-02-15T10:00:00+00:00",
+    "age_days": 60,
+    "commit_count": 1,
+    "loc_delta": 5,
+    "pr_count": 1,
+    "merged": true
+  },
+  {
+    "name": "docs/readme-update",
+    "author": "alice",
+    "last_commit_at": "2026-04-14T12:00:00+00:00",
+    "age_days": 1,
+    "commit_count": 1,
+    "loc_delta": 15,
+    "pr_count": 1,
+    "merged": false
+  },
+  {
+    "name": "feat/\u00fcnicode-br\u00e4nch-\u00f1ame",
+    "author": "bob",
+    "last_commit_at": "2026-04-11T14:00:00+00:00",
+    "age_days": 4,
+    "commit_count": 4,
+    "loc_delta": 200,
+    "pr_count": 1,
+    "merged": false
+  }
+]
