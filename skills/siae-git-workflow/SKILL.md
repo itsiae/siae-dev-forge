@@ -363,6 +363,7 @@ git push origin hotfix/{JIRA-ID}-descrizione
 # → Apri PR verso produzione (merge commit, review obbligatoria)
 
 # 3. Merge e deploy
+# → card 🔴 ALTO (merge) + ATTENDI, poi card 🚨 CRITICO (tag push) + ATTENDI
 git checkout produzione && git merge --no-ff hotfix/{JIRA-ID}-descrizione
 git tag PRODUZIONE && git push origin PRODUZIONE
 

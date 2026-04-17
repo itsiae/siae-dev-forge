@@ -102,7 +102,9 @@ risponde esplicitamente (es. "sì, procedi" / "no, annulla"). Silenzio ≠ conse
 
 ### Risposta ambigua dell'utente alla card
 Se l'utente non risponde con "sì, procedi" o "no, annulla" ma usa frasi ambigue
-("forse", "aspetta", "va bene", cambio argomento): NON eseguire.
+("forse", "aspetta", "va bene", "ok" da solo, cambio argomento, silenzio): NON eseguire.
+**Risposte valide:** "sì", "vai", "procedi", "confermo", "esegui"
+**Risposte NON valide (= silenzio):** "forse", "aspetta", "ci penso", "boh", "magari", "ok" da solo, cambio argomento
 Chiedere: *"Confermo l'operazione? Rispondi 'sì, procedi' oppure 'no, annulla'."*
 
 ### Tool call negato dopo conferma
