@@ -12,7 +12,7 @@
 
 **Design doc:** [`../2026-04-15-dev-analytics-v2-robust-design.md`](../2026-04-15-dev-analytics-v2-robust-design.md)
 
-**Test target:** 75 → 272 test (+197), mutation score ≥85% su core, logging coverage 100%, property-based su math.
+**Test target:** 75 → 262 test (+187), mutation score ≥85% su core, logging coverage 100%, property-based su math.
 
 ---
 

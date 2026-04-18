@@ -7,7 +7,7 @@ SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 MODULES_TO_AUDIT = [
     "autodetect_sources", "collect_github", "collect_s3_telemetry",
     "collect_anthropic_api", "compute_kpis", "compute_ai_impact",
-    "compute_branches", "compute_reviews", "run_analytics",
+    "compute_branches", "compute_reviews", "export_glossary", "run_analytics",
 ]
 
 

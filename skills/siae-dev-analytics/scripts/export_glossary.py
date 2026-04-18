@@ -1,7 +1,10 @@
 """Sheet 'Glossario KPI' per Executive Excel report."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 import yaml
 from openpyxl import Workbook
@@ -16,7 +19,8 @@ def load_glossary_data(yaml_path: Path) -> list[dict]:
     try:
         data = yaml.safe_load(yaml_path.read_text())
         return data.get("kpi", []) if data else []
-    except Exception:
+    except Exception as e:
+        log.warning("Glossario YAML parsing fallito (%s): %s. Sheet sara vuoto.", yaml_path, e)
         return []
 
 

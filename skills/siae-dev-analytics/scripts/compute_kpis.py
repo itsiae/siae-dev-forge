@@ -509,7 +509,8 @@ def kpi_time_to_production_p50(tags: pd.DataFrame, prs: pd.DataFrame) -> dict[st
     prod_tags = tags[tags["tag_name"].str.contains("PRODUZIONE", case=False, na=False)]
     if prod_tags.empty:
         return {}
-    return {}  # Richiede join commit_oid → PR — simplified per v2
+    log.warning("kpi_time_to_production_p50: join commit→tag non implementato in v2 — dati vuoti")
+    return {}  # Richiede join commit_oid → PR — v3
 
 
 def kpi_change_failure_rate(commits: pd.DataFrame, deploy_window_days: int = 7) -> dict[str, float]:
@@ -542,7 +543,8 @@ def kpi_deploy_lead_time_p50(commits: pd.DataFrame, tags: pd.DataFrame) -> dict[
     """D4: median(commit → PROD tag) per dev. Richiede join commit ↔ tag."""
     if commits.empty or tags.empty:
         return {}
-    return {}  # Simplified per v2
+    log.warning("kpi_deploy_lead_time_p50: join commit→tag non implementato in v2 — dati vuoti")
+    return {}  # Richiede join commit ↔ tag — v3
 
 
 # ────────────────────────────────────────────────────────

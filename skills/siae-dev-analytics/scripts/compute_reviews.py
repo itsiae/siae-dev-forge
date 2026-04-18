@@ -47,7 +47,7 @@ def kpi_approvals_given_count(reviews: pd.DataFrame) -> dict:
     """R3: Count of APPROVED reviews per reviewer. DISMISSED excluded."""
     if reviews.empty:
         return {}
-    approved = reviews[(reviews["state"] == "APPROVED") & (reviews["state"] != "DISMISSED")]
+    approved = reviews[reviews["state"] == "APPROVED"]
     # Exclude bot reviewers
     approved = approved[~approved["reviewer"].str.contains(r"\[bot\]", na=False)]
     return approved.groupby("reviewer").size().to_dict()
