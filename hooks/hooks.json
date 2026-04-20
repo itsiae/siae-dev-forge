@@ -130,7 +130,7 @@
           {
             "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' capture-test-result",
-            "timeout": 5
+            "timeout": 10
           },
           {
             "type": "command",
