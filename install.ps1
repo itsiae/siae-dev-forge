@@ -509,6 +509,52 @@ function Invoke-HealthCheck { throw 'not implemented' }
 function New-InstallSnapshot { throw 'not implemented' }
 function Invoke-Rollback { param($Snapshot) throw 'not implemented' }
 
+function Test-IsArm64 {
+    <#
+    .SYNOPSIS
+        Rileva se l'OS e' ARM64 (anche se PowerShell gira in x86 emulato).
+    .DESCRIPTION
+        Reviewer hint T08: PROCESSOR_ARCHITEW6432 e' piu' affidabile di
+        PROCESSOR_ARCHITECTURE quando PS 32-bit gira su OS 64-bit.
+        Se AREW6432 settato -> indica arch reale del SO; altrimenti fallback
+        su PROCESSOR_ARCHITECTURE (valore del processo corrente).
+    .OUTPUTS
+        Boolean -- $true se OS e' ARM64, altrimenti $false.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $archReal = $env:PROCESSOR_ARCHITEW6432
+    if ($archReal) { return ($archReal -eq 'ARM64') }
+
+    return ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64')
+}
+
+function Invoke-Arm64Gate {
+    <#
+    .SYNOPSIS
+        Early exit gate per ARM64: asset sono x64-only (design non-goal).
+    .DESCRIPTION
+        Wire completo nel main flow in T11. Ritorna $true se il gate e' stato
+        triggered (ARM64 rilevato, messaggi stampati) e il caller deve terminare
+        lo script con exit code non-fatal (info, non errore).
+    .OUTPUTS
+        Boolean -- $true se gate triggered (ARM64), $false se OS x64 e si procede.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if (Test-IsArm64) {
+        Write-Host "[DevForge] Architettura ARM64 rilevata." -ForegroundColor Yellow
+        Write-Host "[DevForge] Install ARM64 nativo NON supportato in questa release." -ForegroundColor Yellow
+        Write-Host "[DevForge] Eseguire in emulazione x64:" -ForegroundColor Yellow
+        Write-Host "  Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy Bypass'" -ForegroundColor Cyan
+        Write-Host "[DevForge] Open issue: https://github.com/itsiae/siae-dev-forge/issues/new?title=ARM64%20native%20support" -ForegroundColor Cyan
+        return $true
+    }
+    return $false
+}
+
 # Main flow — riempito in task successivi (T02-T11)
 if ($MyInvocation.InvocationName -ne '.') {
     $script:DevForgeDryRun = $DryRun.IsPresent
