@@ -10,6 +10,9 @@ on:
       - 'tests/windows-runtime/**'
       - '.github/workflows/test-windows-enforcement.yml'
 
+permissions:
+  contents: read
+
 jobs:
   test-pester:
     strategy:

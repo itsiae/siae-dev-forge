@@ -8,7 +8,7 @@ Describe "install.ps1 — scaffold" {
         Test-Path $script:InstallerPath | Should -Be $true
     }
 
-    It "parsing senza errori sintattici (no -Force, no side-effect)" {
+    It "file si parsa senza errori sintattici" {
         $errors = $null
         [System.Management.Automation.Language.Parser]::ParseFile(
             $script:InstallerPath, [ref]$null, [ref]$errors
