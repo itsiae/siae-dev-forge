@@ -34,6 +34,9 @@ jobs:
           $config = New-PesterConfiguration
           $config.Run.Path = 'tests/install-ps1'
           $config.Run.Exit = $true
+          # Exclude 'Release' tag: ReleaseAssetsHashes regression guard runs only
+          # on release-built install.ps1 (SHA256 substituted by build-windows-assets CI job)
+          $config.Filter.ExcludeTag = 'Release'
           $config.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $config
 
