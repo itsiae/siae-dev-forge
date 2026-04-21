@@ -24,6 +24,19 @@ $script:DevForgeLogFile = Join-Path $env:LOCALAPPDATA 'DevForge\install.log'
 $script:DevForgeDryRun = $false
 
 function Write-InstallLog {
+    <#
+    .SYNOPSIS
+        Logga un messaggio su file persistente + console con color-coding.
+    .DESCRIPTION
+        Scrive una riga timestamped ISO-8601Z in $script:DevForgeLogFile + Write-Host
+        colorato (Red=Error, Yellow=Warning, White=Info). Crea la directory log se
+        mancante. Single-process use — nessun lock su file (documentato, non usare
+        da installer concorrenti).
+    .PARAMETER Message
+        Testo del log.
+    .PARAMETER Level
+        Severity level: Info (default) / Warning / Error.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, Position=0)]
@@ -50,22 +63,30 @@ function Write-InstallLog {
 function Invoke-DevForgeCommand {
     <#
     .SYNOPSIS
-        Wrapper per Invoke-Expression che rispetta DryRun mode.
-    .PARAMETER Command
-        Comando shell da eseguire.
+        Wrapper che rispetta DryRun mode — esegue executable con argomenti splattati.
+    .DESCRIPTION
+        Sostituisce Invoke-Expression per evitare command injection. Accetta solo
+        executable path + array argomenti, mai stringhe shell-concatenate.
+    .PARAMETER Executable
+        Path o nome executable (es. 'winget', 'choco', 'C:\full\path\to.exe').
+    .PARAMETER Arguments
+        Array di argomenti passati splattati a & operator.
     .OUTPUTS
-        Output del comando, oppure $null in DryRun.
+        String — output combinato stdout/stderr del comando, oppure $null in DryRun.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]$Command
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$Executable,
+        [Parameter(Position=1)]
+        [string[]]$Arguments = @()
     )
     if ($script:DevForgeDryRun) {
-        Write-InstallLog "[DRY-RUN] would execute: $Command" -Level Info
+        $argStr = ($Arguments -join ' ')
+        Write-InstallLog "[DRY-RUN] would execute: $Executable $argStr" -Level Info
         return $null
     }
-    return (Invoke-Expression $Command)
+    & $Executable @Arguments 2>&1
 }
 
 function Find-Bash { throw 'not implemented' }

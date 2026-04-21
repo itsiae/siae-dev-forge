@@ -1,5 +1,11 @@
 #Requires -Version 5.1
-BeforeAll { . (Join-Path $PSScriptRoot "..\..\install.ps1") }
+BeforeAll {
+    . (Join-Path $PSScriptRoot "..\..\install.ps1")
+    $script:originalDevForgeLogFile = $script:DevForgeLogFile
+}
+AfterAll {
+    $script:DevForgeLogFile = $script:originalDevForgeLogFile
+}
 
 Describe "Write-InstallLog" {
     BeforeEach {
@@ -41,19 +47,21 @@ Describe "Write-InstallLog" {
 }
 
 Describe "DryRun mode" {
-    It "quando `$script:DevForgeDryRun è true, Invoke-Expression NON viene eseguito" {
+    It "quando `$script:DevForgeDryRun è true, executable NON viene invocato e logga DRY-RUN" {
         $script:DevForgeDryRun = $true
-        Mock Invoke-Expression { throw "should not run in dry-run" }
+        $script:testLogFile = Join-Path $env:TEMP "devforge-test-dryrun-$(Get-Random).log"
+        $script:DevForgeLogFile = $script:testLogFile
         try {
-            { Invoke-DevForgeCommand -Command 'fake-cmd' } | Should -Not -Throw
+            { Invoke-DevForgeCommand -Executable 'fake-cmd' -Arguments @('arg1','arg2') } | Should -Not -Throw
+            Get-Content $script:testLogFile -Raw | Should -Match '\[DRY-RUN\] would execute: fake-cmd arg1 arg2'
         } finally {
             $script:DevForgeDryRun = $false
+            Remove-Item -Path $script:testLogFile -ErrorAction SilentlyContinue
         }
     }
-    It "quando DryRun false, esegue normalmente" {
+    It "quando DryRun false, executable viene invocato via & splat" -Skip:($env:OS -ne 'Windows_NT') {
         $script:DevForgeDryRun = $false
-        Mock Invoke-Expression { 'ok' } -Verifiable
-        Invoke-DevForgeCommand -Command 'fake-cmd' | Out-Null
-        Should -Invoke Invoke-Expression
+        $result = Invoke-DevForgeCommand -Executable 'cmd' -Arguments @('/c', 'echo', 'test')
+        ($result -join '').Trim() | Should -Match 'test'
     }
 }
