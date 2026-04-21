@@ -506,8 +506,112 @@ function Install-JqFromAsset {
 }
 function Install-ClaudePlugin { throw 'not implemented' }
 function Invoke-HealthCheck { throw 'not implemented' }
-function New-InstallSnapshot { throw 'not implemented' }
-function Invoke-Rollback { param($Snapshot) throw 'not implemented' }
+function New-InstallSnapshot {
+    <#
+    .SYNOPSIS
+        Crea uno snapshot in-memory degli elementi introdotti dall'installer.
+    .DESCRIPTION
+        Tracking transazionale per rollback su health-check failure. Espone
+        AddFile/AddDir/AddRegistry/AddTask come ScriptMethod (PS 5.1 compatible).
+        Snapshot NON persiste su disco (memoria per install lifecycle).
+    .OUTPUTS
+        PSCustomObject con Timestamp + 4 collezioni + 4 ScriptMethod add.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $snap = [pscustomobject]@{
+        Timestamp       = (Get-Date).ToUniversalTime().ToString('o')
+        TrackedFiles    = [System.Collections.Generic.List[string]]::new()
+        TrackedDirs     = [System.Collections.Generic.List[string]]::new()
+        TrackedRegistry = [System.Collections.Generic.List[pscustomobject]]::new()
+        TrackedTasks    = [System.Collections.Generic.List[string]]::new()
+    }
+    $snap | Add-Member -MemberType ScriptMethod -Name AddFile -Value {
+        param($Path) $this.TrackedFiles.Add($Path) | Out-Null
+    }
+    $snap | Add-Member -MemberType ScriptMethod -Name AddDir -Value {
+        param($Path) $this.TrackedDirs.Add($Path) | Out-Null
+    }
+    $snap | Add-Member -MemberType ScriptMethod -Name AddRegistry -Value {
+        param($Key, $Name)
+        $this.TrackedRegistry.Add([pscustomobject]@{ Key = $Key; Name = $Name }) | Out-Null
+    }
+    $snap | Add-Member -MemberType ScriptMethod -Name AddTask -Value {
+        param($TaskName) $this.TrackedTasks.Add($TaskName) | Out-Null
+    }
+    return $snap
+}
+
+function Invoke-Rollback {
+    <#
+    .SYNOPSIS
+        Rollback transazionale degli elementi tracciati in uno snapshot.
+    .DESCRIPTION
+        Ordine rollback: tasks -> registry -> files (reverse) -> dirs (reverse,
+        solo se vuote). Ogni step logga via Write-InstallLog, non throw:
+        errori per singolo item sono best-effort, non bloccano rollback complessivo.
+    .PARAMETER Snapshot
+        PSCustomObject prodotto da New-InstallSnapshot.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [pscustomobject]$Snapshot
+    )
+    Write-InstallLog "Rollback avviato su snapshot $($Snapshot.Timestamp)" -Level Warning
+
+    foreach ($task in $Snapshot.TrackedTasks) {
+        try {
+            if (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue) {
+                Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction Stop
+                Write-InstallLog "Rollback: unregister task $task" -Level Info
+            }
+        } catch {
+            Write-InstallLog "Rollback task $task fallito: $_" -Level Error
+        }
+    }
+
+    foreach ($reg in $Snapshot.TrackedRegistry) {
+        try {
+            Remove-ItemProperty -Path $reg.Key -Name $reg.Name -ErrorAction Stop
+            Write-InstallLog "Rollback: remove registry $($reg.Key):$($reg.Name)" -Level Info
+        } catch {
+            Write-InstallLog "Rollback registry $($reg.Key) fallito: $_" -Level Error
+        }
+    }
+
+    $files = @($Snapshot.TrackedFiles) ; [array]::Reverse($files)
+    foreach ($f in $files) {
+        try {
+            if (Test-Path -LiteralPath $f) {
+                Remove-Item -LiteralPath $f -Force -ErrorAction Stop
+                Write-InstallLog "Rollback: remove file $f" -Level Info
+            }
+        } catch {
+            Write-InstallLog "Rollback file $f fallito: $_" -Level Error
+        }
+    }
+
+    $dirs = @($Snapshot.TrackedDirs) ; [array]::Reverse($dirs)
+    foreach ($d in $dirs) {
+        try {
+            if (Test-Path -LiteralPath $d) {
+                $children = Get-ChildItem -LiteralPath $d -Force -ErrorAction SilentlyContinue
+                if (-not $children) {
+                    Remove-Item -LiteralPath $d -Force -ErrorAction Stop
+                    Write-InstallLog "Rollback: remove empty dir $d" -Level Info
+                } else {
+                    Write-InstallLog "Rollback: dir $d non vuota, skip" -Level Warning
+                }
+            }
+        } catch {
+            Write-InstallLog "Rollback dir $d fallito: $_" -Level Error
+        }
+    }
+
+    Write-InstallLog "Rollback completato." -Level Info
+}
 
 function Test-IsArm64 {
     <#
