@@ -21,12 +21,12 @@ setlocal enabledelayedexpansion
 set "FAILED=0"
 set "HOOK_FILE=%~dp0..\..\hooks\run-hook.cmd"
 
-REM Test 1: senza bash in PATH → exit /b 1 + emit repair event
-REM (simuliamo "no bash" usando PATH vuoto)
-set "SAVED_PATH=%PATH%"
-set "PATH=C:\Windows\System32"
+REM Test 1: short-circuit via DEVFORGE_TEST_HIDE_BASH → exit /b 1 + emit repair
+REM (necessario perché runner CI Windows ha Git preinstallato — non possiamo
+REM "rimuovere" bash modificando PATH, i path fissi nel .cmd matcherebbero)
 set "APPDATA_TEST=%TEMP%\devforge-test-appdata-%RANDOM%"
 set "APPDATA=%APPDATA_TEST%"
+set "DEVFORGE_TEST_HIDE_BASH=1"
 
 call "%HOOK_FILE%" session-start
 if !ERRORLEVEL! NEQ 1 (
@@ -141,6 +141,12 @@ if "%~1"=="" (
 
 set "HOOK_DIR=%~dp0"
 
+REM BLOCK-2 fix (plan-reviewer): test short-circuit.
+REM Permette alla CI matrix di testare il fail-loud path anche su runner
+REM Windows con Git preinstallato (windows-latest/windows-2019). Non usare
+REM mai in produzione — solo CI tests.
+if "%DEVFORGE_TEST_HIDE_BASH%"=="1" goto :no_bash_found
+
 REM Try Git for Windows bash in standard locations
 if exist "C:\Program Files\Git\bin\bash.exe" (
     "C:\Program Files\Git\bin\bash.exe" "%HOOK_DIR%%~1" %2 %3 %4 %5 %6 %7 %8 %9
@@ -170,7 +176,8 @@ if %ERRORLEVEL% equ 0 (
     exit /b %ERRORLEVEL%
 )
 
-REM No bash found.
+REM No bash found (o short-circuit test).
+:no_bash_found
 REM Panic button: DEVFORGE_SILENT_ON_NO_BASH=1 → vecchio comportamento silent
 if "%DEVFORGE_SILENT_ON_NO_BASH%"=="1" exit /b 0
 

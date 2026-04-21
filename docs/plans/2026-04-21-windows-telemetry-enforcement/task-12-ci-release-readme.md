@@ -125,11 +125,26 @@ Modifica `.github/workflows/auto-release.yml` — aggiungi job **prima** del rel
           echo "sha_python=$(sha256sum python-standalone-x64.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
           echo "sha_jq=$(sha256sum jq-win64.exe | cut -d' ' -f1)" >> $GITHUB_OUTPUT
       - name: Substitute SHA placeholders in install.ps1
+        env:
+          SHA_GIT_DIRECT:  ${{ steps.hashes.outputs.sha_git_direct }}
+          SHA_PORTABLE:    ${{ steps.hashes.outputs.sha_portable_git }}
+          SHA_PYTHON:      ${{ steps.hashes.outputs.sha_python }}
+          SHA_JQ:          ${{ steps.hashes.outputs.sha_jq }}
         run: |
-          sed -i "s/DevForgeGitDirectSha256  = '0\{64\}'/DevForgeGitDirectSha256  = '${{ steps.hashes.outputs.sha_git_direct }}'/" install.ps1
-          sed -i "s/DevForgePortableGitSha256 = '0\{64\}'/DevForgePortableGitSha256 = '${{ steps.hashes.outputs.sha_portable_git }}'/" install.ps1
-          sed -i "s/DevForgePythonSha256 = '0\{64\}'/DevForgePythonSha256 = '${{ steps.hashes.outputs.sha_python }}'/" install.ps1
-          sed -i "s/DevForgeJqSha256 = '0\{64\}'/DevForgeJqSha256 = '${{ steps.hashes.outputs.sha_jq }}'/" install.ps1
+          # BLOCK-1 fix (plan-reviewer): usare double-quote wrapper + env vars,
+          # no single-quote nesting. I placeholder in install.ps1 hanno formato:
+          #   $script:DevForgeGitDirectSha256  = '0000...0000'
+          # Sostituiamo il contenuto DENTRO i single-quote usando pattern ancorato.
+          sed -i "s|DevForgeGitDirectSha256  = '0\{64\}'|DevForgeGitDirectSha256  = '${SHA_GIT_DIRECT}'|"   install.ps1
+          sed -i "s|DevForgePortableGitSha256 = '0\{64\}'|DevForgePortableGitSha256 = '${SHA_PORTABLE}'|"    install.ps1
+          sed -i "s|DevForgePythonSha256 = '0\{64\}'|DevForgePythonSha256 = '${SHA_PYTHON}'|"               install.ps1
+          sed -i "s|DevForgeJqSha256 = '0\{64\}'|DevForgeJqSha256 = '${SHA_JQ}'|"                           install.ps1
+          # Verify zero placeholder rimasti
+          if grep -q "Sha256.*= '0\{64\}'" install.ps1; then
+              echo "::error::Placeholder SHA256 non sostituiti in install.ps1"
+              grep "Sha256.*= '0" install.ps1
+              exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: windows-assets

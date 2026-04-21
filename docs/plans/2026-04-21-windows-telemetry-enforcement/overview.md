@@ -42,7 +42,7 @@
 | 13 | `hooks/emit-repair-event.ps1` + Pester tests schema v2 | `task-13-emit-repair-event.md` | [PENDING] |
 | 14 | Schema validator harness (bash fixture + Pester byte-diff vs logger.sh) | `task-14-schema-validator.md` | [PENDING] |
 | 15 | `hooks/run-hook.cmd` fail-loud + DEVFORGE_SILENT_ON_NO_BASH escape hatch | `task-15-run-hook-cmd-fail-loud.md` | [PENDING] |
-| 16 | `hooks/session-start` repair banner + DEVFORGE_HIDE_REPAIR_BANNER guard | `task-16-session-start-banner.md` | [PENDING] |
+| 16 | `hooks/lib/repair-banner.sh` isolato + source in `session-start` | `task-16-session-start-banner.md` | [PENDING] |
 
 ---
 
