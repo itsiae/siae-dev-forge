@@ -1,6 +1,6 @@
 # Task 04 — Install-GitViaWinget + Install-GitViaChoco
 
-**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T02 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T02 | **Stato:** [DONE]
 
 ## File coinvolti
 

@@ -1,6 +1,6 @@
 # Task 12 — CI release packaging + README Windows + panic button docs
 
-**PR:** PR-1 | **SP:** 0.5 SP-Augmented | **Dipendenze:** T06, T07 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.5 SP-Augmented | **Dipendenze:** T06, T07 | **Stato:** [DONE]
 
 ## File coinvolti
 

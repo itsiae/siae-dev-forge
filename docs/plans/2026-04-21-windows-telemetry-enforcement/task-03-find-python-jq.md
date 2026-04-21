@@ -1,6 +1,6 @@
 # Task 03 — Find-Python3 + Find-Jq detection
 
-**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01 | **Stato:** [DONE]
 
 ## File coinvolti
 

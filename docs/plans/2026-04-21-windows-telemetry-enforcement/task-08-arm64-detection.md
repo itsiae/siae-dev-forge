@@ -1,6 +1,6 @@
 # Task 08 — ARM64 detection + messaggio rinvio x64
 
-**PR:** PR-1 | **SP:** 0.1 SP-Augmented | **Dipendenze:** T01 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.1 SP-Augmented | **Dipendenze:** T01 | **Stato:** [DONE]
 
 ## File coinvolti
 

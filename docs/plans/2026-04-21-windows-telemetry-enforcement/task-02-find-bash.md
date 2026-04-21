@@ -1,6 +1,6 @@
 # Task 02 — Find-Bash detection chain 8-path
 
-**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01 | **Stato:** [DONE]
 
 ## File coinvolti
 

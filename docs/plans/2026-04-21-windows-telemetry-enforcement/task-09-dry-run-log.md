@@ -1,6 +1,6 @@
 # Task 09 — Dry-Run mode + Write-InstallLog
 
-**PR:** PR-1 | **SP:** 0.2 SP-Augmented | **Dipendenze:** T01 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.2 SP-Augmented | **Dipendenze:** T01 | **Stato:** [DONE]
 
 ## File coinvolti
 

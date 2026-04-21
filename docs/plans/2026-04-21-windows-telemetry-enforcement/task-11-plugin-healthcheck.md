@@ -1,6 +1,6 @@
 # Task 11 — Install-ClaudePlugin + Invoke-HealthCheck + Main flow
 
-**PR:** PR-1 | **SP:** 0.4 SP-Augmented | **Dipendenze:** T02-T10 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.4 SP-Augmented | **Dipendenze:** T02-T10 | **Stato:** [DONE]
 
 ## File coinvolti
 

@@ -1,6 +1,6 @@
 # Task 05 — Install-GitViaScoop + Install-GitViaDirectDownload (SHA256 pin)
 
-**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T02 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T02 | **Stato:** [DONE]
 
 ## File coinvolti
 

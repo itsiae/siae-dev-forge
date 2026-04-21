@@ -1,6 +1,6 @@
 # Task 01 — Scaffold install.ps1 + Pester harness + CI workflow Windows matrix
 
-**PR:** PR-1 | **SP:** 0.5 SP-Augmented | **Dipendenze:** nessuna | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.5 SP-Augmented | **Dipendenze:** nessuna | **Stato:** [DONE]
 
 ## File coinvolti
 

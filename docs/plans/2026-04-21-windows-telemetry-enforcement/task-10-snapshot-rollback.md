@@ -1,6 +1,6 @@
 # Task 10 — Snapshot + Rollback transazionale
 
-**PR:** PR-1 | **SP:** 0.4 SP-Augmented | **Dipendenze:** T09 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.4 SP-Augmented | **Dipendenze:** T09 | **Stato:** [DONE]
 
 ## File coinvolti
 

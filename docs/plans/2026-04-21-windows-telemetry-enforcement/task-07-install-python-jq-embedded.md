@@ -1,6 +1,6 @@
 # Task 07 — Install-PythonViaStandaloneEmbedded + Install-JqFromAsset
 
-**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T03, T06 | **Stato:** [PENDING]
+**PR:** PR-1 | **SP:** 0.3 SP-Augmented | **Dipendenze:** T01, T03, T06 | **Stato:** [DONE]
 
 ## File coinvolti
 
