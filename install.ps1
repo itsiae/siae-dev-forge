@@ -289,6 +289,10 @@ function Install-GitViaDirectDownload {
     #>
     [CmdletBinding()]
     param()
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would download Git-$($script:DevForgeGitDirectVersion) from $($script:DevForgeGitDirectUrl) + verify SHA256 + Inno silent install" -Level Info
+        return 'C:\Program Files\Git\bin\bash.exe'
+    }
     Write-InstallLog "Tentativo direct download Git-for-Windows v$($script:DevForgeGitDirectVersion)..." -Level Info
 
     $tmpDir = Join-Path $env:TEMP "devforge-git-install-$(Get-Random)"
@@ -352,6 +356,10 @@ function Install-GitViaPortableEmbedded {
     if ($NoPortableFallback) {
         Write-InstallLog "Fallback PortableGit disabilitato (-NoPortableFallback)" -Level Info
         return $null
+    }
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would download PortableGit SFX from $($script:DevForgePortableGitUrl) + SHA256 verify + extract to LOCALAPPDATA\DevForge\PortableGit" -Level Info
+        return (Join-Path $env:LOCALAPPDATA 'DevForge\PortableGit\bin\bash.exe')
     }
 
     Write-InstallLog "Tentativo install Git via PortableGit asset embedded..." -Level Info
@@ -420,6 +428,10 @@ function Install-PythonViaStandaloneEmbedded {
     #>
     [CmdletBinding()]
     param()
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would download Python-Standalone from $($script:DevForgePythonUrl) + SHA256 verify + tar extract to LOCALAPPDATA\DevForge\python" -Level Info
+        return (Join-Path $env:LOCALAPPDATA 'DevForge\python\python.exe')
+    }
     Write-InstallLog "Install Python-Standalone embedded..." -Level Info
 
     $tmpDir = Join-Path $env:TEMP "devforge-python-$(Get-Random)"
@@ -475,6 +487,10 @@ function Install-JqFromAsset {
     #>
     [CmdletBinding()]
     param()
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would download jq from $($script:DevForgeJqUrl) + SHA256 verify + copy to LOCALAPPDATA\DevForge\bin + PortableGit\usr\bin if present" -Level Info
+        return (Join-Path $env:LOCALAPPDATA 'DevForge\bin\jq.exe')
+    }
     Write-InstallLog "Install jq da release asset..." -Level Info
 
     $destDir = Join-Path $env:LOCALAPPDATA 'DevForge\bin'
@@ -552,6 +568,10 @@ function Invoke-HealthCheck {
         [Parameter(Mandatory=$true)][string]$BashPath,
         [Parameter(Mandatory=$true)][string]$PythonPath
     )
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would execute session-start hook via $BashPath + poll activity.jsonl 5s for event emission" -Level Info
+        return $true
+    }
     Write-InstallLog "Health-check: dry-run session-start hook..." -Level Info
 
     $activityLog = Join-Path $env:USERPROFILE '.claude\devforge-activity.jsonl'
