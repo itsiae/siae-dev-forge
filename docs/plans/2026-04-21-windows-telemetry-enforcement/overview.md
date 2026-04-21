@@ -31,8 +31,8 @@
 | 07 | Install-PythonViaStandaloneEmbedded + Install-JqFromAsset | `task-07-install-python-jq-embedded.md` | [DONE] (a589b2e) |
 | 08 | ARM64 detection (PROCESSOR_ARCHITEW6432) + messaggio rinvio x64 | `task-08-arm64-detection.md` | [DONE] (a6b952a) |
 | 09 | Dry-Run mode + Write-InstallLog | `task-09-dry-run-log.md` | [DONE] (974a6e8+30115f2) |
-| 10 | Snapshot + Rollback transazionale | `task-10-snapshot-rollback.md` | [PENDING] |
-| 11 | Install-ClaudePlugin + Invoke-HealthCheck (dry-run session-start + verify jsonl) | `task-11-plugin-healthcheck.md` | [PENDING] |
+| 10 | Snapshot + Rollback transazionale | `task-10-snapshot-rollback.md` | [DONE] (7c14a79) |
+| 11 | Install-ClaudePlugin + Invoke-HealthCheck (dry-run session-start + verify jsonl) | `task-11-plugin-healthcheck.md` | [DONE] (08fda7b) |
 | 12 | CI release packaging workflow + README Windows + panic button docs | `task-12-ci-release-readme.md` | [DONE] (2271b07) |
 
 ### PR-2 — runtime (1 SP-U / 0.5 SP-A)
