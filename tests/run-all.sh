@@ -1186,6 +1186,15 @@ else
 fi
 rm -f "$F2_LOG" "${HOME}/.claude/.devforge-last-commit-hash" "${HOME}/.claude/.devforge-session-commits"
 
+# Test post-commit-review commit_sha enrichment (K8 adoption health AC-8)
+if bash "${PLUGIN_ROOT}/tests/hooks/post-commit-review-sha.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  post-commit-review: emette commit_sha nel commit_created event"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  post-commit-review: commit_sha assente in commit_created"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""

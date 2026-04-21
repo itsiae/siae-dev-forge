@@ -66,7 +66,7 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     fi
 
     devforge_log "commit_created" "success" \
-        "{\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}${TOKEN_META}}"
+        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}${TOKEN_META}}"
 
     # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
