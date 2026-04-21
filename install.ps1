@@ -244,8 +244,89 @@ function Install-GitViaChoco {
     if ($bash) { Write-InstallLog "Git installato via choco: $bash" -Level Info }
     return $bash
 }
-function Install-GitViaScoop { throw 'not implemented' }
-function Install-GitViaDirectDownload { throw 'not implemented' }
+$script:DevForgeGitDirectVersion = '2.46.0'
+$script:DevForgeGitDirectUrl     = "https://github.com/git-for-windows/git/releases/download/v$($script:DevForgeGitDirectVersion).windows.1/Git-$($script:DevForgeGitDirectVersion)-64-bit.exe"
+# Pinned by T12 CI release packaging — placeholder until release asset is cut
+$script:DevForgeGitDirectSha256  = '0000000000000000000000000000000000000000000000000000000000000000'
+
+function Install-GitViaScoop {
+    <#
+    .SYNOPSIS
+        Install Git-for-Windows via scoop package manager.
+    .DESCRIPTION
+        Invoca scoop install git via Invoke-DevForgeCommand splat. Refresh PATH
+        post-install per rendere bash.exe visibile nella session corrente.
+    .OUTPUTS
+        String -- path a bash.exe via Find-Bash, oppure $null se scoop mancante.
+    #>
+    [CmdletBinding()]
+    param()
+    $scoop = Get-Command -Name 'scoop' -ErrorAction SilentlyContinue
+    if (-not $scoop) { return $null }
+
+    Write-InstallLog "Tentativo install Git via scoop..." -Level Info
+    $global:LASTEXITCODE = 0
+    Invoke-DevForgeCommand -Executable 'scoop' -Arguments @('install','git') | Out-Null
+
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                [Environment]::GetEnvironmentVariable('PATH', 'User')
+
+    $bash = Find-Bash
+    if ($bash) { Write-InstallLog "Git installato via scoop: $bash" -Level Info }
+    return $bash
+}
+
+function Install-GitViaDirectDownload {
+    <#
+    .SYNOPSIS
+        Install Git-for-Windows via direct download con SHA256 pin.
+    .DESCRIPTION
+        Scarica installer pinnato (versione + URL + SHA256 in $script: vars),
+        verifica hash SHA256, avvia installer silent con Inno Setup flags
+        /VERYSILENT /NORESTART /COMPONENTS= minimal. Abort se hash mismatch.
+    .OUTPUTS
+        String -- path a bash.exe via Find-Bash, oppure $null su download/hash/install failure.
+    #>
+    [CmdletBinding()]
+    param()
+    Write-InstallLog "Tentativo direct download Git-for-Windows v$($script:DevForgeGitDirectVersion)..." -Level Info
+
+    $tmpDir = Join-Path $env:TEMP "devforge-git-install-$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+    $installerPath = Join-Path $tmpDir "Git-installer.exe"
+
+    try {
+        Invoke-WebRequest -Uri $script:DevForgeGitDirectUrl -OutFile $installerPath -UseBasicParsing -TimeoutSec 300
+    } catch {
+        Write-InstallLog "Download fallito: $_" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    $actualHash = (Get-FileHash -Path $installerPath -Algorithm SHA256).Hash.ToUpper()
+    $expectedHash = $script:DevForgeGitDirectSha256.ToUpper()
+    if ($actualHash -ne $expectedHash) {
+        Write-InstallLog "SHA256 mismatch: expected $expectedHash, got $actualHash -- ABORT" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+    Write-InstallLog "SHA256 verificato: $actualHash" -Level Info
+
+    $innoArgs = @('/VERYSILENT', '/NORESTART', '/COMPONENTS="gitlfs,assoc,assoc_sh"', '/NOICONS')
+    $proc = Start-Process -FilePath $installerPath -ArgumentList $innoArgs -Wait -PassThru
+    Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+
+    if ($proc.ExitCode -ne 0) {
+        Write-InstallLog "Installer exit code $($proc.ExitCode)" -Level Warning
+    }
+
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                [Environment]::GetEnvironmentVariable('PATH', 'User')
+
+    $bash = Find-Bash
+    if ($bash) { Write-InstallLog "Git installato via direct download: $bash" -Level Info }
+    return $bash
+}
 function Install-GitViaPortableEmbedded { throw 'not implemented' }
 function Install-PythonViaStandaloneEmbedded { throw 'not implemented' }
 function Install-JqFromAsset { throw 'not implemented' }
