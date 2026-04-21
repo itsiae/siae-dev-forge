@@ -12,6 +12,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      new_tag: v${{ steps.current.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -222,3 +225,63 @@ jobs:
             --body "$PR_BODY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Windows release assets ─────────────────────────────────────────────
+  # Builds PortableGit / Python-Standalone / jq mirrors, computes SHA256,
+  # substitutes placeholders in install.ps1, uploads all artifacts to the
+  # release tag created by the `release` job above. Runs only on mode=release.
+  build-windows-assets:
+    needs: release
+    if: needs.release.outputs.mode == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Windows assets
+        run: bash scripts/build-windows-assets.sh dist/windows-assets
+
+      - name: Compute hashes for install.ps1 substitution
+        id: hashes
+        run: |
+          cd dist/windows-assets
+          echo "sha_git_direct=$(sha256sum Git-*-64-bit.exe | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_portable_git=$(sha256sum PortableGit-x64.7z.exe | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_python=$(sha256sum python-standalone-x64.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_jq=$(sha256sum jq-win64.exe | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Substitute SHA placeholders in install.ps1
+        env:
+          SHA_GIT_DIRECT:  ${{ steps.hashes.outputs.sha_git_direct }}
+          SHA_PORTABLE:    ${{ steps.hashes.outputs.sha_portable_git }}
+          SHA_PYTHON:      ${{ steps.hashes.outputs.sha_python }}
+          SHA_JQ:          ${{ steps.hashes.outputs.sha_jq }}
+        run: |
+          # Placeholder format in install.ps1:
+          #   $script:DevForge<Name>Sha256 [whitespace]= [whitespace]'0000...0000'
+          # Use ERE with [[:space:]]* to absorb whitespace variants across lines.
+          sed -i -E "s|(DevForgeGitDirectSha256[[:space:]]*=[[:space:]]*')0{64}(')|\1${SHA_GIT_DIRECT}\2|"  install.ps1
+          sed -i -E "s|(DevForgePortableGitSha256[[:space:]]*=[[:space:]]*')0{64}(')|\1${SHA_PORTABLE}\2|"  install.ps1
+          sed -i -E "s|(DevForgePythonSha256[[:space:]]*=[[:space:]]*')0{64}(')|\1${SHA_PYTHON}\2|"        install.ps1
+          sed -i -E "s|(DevForgeJqSha256[[:space:]]*=[[:space:]]*')0{64}(')|\1${SHA_JQ}\2|"                install.ps1
+
+          # Verify zero placeholders remain
+          if grep -qE "Sha256[[:space:]]*=[[:space:]]*'0{64}'" install.ps1; then
+            echo "::error::Placeholder SHA256 non sostituiti in install.ps1"
+            grep -nE "Sha256.*'0" install.ps1
+            exit 1
+          fi
+
+      - name: Upload windows assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release.outputs.new_tag }}" \
+            dist/windows-assets/PortableGit-x64.7z.exe \
+            dist/windows-assets/python-standalone-x64.tar.gz \
+            dist/windows-assets/jq-win64.exe \
+            dist/windows-assets/SHA256SUMS \
+            install.ps1 \
+            --clobber
