@@ -28,12 +28,12 @@
 | 04 | Install-GitViaWinget + Install-GitViaChoco | `task-04-install-git-winget-choco.md` | [DONE] (5a27c2b) |
 | 05 | Install-GitViaScoop + Install-GitViaDirectDownload (SHA256 pin) | `task-05-install-git-scoop-direct.md` | [DONE] (d2e160f) |
 | 06 | Install-GitViaPortableEmbedded (SFX extract dal release asset) | `task-06-install-git-portable-embedded.md` | [DONE] (957716b) |
-| 07 | Install-PythonViaStandaloneEmbedded + Install-JqFromAsset | `task-07-install-python-jq-embedded.md` | [PENDING] |
-| 08 | ARM64 detection (PROCESSOR_ARCHITEW6432) + messaggio rinvio x64 | `task-08-arm64-detection.md` | [PENDING] |
+| 07 | Install-PythonViaStandaloneEmbedded + Install-JqFromAsset | `task-07-install-python-jq-embedded.md` | [DONE] (a589b2e) |
+| 08 | ARM64 detection (PROCESSOR_ARCHITEW6432) + messaggio rinvio x64 | `task-08-arm64-detection.md` | [DONE] (a6b952a) |
 | 09 | Dry-Run mode + Write-InstallLog | `task-09-dry-run-log.md` | [DONE] (974a6e8+30115f2) |
 | 10 | Snapshot + Rollback transazionale | `task-10-snapshot-rollback.md` | [PENDING] |
 | 11 | Install-ClaudePlugin + Invoke-HealthCheck (dry-run session-start + verify jsonl) | `task-11-plugin-healthcheck.md` | [PENDING] |
-| 12 | CI release packaging workflow + README Windows + panic button docs | `task-12-ci-release-readme.md` | [PENDING] |
+| 12 | CI release packaging workflow + README Windows + panic button docs | `task-12-ci-release-readme.md` | [DONE] (2271b07) |
 
 ### PR-2 — runtime (1 SP-U / 0.5 SP-A)
 
