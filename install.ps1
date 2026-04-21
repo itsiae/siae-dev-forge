@@ -89,7 +89,41 @@ function Invoke-DevForgeCommand {
     & $Executable @Arguments 2>&1
 }
 
-function Find-Bash { throw 'not implemented' }
+function Find-Bash {
+    <#
+    .SYNOPSIS
+        Detection chain 8-path per bash.exe su Windows.
+    .DESCRIPTION
+        Cerca bash.exe in 6 path ben noti (Git for Windows machine-wide, user-scope,
+        scoop, MSYS2, Cygwin) piu' PATH lookup fallback via Get-Command.
+    .OUTPUTS
+        String -- path assoluto a bash.exe, oppure $null se non trovato.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $candidates = @(
+        'C:\Program Files\Git\bin\bash.exe',
+        'C:\Program Files (x86)\Git\bin\bash.exe',
+        (Join-Path $env:LOCALAPPDATA 'Programs\Git\bin\bash.exe'),
+        (Join-Path $env:USERPROFILE 'scoop\apps\git\current\bin\bash.exe'),
+        'C:\msys64\usr\bin\bash.exe',
+        'C:\cygwin64\bin\bash.exe'
+    )
+
+    foreach ($path in $candidates) {
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
+    $cmd = Get-Command -Name 'bash' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd -and $cmd.Source) {
+        return $cmd.Source
+    }
+
+    return $null
+}
 function Find-Python3 { throw 'not implemented' }
 function Find-Jq { throw 'not implemented' }
 function Install-GitViaWinget { throw 'not implemented' }
