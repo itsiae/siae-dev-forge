@@ -772,7 +772,12 @@ function Invoke-Arm64Gate {
 }
 
 # --- MAIN FLOW ------------------------------------------------------------
-if ($MyInvocation.InvocationName -ne '.') {
+# Pester-safe guard: skip main flow when the script is dot-sourced for testing.
+# Pattern: $MyInvocation.Line starts with '. ' when dot-sourced (e.g. Pester
+# BeforeAll { . (Join-Path ...) }). The previous check on InvocationName
+# was fragile across Pester versions -- a Join-Path expression can make
+# InvocationName equal to the script path instead of '.'.
+if (-not ($MyInvocation.Line -match '^\s*\.\s')) {
     $script:DevForgeDryRun = $DryRun.IsPresent
 
     if (Invoke-Arm64Gate) { exit 0 }
