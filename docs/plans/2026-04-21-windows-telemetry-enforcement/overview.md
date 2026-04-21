@@ -22,7 +22,7 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 01 | Scaffold install.ps1 + Pester harness + CI workflow Windows matrix | `task-01-scaffold-install-ps1.md` | [PENDING] |
+| 01 | Scaffold install.ps1 + Pester harness + CI workflow Windows matrix | `task-01-scaffold-install-ps1.md` | [DONE] (c497233+a939c1f) |
 | 02 | Find-Bash — detection chain 8-path | `task-02-find-bash.md` | [PENDING] |
 | 03 | Find-Python3 + Find-Jq — py launcher + PATH + cache locale | `task-03-find-python-jq.md` | [PENDING] |
 | 04 | Install-GitViaWinget + Install-GitViaChoco | `task-04-install-git-winget-choco.md` | [PENDING] |
@@ -30,7 +30,7 @@
 | 06 | Install-GitViaPortableEmbedded (SFX extract dal release asset) | `task-06-install-git-portable-embedded.md` | [PENDING] |
 | 07 | Install-PythonViaStandaloneEmbedded + Install-JqFromAsset | `task-07-install-python-jq-embedded.md` | [PENDING] |
 | 08 | ARM64 detection (PROCESSOR_ARCHITEW6432) + messaggio rinvio x64 | `task-08-arm64-detection.md` | [PENDING] |
-| 09 | Dry-Run mode + Write-InstallLog | `task-09-dry-run-log.md` | [PENDING] |
+| 09 | Dry-Run mode + Write-InstallLog | `task-09-dry-run-log.md` | [DONE] (974a6e8+30115f2) |
 | 10 | Snapshot + Rollback transazionale | `task-10-snapshot-rollback.md` | [PENDING] |
 | 11 | Install-ClaudePlugin + Invoke-HealthCheck (dry-run session-start + verify jsonl) | `task-11-plugin-healthcheck.md` | [PENDING] |
 | 12 | CI release packaging workflow + README Windows + panic button docs | `task-12-ci-release-readme.md` | [PENDING] |
