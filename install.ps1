@@ -181,8 +181,69 @@ function Find-Jq {
 
     return $null
 }
-function Install-GitViaWinget { throw 'not implemented' }
-function Install-GitViaChoco { throw 'not implemented' }
+function Install-GitViaWinget {
+    <#
+    .SYNOPSIS
+        Install Git-for-Windows via winget con scope user.
+    .DESCRIPTION
+        Invoca winget install Git.Git con flags silent e accept-agreements. Tratta
+        exit code 1978335224 (WINGET_INSTALLER_RETRY_ALREADY_INSTALLED) e
+        2316632107 (UPDATE_NOT_APPLICABLE) come success. Refresh PATH post-install
+        da Machine+User env per rendere bash.exe visibile nella session corrente.
+    .OUTPUTS
+        String -- path a bash.exe post-install via Find-Bash, oppure $null su failure.
+    #>
+    [CmdletBinding()]
+    param()
+    $winget = Get-Command -Name 'winget' -ErrorAction SilentlyContinue
+    if (-not $winget) { return $null }
+
+    Write-InstallLog "Tentativo install Git via winget..." -Level Info
+    $global:LASTEXITCODE = 0
+    Invoke-DevForgeCommand -Executable 'winget' -Arguments @(
+        'install','--id','Git.Git','-e','--silent',
+        '--scope','user',
+        '--accept-source-agreements','--accept-package-agreements'
+    ) | Out-Null
+
+    $acceptedCodes = @(0, 1978335224, 2316632107)
+    if ($acceptedCodes -notcontains $LASTEXITCODE) {
+        Write-InstallLog "winget fallito con exit code $LASTEXITCODE" -Level Warning
+    }
+
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                [Environment]::GetEnvironmentVariable('PATH', 'User')
+
+    $bash = Find-Bash
+    if ($bash) { Write-InstallLog "Git installato via winget: $bash" -Level Info }
+    return $bash
+}
+
+function Install-GitViaChoco {
+    <#
+    .SYNOPSIS
+        Install Git-for-Windows via chocolatey.
+    .DESCRIPTION
+        Invoca choco install git -y --no-progress. Refresh PATH post-install.
+    .OUTPUTS
+        String -- path a bash.exe post-install via Find-Bash, oppure $null su failure.
+    #>
+    [CmdletBinding()]
+    param()
+    $choco = Get-Command -Name 'choco' -ErrorAction SilentlyContinue
+    if (-not $choco) { return $null }
+
+    Write-InstallLog "Tentativo install Git via choco..." -Level Info
+    $global:LASTEXITCODE = 0
+    Invoke-DevForgeCommand -Executable 'choco' -Arguments @('install','git','-y','--no-progress') | Out-Null
+
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                [Environment]::GetEnvironmentVariable('PATH', 'User')
+
+    $bash = Find-Bash
+    if ($bash) { Write-InstallLog "Git installato via choco: $bash" -Level Info }
+    return $bash
+}
 function Install-GitViaScoop { throw 'not implemented' }
 function Install-GitViaDirectDownload { throw 'not implemented' }
 function Install-GitViaPortableEmbedded { throw 'not implemented' }
