@@ -327,7 +327,78 @@ function Install-GitViaDirectDownload {
     if ($bash) { Write-InstallLog "Git installato via direct download: $bash" -Level Info }
     return $bash
 }
-function Install-GitViaPortableEmbedded { throw 'not implemented' }
+$script:DevForgePortableGitUrl    = 'https://github.com/itsiae/siae-dev-forge/releases/latest/download/PortableGit-x64.7z.exe'
+# Pinned by T12 CI release packaging -- placeholder until release asset is cut
+$script:DevForgePortableGitSha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+
+function Install-GitViaPortableEmbedded {
+    <#
+    .SYNOPSIS
+        Install PortableGit embedded da asset del release plugin (SFX 7z).
+    .DESCRIPTION
+        Ultima risorsa della cascade install: scarica PortableGit SFX dal release
+        asset del plugin DevForge, verifica SHA256, estrae in
+        LOCALAPPDATA\DevForge\PortableGit (idempotent: pulisce destdir preesistente).
+        Si bypassa con switch -NoPortableFallback (air-gapped / policy restrittiva).
+    .PARAMETER NoPortableFallback
+        Se presente, disabilita il fallback e ritorna subito $null.
+    .OUTPUTS
+        String -- path a bash.exe estratto, oppure $null su skip/download/hash/extract failure.
+    #>
+    [CmdletBinding()]
+    param(
+        [switch]$NoPortableFallback
+    )
+    if ($NoPortableFallback) {
+        Write-InstallLog "Fallback PortableGit disabilitato (-NoPortableFallback)" -Level Info
+        return $null
+    }
+
+    Write-InstallLog "Tentativo install Git via PortableGit asset embedded..." -Level Info
+
+    $tmpDir = Join-Path $env:TEMP "devforge-portable-git-$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+    $sfxPath = Join-Path $tmpDir "PortableGit.7z.exe"
+    $destDir = Join-Path $env:LOCALAPPDATA 'DevForge\PortableGit'
+
+    try {
+        Invoke-WebRequest -Uri $script:DevForgePortableGitUrl -OutFile $sfxPath -UseBasicParsing -TimeoutSec 600
+    } catch {
+        Write-InstallLog "Download PortableGit fallito: $_" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    $actualHash = (Get-FileHash -Path $sfxPath -Algorithm SHA256).Hash.ToUpper()
+    $expectedHash = $script:DevForgePortableGitSha256.ToUpper()
+    if ($actualHash -ne $expectedHash) {
+        Write-InstallLog "SHA256 PortableGit mismatch: expected $expectedHash, got $actualHash -- ABORT" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+    Write-InstallLog "SHA256 PortableGit verificato" -Level Info
+
+    if (Test-Path -LiteralPath $destDir) {
+        Remove-Item -LiteralPath $destDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+
+    $sfxArgs = @('-o' + $destDir, '-y')
+    $proc = Start-Process -FilePath $sfxPath -ArgumentList $sfxArgs -Wait -PassThru
+    Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+
+    if ($proc.ExitCode -ne 0) {
+        Write-InstallLog "PortableGit SFX exit code $($proc.ExitCode)" -Level Warning
+    }
+
+    $bashPath = Join-Path $destDir 'bin\bash.exe'
+    if (Test-Path -LiteralPath $bashPath) {
+        Write-InstallLog "PortableGit estratto: $bashPath" -Level Info
+        return $bashPath
+    }
+    Write-InstallLog "PortableGit estratto ma bash.exe non trovato in $bashPath" -Level Error
+    return $null
+}
 function Install-PythonViaStandaloneEmbedded { throw 'not implemented' }
 function Install-JqFromAsset { throw 'not implemented' }
 function Install-ClaudePlugin { throw 'not implemented' }
