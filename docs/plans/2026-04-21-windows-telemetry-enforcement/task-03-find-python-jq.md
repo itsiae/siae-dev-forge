@@ -30,13 +30,13 @@ Describe "Find-Python3" {
     It "cade a python.exe PATH se è v3+" {
         Mock Get-Command { $null } -ParameterFilter { $Name -eq 'py' -or $Name -eq 'python3' }
         Mock Get-Command { [pscustomobject]@{ Source = 'C:\Python312\python.exe' } } -ParameterFilter { $Name -eq 'python' }
-        Mock Invoke-Expression { 'Python 3.12.0' } -ParameterFilter { $Command -match 'python\.exe.*--version' }
+        Mock Invoke-DevForgeCommand { 'Python 3.12.0' } -ParameterFilter { $Executable -match 'python\.exe$' -and $Arguments -contains '--version' }
         Find-Python3 | Should -Be 'C:\Python312\python.exe'
     }
     It "ignora python.exe v2.x" {
         Mock Get-Command { $null } -ParameterFilter { $Name -eq 'py' -or $Name -eq 'python3' }
         Mock Get-Command { [pscustomobject]@{ Source = 'C:\Python27\python.exe' } } -ParameterFilter { $Name -eq 'python' }
-        Mock Invoke-Expression { 'Python 2.7.18' } -ParameterFilter { $Command -match 'python\.exe.*--version' }
+        Mock Invoke-DevForgeCommand { 'Python 2.7.18' } -ParameterFilter { $Executable -match 'python\.exe$' -and $Arguments -contains '--version' }
         Find-Python3 | Should -Be $null
     }
     It "cerca cache locale DevForge se PATH vuoto" {
@@ -101,7 +101,7 @@ function Find-Python3 {
 
     $cmd = Get-Command -Name 'python' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($cmd -and $cmd.Source) {
-        $version = Invoke-Expression "& `"$($cmd.Source)`" --version 2>&1"
+        $version = Invoke-DevForgeCommand -Executable $cmd.Source -Arguments @('--version')
         if ($version -match 'Python 3\.') { return $cmd.Source }
     }
 

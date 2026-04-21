@@ -28,10 +28,12 @@ Describe "Install-GitViaScoop" {
     }
     It "invoca scoop install git" {
         Mock Get-Command { [pscustomobject]@{ Source = 'scoop' } } -ParameterFilter { $Name -eq 'scoop' }
-        Mock Invoke-Expression { $global:LASTEXITCODE = 0; '' } -Verifiable
+        Mock Invoke-DevForgeCommand { $global:LASTEXITCODE = 0; '' } -Verifiable
         Mock Find-Bash { 'C:\Users\test\scoop\apps\git\current\bin\bash.exe' }
         $result = Install-GitViaScoop
-        Should -Invoke Invoke-Expression -ParameterFilter { $Command -match 'scoop install git' }
+        Should -Invoke Invoke-DevForgeCommand -ParameterFilter {
+            $Executable -eq 'scoop' -and $Arguments -contains 'install' -and $Arguments -contains 'git'
+        }
         $result | Should -Be 'C:\Users\test\scoop\apps\git\current\bin\bash.exe'
     }
 }
@@ -95,7 +97,7 @@ function Install-GitViaScoop {
 
     Write-InstallLog "Tentativo install Git via scoop..." -Level Info
     $global:LASTEXITCODE = 0
-    Invoke-Expression 'scoop install git' 2>&1 | Out-Null
+    Invoke-DevForgeCommand -Executable 'scoop' -Arguments @('install','git') | Out-Null
 
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
                 [Environment]::GetEnvironmentVariable('PATH', 'User')
