@@ -124,8 +124,63 @@ function Find-Bash {
 
     return $null
 }
-function Find-Python3 { throw 'not implemented' }
-function Find-Jq { throw 'not implemented' }
+function Find-Python3 {
+    <#
+    .SYNOPSIS
+        Detection di Python 3.x su Windows.
+    .DESCRIPTION
+        Cerca in ordine: py.exe launcher (Windows default), python3.exe, python.exe
+        (solo se reporta versione 3.x via --version), cache locale DevForge.
+        Usa Invoke-DevForgeCommand per il version check (no Invoke-Expression,
+        splat API mockabile e sicura contro command injection).
+    .OUTPUTS
+        String -- path assoluto a interprete Python 3, oppure $null se non trovato.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $cmd = Get-Command -Name 'py' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd -and $cmd.Source) { return $cmd.Source }
+
+    $cmd = Get-Command -Name 'python3' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd -and $cmd.Source) { return $cmd.Source }
+
+    $cmd = Get-Command -Name 'python' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd -and $cmd.Source) {
+        $version = Invoke-DevForgeCommand -Executable $cmd.Source -Arguments @('--version')
+        if ($version -match 'Python 3\.') { return $cmd.Source }
+    }
+
+    $cachePath = Join-Path $env:LOCALAPPDATA 'DevForge\python\python.exe'
+    if (Test-Path -LiteralPath $cachePath) { return $cachePath }
+
+    return $null
+}
+
+function Find-Jq {
+    <#
+    .SYNOPSIS
+        Detection di jq su Windows.
+    .DESCRIPTION
+        Cerca jq in PATH, poi in PortableGit embedded (LOCALAPPDATA\DevForge\PortableGit\usr\bin),
+        infine cache locale DevForge bin.
+    .OUTPUTS
+        String -- path assoluto a jq.exe, oppure $null se non trovato.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $cmd = Get-Command -Name 'jq' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd -and $cmd.Source) { return $cmd.Source }
+
+    $portablePath = Join-Path $env:LOCALAPPDATA 'DevForge\PortableGit\usr\bin\jq.exe'
+    if (Test-Path -LiteralPath $portablePath) { return $portablePath }
+
+    $cachePath = Join-Path $env:LOCALAPPDATA 'DevForge\bin\jq.exe'
+    if (Test-Path -LiteralPath $cachePath) { return $cachePath }
+
+    return $null
+}
 function Install-GitViaWinget { throw 'not implemented' }
 function Install-GitViaChoco { throw 'not implemented' }
 function Install-GitViaScoop { throw 'not implemented' }
