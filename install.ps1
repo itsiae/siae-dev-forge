@@ -21,8 +21,53 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $script:DevForgeLogFile = Join-Path $env:LOCALAPPDATA 'DevForge\install.log'
+$script:DevForgeDryRun = $false
 
-function Write-InstallLog { param($Message, $Level = 'Info') throw 'not implemented' }
+function Write-InstallLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$Message,
+        [ValidateSet('Info','Warning','Error')]
+        [string]$Level = 'Info'
+    )
+    $logDir = Split-Path $script:DevForgeLogFile -Parent
+    if (-not (Test-Path -LiteralPath $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+    $ts = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $line = "[$ts] [$($Level.ToUpper())] $Message"
+    Add-Content -Path $script:DevForgeLogFile -Value $line -Encoding UTF8
+
+    $color = switch ($Level) {
+        'Error'   { 'Red' }
+        'Warning' { 'Yellow' }
+        default   { 'White' }
+    }
+    Write-Host $line -ForegroundColor $color
+}
+
+function Invoke-DevForgeCommand {
+    <#
+    .SYNOPSIS
+        Wrapper per Invoke-Expression che rispetta DryRun mode.
+    .PARAMETER Command
+        Comando shell da eseguire.
+    .OUTPUTS
+        Output del comando, oppure $null in DryRun.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Command
+    )
+    if ($script:DevForgeDryRun) {
+        Write-InstallLog "[DRY-RUN] would execute: $Command" -Level Info
+        return $null
+    }
+    return (Invoke-Expression $Command)
+}
+
 function Find-Bash { throw 'not implemented' }
 function Find-Python3 { throw 'not implemented' }
 function Find-Jq { throw 'not implemented' }
@@ -40,6 +85,7 @@ function Invoke-Rollback { param($Snapshot) throw 'not implemented' }
 
 # Main flow — riempito in task successivi (T02-T11)
 if ($MyInvocation.InvocationName -ne '.') {
+    $script:DevForgeDryRun = $DryRun.IsPresent
     Write-Host "[DevForge] install.ps1 scaffold — funzioni non ancora implementate. Vedi task T02-T11." -ForegroundColor Yellow
     exit 0
 }
