@@ -23,8 +23,8 @@
 | # | Task | File | Stato |
 |---|------|------|-------|
 | 01 | Scaffold install.ps1 + Pester harness + CI workflow Windows matrix | `task-01-scaffold-install-ps1.md` | [DONE] (c497233+a939c1f) |
-| 02 | Find-Bash — detection chain 8-path | `task-02-find-bash.md` | [PENDING] |
-| 03 | Find-Python3 + Find-Jq — py launcher + PATH + cache locale | `task-03-find-python-jq.md` | [PENDING] |
+| 02 | Find-Bash — detection chain 8-path | `task-02-find-bash.md` | [DONE] (6fcc5be) |
+| 03 | Find-Python3 + Find-Jq — py launcher + PATH + cache locale | `task-03-find-python-jq.md` | [DONE] (fcbbf67) |
 | 04 | Install-GitViaWinget + Install-GitViaChoco | `task-04-install-git-winget-choco.md` | [PENDING] |
 | 05 | Install-GitViaScoop + Install-GitViaDirectDownload (SHA256 pin) | `task-05-install-git-scoop-direct.md` | [PENDING] |
 | 06 | Install-GitViaPortableEmbedded (SFX extract dal release asset) | `task-06-install-git-portable-embedded.md` | [PENDING] |
