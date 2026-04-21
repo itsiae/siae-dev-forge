@@ -399,8 +399,111 @@ function Install-GitViaPortableEmbedded {
     Write-InstallLog "PortableGit estratto ma bash.exe non trovato in $bashPath" -Level Error
     return $null
 }
-function Install-PythonViaStandaloneEmbedded { throw 'not implemented' }
-function Install-JqFromAsset { throw 'not implemented' }
+$script:DevForgePythonUrl    = 'https://github.com/itsiae/siae-dev-forge/releases/latest/download/python-standalone-x64.tar.gz'
+# Pinned by T12 CI release packaging -- placeholder until release asset is cut
+$script:DevForgePythonSha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+
+$script:DevForgeJqUrl    = 'https://github.com/itsiae/siae-dev-forge/releases/latest/download/jq-win64.exe'
+# Pinned by T12 CI release packaging -- placeholder until release asset is cut
+$script:DevForgeJqSha256 = '0000000000000000000000000000000000000000000000000000000000000000'
+
+function Install-PythonViaStandaloneEmbedded {
+    <#
+    .SYNOPSIS
+        Install Python-Standalone (indygreg) embedded da release asset DevForge.
+    .DESCRIPTION
+        Scarica tar.gz mirror (python-build-standalone 3.12.x x64), verifica SHA256,
+        estrae via tar.exe nativo (Win10 1803+). Abort su hash mismatch. Idempotent:
+        pulisce LOCALAPPDATA\DevForge\python pre-extract.
+    .OUTPUTS
+        String -- path a python.exe estratto, oppure $null su failure.
+    #>
+    [CmdletBinding()]
+    param()
+    Write-InstallLog "Install Python-Standalone embedded..." -Level Info
+
+    $tmpDir = Join-Path $env:TEMP "devforge-python-$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+    $tgzPath = Join-Path $tmpDir "python.tar.gz"
+    $destDir = Join-Path $env:LOCALAPPDATA 'DevForge\python'
+
+    try {
+        Invoke-WebRequest -Uri $script:DevForgePythonUrl -OutFile $tgzPath -UseBasicParsing -TimeoutSec 300
+    } catch {
+        Write-InstallLog "Download Python-Standalone fallito: $_" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    $actualHash = (Get-FileHash -Path $tgzPath -Algorithm SHA256).Hash.ToUpper()
+    if ($actualHash -ne $script:DevForgePythonSha256.ToUpper()) {
+        Write-InstallLog "SHA256 Python mismatch -- ABORT" -Level Error
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    if (Test-Path -LiteralPath $destDir) {
+        Remove-Item -LiteralPath $destDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+
+    $proc = Start-Process -FilePath 'tar.exe' -ArgumentList @('-xzf', $tgzPath, '-C', $destDir, '--strip-components=1') -Wait -PassThru -NoNewWindow
+    Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+
+    if ($proc.ExitCode -ne 0) {
+        Write-InstallLog "tar extract exit code $($proc.ExitCode)" -Level Warning
+    }
+
+    $pythonExe = Join-Path $destDir 'python.exe'
+    if (Test-Path -LiteralPath $pythonExe) {
+        Write-InstallLog "Python-Standalone estratto: $pythonExe" -Level Info
+        return $pythonExe
+    }
+    return $null
+}
+
+function Install-JqFromAsset {
+    <#
+    .SYNOPSIS
+        Install jq da release asset DevForge (mirror jqlang/jq).
+    .DESCRIPTION
+        Scarica jq.exe in LOCALAPPDATA\DevForge\bin, verifica SHA256, abort su
+        mismatch. Copia anche in PortableGit\usr\bin se presente (discoverability
+        uniforme con bash toolchain).
+    .OUTPUTS
+        String -- path a jq.exe, oppure $null su download/hash failure.
+    #>
+    [CmdletBinding()]
+    param()
+    Write-InstallLog "Install jq da release asset..." -Level Info
+
+    $destDir = Join-Path $env:LOCALAPPDATA 'DevForge\bin'
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    $jqPath = Join-Path $destDir 'jq.exe'
+
+    try {
+        Invoke-WebRequest -Uri $script:DevForgeJqUrl -OutFile $jqPath -UseBasicParsing -TimeoutSec 120
+    } catch {
+        Write-InstallLog "Download jq fallito: $_" -Level Error
+        return $null
+    }
+
+    $actualHash = (Get-FileHash -Path $jqPath -Algorithm SHA256).Hash.ToUpper()
+    if ($actualHash -ne $script:DevForgeJqSha256.ToUpper()) {
+        Write-InstallLog "SHA256 jq mismatch -- ABORT" -Level Error
+        Remove-Item $jqPath -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    $portableUsrBin = Join-Path $env:LOCALAPPDATA 'DevForge\PortableGit\usr\bin'
+    if (Test-Path -LiteralPath $portableUsrBin) {
+        Copy-Item -Path $jqPath -Destination $portableUsrBin -Force -ErrorAction SilentlyContinue
+        Write-InstallLog "jq copiato in $portableUsrBin" -Level Info
+    }
+
+    Write-InstallLog "jq installato: $jqPath" -Level Info
+    return $jqPath
+}
 function Install-ClaudePlugin { throw 'not implemented' }
 function Invoke-HealthCheck { throw 'not implemented' }
 function New-InstallSnapshot { throw 'not implemented' }
