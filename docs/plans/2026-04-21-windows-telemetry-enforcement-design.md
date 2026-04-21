@@ -47,6 +47,7 @@ Ogni dev Windows SIAE emette gli stessi log telemetria che emette un dev Mac/Lin
 - **MDM/Intune** — no accesso IT SIAE attuale.
 - **Port PowerShell dei hook** — duplicato non mantenibile.
 - **Fix API key hardcoded** — tech debt pre-esistente, non aggravato.
+- **ARM64 Windows (Surface Pro X / Copilot+ PC nativo)** — rinviato a follow-up. Motivazione: nessun dev SIAE noto al 2026-04-21 su ARM64 nativo; copertura via emulazione x64 è adeguata per il rollout iniziale. Asset ARM64 (`PortableGit-arm64`, `python-standalone-arm64`, `jq-arm64`) **non vengono pubblicati** in questo scope — l'installer rileva ARM64 e mostra un messaggio esplicito che rinvia a x64 emulato. Se in futuro un dev SIAE passa ad ARM64 nativo, apre ticket dedicato.
 
 ### 1.5. Anti-scope creep
 
@@ -81,14 +82,12 @@ Principio guida: **"enforcement di quello che abbiamo, non una cosa in più"**. 
 ```
                           ┌─────────────────────────────────────┐
                           │  GitHub Release itsiae/siae-dev-forge    │
-                          │  assets:                            │
+                          │  assets (x64 only, ARM64 non-goal):  │
                           │   - plugin.tar.gz                   │
                           │   - install.ps1                     │
                           │   - PortableGit-x64.7z.exe   (~50MB)│
-                          │   - PortableGit-arm64.7z.exe (~60MB)│
                           │   - python-standalone-x64.tar.gz (~30MB)
-                          │   - python-standalone-arm64.tar.gz (~30MB)
-                          │   - jq-win64.exe, jq-arm64.exe      │
+                          │   - jq-win64.exe                    │
                           │   - SHA256SUMS                      │
                           └─────────────────────────────────────┘
                                           │
@@ -160,17 +159,19 @@ Principio guida: **"enforcement di quello che abbiamo, non una cosa in più"**. 
 
 **Alternativa scartata:** port PS completo di hook+logger+uploader. Maintenance drift, test doppi.
 
-### ADR-03. PortableGit + Python-Standalone embedded nel release asset
+### ADR-03. PortableGit + Python-Standalone embedded nel release asset (x64-only)
 
-**Decisione:** GitHub release del plugin include:
-- `PortableGit-x64.7z.exe` + variant `arm64`
-- `python-standalone-x64.tar.gz` + variant `arm64` (da `indygreg/python-build-standalone`, binari portable che funzionano senza installer)
-- `jq-win64.exe` + `jq-arm64.exe`
+**Decisione:** GitHub release del plugin include (solo x64 in questo scope):
+- `PortableGit-x64.7z.exe` (~50MB, da git-for-windows project)
+- `python-standalone-x64.tar.gz` (~30MB, da `indygreg/python-build-standalone`, binari portable)
+- `jq-win64.exe` (~5MB, da jqlang/jq)
 - `SHA256SUMS` con hash di tutti
 
 L'installer li scarica solo se i metodi preferiti (winget/choco/direct-from-upstream) falliscono. Fornisce il fallback per ambienti air-gapped o con policy corp restrittive.
 
-**Dimensione totale release:** ~180MB (ok per GitHub release 2GB limit).
+ARM64 non supportato in questo scope — installer detecta `$env:PROCESSOR_ARCHITECTURE -eq "ARM64"` e mostra messaggio esplicito che rinvia a x64 emulato (vedi §1.4 non-goal).
+
+**Dimensione totale release:** ~90MB (ok per GitHub release 2GB limit).
 
 ### ADR-04. `emit-repair-event.ps1` riusa schema esistente (1 event type `repair_needed`)
 
@@ -186,9 +187,17 @@ L'installer li scarica solo se i metodi preferiti (winget/choco/direct-from-upst
 
 **Decisione:** `install.ps1` registra snapshot pre-install (file creati, registry key, scheduled task); su health-check failure ripristina stato precedente.
 
-### ADR-07. Rollout opt-in → GA dopo 7gg
+### ADR-07. Rollout opt-in → GA dopo 7gg + panic buttons multipli
 
-**Decisione:** v1.45.0 in opt-in install manuale → monitoring 7gg → promozione GA auto-update. Panic button `DEVFORGE_DISABLE_REPAIR_EVENT=1`.
+**Decisione:** v1.45.0 in opt-in install manuale → monitoring 7gg → promozione GA auto-update. Tre panic buttons env var separati (documentati in README troubleshooting, coperti da AC-17):
+
+| Env var | Effetto | Use case |
+|---|---|---|
+| `DEVFORGE_DISABLE_REPAIR_EVENT=1` | Skip emissione `repair_needed` event | Se l'event corrompe la pipeline e va disabilitato senza re-deploy |
+| `DEVFORGE_SILENT_ON_NO_BASH=1` | `run-hook.cmd` ripristina vecchio `exit /b 0` silent | Dev broken che non può riparare subito e vuole silenziare stderr |
+| `DEVFORGE_HIDE_REPAIR_BANNER=1` | `session-start` non mostra il repair banner | Se banner ridondante in loop, riduce rumore nel context del model |
+
+**Conseguenza:** 3 kill-switch per componenti distinti, blast radius limitato, recovery path chiaro.
 
 ### ADR-08. Verifica silent users via log esistenti
 
@@ -277,10 +286,13 @@ iwr https://github.com/itsiae/siae-dev-forge/releases/latest/download/install.ps
 
 ### 5.2. `hooks/run-hook.cmd` update (PR-2, parte di 1 SP-U / 0.5 SP-A)
 
-Modifica del fallback silent:
+Modifica del fallback silent + escape hatch per chi non può riparare subito:
 
 ```cmd
 REM ... detection chain bash invariata (8 path) ...
+
+REM Panic button: DEVFORGE_SILENT_ON_NO_BASH=1 ripristina vecchio comportamento
+if "%DEVFORGE_SILENT_ON_NO_BASH%"=="1" exit /b 0
 
 REM No bash found - fail LOUD (precedentemente exit /b 0 silent)
 echo. >&2
@@ -288,6 +300,7 @@ echo [DevForge] bash not found - DevForge hooks disabled. >&2
 echo [DevForge] Ripara con: >&2
 echo   Set-ExecutionPolicy -Scope Process Bypass -Force >&2
 echo   iwr https://github.com/itsiae/siae-dev-forge/releases/latest/download/install.ps1 ^| iex >&2
+echo [DevForge] Per silenziare temporaneamente: set DEVFORGE_SILENT_ON_NO_BASH=1 >&2
 echo. >&2
 if not exist "%APPDATA%\Claude" mkdir "%APPDATA%\Claude" 2>nul
 type NUL > "%APPDATA%\Claude\devforge-needs-repair" 2>nul
@@ -295,82 +308,118 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%HOOK_DIR%emit-repair-event
 exit /b 1
 ```
 
-Cambio critico: `exit /b 1` visibile a Claude Code invece di `exit /b 0` silent.
+Cambio critico: `exit /b 1` visibile a Claude Code invece di `exit /b 0` silent. Escape hatch: `DEVFORGE_SILENT_ON_NO_BASH=1` ripristina comportamento precedente per chi è broken ma non può riparare immediatamente (last-resort, non dovrebbe essere usato in regime).
 
 ### 5.3. `hooks/emit-repair-event.ps1` (PR-2, parte di 1 SP-U / 0.5 SP-A)
 
-~20 righe, emette 1 event nell'outbox esistente, schema standard:
+~35 righe, emette 1 event `repair_needed` con **schema v2 canonico** (17 campi top-level + `meta`), deposita il file JSONL direttamente in `.global-outbox/` seguendo il pattern batch esistente (`lib/telemetry-upload.sh:100-122`). Drain automatico dal loop `devforge_upload_backlog` esistente — nessuna modifica agli uploader.
+
+**Schema:** riproduce esattamente il payload emesso da `lib/logger.sh:440` (funzione `devforge_log`). Campi non determinabili da PowerShell senza bash (git context, repo, project) usano defaults sicuri. Campi non-schema (reason, os, os_release, arch, plugin_version) stanno **dentro `meta`**, non top-level.
 
 ```powershell
 # emit-repair-event.ps1 — emergency signal path (no bash needed)
-# Emette 1 event `repair_needed` nell'outbox standard, schema identico
-# a logger.sh output. Consumato dalla pipeline S3 esistente.
+# Emette 1 event `repair_needed` con schema v2 canonico nel pattern
+# .global-outbox/batch-<ns>-emergency.jsonl. Consumato dal loop
+# devforge_upload_backlog esistente (lib/telemetry-upload.sh:132-160).
 $ErrorActionPreference = 'SilentlyContinue'
 if ($env:DEVFORGE_DISABLE_REPAIR_EVENT -eq "1") { exit 0 }
 
-$stateDir = Join-Path $env:USERPROFILE ".claude\devforge-state\emergency"
-$outbox   = Join-Path $stateDir "outbox"
-New-Item -ItemType Directory -Path $outbox -Force | Out-Null
+# .global-outbox è il path canonico per eventi stranded (telemetry-upload.sh:105)
+$globalOutbox = Join-Path $env:USERPROFILE ".claude\devforge-state\.global-outbox"
+New-Item -ItemType Directory -Path (Join-Path $globalOutbox "acked") -Force | Out-Null
 
-$epoch = [int][double]::Parse((Get-Date -UFormat %s))
-$guid  = [guid]::NewGuid().ToString()
-$event = @{
-    event          = "repair_needed"
-    schema_version = 2
-    event_id       = $guid
-    ts             = $epoch
-    user_raw       = $env:USERNAME
-    hostname       = $env:COMPUTERNAME
-    os             = "windows"
-    os_release     = [System.Environment]::OSVersion.VersionString
-    arch           = $env:PROCESSOR_ARCHITECTURE
+# Schema v2 canonico — 17 top-level fields + meta object
+$sid     = "emergency-" + [guid]::NewGuid().ToString("N").Substring(0, 12)
+$seq     = 0
+$eventId = "$sid-$seq"
+$tsIso   = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.000Z")
+$user    = $env:USERNAME
+$pluginDir = Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\siae-devforge" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+$pluginVer = if ($pluginDir) {
+    (Get-Content (Join-Path $pluginDir.FullName ".claude-plugin\plugin.json") -ErrorAction SilentlyContinue | ConvertFrom-Json).version
+} else { "unknown" }
+
+$meta = [ordered]@{
     reason         = "no-bash"
-    plugin_version = (Get-Content "$env:USERPROFILE\.claude\plugins\cache\siae-devforge\*\plugin.json" -ErrorAction SilentlyContinue | ConvertFrom-Json).version
-    hook_name      = "run-hook-cmd"
-} | ConvertTo-Json -Compress
+    os             = "windows"
+    os_release     = [Environment]::OSVersion.VersionString
+    arch           = $env:PROCESSOR_ARCHITECTURE
+    plugin_version = $pluginVer
+    hostname       = $env:COMPUTERNAME
+}
 
-$file = Join-Path $outbox "$guid.json"
-[System.IO.File]::WriteAllText($file, $event, [System.Text.UTF8Encoding]::new($false))
+$event = [ordered]@{
+    event_id          = $eventId
+    schema_version    = 2
+    session_seq       = $seq
+    hook_name         = "run-hook-cmd"
+    actor_canonical   = $user.ToLower()
+    repo_root         = ""                    # non determinabile senza bash
+    project_canonical = ""
+    ts                = $tsIso
+    user              = $user.ToLower()
+    user_raw          = $user
+    user_source       = "windows-emergency"
+    sid               = $sid
+    branch            = ""
+    jira_id           = $null
+    project           = ""
+    event             = "repair_needed"
+    status            = "failure"
+    meta              = $meta
+}
+
+$jsonLine = ($event | ConvertTo-Json -Compress -Depth 5)
+
+# Batch-pattern compatible with telemetry-upload.sh — one-line JSONL batch
+$epochNs  = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() * 1000000
+$batchFile = Join-Path $globalOutbox "batch-${epochNs}-emergency.jsonl"
+# UTF-8 no BOM, LF-terminated (matches atomic_write.py output)
+[System.IO.File]::WriteAllText($batchFile, $jsonLine + "`n", [System.Text.UTF8Encoding]::new($false))
 ```
 
-Upload: avviene quando bash viene ripristinato e il prossimo `session-start` esegue drain del directory `emergency/outbox`. Il drain è aggiunto in `session-start` esistente (§5.4).
+**Drain:** gestito **automaticamente** da `lib/telemetry-upload.sh:142` che già scansiona `.global-outbox/batch-*.jsonl` ad ogni upload trigger (session-start, devforge-flusher PostToolUse, stop-gate). Zero modifiche agli uploader. Al ripristino di bash, il prossimo hook drena lo stranded event in S3 `devforge-logs/`.
 
-### 5.4. `hooks/session-start` addition (PR-2, parte di 1 SP-U / 0.5 SP-A)
+### 5.4. `hooks/session-start` addition — banner only (PR-2, parte di 1 SP-U / 0.5 SP-A)
 
-Aggiunta minima in bash esistente:
+Aggiunta minima: **solo** il banner repair. Il drain dell'emergency event avviene **senza modifiche agli hook** — il batch `.global-outbox/batch-<ns>-emergency.jsonl` è già nel path scansionato da `lib/telemetry-upload.sh:142` (`$state_root/.global-outbox`). Al prossimo hook trigger (session-start stesso chiama `devforge_upload_backlog`), il batch viene drenato, uploadato, e spostato in `.global-outbox/acked/`.
+
+Unico contenuto aggiunto in `hooks/session-start`:
 
 ```bash
-# hooks/session-start — addition at top of script
-# Self-healing: drain emergency outbox se bash è tornato disponibile
-# e mostra repair banner se flag presente.
-REPAIR_FLAG="${APPDATA:-$HOME/.config}/Claude/devforge-needs-repair"
-EMERGENCY_OUTBOX="${HOME}/.claude/devforge-state/emergency/outbox"
-
-if [[ -d "$EMERGENCY_OUTBOX" ]]; then
-    # Move emergency events into current session outbox for normal upload
-    mkdir -p "${DEVFORGE_SESSION_DIR}/outbox"
-    mv "${EMERGENCY_OUTBOX}"/*.json "${DEVFORGE_SESSION_DIR}/outbox/" 2>/dev/null || true
-fi
-
-if [[ -f "$REPAIR_FLAG" ]]; then
-    cat <<EOF
+# Self-healing repair banner — mostra istruzioni di ripristino se flag presente.
+# Il drain dell'evento repair_needed avviene automaticamente via .global-outbox/
+# (pattern canonico lib/telemetry-upload.sh, nessuna modifica qui).
+if [[ "${DEVFORGE_HIDE_REPAIR_BANNER:-}" != "1" ]]; then
+    REPAIR_FLAG="${APPDATA:-$HOME/.config}/Claude/devforge-needs-repair"
+    if [[ -f "$REPAIR_FLAG" ]]; then
+        cat <<EOF
 [DevForge Repair Banner]
 Una sessione precedente ha rilevato bash mancante.
 Per ripristinare (PowerShell):
   Set-ExecutionPolicy -Scope Process Bypass -Force
   iwr https://github.com/itsiae/siae-dev-forge/releases/latest/download/install.ps1 | iex
 EOF
-    rm -f "$REPAIR_FLAG"
+        rm -f "$REPAIR_FLAG"
+    fi
 fi
 ```
+
+**Semplificazione rispetto a versione precedente:** niente `mv` custom di `.json` files (pattern non matchava `batch-*.jsonl` canonico). Riuso totale della pipeline esistente → zero nuovo codice di drain da testare.
 
 ---
 
 ## 6. Data model
 
-**Nessuna modifica retrocompatibile a schema esistenti.**
+**Nessuna modifica retrocompatibile a schema esistenti.** Nessun nuovo campo top-level.
 
-**Un nuovo event type aggiunto** (`repair_needed`), schema identico ai log esistenti — riutilizza i campi `event`, `schema_version`, `event_id`, `ts`, `user_raw`, `hostname`, `os`, `os_release`, `arch`, `plugin_version`, `hook_name` già in uso. Campo nuovo: `reason` (string, enum: `no-bash`). La Lambda dedup esistente gestisce `event_id` correttamente (S3 key deterministica).
+**Un nuovo valore aggiunto all'enum `event`:** `repair_needed`. Lo schema v2 canonico (17 campi top-level + `meta` object, vedi `lib/logger.sh:440,510`) è rispettato byte-identical. I campi non determinabili da PowerShell senza bash (`repo_root`, `project_canonical`, `branch`, `project`) usano stringa vuota come default; `jira_id` usa `null`. I campi specifici Windows (`reason`, `os`, `os_release`, `arch`, `plugin_version`, `hostname`) vivono **dentro `meta`** (pattern esistente per payload addizionali specifici).
+
+**Formato `event_id`:** stringa `"${sid}-${seq}"` — per emergency path `sid = "emergency-<12-hex>"`, `seq = 0`. Deterministico e univoco per batch (il dedup Lambda esistente gestisce `event_id` come PK).
+
+**Formato `ts`:** stringa ISO-8601 UTC `"YYYY-MM-DDTHH:MM:SS.000Z"` (stesso formato di `lib/logger.sh:401`).
+
+**Path deposito:** `~/.claude/devforge-state/.global-outbox/batch-<epoch_ns>-emergency.jsonl`. File JSONL single-line, UTF-8 no BOM, LF-terminated. Scansionato automaticamente da `lib/telemetry-upload.sh:142` e drenato al prossimo upload trigger.
 
 ---
 
@@ -399,7 +448,8 @@ fi
 |---|---|---|
 | `install.ps1` funzioni isolate | Pester 5 + mock winget/choco/Invoke-WebRequest/Expand-Archive | ≥ 90% |
 | `emit-repair-event.ps1` | Pester 5 | ≥ 90% |
-| `session-start` addition (drain + banner) | bats | ≥ 90% del nuovo codice |
+| **Schema v2 validator su `repair_needed`** | Pester 5 — JSON emesso da `emit-repair-event.ps1` diffato contro output di `devforge_log` bash per un evento equivalent: 17 campi top-level identici per tipo/presenza, `meta` object corretto | ≥ 90% + zero diff strutturali |
+| `session-start` addition (banner, no drain) | bats | ≥ 90% del nuovo codice |
 
 ### 8.2. Layer 2 — Integration (GitHub Actions matrix)
 
@@ -411,7 +461,7 @@ Matrix OS: `windows-latest`, `windows-2019`, `ubuntu-latest`, `macos-latest`.
 | Install con bash+python già presenti | ✅ (fast-path) | ✅ (no-op verify) |
 | Simulazione no-bash runtime (`DEVFORGE_TEST_HIDE_BASH=1`) → run-hook.cmd fail-loud | ✅ | — |
 | Simulazione no-python (degraded logger path) | ✅ | ✅ |
-| Session-start drain emergency outbox → event atterra in activity.jsonl | ✅ | ✅ |
+| Emergency batch drainato da `.global-outbox/` → event atterra in S3 `devforge-logs/` (nessuna modifica uploader) | ✅ | ✅ |
 | Path OneDrive Unicode/spazi | ✅ | ✅ |
 | Path > 260 char | ✅ | — |
 | No admin (demote shell) | ✅ | — |
@@ -475,9 +525,10 @@ Checklist:
 - [ ] AC-2: Con winget bloccato, installer usa choco/scoop/direct download senza intervento utente
 - [ ] AC-3: Su macchina offline, installer usa asset embedded (PortableGit + Python-Standalone + jq) e completa
 - [ ] AC-4: Post-install, `hooks/session-start` emette event **byte-identical** (su campi comuni) a Mac/Linux — diff JSON zero
-- [ ] AC-5: `hooks/run-hook.cmd` senza bash **non** esce silent: stderr visibile + flag file + event `repair_needed` in outbox
-- [ ] AC-6: `emit-repair-event.ps1` produce JSON parseable con schema identico ai log esistenti
-- [ ] AC-7: Al ripristino bash, `session-start` drena `emergency/outbox` → event `repair_needed` atterra in S3 `devforge-logs/`
+- [ ] AC-5: `hooks/run-hook.cmd` senza bash **non** esce silent: stderr visibile + flag file + event `repair_needed` emesso in `.global-outbox/`
+- [ ] AC-6: `emit-repair-event.ps1` produce JSONL con **tutti e 17 i campi top-level** dello schema v2 canonico + `meta` object; formato `event_id` = `"${sid}-${seq}"`, `ts` = ISO-8601 UTC
+- [ ] AC-6b: JSON emesso da `emit-repair-event.ps1` passa lo stesso validator schema v2 usato per gli eventi bash; test Pester dedicato verifica byte-structure
+- [ ] AC-7: Event `repair_needed` depositato in `.global-outbox/batch-<ns>-emergency.jsonl` viene drenato dal loop `devforge_upload_backlog` esistente (nessuna modifica agli uploader) e atterra in S3 `devforge-logs/` al ripristino bash
 - [ ] AC-8: Test matrix CI 4-OS verde (zero regression)
 - [ ] AC-9: `install.ps1 -DryRun` logga tutti i path senza side-effect
 - [ ] AC-10: Rollback automatico ripristina stato pre-install su failure iniettato
@@ -485,6 +536,9 @@ Checklist:
 - [ ] AC-12: 3+ volontari Windows SIAE emettono `session_start` events regolari per 7gg RC
 - [ ] AC-13: Verifica silent users via query su `siae-dev-analytics` (o script ad-hoc) produce Excel atteso — nessun Lambda dedicato costruito in questa iniziativa
 - [ ] AC-14: Zero nuovo Lambda, zero nuova dashboard, zero nuovo Athena table aggiunti in questa PR
+- [ ] AC-15: Su Windows ARM64 (`$env:PROCESSOR_ARCHITECTURE -eq "ARM64"`), `install.ps1` detecta e mostra messaggio esplicito di rinvio a x64 emulato — non tenta install asset non esistenti. Out of scope installazione ARM64 nativa
+- [ ] AC-16: Tutti i test Layer 2 edge-case nella matrix CI sono verdi — Unicode/OneDrive, longpath > 260, no-admin, proxy MITM, AV quarantine, winget blocked-by-policy (cascade choco/scoop/direct/embedded). Nessuno skip condizionale senza justification documentata nel PR body
+- [ ] AC-17: Panic button env vars documentati in README troubleshooting e funzionanti: `DEVFORGE_DISABLE_REPAIR_EVENT=1`, `DEVFORGE_SILENT_ON_NO_BASH=1`, `DEVFORGE_HIDE_REPAIR_BANNER=1`
 
 ---
 
@@ -497,6 +551,14 @@ Checklist:
 | **Totale** | — | **6 / 2.5** | — |
 
 **Test strategy:** ogni PR ha test suite dedicata (Pester/bats), integrati nella matrix 4-OS CI. Nessuna PR merge senza verde.
+
+**Assunzioni stima SP (warn-03 spec-reviewer):** la stima 6 SP-U / 2.5 SP-A presuppone:
+- (a) NO code-signing Authenticode in questo scope (rinviato se servirà ridurre friction SmartScreen post-rollout)
+- (b) Pester 5 expertise disponibile (o lead time accettabile per setup)
+- (c) Release packaging via CI template esistente del repo (`.github/workflows/`), no nuovo pipeline scratch
+- (d) Binari upstream (PortableGit, Python-Standalone, jq) pulled "as-is" + SHA256-pin, nessun rebuild custom
+
+Se una di queste premesse cade (es. IT SIAE richiede code-signing ora, CI template assente, upstream broken), riaprire stima — PR-1 può salire a 7-8 SP-U.
 
 ---
 
@@ -547,3 +609,14 @@ Da analisi `hooks/*` e `lib/*`:
 | gh, node | 🟢 Feature opzionali | ❌ NON incluso | Sì |
 
 **Conclusione:** con solo Git for Windows, telemetria arriva ma è degradata (no zero-loss, no token stats). Opzione B elimina anche questa degradazione installando python3+jq come parte dell'enforcement.
+
+### Fix applicati post spec-review iter-1 (2026-04-21)
+
+Lo spec-reviewer ha sollevato 2 BLOCK + 4 WARN contro il design iter-1. Fix applicati:
+
+- **BLOCK-01 (schema mismatch):** `emit-repair-event.ps1` riscritto con schema v2 canonico completo (17 campi top-level + `meta` object). `event_id = "${sid}-${seq}"`, `ts = ISO-8601 UTC`. Campi non-schema (`reason`, `os`, `os_release`, `arch`, `plugin_version`, `hostname`) spostati dentro `meta`. Aggiunto AC-6b (validator schema).
+- **BLOCK-02 (drain pattern):** `emit-repair-event.ps1` scrive ora in `~/.claude/devforge-state/.global-outbox/batch-<ns>-emergency.jsonl` (pattern canonico `telemetry-upload.sh:142`) invece di `emergency/outbox/*.json`. Drain gestito dal loop `devforge_upload_backlog` esistente senza modifiche agli uploader. §5.4 semplificato: solo banner, niente drain custom.
+- **WARN-01 (ARM64):** spostato esplicitamente a non-goal in §1.4. Asset ARM64 rimossi dal release (`PortableGit-arm64`, `python-standalone-arm64`, `jq-arm64`). `install.ps1` detecta `$env:PROCESSOR_ARCHITECTURE -eq "ARM64"` e mostra messaggio rinvio a x64 emulato (AC-15).
+- **WARN-02 (edge-case AC):** aggiunto AC-16 collettivo "tutti i test L2 edge-case verdi nella matrix CI".
+- **WARN-03 (stima SP):** aggiunta sezione "Assunzioni stima SP" in §11 con 4 premesse esplicite.
+- **WARN-04 (panic buttons):** ADR-07 riscritto con 3 env var separati (`DEVFORGE_DISABLE_REPAIR_EVENT`, `DEVFORGE_SILENT_ON_NO_BASH`, `DEVFORGE_HIDE_REPAIR_BANNER`). `run-hook.cmd` implementa escape hatch. Aggiunto AC-17.
