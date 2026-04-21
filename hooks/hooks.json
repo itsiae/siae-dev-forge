@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' session-start",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' session-start",
             "async": false
           }
         ]
@@ -18,22 +18,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' user-prompt-context",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' user-prompt-context",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-reinject",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' devforge-reinject",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-context-always",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' devforge-context-always",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-reset",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' batch-reset",
             "timeout": 5
           }
         ]
@@ -45,12 +45,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pre-commit",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' pre-commit",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' pr-gate",
             "timeout": 15
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' tdd-gate",
             "timeout": 5
           }
         ]
@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' tdd-gate",
             "timeout": 5
           }
         ]
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' plan-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' plan-gate",
             "timeout": 5
           }
         ]
@@ -90,7 +90,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' sub-skill-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' sub-skill-gate",
             "timeout": 5
           }
         ]
@@ -102,7 +102,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' stop-gate",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' stop-gate",
             "timeout": 5
           }
         ]
@@ -114,7 +114,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' post-skill",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' post-skill",
             "timeout": 5
           }
         ]
@@ -124,17 +124,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' post-commit-review",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' post-commit-review",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' capture-test-result",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' capture-test-result",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-checkpoint",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' batch-checkpoint",
             "timeout": 5
           }
         ]
@@ -144,7 +144,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-flusher",
+            "command": "node '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.js' devforge-flusher",
             "timeout": 10,
             "async": true
           }
