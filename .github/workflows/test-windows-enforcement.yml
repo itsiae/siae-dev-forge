@@ -1,0 +1,49 @@
+name: Test Windows Enforcement
+on:
+  pull_request:
+    paths:
+      - 'install.ps1'
+      - 'hooks/run-hook.cmd'
+      - 'hooks/emit-repair-event.ps1'
+      - 'hooks/session-start'
+      - 'tests/install-ps1/**'
+      - 'tests/windows-runtime/**'
+      - '.github/workflows/test-windows-enforcement.yml'
+
+jobs:
+  test-pester:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2019]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester 5
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck
+          Import-Module Pester -MinimumVersion 5.5.0
+          Get-Module Pester | Format-Table Name, Version
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests/install-ps1'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  test-bash-regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bats
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install bats-core; else sudo apt-get install -y bats; fi
+      - name: Run existing bash tests (zero-regression guard)
+        run: bash tests/run-all.sh
