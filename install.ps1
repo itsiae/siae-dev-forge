@@ -504,8 +504,100 @@ function Install-JqFromAsset {
     Write-InstallLog "jq installato: $jqPath" -Level Info
     return $jqPath
 }
-function Install-ClaudePlugin { throw 'not implemented' }
-function Invoke-HealthCheck { throw 'not implemented' }
+function Install-ClaudePlugin {
+    <#
+    .SYNOPSIS
+        Installa il plugin DevForge via claude CLI.
+    .DESCRIPTION
+        Verifica presenza claude CLI in PATH; se assente fallisce early con hint
+        al link ufficiale. Altrimenti invoca `claude plugin install siae-devforge@siae-devforge`
+        via Invoke-DevForgeCommand splat (signature hardened post iter-2).
+    .OUTPUTS
+        Boolean -- $true se claude CLI presente + install invocato, $false altrimenti.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $claude = Get-Command -Name 'claude' -ErrorAction SilentlyContinue
+    if (-not $claude) {
+        Write-InstallLog "claude CLI non trovato -- installa Claude Code da https://docs.anthropic.com/en/docs/build-with-claude/claude-code" -Level Error
+        return $false
+    }
+
+    Write-InstallLog "Install plugin DevForge via claude CLI..." -Level Info
+    $out = Invoke-DevForgeCommand -Executable 'claude' -Arguments @('plugin','install','siae-devforge@siae-devforge')
+    Write-InstallLog "Plugin install output: $out" -Level Info
+    return $true
+}
+
+function Invoke-HealthCheck {
+    <#
+    .SYNOPSIS
+        Dry-run health-check end-to-end della pipeline telemetria.
+    .DESCRIPTION
+        Localizza session-start hook in ~/.claude/plugins/cache/siae-devforge/<ver>/hooks/,
+        lo esegue via bash con env DEVFORGE_HEALTH_CHECK=1, poi polla
+        ~/.claude/devforge-activity.jsonl per 5s per rilevare event emission
+        (baseline size delta). Ritorna $false su: hook mancante, exec fallita,
+        zero event emessi entro deadline.
+    .PARAMETER BashPath
+        Path assoluto a bash.exe (da Find-Bash / install chain).
+    .PARAMETER PythonPath
+        Path assoluto a python3 (da Find-Python3 / install chain).
+    .OUTPUTS
+        Boolean -- $true se health-check passa, $false su qualsiasi failure.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][string]$BashPath,
+        [Parameter(Mandatory=$true)][string]$PythonPath
+    )
+    Write-InstallLog "Health-check: dry-run session-start hook..." -Level Info
+
+    $activityLog = Join-Path $env:USERPROFILE '.claude\devforge-activity.jsonl'
+    $initialSize = 0
+    if (Test-Path -LiteralPath $activityLog) {
+        $initialSize = (Get-Item -LiteralPath $activityLog).Length
+    }
+
+    $pluginDir = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\siae-devforge" -Directory -ErrorAction SilentlyContinue |
+                  Select-Object -First 1)
+    $hookPath = $null
+    if ($pluginDir) {
+        $hookPath = Join-Path $pluginDir.FullName 'hooks\session-start'
+    }
+    if (-not $hookPath -or -not (Test-Path -LiteralPath $hookPath)) {
+        Write-InstallLog "Hook session-start non trovato in plugin cache" -Level Error
+        return $false
+    }
+
+    $env:DEVFORGE_HEALTH_CHECK = '1'
+    try {
+        $proc = Start-Process -FilePath $BashPath -ArgumentList @($hookPath) -Wait -PassThru -NoNewWindow
+        if ($proc.ExitCode -ne 0) {
+            Write-InstallLog "session-start exit code $($proc.ExitCode)" -Level Warning
+        }
+    } catch {
+        Write-InstallLog "Health-check exec fallita: $_" -Level Error
+        return $false
+    } finally {
+        Remove-Item Env:DEVFORGE_HEALTH_CHECK -ErrorAction SilentlyContinue
+    }
+
+    $deadline = (Get-Date).AddSeconds(5)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-Path -LiteralPath $activityLog) {
+            $currentSize = (Get-Item -LiteralPath $activityLog).Length
+            if ($currentSize -gt $initialSize) {
+                Write-InstallLog "Health-check OK: event emesso in activity.jsonl (+$($currentSize - $initialSize) bytes)" -Level Info
+                return $true
+            }
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    Write-InstallLog "Health-check FAILED: nessun event emesso entro 5s" -Level Error
+    return $false
+}
 function New-InstallSnapshot {
     <#
     .SYNOPSIS
@@ -659,9 +751,72 @@ function Invoke-Arm64Gate {
     return $false
 }
 
-# Main flow — riempito in task successivi (T02-T11)
+# --- MAIN FLOW ------------------------------------------------------------
 if ($MyInvocation.InvocationName -ne '.') {
     $script:DevForgeDryRun = $DryRun.IsPresent
-    Write-Host "[DevForge] install.ps1 scaffold — funzioni non ancora implementate. Vedi task T02-T11." -ForegroundColor Yellow
-    exit 0
+
+    if (Invoke-Arm64Gate) { exit 0 }
+
+    Write-InstallLog "DevForge Windows installer avviato (DryRun=$($script:DevForgeDryRun), Force=$($Force.IsPresent))" -Level Info
+
+    $snapshot = New-InstallSnapshot
+    try {
+        $bash = Find-Bash
+        if (-not $bash -or $Force) {
+            Write-InstallLog "Bash non trovato -- inizio install chain..." -Level Info
+            $bash = Install-GitViaWinget
+            if (-not $bash) { $bash = Install-GitViaChoco }
+            if (-not $bash) { $bash = Install-GitViaScoop }
+            if (-not $bash) { $bash = Install-GitViaDirectDownload }
+            if (-not $bash) { $bash = Install-GitViaPortableEmbedded -NoPortableFallback:$NoPortableFallback }
+            if (-not $bash) {
+                throw "Impossibile installare bash: tutti i metodi falliti. Vedi log: $script:DevForgeLogFile"
+            }
+            $snapshot.AddDir((Join-Path $env:LOCALAPPDATA 'DevForge\PortableGit'))
+        }
+        Write-InstallLog "Bash disponibile: $bash" -Level Info
+
+        $python = Find-Python3
+        if (-not $python -or $Force) {
+            Write-InstallLog "Python3 non trovato -- inizio install..." -Level Info
+            $python = Install-PythonViaStandaloneEmbedded
+            if (-not $python) {
+                throw "Impossibile installare python3."
+            }
+            $snapshot.AddDir((Join-Path $env:LOCALAPPDATA 'DevForge\python'))
+        }
+        Write-InstallLog "Python3 disponibile: $python" -Level Info
+
+        $jq = Find-Jq
+        if (-not $jq -or $Force) {
+            $jq = Install-JqFromAsset
+            if (-not $jq) { throw "Impossibile installare jq." }
+            $snapshot.AddFile($jq)
+        }
+        Write-InstallLog "jq disponibile: $jq" -Level Info
+
+        if (-not (Install-ClaudePlugin)) {
+            throw "Plugin install fallito."
+        }
+
+        if (-not (Invoke-HealthCheck -BashPath $bash -PythonPath $python)) {
+            throw "Health-check fallito -- telemetria non raggiunge activity.jsonl."
+        }
+
+        $repairFlag = Join-Path $env:APPDATA 'Claude\devforge-needs-repair'
+        if (Test-Path -LiteralPath $repairFlag) {
+            Remove-Item -LiteralPath $repairFlag -Force -ErrorAction SilentlyContinue
+            Write-InstallLog "Repair flag rimosso." -Level Info
+        }
+
+        Write-InstallLog "Install completato con successo." -Level Info
+        Write-Host "`n[OK] DevForge installato e funzionante su Windows. Riavvia Claude Code per attivare gli hook.`n" -ForegroundColor Green
+        exit 0
+
+    } catch {
+        Write-InstallLog "Install fallito: $_" -Level Error
+        Invoke-Rollback -Snapshot $snapshot
+        Write-Host "`n[FAIL] DevForge install fallito. Vedi log: $script:DevForgeLogFile`n" -ForegroundColor Red
+        exit 1
+    }
 }
