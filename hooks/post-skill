@@ -81,6 +81,29 @@ if [ -n "$SKILL_NAME" ]; then
     # before devforge_log_timed has read it above.
     NOW_NS=$(_devforge_epoch_ns)
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
+
+    # Plan lifecycle events (AC-9, AC-10)
+    # Euristica: cerca design doc recentemente modificato (last 60s) nel cwd corrente
+    CLEAN_SKILL_TOKEN="${SKILL_NAME##*:}"
+    if [ "$CLEAN_SKILL_TOKEN" = "siae-brainstorming" ]; then
+        # plan_created: trova doc piu' recente in docs/plans/*-design.md modificato ultimi 60s
+        if [ -d "docs/plans" ]; then
+            RECENT_PLAN=$(find docs/plans -maxdepth 1 -name "*-design.md" -type f -newermt "60 seconds ago" 2>/dev/null | head -1)
+            if [ -n "$RECENT_PLAN" ]; then
+                SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
+                devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+            fi
+        fi
+    elif [ "$CLEAN_SKILL_TOKEN" = "siae-writing-plans" ]; then
+        # plan_approved: trova doc con frontmatter status:approved modificato ultimi 60s
+        if [ -d "docs/plans" ]; then
+            RECENT_PLAN=$(find docs/plans -maxdepth 1 -name "*-design.md" -type f -newermt "60 seconds ago" 2>/dev/null | head -1)
+            if [ -n "$RECENT_PLAN" ] && head -10 "$RECENT_PLAN" 2>/dev/null | grep -qiE '^status:[[:space:]]*approved'; then
+                SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
+                devforge_log "plan_approved" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+            fi
+        fi
+    fi
 fi
 
 # --- TDD State Machine: initialize state when siae-tdd is invoked ---
