@@ -10,6 +10,7 @@ export DEVFORGE_FORCE_BASH_FALLBACK=1
 
 # Simula un commit: crea repo temp con 1 commit
 TMP_REPO=$(mktemp -d)
+trap 'rm -rf "$TMP_REPO" "$DEVFORGE_SESSION_DIR" "$DEVFORGE_LOG_FILE"' EXIT
 cd "$TMP_REPO"
 git init -q
 git config user.email "test@test.local"
@@ -41,13 +42,15 @@ mkdir -p "${HOME}/.claude"
 echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash"
 
 HOOK_INPUT='{"tool_name":"Bash","command":"git commit -m test","tool_input":{"command":"git commit -m test"}}'
-echo "$HOOK_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-commit-review" >/dev/null 2>&1 || true
+echo "$HOOK_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-commit-review" >/dev/null 2>&1
 
 # Cerca l'ultimo evento commit_created nel log
 LAST_COMMIT_EVENT=$(grep '"event":"commit_created"' "$DEVFORGE_LOG_FILE" | tail -1)
 if [ -z "$LAST_COMMIT_EVENT" ]; then
-    echo "SKIP e2e: hook non ha emesso commit_created (HEAD ts invariato)"
-    exit 0
+    echo "FAIL e2e: hook non ha emesso commit_created (saved_hash=000... HEAD=${EXPECTED_SHA}, dovrebbe triggerare)"
+    echo "--- log content ---"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
 fi
 
 # Verifica che sia SHA reale (64 hex? git sha is 40 hex) non il valore dummy dello step 1
