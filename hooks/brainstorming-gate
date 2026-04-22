@@ -73,6 +73,61 @@ if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
     exit 0
 fi
 
-# Scope filter passato — da qui in avanti Task 03 aggiunge la logica
-echo '{}'
-exit 0
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
+# Short-circuit: siae-brainstorming già invocato in session-skills
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+if [ -f "$SESSION_SKILLS_FILE" ] && grep -qF "siae-brainstorming" "$SESSION_SKILLS_FILE" 2>/dev/null; then
+    echo '{}'
+    exit 0
+fi
+
+# Rollout mode check
+W2_DEFAULT="${DEVFORGE_W2_DEFAULT:-0}"
+if [ "$W2_DEFAULT" != "1" ] && [ "${DEVFORGE_ENFORCEMENT_STRICT:-0}" != "1" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Counter SID-anchored
+CURRENT_SID=$(devforge_get_sid 2>/dev/null || echo "unknown")
+COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
+CURRENT_DATA=$(cat "$COUNTER_FILE" 2>/dev/null || echo "")
+STORED_SID="${CURRENT_DATA%%|*}"
+STORED_N="${CURRENT_DATA##*|}"
+if [ "$STORED_SID" != "$CURRENT_SID" ] || [ -z "$STORED_N" ]; then
+    STORED_N=0
+fi
+
+NEW_N=$((STORED_N + 1))
+echo "${CURRENT_SID}|${NEW_N}" > "${COUNTER_FILE}.tmp" && mv "${COUNTER_FILE}.tmp" "$COUNTER_FILE"
+
+SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+BASENAME=$(basename "$FILE_PATH")
+
+if [ "$NEW_N" -eq 1 ]; then
+    devforge_log "brainstorming_nudge_soft" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":1}"
+    echo '{}'
+    exit 0
+elif [ "$NEW_N" -le 3 ]; then
+    devforge_log "brainstorming_gate_warn" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N}}"
+    cat <<EOF_WARN
+{
+  "decision": "block",
+  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>."
+}
+EOF_WARN
+    exit 0
+else
+    devforge_log "brainstorming_gate_blocked" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N},\"violation\":\"no_brainstorm\"}"
+    cat <<EOF_BLOCK
+{
+  "decision": "block",
+  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support."
+}
+EOF_BLOCK
+    exit 0
+fi
