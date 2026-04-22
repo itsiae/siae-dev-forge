@@ -82,13 +82,33 @@ if [ ! -f "${HOME}/.claude/.devforge-pr-state-213.json" ]; then
 fi
 echo "PASS scenario 1: pr_opened 1x + snapshot creato"
 
-# ─── Scenario 7: secondo push, snapshot esiste → NON ri-emette pr_opened ───
+# ─── Scenario 2: secondo push → pr_commit_after_open, NO altro pr_opened ───
+cd "$TEST_REPO"
+echo "change" >> file.txt
+git add file.txt
+git commit -q -m "second commit"
+NEW_SHA=$(git rev-parse HEAD)
+
+# commits.totalCount passa da 2 → 3
+set_gh_fixture '{"number":213,"baseRefName":"main","changedFiles":3,"commits":{"totalCount":3},"reviewDecision":"REVIEW_REQUIRED","state":"OPEN"}'
+
 invoke_hook "git push origin HEAD"
 
 if [ "$(count_events pr_opened)" != "1" ]; then
-    echo "FAIL scenario 7: pr_opened count = $(count_events pr_opened), atteso 1 (dedup)"
+    echo "FAIL scenario 2: pr_opened count = $(count_events pr_opened), atteso 1 (dedup)"
     exit 1
 fi
+if [ "$(count_events pr_commit_after_open)" != "1" ]; then
+    echo "FAIL scenario 2: pr_commit_after_open count = $(count_events pr_commit_after_open), atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -q '"commits_since_open":1' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 2: commits_since_open != 1"
+    grep pr_commit_after_open "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+echo "PASS scenario 2: pr_commit_after_open con commits_since_open=1"
 echo "PASS scenario 7: dedup pr_opened via snapshot (count=1)"
 
 echo "SETUP OK"

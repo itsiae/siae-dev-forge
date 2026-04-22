@@ -112,6 +112,14 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
 {"pr_number":${PR_NUMBER},"base_branch":"${BASE_BRANCH}","opened_ts":"${OPENED_TS}","commits_at_open":${COMMITS_COUNT},"last_review_decision":"REVIEW_REQUIRED"}
 EOF_SNAP
                     mv "${SNAPSHOT_FILE}.tmp" "$SNAPSHOT_FILE"
+                else
+                    # Snapshot esiste → emit pr_commit_after_open
+                    COMMITS_AT_OPEN=$(grep -o '"commits_at_open":[0-9]*' "$SNAPSHOT_FILE" | grep -oE '[0-9]+' | head -1 || echo "0")
+                    COMMITS_SINCE_OPEN=$(( COMMITS_COUNT - COMMITS_AT_OPEN ))
+                    [ "$COMMITS_SINCE_OPEN" -lt 0 ] && COMMITS_SINCE_OPEN=0
+                    CURRENT_COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
+                    devforge_log "pr_commit_after_open" "success" \
+                        "{\"pr_number\":${PR_NUMBER},\"commit_sha\":\"${CURRENT_COMMIT_SHA}\",\"commits_since_open\":${COMMITS_SINCE_OPEN}}"
                 fi
                 SHOULD_UPLOAD=1
             fi
