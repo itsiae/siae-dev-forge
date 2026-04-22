@@ -66,5 +66,30 @@ count_events() {
     grep -c "\"event\":\"${event_name}\"" "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0
 }
 
+# ─── Scenario 1: primo push con PR → pr_opened + snapshot ───
+set_gh_fixture '{"number":213,"baseRefName":"main","changedFiles":3,"commits":{"totalCount":2},"reviewDecision":"REVIEW_REQUIRED","state":"OPEN"}'
+
+invoke_hook "git push origin HEAD"
+
+if [ "$(count_events pr_opened)" != "1" ]; then
+    echo "FAIL scenario 1: pr_opened count = $(count_events pr_opened), atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if [ ! -f "${HOME}/.claude/.devforge-pr-state-213.json" ]; then
+    echo "FAIL scenario 1: snapshot file non creato"
+    exit 1
+fi
+echo "PASS scenario 1: pr_opened 1x + snapshot creato"
+
+# ─── Scenario 7: secondo push, snapshot esiste → NON ri-emette pr_opened ───
+invoke_hook "git push origin HEAD"
+
+if [ "$(count_events pr_opened)" != "1" ]; then
+    echo "FAIL scenario 7: pr_opened count = $(count_events pr_opened), atteso 1 (dedup)"
+    exit 1
+fi
+echo "PASS scenario 7: dedup pr_opened via snapshot (count=1)"
+
 echo "SETUP OK"
 exit 0
