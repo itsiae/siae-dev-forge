@@ -124,6 +124,48 @@ if [ "$BLOCKED_BEFORE" != "$BLOCKED_AFTER" ]; then
 fi
 echo "PASS scenario 10: senza STRICT → no enforcement"
 
+# ─── Scenario 4: DEVFORGE_SKIP_BRAINSTORMING=1 → bypass + log ───
+rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-bypass-count"
+BYPASS_BEFORE=$(count_events brainstorming_gate_bypassed)
+DEVFORGE_ENFORCEMENT_STRICT=1 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
+BYPASS_AFTER=$(count_events brainstorming_gate_bypassed)
+if [ $((BYPASS_AFTER - BYPASS_BEFORE)) != "1" ]; then
+    echo "FAIL scenario 4: bypass event non emesso"
+    exit 1
+fi
+COUNTER=$(read_counter)
+if echo "$COUNTER" | grep -qE "\|[1-9]"; then
+    echo "FAIL scenario 4: counter incrementato su bypass ($COUNTER)"
+    exit 1
+fi
+echo "PASS scenario 4: bypass emette gate_bypassed + no counter increment"
+
+# ─── Scenario 11: anti-abuse > 5/giorno → abuse_suspected ───
+for i in 2 3 4 5 6; do
+    DEVFORGE_ENFORCEMENT_STRICT=1 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
+done
+ABUSE_COUNT=$(count_events brainstorming_bypass_abuse_suspected)
+if [ "$ABUSE_COUNT" = "0" ]; then
+    echo "FAIL scenario 11: nessun abuse_suspected dopo 6 bypass"
+    cat "${HOME}/.claude/.devforge-bypass-count"
+    exit 1
+fi
+echo "PASS scenario 11: abuse_suspected emesso dopo 6 bypass"
+
+# ─── Scenario 12: bypass file format YYYY-MM-DD|count ───
+BYPASS_FILE="${HOME}/.claude/.devforge-bypass-count"
+if [ ! -f "$BYPASS_FILE" ]; then
+    echo "FAIL scenario 12: bypass file non creato"
+    exit 1
+fi
+CONTENT=$(cat "$BYPASS_FILE")
+TODAY=$(date -u +%Y-%m-%d)
+if ! echo "$CONTENT" | grep -qE "^${TODAY}\|[0-9]+$"; then
+    echo "FAIL scenario 12: format errato: '$CONTENT'"
+    exit 1
+fi
+echo "PASS scenario 12: bypass file format YYYY-MM-DD|count"
+
 # ─── Scenario 6: file docs (.md) → out of scope (delta check) ───
 BEFORE_6=$(count_events brainstorming_nudge_soft)
 invoke_gate "${TEST_REPO}/README.md"

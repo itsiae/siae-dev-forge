@@ -92,6 +92,35 @@ if [ "$W2_DEFAULT" != "1" ] && [ "${DEVFORGE_ENFORCEMENT_STRICT:-0}" != "1" ]; t
     exit 0
 fi
 
+# Bypass esplicito via env var + daily anti-abuse counter
+if [ "${DEVFORGE_SKIP_BRAINSTORMING:-0}" = "1" ]; then
+    SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+
+    BYPASS_FILE="${HOME}/.claude/.devforge-bypass-count"
+    TODAY=$(date -u +%Y-%m-%d)
+    BYPASS_DATA=$(cat "$BYPASS_FILE" 2>/dev/null || echo "")
+    BYPASS_DATE="${BYPASS_DATA%%|*}"
+    BYPASS_COUNT="${BYPASS_DATA##*|}"
+    if [ "$BYPASS_DATE" != "$TODAY" ] || [ -z "$BYPASS_COUNT" ]; then
+        BYPASS_COUNT=0
+    fi
+    NEW_BYPASS_COUNT=$((BYPASS_COUNT + 1))
+    echo "${TODAY}|${NEW_BYPASS_COUNT}" > "${BYPASS_FILE}.tmp" && mv "${BYPASS_FILE}.tmp" "$BYPASS_FILE"
+
+    devforge_log "brainstorming_gate_bypassed" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"reason\":\"env_var\",\"bypass_count_today\":${NEW_BYPASS_COUNT}}"
+
+    if [ "$NEW_BYPASS_COUNT" -gt 5 ]; then
+        PATTERN="frequent_bypass"
+        if [ "$NEW_BYPASS_COUNT" -ge 10 ]; then
+            PATTERN="always_on"
+        fi
+        devforge_log "brainstorming_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT},\"estimated_pattern\":\"${PATTERN}\"}"
+    fi
+
+    echo '{}'
+    exit 0
+fi
+
 # Counter SID-anchored
 CURRENT_SID=$(devforge_get_sid 2>/dev/null || echo "unknown")
 COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
