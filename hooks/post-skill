@@ -120,6 +120,23 @@ if [ -n "$SKILL_NAME" ]; then
                 devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
             fi
         fi
+
+        # Reset brainstorming-gate counter (T05) + emit conversion event
+        CURRENT_SID_RESET=$(devforge_get_sid 2>/dev/null || echo "unknown")
+        BRAINSTORM_COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
+        PRE_RESET_DATA=$(cat "$BRAINSTORM_COUNTER_FILE" 2>/dev/null || echo "")
+        PRE_RESET_N="${PRE_RESET_DATA##*|}"
+        TRIGGER="none"
+        case "${PRE_RESET_N:-0}" in
+            1) TRIGGER="nudge" ;;
+            2|3) TRIGGER="warn" ;;
+            [4-9]|[0-9][0-9]*) TRIGGER="block" ;;
+        esac
+        echo "${CURRENT_SID_RESET}|0" > "${BRAINSTORM_COUNTER_FILE}.tmp" && \
+            mv "${BRAINSTORM_COUNTER_FILE}.tmp" "$BRAINSTORM_COUNTER_FILE"
+        if [ "$TRIGGER" != "none" ]; then
+            devforge_log "brainstorming_invoked_post_gate" "success" "{\"trigger\":\"${TRIGGER}\",\"counter_before_reset\":${PRE_RESET_N:-0}}" || true
+        fi
     elif [ "$CLEAN_SKILL_TOKEN" = "siae-writing-plans" ]; then
         # plan_approved: doc con frontmatter status:approved modificato ultimi PLAN_EVENT_WINDOW_SEC
         RECENT_PLAN=$(_plan_latest_recent)

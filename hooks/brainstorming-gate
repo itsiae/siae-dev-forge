@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# PreToolUse hook: progressive enforcement siae-brainstorming su Edit/Write
+# ─────────────────────────────────────────────────────────────────
+# Hook:     brainstorming-gate
+# Evento:   PreToolUse
+# Matcher:  Edit, Write
+# Timeout:  5s
+# Formato:  decision:"block" se counter >= 2 (W1+ mode) e no brainstorming
+# History:  v1.45.0 NEW (progressive friction — KPI Rosario adoption)
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="brainstorming-gate"
+
+HOOK_INPUT=$(cat)
+
+# Escape hatch: DEVFORGE_ENFORCEMENT_OFF=1 → skip immediato
+if [ "${DEVFORGE_ENFORCEMENT_OFF:-0}" = "1" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Extract file_path (pattern tdd-gate)
+if command -v jq >/dev/null 2>&1; then
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
+else
+    FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
+
+if [ -z "$FILE_PATH" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Normalize relative → absolute
+if [[ "$FILE_PATH" != /* ]]; then
+    FILE_PATH="$(pwd)/${FILE_PATH#./}"
+fi
+
+# Scope: file dev essere dentro un repo git
+FILE_DIR="$(dirname "$FILE_PATH")"
+while [ -n "$FILE_DIR" ] && [ ! -d "$FILE_DIR" ]; do
+    FILE_DIR="$(dirname "$FILE_DIR")"
+done
+if [ -z "$FILE_DIR" ]; then
+    echo '{}'
+    exit 0
+fi
+FILE_GIT_ROOT="$(git -C "$FILE_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$FILE_GIT_ROOT" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Scope: solo repo itsiae
+REMOTE_URL="$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)"
+if ! echo "$REMOTE_URL" | grep -qE "[/:]itsiae/"; then
+    echo '{}'
+    exit 0
+fi
+
+# Scope: solo file prod (stessa regex di tdd-gate)
+PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
+if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
+    echo '{}'
+    exit 0
+fi
+
+# Esclude test files e docs
+EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
+    echo '{}'
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
+# Short-circuit: siae-brainstorming già invocato in session-skills
+SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
+if [ -f "$SESSION_SKILLS_FILE" ] && grep -qF "siae-brainstorming" "$SESSION_SKILLS_FILE" 2>/dev/null; then
+    echo '{}'
+    exit 0
+fi
+
+# Rollout mode check
+W2_DEFAULT="${DEVFORGE_W2_DEFAULT:-0}"
+if [ "$W2_DEFAULT" != "1" ] && [ "${DEVFORGE_ENFORCEMENT_STRICT:-0}" != "1" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Bypass esplicito via env var + daily anti-abuse counter
+if [ "${DEVFORGE_SKIP_BRAINSTORMING:-0}" = "1" ]; then
+    SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+
+    BYPASS_FILE="${HOME}/.claude/.devforge-bypass-count"
+    TODAY=$(date -u +%Y-%m-%d)
+    BYPASS_DATA=$(cat "$BYPASS_FILE" 2>/dev/null || echo "")
+    BYPASS_DATE="${BYPASS_DATA%%|*}"
+    BYPASS_COUNT="${BYPASS_DATA##*|}"
+    if [ "$BYPASS_DATE" != "$TODAY" ] || [ -z "$BYPASS_COUNT" ]; then
+        BYPASS_COUNT=0
+    fi
+    NEW_BYPASS_COUNT=$((BYPASS_COUNT + 1))
+    echo "${TODAY}|${NEW_BYPASS_COUNT}" > "${BYPASS_FILE}.tmp" && mv "${BYPASS_FILE}.tmp" "$BYPASS_FILE"
+
+    devforge_log "brainstorming_gate_bypassed" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"reason\":\"env_var\",\"bypass_count_today\":${NEW_BYPASS_COUNT}}"
+
+    if [ "$NEW_BYPASS_COUNT" -gt 5 ]; then
+        PATTERN="frequent_bypass"
+        if [ "$NEW_BYPASS_COUNT" -ge 10 ]; then
+            PATTERN="always_on"
+        fi
+        devforge_log "brainstorming_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT},\"estimated_pattern\":\"${PATTERN}\"}"
+    fi
+
+    echo '{}'
+    exit 0
+fi
+
+# Counter SID-anchored
+CURRENT_SID=$(devforge_get_sid 2>/dev/null || echo "unknown")
+COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
+CURRENT_DATA=$(cat "$COUNTER_FILE" 2>/dev/null || echo "")
+STORED_SID="${CURRENT_DATA%%|*}"
+STORED_N="${CURRENT_DATA##*|}"
+if [ "$STORED_SID" != "$CURRENT_SID" ] || [ -z "$STORED_N" ]; then
+    STORED_N=0
+fi
+
+NEW_N=$((STORED_N + 1))
+echo "${CURRENT_SID}|${NEW_N}" > "${COUNTER_FILE}.tmp" && mv "${COUNTER_FILE}.tmp" "$COUNTER_FILE"
+
+SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+BASENAME=$(basename "$FILE_PATH")
+
+if [ "$NEW_N" -eq 1 ]; then
+    devforge_log "brainstorming_nudge_soft" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":1}"
+    echo '{}'
+    exit 0
+elif [ "$NEW_N" -le 3 ]; then
+    devforge_log "brainstorming_gate_warn" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N}}"
+    cat <<EOF_WARN
+{
+  "decision": "block",
+  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>."
+}
+EOF_WARN
+    exit 0
+else
+    devforge_log "brainstorming_gate_blocked" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N},\"violation\":\"no_brainstorm\"}"
+    cat <<EOF_BLOCK
+{
+  "decision": "block",
+  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support."
+}
+EOF_BLOCK
+    exit 0
+fi

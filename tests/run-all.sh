@@ -1204,6 +1204,15 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+# Test brainstorming-gate progressive enforcement (adoption 3.3% -> 50%+)
+if bash "${PLUGIN_ROOT}/tests/hooks/brainstorming-gate.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  brainstorming-gate: progressive enforcement (nudge/warn/block + bypass + anti-abuse)"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  brainstorming-gate: hook enforcement non funziona"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""
