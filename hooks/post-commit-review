@@ -144,6 +144,39 @@ EOF_SNAP
     fi
 fi
 
+# Emit pr_merged on gh pr merge CLI invocation
+if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
+    source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+    devforge_init_session 2>/dev/null || true
+    if command -v gh >/dev/null 2>&1; then
+        if command -v timeout >/dev/null 2>&1; then
+            PR_JSON=$(timeout 3 gh pr view --json number,commits 2>/dev/null || echo "")
+        else
+            PR_JSON=$(gh pr view --json number,commits 2>/dev/null || echo "")
+        fi
+        if [ -n "$PR_JSON" ]; then
+            PR_NUMBER=$(echo "$PR_JSON" | grep -o '"number":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")
+            TOTAL_COMMITS=$(echo "$PR_JSON" | grep -o '"totalCount":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")
+            if [ "${PR_NUMBER:-0}" -gt 0 ]; then
+                SNAPSHOT_FILE="${HOME}/.claude/.devforge-pr-state-${PR_NUMBER}.json"
+                COMMITS_AT_OPEN=0
+                if [ -f "$SNAPSHOT_FILE" ]; then
+                    COMMITS_AT_OPEN=$(grep -o '"commits_at_open":[0-9]*' "$SNAPSHOT_FILE" | grep -oE '[0-9]+' | head -1 || echo "0")
+                fi
+                DELTA=$(( TOTAL_COMMITS - COMMITS_AT_OPEN ))
+                [ "$DELTA" -lt 0 ] && DELTA=0
+
+                devforge_log "pr_merged" "success" \
+                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA}}"
+
+                # Cleanup snapshot
+                rm -f "$SNAPSHOT_FILE"
+                SHOULD_UPLOAD=1
+            fi
+        fi
+    fi
+fi
+
 # Only trigger review on PR creation or git push (not on every commit)
 if [[ ! "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+create ]] && \
    [[ ! "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then

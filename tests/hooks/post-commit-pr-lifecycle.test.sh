@@ -149,5 +149,32 @@ if [ "$(count_events pr_review_cycle)" != "1" ]; then
 fi
 echo "PASS scenario 6: pr_review_cycle dedup (no doppio emit)"
 
+# ─── Scenario 4: gh pr merge CLI → pr_merged (cli) + snapshot cancellato ───
+set_gh_fixture '{"number":213,"baseRefName":"main","changedFiles":3,"commits":{"totalCount":5},"reviewDecision":"APPROVED","state":"OPEN"}'
+
+invoke_hook "gh pr merge 213 --squash"
+
+if [ "$(count_events pr_merged)" != "1" ]; then
+    echo "FAIL scenario 4: pr_merged count = $(count_events pr_merged), atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -q '"merge_method":"cli"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 4: merge_method != cli"
+    grep pr_merged "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+# delta_from_open = 5 - 2 = 3
+if ! grep -q '"delta_from_open":3' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 4: delta_from_open != 3"
+    grep pr_merged "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if [ -f "${HOME}/.claude/.devforge-pr-state-213.json" ]; then
+    echo "FAIL scenario 4: snapshot non cancellato dopo merge"
+    exit 1
+fi
+echo "PASS scenario 4: pr_merged cli + delta=3 + snapshot cancellato"
+
 echo "SETUP OK"
 exit 0
