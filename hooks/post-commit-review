@@ -169,6 +169,27 @@ if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
                 devforge_log "pr_merged" "success" \
                     "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA}}"
 
+                # pr_metrics aggregato (legge snapshot PRIMA del cleanup)
+                REWORK_COUNT=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
+                REWORK_COUNT=${REWORK_COUNT:-0}
+                CYCLES_COUNT=$(grep -c "\"event\":\"pr_review_cycle\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
+                CYCLES_COUNT=${CYCLES_COUNT:-0}
+                TTM_SEC=0
+                if [ -f "$SNAPSHOT_FILE" ] && command -v python3 >/dev/null 2>&1; then
+                    OPENED_TS=$(grep -o '"opened_ts":"[^"]*"' "$SNAPSHOT_FILE" | sed 's/.*"opened_ts":"//;s/"$//')
+                    if [ -n "$OPENED_TS" ]; then
+                        TTM_SEC=$(python3 -c "
+import sys
+from datetime import datetime, timezone
+t = datetime.fromisoformat(sys.argv[1].replace('Z','+00:00'))
+now = datetime.now(timezone.utc)
+print(max(0, int((now - t).total_seconds())))
+" "$OPENED_TS" 2>/dev/null || echo 0)
+                    fi
+                fi
+                devforge_log "pr_metrics" "success" \
+                    "{\"pr_number\":${PR_NUMBER},\"rework_commits\":${REWORK_COUNT},\"review_cycles\":${CYCLES_COUNT},\"time_to_merge_sec\":${TTM_SEC},\"first_push_to_merge_sec\":${TTM_SEC}}"
+
                 # Cleanup snapshot
                 rm -f "$SNAPSHOT_FILE"
                 SHOULD_UPLOAD=1

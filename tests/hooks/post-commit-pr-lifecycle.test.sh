@@ -170,6 +170,29 @@ if ! grep -q '"delta_from_open":3' "$DEVFORGE_LOG_FILE"; then
     grep pr_merged "$DEVFORGE_LOG_FILE"
     exit 1
 fi
+if [ "$(count_events pr_metrics)" != "1" ]; then
+    echo "FAIL scenario 4b: pr_metrics count = $(count_events pr_metrics), atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+EXPECTED_REWORK=$(grep -c '"event":"pr_commit_after_open"' "$DEVFORGE_LOG_FILE" || true)
+EXPECTED_REWORK=${EXPECTED_REWORK:-0}
+if ! grep -q "\"rework_commits\":${EXPECTED_REWORK}" "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 4b: rework_commits != ${EXPECTED_REWORK}"
+    grep pr_metrics "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -q '"review_cycles":1' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 4b: review_cycles != 1"
+    grep pr_metrics "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -qE '"time_to_merge_sec":[0-9]+' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 4b: time_to_merge_sec mancante"
+    exit 1
+fi
+echo "PASS scenario 4b: pr_metrics rework=${EXPECTED_REWORK} cycles=1 ttm=ok"
+
 if [ -f "${HOME}/.claude/.devforge-pr-state-213.json" ]; then
     echo "FAIL scenario 4: snapshot non cancellato dopo merge"
     exit 1
