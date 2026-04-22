@@ -107,3 +107,78 @@ else
     fi
     echo "PASS: plan_created correctly skipped on stale doc"
 fi
+
+# Step 5: plan_revised emesso su seconda invocazione brainstorming per lo stesso plan
+# Reset log + rinfresca plan (riporta a proposed per nuovo ciclo)
+rm -f "$DEVFORGE_LOG_FILE"
+sed -i.bak 's/status: approved/status: proposed/' docs/plans/2026-04-21-test-design.md 2>/dev/null || true
+# Assicura frontmatter proposed (il file potrebbe essere rimasto proposed dallo step 3)
+touch docs/plans/2026-04-21-test-design.md
+
+# Prima invocazione brainstorming → plan_created
+HOOK_INPUT='{"tool_name":"Skill","tool_input":{"skill":"siae-devforge:siae-brainstorming","args":""}}'
+echo "$HOOK_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+
+# Seconda invocazione brainstorming (simula revisione) → plan_revised
+touch docs/plans/2026-04-21-test-design.md
+echo "$HOOK_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+
+if ! grep -q '"event":"plan_revised"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL: plan_revised missing on second brainstorming invocation"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+CREATED_COUNT=$(grep -c '"event":"plan_created"' "$DEVFORGE_LOG_FILE")
+if [ "$CREATED_COUNT" -ne 1 ]; then
+    echo "FAIL: expected exactly 1 plan_created, got $CREATED_COUNT"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+echo "PASS: plan_revised emitted on second invocation (not double plan_created)"
+
+# Step 6: plan_metrics emesso dopo plan_approved con iterations correct
+# Setup pronto da step 5: 1 created + 1 revised per test-design.md
+sed -i.bak 's/status: proposed/status: approved/' docs/plans/2026-04-21-test-design.md
+touch docs/plans/2026-04-21-test-design.md
+
+HOOK_INPUT2='{"tool_name":"Skill","tool_input":{"skill":"siae-devforge:siae-writing-plans","args":""}}'
+echo "$HOOK_INPUT2" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+
+if ! grep -q '"event":"plan_metrics"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL: plan_metrics missing after plan_approved"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+METRICS_LINE=$(grep '"event":"plan_metrics"' "$DEVFORGE_LOG_FILE" | tail -1)
+if ! echo "$METRICS_LINE" | grep -q '"iterations":1'; then
+    echo "FAIL: plan_metrics iterations incorrect (expected 1)"
+    echo "$METRICS_LINE"
+    exit 1
+fi
+echo "PASS: plan_metrics emitted with iterations=1"
+
+# Step 7: plan_metrics skipped se non c'e' plan_created precedente
+rm -f "$DEVFORGE_LOG_FILE"
+cat > docs/plans/2026-04-21-another-design.md <<'FM'
+---
+title: Another
+date: 2026-04-21
+status: approved
+---
+# Another
+FM
+touch docs/plans/2026-04-21-another-design.md
+
+echo "$HOOK_INPUT2" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+
+if ! grep -q '"event":"plan_approved"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL: plan_approved missing"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if grep -q '"event":"plan_metrics"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL: plan_metrics emitted without prior plan_created (should skip)"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+echo "PASS: plan_metrics correctly skipped (no prior plan_created)"

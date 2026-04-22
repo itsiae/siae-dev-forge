@@ -109,11 +109,16 @@ if [ -n "$SKILL_NAME" ]; then
     }
 
     if [ "$CLEAN_SKILL_TOKEN" = "siae-brainstorming" ]; then
-        # plan_created: doc piu' recente in docs/plans/*-design.md modificato ultimi PLAN_EVENT_WINDOW_SEC
+        # plan_created vs plan_revised: se esiste gia' un plan_created per questo plan_path
+        # nel log JSONL locale, emetti plan_revised (iterazione successiva di design).
         RECENT_PLAN=$(_plan_latest_recent)
         if [ -n "$RECENT_PLAN" ]; then
             SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
-            devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+            if [ -f "$DEVFORGE_LOG_FILE" ] && grep -q "\"event\":\"plan_created\".*\"plan_path\":\"${SAFE_PLAN_PATH}\"" "$DEVFORGE_LOG_FILE" 2>/dev/null; then
+                devforge_log "plan_revised" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+            else
+                devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+            fi
         fi
     elif [ "$CLEAN_SKILL_TOKEN" = "siae-writing-plans" ]; then
         # plan_approved: doc con frontmatter status:approved modificato ultimi PLAN_EVENT_WINDOW_SEC
@@ -121,6 +126,28 @@ if [ -n "$SKILL_NAME" ]; then
         if [ -n "$RECENT_PLAN" ] && head -10 "$RECENT_PLAN" 2>/dev/null | grep -qiE '^status:[[:space:]]*approved'; then
             SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
             devforge_log "plan_approved" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+
+            # plan_metrics: iterations + duration calcolati dal log JSONL locale.
+            # Skip emit se plan_created non esiste (utente skippa brainstorming).
+            if [ -f "$DEVFORGE_LOG_FILE" ]; then
+                CREATED_LINE=$(grep "\"event\":\"plan_created\".*\"plan_path\":\"${SAFE_PLAN_PATH}\"" "$DEVFORGE_LOG_FILE" 2>/dev/null | head -1 || true)
+                if [ -n "$CREATED_LINE" ]; then
+                    ITERATIONS=$(grep -c "\"event\":\"plan_revised\".*\"plan_path\":\"${SAFE_PLAN_PATH}\"" "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
+                    CREATED_TS=$(echo "$CREATED_LINE" | grep -oE '"ts":"[^"]+"' | head -1 | sed 's/"ts":"//;s/"$//')
+                    if command -v python3 >/dev/null 2>&1 && [ -n "$CREATED_TS" ]; then
+                        CREATED_EPOCH=$(python3 -c "import sys;from datetime import datetime;t=datetime.fromisoformat(sys.argv[1].replace('Z','+00:00'));print(int(t.timestamp()))" "$CREATED_TS" 2>/dev/null || echo 0)
+                        NOW_EPOCH=$(date -u +%s)
+                        if [ "${CREATED_EPOCH:-0}" -gt 0 ]; then
+                            DURATION_SEC=$((NOW_EPOCH - CREATED_EPOCH))
+                            devforge_log "plan_metrics" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"iterations\":${ITERATIONS:-0},\"duration_sec\":${DURATION_SEC},\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+                        else
+                            devforge_log "plan_metrics" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"iterations\":${ITERATIONS:-0},\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+                        fi
+                    else
+                        devforge_log "plan_metrics" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"iterations\":${ITERATIONS:-0},\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
+                    fi
+                fi
+            fi
         fi
     fi
 fi
