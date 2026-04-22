@@ -141,6 +141,62 @@ EOF_SNAP
                 SHOULD_UPLOAD=1
             fi
         fi
+
+        # ─── Catch-up: snapshot orfani per merge via UI web ───
+        CATCH_UP_COUNT=0
+        CURRENT_PR_NUMBER="${PR_NUMBER:-0}"
+        for snapshot in $(ls -1tr "${HOME}/.claude/".devforge-pr-state-*.json 2>/dev/null | head -5); do
+            [ "$CATCH_UP_COUNT" -ge 5 ] && break
+            [ ! -f "$snapshot" ] && continue
+            ORPHAN_PR=$(grep -o '"pr_number":[0-9]*' "$snapshot" | grep -oE '[0-9]+' | head -1 || echo "0")
+            if [ "$ORPHAN_PR" = "$CURRENT_PR_NUMBER" ]; then
+                continue
+            fi
+            [ "${ORPHAN_PR:-0}" -eq 0 ] && continue
+
+            if command -v timeout >/dev/null 2>&1; then
+                ORPHAN_JSON=$(timeout 3 gh pr view "$ORPHAN_PR" --json state,mergedAt,commits 2>/dev/null || echo "")
+            else
+                ORPHAN_JSON=$(gh pr view "$ORPHAN_PR" --json state,mergedAt,commits 2>/dev/null || echo "")
+            fi
+            [ -z "$ORPHAN_JSON" ] && continue
+
+            ORPHAN_STATE=$(echo "$ORPHAN_JSON" | grep -o '"state":"[^"]*"' | sed 's/.*"state":"//;s/"$//' || echo "")
+            if [ "$ORPHAN_STATE" = "MERGED" ] || [ "$ORPHAN_STATE" = "CLOSED" ]; then
+                ORPHAN_TOTAL=$(echo "$ORPHAN_JSON" | grep -o '"totalCount":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")
+                ORPHAN_COMMITS_AT_OPEN=$(grep -o '"commits_at_open":[0-9]*' "$snapshot" | grep -oE '[0-9]+' | head -1 || echo "0")
+                ORPHAN_DELTA=$(( ORPHAN_TOTAL - ORPHAN_COMMITS_AT_OPEN ))
+                [ "$ORPHAN_DELTA" -lt 0 ] && ORPHAN_DELTA=0
+
+                MERGE_METHOD="web"
+                [ "$ORPHAN_STATE" = "CLOSED" ] && MERGE_METHOD="closed"
+
+                devforge_log "pr_merged" "success" \
+                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA}}"
+
+                ORPHAN_REWORK=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${ORPHAN_PR}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
+                ORPHAN_REWORK=${ORPHAN_REWORK:-0}
+                ORPHAN_CYCLES=$(grep -c "\"event\":\"pr_review_cycle\".*\"pr_number\":${ORPHAN_PR}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
+                ORPHAN_CYCLES=${ORPHAN_CYCLES:-0}
+                ORPHAN_OPENED_TS=$(grep -o '"opened_ts":"[^"]*"' "$snapshot" | sed 's/.*"opened_ts":"//;s/"$//')
+                ORPHAN_TTM=0
+                if [ -n "$ORPHAN_OPENED_TS" ] && command -v python3 >/dev/null 2>&1; then
+                    ORPHAN_TTM=$(python3 -c "
+import sys
+from datetime import datetime, timezone
+t = datetime.fromisoformat(sys.argv[1].replace('Z','+00:00'))
+now = datetime.now(timezone.utc)
+print(max(0, int((now - t).total_seconds())))
+" "$ORPHAN_OPENED_TS" 2>/dev/null || echo 0)
+                fi
+                devforge_log "pr_metrics" "success" \
+                    "{\"pr_number\":${ORPHAN_PR},\"rework_commits\":${ORPHAN_REWORK},\"review_cycles\":${ORPHAN_CYCLES},\"time_to_merge_sec\":${ORPHAN_TTM},\"first_push_to_merge_sec\":${ORPHAN_TTM}}"
+
+                rm -f "$snapshot"
+                CATCH_UP_COUNT=$(( CATCH_UP_COUNT + 1 ))
+                SHOULD_UPLOAD=1
+            fi
+        done
     fi
 fi
 

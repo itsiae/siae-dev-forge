@@ -199,5 +199,52 @@ if [ -f "${HOME}/.claude/.devforge-pr-state-213.json" ]; then
 fi
 echo "PASS scenario 4: pr_merged cli + delta=3 + snapshot cancellato"
 
+# ─── Scenario 5: snapshot orfano + state=MERGED → catch-up pr_merged (web) ───
+OPENED_TS_PAST=$(python3 -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) - timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+cat > "${HOME}/.claude/.devforge-pr-state-999.json" << EOF
+{"pr_number":999,"base_branch":"main","opened_ts":"${OPENED_TS_PAST}","commits_at_open":1,"last_review_decision":"REVIEW_REQUIRED"}
+EOF
+
+# Shim gh per-arg: PR 999 → MERGED
+cat > "${GH_SHIM_DIR}/gh" << 'GHEOF'
+#!/usr/bin/env bash
+for arg in "$@"; do
+    case "$arg" in
+        999)
+            echo '{"number":999,"state":"MERGED","mergedAt":"2026-04-22T09:00:00Z","commits":{"totalCount":4}}'
+            exit 0
+            ;;
+    esac
+done
+echo ""
+exit 0
+GHEOF
+chmod +x "${GH_SHIM_DIR}/gh"
+unset GH_FIXTURE
+
+MERGED_BEFORE=$(count_events pr_merged)
+invoke_hook "git push origin HEAD"
+MERGED_AFTER=$(count_events pr_merged)
+NEW_MERGED=$(( MERGED_AFTER - MERGED_BEFORE ))
+if [ "$NEW_MERGED" != "1" ]; then
+    echo "FAIL scenario 5: nuovi pr_merged = $NEW_MERGED, atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -q '"merge_method":"web"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 5: merge_method != web"
+    grep pr_merged "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if [ -f "${HOME}/.claude/.devforge-pr-state-999.json" ]; then
+    echo "FAIL scenario 5: snapshot PR 999 non cancellato"
+    exit 1
+fi
+if ! grep -q '"pr_number":999' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 5: pr_metrics PR 999 non presente"
+    exit 1
+fi
+echo "PASS scenario 5: catch-up pr_merged (web) + pr_metrics + cleanup"
+
 echo "SETUP OK"
 exit 0
