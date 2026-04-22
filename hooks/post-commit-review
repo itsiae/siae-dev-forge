@@ -109,7 +109,7 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
 
                     OPENED_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                     cat > "${SNAPSHOT_FILE}.tmp" << EOF_SNAP
-{"pr_number":${PR_NUMBER},"base_branch":"${BASE_BRANCH}","opened_ts":"${OPENED_TS}","commits_at_open":${COMMITS_COUNT},"last_review_decision":"REVIEW_REQUIRED"}
+{"pr_number":${PR_NUMBER},"base_branch":"${SAFE_BASE_BRANCH}","opened_ts":"${OPENED_TS}","commits_at_open":${COMMITS_COUNT},"last_review_decision":"REVIEW_REQUIRED"}
 EOF_SNAP
                     mv "${SNAPSHOT_FILE}.tmp" "$SNAPSHOT_FILE"
                 else
