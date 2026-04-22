@@ -21,12 +21,12 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Test scaffold + helper gh/git mock | `task-01-test-scaffold.md` | [PENDING] |
-| 2 | Hook scope filter + escape hatch | `task-02-hook-scope-filter.md` | [PENDING] |
-| 3 | Counter SID-anchored + 3 livelli (soft/warn/block) | `task-03-counter-levels.md` | [PENDING] |
-| 4 | Bypass env var + daily anti-abuse counter | `task-04-bypass-anti-abuse.md` | [PENDING] |
-| 5 | Reset counter in post-skill su siae-brainstorming | `task-05-post-skill-reset.md` | [PENDING] |
-| 6 | Hooks.json registration + run-all.sh integration | `task-06-hooks-json-integration.md` | [PENDING] |
+| 1 | Test scaffold + helper gh/git mock | `task-01-test-scaffold.md` | [DONE] |
+| 2 | Hook scope filter + escape hatch | `task-02-hook-scope-filter.md` | [DONE] |
+| 3 | Counter SID-anchored + 3 livelli (soft/warn/block) | `task-03-counter-levels.md` | [DONE] |
+| 4 | Bypass env var + daily anti-abuse counter | `task-04-bypass-anti-abuse.md` | [DONE] |
+| 5 | Reset counter in post-skill su siae-brainstorming | `task-05-post-skill-reset.md` | [DONE] |
+| 6 | Hooks.json registration + run-all.sh integration | `task-06-hooks-json-integration.md` | [DONE] |
 
 ## Dipendenze
 
