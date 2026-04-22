@@ -127,22 +127,14 @@ EOF_SNAP
                 if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] && [ -f "$SNAPSHOT_FILE" ]; then
                     LAST_DECISION=$(grep -o '"last_review_decision":"[^"]*"' "$SNAPSHOT_FILE" | sed 's/.*"last_review_decision":"//;s/"$//' || echo "")
                     if [ "$LAST_DECISION" != "CHANGES_REQUESTED" ]; then
-                        PREV_CYCLES=$(grep -c "\"event\":\"pr_review_cycle\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || echo 0)
+                        PREV_CYCLES=$(grep -c "\"event\":\"pr_review_cycle\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
+                        PREV_CYCLES=${PREV_CYCLES:-0}
                         CYCLE_NUM=$(( PREV_CYCLES + 1 ))
                         devforge_log "pr_review_cycle" "success" \
                             "{\"pr_number\":${PR_NUMBER},\"cycle_num\":${CYCLE_NUM},\"trigger\":\"changes_requested\"}"
 
-                        # Update snapshot con nuova last_review_decision
-                        if command -v python3 >/dev/null 2>&1; then
-                            python3 - "$SNAPSHOT_FILE" "$REVIEW_DECISION" << 'PYEOF' || true
-import json, sys, os
-p, new_dec = sys.argv[1], sys.argv[2]
-with open(p) as f: d = json.load(f)
-d["last_review_decision"] = new_dec
-with open(p + ".tmp", "w") as f: json.dump(d, f)
-os.replace(p + ".tmp", p)
-PYEOF
-                        fi
+                        # Update snapshot con nuova last_review_decision (sed portable macOS/Linux)
+                        sed "s/\"last_review_decision\":\"[^\"]*\"/\"last_review_decision\":\"${REVIEW_DECISION}\"/" "$SNAPSHOT_FILE" > "${SNAPSHOT_FILE}.tmp" && mv "${SNAPSHOT_FILE}.tmp" "$SNAPSHOT_FILE"
                     fi
                 fi
 
