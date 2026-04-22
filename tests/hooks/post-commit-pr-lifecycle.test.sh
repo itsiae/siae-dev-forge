@@ -111,5 +111,43 @@ fi
 echo "PASS scenario 2: pr_commit_after_open con commits_since_open=1"
 echo "PASS scenario 7: dedup pr_opened via snapshot (count=1)"
 
+# ─── Scenario 3: reviewDecision → CHANGES_REQUESTED → pr_review_cycle cycle_num=1 ───
+cd "$TEST_REPO"
+echo "fix" >> file.txt
+git add file.txt
+git commit -q -m "fix review"
+
+set_gh_fixture '{"number":213,"baseRefName":"main","changedFiles":3,"commits":{"totalCount":4},"reviewDecision":"CHANGES_REQUESTED","state":"OPEN"}'
+
+invoke_hook "git push origin HEAD"
+
+if [ "$(count_events pr_review_cycle)" != "1" ]; then
+    echo "FAIL scenario 3: pr_review_cycle count = $(count_events pr_review_cycle), atteso 1"
+    cat "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+if ! grep -q '"cycle_num":1' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 3: cycle_num != 1"
+    grep pr_review_cycle "$DEVFORGE_LOG_FILE"
+    exit 1
+fi
+echo "PASS scenario 3: pr_review_cycle cycle_num=1"
+
+# ─── Scenario 6: push successivo con stessa CHANGES_REQUESTED → no doppio emit ───
+cd "$TEST_REPO"
+echo "fix2" >> file.txt
+git add file.txt
+git commit -q -m "another fix"
+
+set_gh_fixture '{"number":213,"baseRefName":"main","changedFiles":3,"commits":{"totalCount":5},"reviewDecision":"CHANGES_REQUESTED","state":"OPEN"}'
+
+invoke_hook "git push origin HEAD"
+
+if [ "$(count_events pr_review_cycle)" != "1" ]; then
+    echo "FAIL scenario 6: pr_review_cycle count = $(count_events pr_review_cycle), atteso 1 (no doppio emit)"
+    exit 1
+fi
+echo "PASS scenario 6: pr_review_cycle dedup (no doppio emit)"
+
 echo "SETUP OK"
 exit 0
