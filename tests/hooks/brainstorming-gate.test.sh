@@ -124,8 +124,29 @@ if [ "$BLOCKED_BEFORE" != "$BLOCKED_AFTER" ]; then
 fi
 echo "PASS scenario 10: senza STRICT → no enforcement"
 
+# ─── Scenario 5b: post-skill reset su siae-brainstorming ───
+rm -f "${HOME}/.claude/.devforge-session-skills"
+echo "test-sid-12345|3" > "${HOME}/.claude/.devforge-brainstorm-counter"
+SKILL_INPUT='{"tool_name":"Skill","skill":"siae-devforge:siae-brainstorming","name":"siae-devforge:siae-brainstorming"}'
+echo "$SKILL_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+COUNTER=$(read_counter)
+if [ "$COUNTER" != "test-sid-12345|0" ]; then
+    echo "FAIL scenario 5b: counter dopo reset = '$COUNTER'"
+    exit 1
+fi
+if [ "$(count_events brainstorming_invoked_post_gate)" = "0" ]; then
+    echo "FAIL scenario 5b: brainstorming_invoked_post_gate non emesso"
+    exit 1
+fi
+if ! grep -q '"trigger":"warn"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 5b: trigger non è 'warn' (counter era 3)"
+    grep brainstorming_invoked_post_gate "$DEVFORGE_LOG_FILE" || true
+    exit 1
+fi
+echo "PASS scenario 5b: post-skill reset + invoked_post_gate trigger=warn"
+
 # ─── Scenario 4: DEVFORGE_SKIP_BRAINSTORMING=1 → bypass + log ───
-rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-bypass-count"
+rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-bypass-count" "${HOME}/.claude/.devforge-session-skills"
 BYPASS_BEFORE=$(count_events brainstorming_gate_bypassed)
 DEVFORGE_ENFORCEMENT_STRICT=1 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
 BYPASS_AFTER=$(count_events brainstorming_gate_bypassed)
