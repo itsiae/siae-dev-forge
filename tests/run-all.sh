@@ -1195,6 +1195,15 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+# Test PR lifecycle events (KPI Rosario #3: rework/review iterations)
+if bash "${PLUGIN_ROOT}/tests/hooks/post-commit-pr-lifecycle.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  post-commit-pr-lifecycle: pr_opened/commit_after_open/review_cycle/merged/metrics"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  post-commit-pr-lifecycle: eventi PR lifecycle non emessi correttamente"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""

@@ -21,13 +21,13 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Setup test file + gh mock shim | `task-01-setup-test-shim.md` | [PENDING] |
-| 2 | pr_opened idempotente via snapshot | `task-02-pr-opened-idempotent.md` | [PENDING] |
-| 3 | pr_commit_after_open su push successivi | `task-03-pr-commit-after-open.md` | [PENDING] |
-| 4 | pr_review_cycle su CHANGES_REQUESTED | `task-04-pr-review-cycle.md` | [PENDING] |
-| 5 | pr_merged via gh pr merge (CLI) | `task-05-pr-merged-cli.md` | [PENDING] |
-| 6 | pr_metrics aggregato post-merge | `task-06-pr-metrics.md` | [PENDING] |
-| 7 | Catch-up polling + pr_merged web | `task-07-catch-up-web.md` | [PENDING] |
+| 1 | Setup test file + gh mock shim | `task-01-setup-test-shim.md` | [DONE] |
+| 2 | pr_opened idempotente via snapshot | `task-02-pr-opened-idempotent.md` | [DONE] |
+| 3 | pr_commit_after_open su push successivi | `task-03-pr-commit-after-open.md` | [DONE] |
+| 4 | pr_review_cycle su CHANGES_REQUESTED | `task-04-pr-review-cycle.md` | [DONE] |
+| 5 | pr_merged via gh pr merge (CLI) | `task-05-pr-merged-cli.md` | [DONE] |
+| 6 | pr_metrics aggregato post-merge | `task-06-pr-metrics.md` | [DONE] |
+| 7 | Catch-up polling + pr_merged web | `task-07-catch-up-web.md` | [DONE] |
 
 ## Dipendenze
 
