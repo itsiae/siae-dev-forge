@@ -83,25 +83,44 @@ if [ -n "$SKILL_NAME" ]; then
     echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
 
     # Plan lifecycle events (AC-9, AC-10)
-    # Euristica: cerca design doc recentemente modificato (last 60s) nel cwd corrente
+    # Euristica: cerca design doc recentemente modificato (last PLAN_EVENT_WINDOW_SEC) nel cwd corrente
+    # Portable mtime check (no `find -newermt`: unsupported on busybox/git-bash on Windows).
+    # Ordering via `ls -1t` (mtime-desc) + age via stat (BSD -f %m / GNU -c %Y).
+    PLAN_EVENT_WINDOW_SEC=60
     CLEAN_SKILL_TOKEN="${SKILL_NAME##*:}"
+    _plan_latest_recent() {
+        # stdout: path del design doc piu' recente in docs/plans/*-design.md
+        # se la sua eta' e' nel range [0, PLAN_EVENT_WINDOW_SEC] secondi; vuoto altrimenti.
+        if [ ! -d "docs/plans" ]; then
+            return 0
+        fi
+        local latest
+        latest=$(ls -1t docs/plans/*-design.md 2>/dev/null | head -1)
+        if [ -z "$latest" ] || [ ! -f "$latest" ]; then
+            return 0
+        fi
+        local file_mtime now_epoch age_sec
+        file_mtime=$(stat -f %m "$latest" 2>/dev/null || stat -c %Y "$latest" 2>/dev/null || echo 0)
+        now_epoch=$(date +%s)
+        age_sec=$(( now_epoch - file_mtime ))
+        if [ "$age_sec" -ge 0 ] && [ "$age_sec" -le "$PLAN_EVENT_WINDOW_SEC" ]; then
+            echo "$latest"
+        fi
+    }
+
     if [ "$CLEAN_SKILL_TOKEN" = "siae-brainstorming" ]; then
-        # plan_created: trova doc piu' recente in docs/plans/*-design.md modificato ultimi 60s
-        if [ -d "docs/plans" ]; then
-            RECENT_PLAN=$(find docs/plans -maxdepth 1 -name "*-design.md" -type f -newermt "60 seconds ago" 2>/dev/null | head -1)
-            if [ -n "$RECENT_PLAN" ]; then
-                SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
-                devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
-            fi
+        # plan_created: doc piu' recente in docs/plans/*-design.md modificato ultimi PLAN_EVENT_WINDOW_SEC
+        RECENT_PLAN=$(_plan_latest_recent)
+        if [ -n "$RECENT_PLAN" ]; then
+            SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
+            devforge_log "plan_created" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
         fi
     elif [ "$CLEAN_SKILL_TOKEN" = "siae-writing-plans" ]; then
-        # plan_approved: trova doc con frontmatter status:approved modificato ultimi 60s
-        if [ -d "docs/plans" ]; then
-            RECENT_PLAN=$(find docs/plans -maxdepth 1 -name "*-design.md" -type f -newermt "60 seconds ago" 2>/dev/null | head -1)
-            if [ -n "$RECENT_PLAN" ] && head -10 "$RECENT_PLAN" 2>/dev/null | grep -qiE '^status:[[:space:]]*approved'; then
-                SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
-                devforge_log "plan_approved" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
-            fi
+        # plan_approved: doc con frontmatter status:approved modificato ultimi PLAN_EVENT_WINDOW_SEC
+        RECENT_PLAN=$(_plan_latest_recent)
+        if [ -n "$RECENT_PLAN" ] && head -10 "$RECENT_PLAN" 2>/dev/null | grep -qiE '^status:[[:space:]]*approved'; then
+            SAFE_PLAN_PATH=$(devforge_sanitize_json_str "$RECENT_PLAN")
+            devforge_log "plan_approved" "success" "{\"plan_path\":\"${SAFE_PLAN_PATH}\",\"origin_skill\":\"${SAFE_SKILL_NAME}\"}" || true
         fi
     fi
 fi
