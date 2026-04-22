@@ -52,5 +52,44 @@ set_session_skill() {
 
 set_sid "test-sid-12345"
 
+# ─── Scenario 6: file docs (.md) → out of scope ───
+invoke_gate "${TEST_REPO}/README.md"
+if [ "$(count_events brainstorming_nudge_soft)" != "0" ] || [ "$(count_events brainstorming_gate_blocked)" != "0" ]; then
+    echo "FAIL scenario 6: hook ha elaborato file .md"
+    exit 1
+fi
+echo "PASS scenario 6: file .md → pass (out of scope)"
+
+# ─── Scenario 7: file IaC (.tf) → out of scope ───
+echo "resource {}" > "${TEST_REPO}/main.tf"
+invoke_gate "${TEST_REPO}/main.tf"
+if [ "$(count_events brainstorming_nudge_soft)" != "0" ]; then
+    echo "FAIL scenario 7: hook ha elaborato .tf"
+    exit 1
+fi
+echo "PASS scenario 7: file .tf → pass (out of scope)"
+
+# ─── Scenario 8: repo non-itsiae → out of scope ───
+NON_ITSIAE_REPO=$(mktemp -d)
+(cd "$NON_ITSIAE_REPO" && git init -q && git config user.email t@t && git config user.name t && \
+  git remote add origin "https://github.com/other-org/repo.git" && \
+  echo "ts" > f.ts && git add f.ts && git commit -q -m init)
+invoke_gate "${NON_ITSIAE_REPO}/f.ts"
+if [ "$(count_events brainstorming_nudge_soft)" != "0" ]; then
+    echo "FAIL scenario 8: hook ha elaborato repo non-itsiae"
+    rm -rf "$NON_ITSIAE_REPO"
+    exit 1
+fi
+rm -rf "$NON_ITSIAE_REPO"
+echo "PASS scenario 8: repo non-itsiae → pass (out of scope)"
+
+# ─── Scenario 9: DEVFORGE_ENFORCEMENT_OFF=1 → escape hatch ───
+DEVFORGE_ENFORCEMENT_OFF=1 invoke_gate "${TEST_REPO}/hello.ts"
+if [ "$(count_events brainstorming_nudge_soft)" != "0" ]; then
+    echo "FAIL scenario 9: ENFORCEMENT_OFF non ha escapato"
+    exit 1
+fi
+echo "PASS scenario 9: DEVFORGE_ENFORCEMENT_OFF=1 → escape immediato"
+
 echo "SETUP OK"
 exit 0

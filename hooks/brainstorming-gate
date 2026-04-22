@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# PreToolUse hook: progressive enforcement siae-brainstorming su Edit/Write
+# ─────────────────────────────────────────────────────────────────
+# Hook:     brainstorming-gate
+# Evento:   PreToolUse
+# Matcher:  Edit, Write
+# Timeout:  5s
+# Formato:  decision:"block" se counter >= 2 (W1+ mode) e no brainstorming
+# History:  v1.45.0 NEW (progressive friction — KPI Rosario adoption)
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="brainstorming-gate"
+
+HOOK_INPUT=$(cat)
+
+# Escape hatch: DEVFORGE_ENFORCEMENT_OFF=1 → skip immediato
+if [ "${DEVFORGE_ENFORCEMENT_OFF:-0}" = "1" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Extract file_path (pattern tdd-gate)
+if command -v jq >/dev/null 2>&1; then
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
+else
+    FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
+
+if [ -z "$FILE_PATH" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Normalize relative → absolute
+if [[ "$FILE_PATH" != /* ]]; then
+    FILE_PATH="$(pwd)/${FILE_PATH#./}"
+fi
+
+# Scope: file dev essere dentro un repo git
+FILE_DIR="$(dirname "$FILE_PATH")"
+while [ -n "$FILE_DIR" ] && [ ! -d "$FILE_DIR" ]; do
+    FILE_DIR="$(dirname "$FILE_DIR")"
+done
+if [ -z "$FILE_DIR" ]; then
+    echo '{}'
+    exit 0
+fi
+FILE_GIT_ROOT="$(git -C "$FILE_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$FILE_GIT_ROOT" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Scope: solo repo itsiae
+REMOTE_URL="$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)"
+if ! echo "$REMOTE_URL" | grep -qE "[/:]itsiae/"; then
+    echo '{}'
+    exit 0
+fi
+
+# Scope: solo file prod (stessa regex di tdd-gate)
+PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
+if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
+    echo '{}'
+    exit 0
+fi
+
+# Esclude test files e docs
+EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
+    echo '{}'
+    exit 0
+fi
+
+# Scope filter passato — da qui in avanti Task 03 aggiunge la logica
+echo '{}'
+exit 0
