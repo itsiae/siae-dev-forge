@@ -1,0 +1,51 @@
+{
+  "snapshot_date": "2026-04-25",
+  "snapshot_path": "docs/measurements/baseline-2026-04-25/devforge-state-snapshot",
+  "totals": {
+    "sessions_all": 230,
+    "sessions_ended": 145,
+    "sessions_productive": 109,
+    "sessions_with_commit": 101,
+    "total_events": 3466
+  },
+  "adoption_pct_session_scoped": {
+    "productive": {
+      "siae-brainstorming": 39.4,
+      "siae-tdd": 37.6,
+      "siae-verification": 2.8,
+      "siae-git-workflow": 60.6,
+      "siae-blind-review": 0.0,
+      "siae-security": 12.8,
+      "siae-retrospective": 7.3,
+      "siae-debugging": 6.4,
+      "siae-writing-plans": 22.0
+    },
+    "with_commit": {
+      "siae-brainstorming": 37.6,
+      "siae-tdd": 37.6,
+      "siae-verification": 3.0,
+      "siae-git-workflow": 62.4,
+      "siae-blind-review": 0.0,
+      "siae-security": 13.9,
+      "siae-retrospective": 7.9,
+      "siae-debugging": 6.9,
+      "siae-writing-plans": 21.8
+    }
+  },
+  "gate_blocks_total": {
+    "tdd_gate": 90,
+    "pre_commit": 94,
+    "sub_skill_gate": 97,
+    "plan_gate": 10,
+    "batch_checkpoint": 6,
+    "coverage_gate": 12
+  },
+  "caveat": "Session-scoped metrics (pre-ADR-001). Post-PR-2 migration replaces this with task-scoped equivalent via lib/measure-task-baseline.sh.",
+  "targets": {
+    "adoption_per_task_min_pct": 80.0,
+    "skill_md_max_lines": 1000,
+    "bytes_per_session_max_kb": 30.0,
+    "extremely_important_max_per_session": 1,
+    "reinject_hit_rate_max_pct": 30.0
+  }
+}
