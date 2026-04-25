@@ -6,6 +6,11 @@ description: >
   Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di
   codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi
   funzione, implementa, codifica, sviluppa.
+validates_via:
+  predicate: tdd_red_green_observed
+  evidence_type: state_file
+  evidence_path: ~/.claude/.devforge-tdd-state
+  evidence_check: "phase in (GREEN, REFACTOR), transitioned from RED"
 ---
 
 # SIAE TDD — Test-Driven Development

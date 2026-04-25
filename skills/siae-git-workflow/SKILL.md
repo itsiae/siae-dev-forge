@@ -6,6 +6,10 @@ description: >
   branch, naming branch, conventional commits, pre-flight card, inizio feature,
   preparazione deploy, promozione ambiente, hotfix, rollback, push remoto,
   tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
+validates_via:
+  predicate: conventional_commit_made
+  evidence_type: git_state
+  evidence_check: "git log -1 --format=%s matches ^(feat|fix|chore|docs|refactor|test|style|perf|build|ci|revert)(\\(.+\\))?!?:"
 ---
 
 # SIAE Git Workflow

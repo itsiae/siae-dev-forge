@@ -7,6 +7,10 @@ description: >
   valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature,
   costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione,
   bug fix, refactoring, ottimizzazione, modifica codice, qualsiasi task implementativo.
+validates_via:
+  predicate: design_doc_produced
+  evidence_type: file_pattern
+  evidence_check: "docs/plans/*-design.md mtime > DEVFORGE_SESSION_START_S"
 ---
 
 # SIAE Brainstorming — Da Idea a Design Validato

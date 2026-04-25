@@ -6,6 +6,10 @@ description: >
   Trigger: prima di commit, PR, task complete, dichiarazioni di successo, "fatto",
   "fixato", "funziona", "completato", "pronto", "implementato", "risolto",
   "test passano", "build verde", "tutto ok", "finito".
+validates_via:
+  predicate: verification_run_passed
+  evidence_type: log_event
+  evidence_check: "DEVFORGE_LOG_FILE contains verification_run event with exit=0 for current sid"
 ---
 
 # SIAE Verification — Protocollo di Verifica Pre-Completamento
