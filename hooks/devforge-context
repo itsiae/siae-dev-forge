@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# devforge-context — unified context injection with budget + diff-based dedup
+# ─────────────────────────────────────────────────────────────────
+# Replaces: user-prompt-context + devforge-reinject + devforge-context-always
+# batch-reset remains separate (different responsibility).
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="devforge-context"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
+STATE_DIR="${HOME}/.claude"
+HASH_FILE="${STATE_DIR}/.devforge-last-injection-hash"
+MAX_BYTES=2048
+
+# Compute state hash: skills invoked + branch + gate violations + tdd phase
+compute_state_hash() {
+    local skills branch tdd_phase gate_violation mtime now
+    skills=$(cat "${STATE_DIR}/.devforge-session-skills" 2>/dev/null || echo "")
+    branch=$(git branch --show-current 2>/dev/null || echo "detached")
+    tdd_phase=$(cut -d'|' -f1 < "${STATE_DIR}/.devforge-tdd-state" 2>/dev/null || echo "")
+    # Recent block (<60s): check stop-block-count mtime
+    gate_violation=0
+    if [ -f "${STATE_DIR}/.devforge-stop-block-count" ]; then
+        mtime=$(stat -f%m "${STATE_DIR}/.devforge-stop-block-count" 2>/dev/null || stat -c%Y "${STATE_DIR}/.devforge-stop-block-count" 2>/dev/null || echo 0)
+        now=$(date +%s)
+        [ $((now - mtime)) -lt 60 ] && gate_violation=1
+    fi
+    printf '%s|%s|%s|%s' "$skills" "$branch" "$tdd_phase" "$gate_violation" | shasum | cut -d' ' -f1
+}
+
+CURRENT_HASH=$(compute_state_hash)
+LAST_HASH=$(cat "$HASH_FILE" 2>/dev/null || echo "")
+
+# Diff-based: skip if state unchanged
+if [ "$CURRENT_HASH" = "$LAST_HASH" ]; then
+    exit 0
+fi
+
+# Determine tier (top-level: no 'local'; use plain vars)
+TIER="none"
+TAG_OPEN=""
+TAG_CLOSE=""
+if [ -f "${STATE_DIR}/.devforge-stop-block-count" ]; then
+    SB_MTIME=$(stat -f%m "${STATE_DIR}/.devforge-stop-block-count" 2>/dev/null || stat -c%Y "${STATE_DIR}/.devforge-stop-block-count" 2>/dev/null || echo 0)
+    SB_NOW=$(date +%s)
+    if [ $((SB_NOW - SB_MTIME)) -lt 60 ]; then
+        TIER="important"
+        TAG_OPEN="<IMPORTANT>"
+        TAG_CLOSE="</IMPORTANT>"
+    fi
+fi
+# Tier 'extreme' riserved for active hard-gate; in PR #1 we don't escalate here.
+
+# Build compact payload (max $MAX_BYTES bytes)
+PAYLOAD=""
+# 1. Git state (1 line)
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
+    GIT_LAST=$(git log --oneline -1 2>/dev/null || echo "")
+    PAYLOAD="${PAYLOAD}Git: branch=${GIT_BRANCH} | ${GIT_LAST}\n"
+fi
+# 2. Session stats (1 line)
+SKILLS_COUNT=$(cat "${STATE_DIR}/.devforge-session-skills" 2>/dev/null | tr ',' '\n' | grep -c . || true)
+SKILLS_COUNT=${SKILLS_COUNT:-0}
+COMMITS_COUNT=$(cat "${STATE_DIR}/.devforge-session-commits" 2>/dev/null || echo 0)
+PAYLOAD="${PAYLOAD}Session: skills=${SKILLS_COUNT} | commits=${COMMITS_COUNT}\n"
+# 3. Backbone 1-liner (compact)
+PAYLOAD="${PAYLOAD}Backbone: brainstorm→plan→tdd→verification. If 1% applicable, invoke skill.\n"
+
+# Trim to budget
+PAYLOAD=$(printf '%.*s' "$MAX_BYTES" "$PAYLOAD")
+
+# Escape for JSON
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/\\n}"
+    printf '%s' "$s"
+}
+PAYLOAD_ESCAPED=$(escape_for_json "$PAYLOAD")
+
+# Final context with optional tier tag
+if [ -n "$TAG_OPEN" ]; then
+    CONTEXT="${TAG_OPEN}\\n[DevForge Context]\\n${PAYLOAD_ESCAPED}${TAG_CLOSE}"
+else
+    CONTEXT="[DevForge Context]\\n${PAYLOAD_ESCAPED}"
+fi
+
+# Telemetry
+SIZE=$(printf '%s' "$CONTEXT" | wc -c | tr -d ' ')
+devforge_log "prompt_injection_emitted" "success" "{\"size_bytes\":${SIZE},\"tier\":\"${TIER}\"}" 2>/dev/null || true
+
+# Store hash
+echo "$CURRENT_HASH" > "${HASH_FILE}.tmp" && mv "${HASH_FILE}.tmp" "$HASH_FILE"
+
+cat <<EOF
+{
+  "additional_context": "${CONTEXT}",
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "${CONTEXT}"
+  }
+}
+EOF
+exit 0
