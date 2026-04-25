@@ -22,7 +22,7 @@ compute_state_hash() {
     local skills branch tdd_phase gate_violation mtime now
     skills=$(cat "${STATE_DIR}/.devforge-session-skills" 2>/dev/null || echo "")
     branch=$(git branch --show-current 2>/dev/null || echo "detached")
-    tdd_phase=$(cut -d'|' -f1 < "${STATE_DIR}/.devforge-tdd-state" 2>/dev/null || echo "")
+    tdd_phase=$(cat "${STATE_DIR}/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1 || echo "")
     # Recent block (<60s): check stop-block-count mtime
     gate_violation=0
     if [ -f "${STATE_DIR}/.devforge-stop-block-count" ]; then
