@@ -348,7 +348,28 @@ echo "$CURRENT_PID" > "$SESSION_LOCK_FILE"
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 # F2: Init last commit hash for commit_created detection
 git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null || echo "" > "${HOME}/.claude/.devforge-last-commit-hash"
-echo "" > "${HOME}/.claude/.devforge-session-skills"
+
+# Preserve session-skills on resume|clear|compact (logical same session).
+# Read source from stdin payload (Claude Code sends JSON with `source` field).
+# Only reset on true `startup` to preserve skill invocation history across
+# auto-compact events — fixes recurring sub-skill-gate false positives.
+SESSION_START_SOURCE=""
+if [ ! -t 0 ]; then
+    STDIN_PAYLOAD=$(cat 2>/dev/null || echo "")
+    if [ -n "$STDIN_PAYLOAD" ] && command -v jq >/dev/null 2>&1; then
+        SESSION_START_SOURCE=$(echo "$STDIN_PAYLOAD" | jq -r '.source // empty' 2>/dev/null || echo "")
+    fi
+fi
+case "$SESSION_START_SOURCE" in
+    resume|clear|compact)
+        # Same logical session — preserve skills invoked so far
+        devforge_log "session_start_preserved_skills" "success" "{\"source\":\"${SESSION_START_SOURCE}\"}" 2>/dev/null || true
+        ;;
+    *)
+        # startup or unknown → true reset
+        echo "" > "${HOME}/.claude/.devforge-session-skills"
+        ;;
+esac
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"
 echo "0" > "${HOME}/.claude/.devforge-message-counter"
 # (guard cleanup moved before devforge_log_timed call, after EOF output)
