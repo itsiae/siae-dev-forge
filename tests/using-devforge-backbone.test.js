@@ -17,8 +17,8 @@ assert.ok(content.includes('## DevForge Backbone Core'),
   'Manca la sezione DevForge Backbone Core');
 assert.ok(content.includes('## Always-On Companion Skills'),
   'Manca la sezione Always-On Companion Skills');
-assert.ok(content.includes('## Skill Priority'),
-  'Manca la sezione Skill Priority');
+assert.ok(content.includes('## Skill Priority') || content.includes('## Priority & Rules'),
+  'Manca la sezione Skill Priority / Priority & Rules');
 assert.ok(content.includes('## Gate Operativi'),
   'Manca la sezione Gate Operativi');
 console.log('PASS: sezioni backbone core presenti');

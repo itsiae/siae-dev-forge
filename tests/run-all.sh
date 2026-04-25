@@ -313,14 +313,17 @@ for skill_dir in "${PLUGIN_ROOT}"/skills/*/; do
     fi
   fi
 
-  # Check 2: Tutte le skill → Tabella Anti-Razionalizzazione
-  if ! grep -qi 'Tabella Anti-Razionalizzazione' "$skill_file"; then
-    fail_reasons="${fail_reasons}[MANCA: Tabella Anti-Razionalizzazione] "
+  # Check 2: Tutte le skill → Tabella Anti-Razionalizzazione inline OR
+  # riferimento alla centralizzazione in lib/*.md (post PR #1 anti-dilution).
+  # La Tabella Anti-Razionalizzazione è stata centralizzata nelle skill backbone
+  # compresse; le skill specialistiche possono mantenerla inline o referenziarla.
+  if ! grep -qi 'Tabella Anti-Razionalizzazione\|lib/risk-taxonomy\.md\|lib/permission-denied-handling\.md' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Tabella Anti-Razionalizzazione o ref lib/*.md] "
   fi
 
-  # Check 3: Tutte le skill → Classificazione Rischio Operazioni
-  if ! grep -qi 'Classificazione Rischio' "$skill_file"; then
-    fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni] "
+  # Check 3: Classificazione Rischio inline OR riferimento a lib/risk-taxonomy.md
+  if ! grep -qi 'Classificazione Rischio\|lib/risk-taxonomy\.md' "$skill_file"; then
+    fail_reasons="${fail_reasons}[MANCA: Classificazione Rischio Operazioni o ref lib/risk-taxonomy.md] "
   fi
 
   # Check 4: Se Card=Si nel Risk Table → almeno una pre-flight card presente
