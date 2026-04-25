@@ -18,17 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' user-prompt-context",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-reinject",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-context-always",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-context",
             "timeout": 5
           },
           {

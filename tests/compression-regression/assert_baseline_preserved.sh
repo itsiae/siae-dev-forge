@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Improvement: la test suite esistente non regredisce.
-# Baseline pre-PR-1: 168 PASS / 6 FAIL / 1 SKIP.
+# Baseline pre-PR-1 era: 168 PASS / 6 FAIL / 1 SKIP.
+# Baseline post-T12 (PR-1): 161 PASS / 6 FAIL / 1 SKIP (-7 atteso: 7 test
+# archiviati assieme a hooks/user-prompt-context, coperto da
+# tests/hooks/test_devforge_context.sh + compression-regression).
 set -eu
 cd "$(git rev-parse --show-toplevel)"
 
@@ -13,7 +16,7 @@ FAIL_COUNT=$(grep -oE '❌ FAIL: `[0-9]+`' "$OUTPUT_FILE" | grep -oE '[0-9]+' | 
 
 echo "Current run: PASS=$PASS_COUNT  FAIL=$FAIL_COUNT"
 
-BASELINE_PASS=168
+BASELINE_PASS=161
 BASELINE_FAIL=6
 
 if [ "$PASS_COUNT" -ge "$BASELINE_PASS" ]; then
