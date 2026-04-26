@@ -32,15 +32,9 @@ devforge_init_session 2>/dev/null || true
 SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
 devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${SAFE_TOOL_COMMAND}\"}"
 
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+# JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
+# Local alias for readability in this file.
+escape_for_json() { devforge_sanitize_json_str "$1"; }
 
 # ─────────────────────────────────────────────────────────────────
 # SECURITY SCAN — automated, blocking

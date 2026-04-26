@@ -18,8 +18,9 @@ HASH_FILE="${STATE_DIR}/.devforge-last-injection-hash"
 MAX_BYTES=2048
 
 # Compute state hash: skills invoked + branch + gate violations + tdd phase
+#                   + latest design doc mtime (so design revisions trigger re-emit).
 compute_state_hash() {
-    local skills branch tdd_phase gate_violation mtime now
+    local skills branch tdd_phase gate_violation mtime now design_doc design_mtime
     skills=$(cat "${STATE_DIR}/.devforge-session-skills" 2>/dev/null || echo "")
     branch=$(git branch --show-current 2>/dev/null || echo "detached")
     tdd_phase=$(cat "${STATE_DIR}/.devforge-tdd-state" 2>/dev/null | cut -d'|' -f1 || echo "")
@@ -30,7 +31,15 @@ compute_state_hash() {
         now=$(date +%s)
         [ $((now - mtime)) -lt 60 ] && gate_violation=1
     fi
-    printf '%s|%s|%s|%s' "$skills" "$branch" "$tdd_phase" "$gate_violation" | shasum | cut -d' ' -f1
+    # Design doc mtime: edits to design doc must re-trigger context (baseline changes).
+    design_mtime=0
+    if [ -d docs/plans ]; then
+        design_doc=$(ls -1t docs/plans/*-design.md 2>/dev/null | head -1)
+        if [ -n "$design_doc" ] && [ -f "$design_doc" ]; then
+            design_mtime=$(stat -f%m "$design_doc" 2>/dev/null || stat -c%Y "$design_doc" 2>/dev/null || echo 0)
+        fi
+    fi
+    printf '%s|%s|%s|%s|%s' "$skills" "$branch" "$tdd_phase" "$gate_violation" "$design_mtime" | shasum | cut -d' ' -f1
 }
 
 CURRENT_HASH=$(compute_state_hash)
@@ -75,13 +84,9 @@ PAYLOAD="${PAYLOAD}Backbone: brainstorm→plan→tdd→verification. If 1% appli
 # Trim to budget
 PAYLOAD=$(printf '%.*s' "$MAX_BYTES" "$PAYLOAD")
 
-# Escape for JSON
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/\\n}"
-    printf '%s' "$s"
-}
-PAYLOAD_ESCAPED=$(escape_for_json "$PAYLOAD")
+# Use centralized JSON escape helper (lib/logger.sh :: devforge_sanitize_json_str).
+# Handles \, ", \n, \r, \t, and strips control chars 0x00-0x1F.
+PAYLOAD_ESCAPED=$(devforge_sanitize_json_str "$PAYLOAD")
 
 # Final context with optional tier tag
 if [ -n "$TAG_OPEN" ]; then
@@ -94,10 +99,10 @@ fi
 SIZE=$(printf '%s' "$CONTEXT" | wc -c | tr -d ' ')
 devforge_log "prompt_injection_emitted" "success" "{\"size_bytes\":${SIZE},\"tier\":\"${TIER}\"}" 2>/dev/null || true
 
-# Store hash
-echo "$CURRENT_HASH" > "${HASH_FILE}.tmp" && mv "${HASH_FILE}.tmp" "$HASH_FILE"
-
-cat <<EOF
+# Emit context JSON to stdout. Store hash ONLY on successful emission — if cat
+# fails (pipe broken, disk full), the hash is NOT updated so the next invocation
+# retries the emission instead of assuming it already happened.
+if cat <<EOF
 {
   "additional_context": "${CONTEXT}",
   "hookSpecificOutput": {
@@ -106,4 +111,7 @@ cat <<EOF
   }
 }
 EOF
+then
+    echo "$CURRENT_HASH" > "${HASH_FILE}.tmp" && mv "${HASH_FILE}.tmp" "$HASH_FILE"
+fi
 exit 0

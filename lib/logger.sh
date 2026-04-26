@@ -376,7 +376,9 @@ devforge_next_seq() {
     echo "$next"
 }
 
-# Sanitize a string for safe JSON embedding (escapes \, ", newlines, tabs)
+# Sanitize a string for safe JSON embedding.
+# Escapes: \, ", \n, \r, \t, and control chars 0x00-0x1F (stripped).
+# Source of truth for JSON escaping across hooks — do not duplicate inline.
 # Usage: devforge_sanitize_json_str "unsafe string"
 devforge_sanitize_json_str() {
     local s="$1"
@@ -385,6 +387,11 @@ devforge_sanitize_json_str() {
     s="${s//$'\n'/\\n}"
     s="${s//$'\r'/\\r}"
     s="${s//$'\t'/\\t}"
+    # Strip remaining control chars (0x00-0x08, 0x0b, 0x0c, 0x0e-0x1f).
+    # \n \r \t already handled above; JSON spec requires these or \uXXXX form.
+    # We strip (not escape to \uXXXX) for simplicity — these bytes should not
+    # appear in file paths, skill names, or commit messages in practice.
+    s=$(printf '%s' "$s" | LC_ALL=C tr -d '\000-\010\013\014\016-\037')
     printf '%s' "$s"
 }
 

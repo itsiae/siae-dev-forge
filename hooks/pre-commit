@@ -54,16 +54,9 @@ if [ $((COUNTER % REINJECT_INTERVAL)) -eq 0 ]; then
 fi
 # --- End session-aware block ---
 
-# Escape string for JSON embedding using bash parameter substitution.
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+# JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
+# Local alias for readability in this file.
+escape_for_json() { devforge_sanitize_json_str "$1"; }
 
 # Route to appropriate check based on command
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
@@ -85,7 +78,9 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
         if [ "$NEW_BYPASS_COUNT" -ge 5 ]; then
             devforge_log "pre_commit_git_gate_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT}}"
         fi
-        # fall through to quality gate (not blocking)
+        # Bypass branch: no block, no early exit. Control continues past the
+        # if/elif chain below into the quality-gate instructions emitted at the
+        # bottom of the file (secret scan / naming / tests / file size / lint).
     # Check if siae-git-workflow was invoked this session — HARD GATE
     elif ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
         SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")

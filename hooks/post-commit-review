@@ -285,16 +285,9 @@ SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
 devforge_log "pr_auto_review" "triggered" "{\"command\":\"${SAFE_TOOL_COMMAND}\"}" 2>/dev/null || true
 SHOULD_UPLOAD=1
 
-# Escape string for JSON embedding
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+# JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
+# Local alias for readability in this file.
+escape_for_json() { devforge_sanitize_json_str "$1"; }
 
 read -r -d '' REVIEW_INSTRUCTIONS << 'REVIEW_EOF' || true
 # DevForge PR Auto-Review
