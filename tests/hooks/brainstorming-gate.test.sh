@@ -249,5 +249,9 @@ if [ "$BEFORE_13" = "$AFTER_13" ]; then
 fi
 echo "PASS scenario 13: gate always-on without STRICT/W2_DEFAULT (ADR-006)"
 
+# Summary (aggregator-compatible)
+PASS_COUNT=13
+FAIL_COUNT=0
+echo "Total: $PASS_COUNT — PASS: $PASS_COUNT — FAIL: $FAIL_COUNT"
 echo "ALL SCENARIOS OK"
 exit 0
