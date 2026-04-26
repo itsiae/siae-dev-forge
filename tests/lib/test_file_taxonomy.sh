@@ -96,8 +96,12 @@ _expect_no_tdd "test.py prefix"   "tests/test_user.py"
 _expect_no_tdd "go test suffix"   "pkg/foo_test.go"
 _expect_no_tdd "java Test"        "src/test/java/FooTest.java"
 _expect_no_tdd "java IT"          "src/test/java/FooIT.java"
-_expect_no_tdd "docs"             "docs/plans/foo-design.md"
-_expect_no_tdd "evals"            "evals/cases/foo.yaml"
+_expect_no_tdd "docs dir"         "docs/foo.md"
+_expect_no_tdd "docs/plans"       "docs/plans/foo-design.md"
+# PR #2 review fix: app-level plans/ and evals/ directories must NOT be
+# excluded — only docs/plans/ and docs/evals/ are doc-tree locations.
+_expect_tdd    "src/plans ts"     "src/plans/action-plan.ts"
+_expect_tdd    "src/evals java"   "src/evals/EvaluationService.java"
 
 echo ""
 echo "=== 4. .sh deny-by-default, opt-in via DEVFORGE_BASH_TDD ==="

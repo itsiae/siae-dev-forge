@@ -50,6 +50,25 @@ if [ "$CURRENT_HASH" = "$LAST_HASH" ]; then
     exit 0
 fi
 
+# Task transition (PR #2 ADR-001): if the current task_id differs from the
+# last one we observed, run evidence copy-forward. This is the only path
+# that realises the mitigation documented in the design doc for
+# "task_id cambia mid-task → gate reset".
+if source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null; then
+    _CURR_TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+    _LAST_TASK_ID_FILE="${STATE_DIR}/.devforge-last-task-id"
+    _LAST_TASK_ID=$(cat "$_LAST_TASK_ID_FILE" 2>/dev/null || echo "")
+    if [ -n "$_CURR_TASK_ID" ] && [ -n "$_LAST_TASK_ID" ] && [ "$_CURR_TASK_ID" != "$_LAST_TASK_ID" ]; then
+        devforge_task_id_transition "$_LAST_TASK_ID" "$_CURR_TASK_ID" 2>/dev/null || true
+        devforge_log "task_id_transition" "info" \
+            "{\"from\":\"${_LAST_TASK_ID}\",\"to\":\"${_CURR_TASK_ID}\"}" 2>/dev/null || true
+    fi
+    if [ -n "$_CURR_TASK_ID" ]; then
+        echo "$_CURR_TASK_ID" > "${_LAST_TASK_ID_FILE}.tmp" \
+            && mv "${_LAST_TASK_ID_FILE}.tmp" "$_LAST_TASK_ID_FILE"
+    fi
+fi
+
 # Determine tier (top-level: no 'local'; use plain vars)
 TIER="none"
 TAG_OPEN=""

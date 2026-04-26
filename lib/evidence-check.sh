@@ -6,32 +6,67 @@
 # ─────────────────────────────────────────────────────────────────
 
 # devforge_skill_validated SKILL_NAME [TASK_ID]
-# Returns 0 if skill's validates_via predicate is satisfied, 1 otherwise.
+# Returns 0 if the skill is validated for this context.
+#
+# Precedence (PR #2 task-scope wiring):
+#   1. If TASK_ID is provided AND the ledger file
+#      ~/.claude/.devforge-task-skills/<task_id>/skills_validated
+#      contains SKILL_NAME (exact match), return 0 immediately.
+#      This is the only path that discriminates between two tasks in the
+#      same session.
+#   2. Otherwise, run the session-wide predicate check (PR #1 behaviour).
+#      If the predicate passes AND task_id is non-empty, record the skill
+#      in the ledger so future invocations short-circuit at step 1 — and
+#      so `devforge_task_id_transition` has real evidence to copy forward
+#      on design-doc revision.
 devforge_skill_validated() {
     local skill="${1:?skill name required}"
-    local task_id="${2:-}"  # unused in PR #1, reserved for PR #2
+    local task_id="${2:-}"
+    local predicate_result=1
 
+    # Task-scoped ledger check (PR #2 wiring)
+    if [ -n "$task_id" ]; then
+        local ledger="${HOME}/.claude/.devforge-task-skills/${task_id}/skills_validated"
+        if [ -f "$ledger" ] && grep -qxF "$skill" "$ledger" 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    # Session-wide predicate check (PR #1 behaviour)
     case "$skill" in
         siae-tdd)
-            _devforge_check_tdd_red_green
+            _devforge_check_tdd_red_green && predicate_result=0
             ;;
         siae-brainstorming)
-            _devforge_check_design_doc_produced
+            _devforge_check_design_doc_produced && predicate_result=0
             ;;
         siae-git-workflow)
-            _devforge_check_conventional_commit
+            _devforge_check_conventional_commit && predicate_result=0
             ;;
         siae-verification)
-            _devforge_check_verification_run_passed
+            _devforge_check_verification_run_passed && predicate_result=0
             ;;
         siae-blind-review)
-            _devforge_check_blind_review_completed
+            _devforge_check_blind_review_completed && predicate_result=0
             ;;
         *)
-            # Unknown skill: not validatable in PR #1. Default: not validated.
-            return 1
+            predicate_result=1
             ;;
     esac
+
+    # Cache success into task ledger so the next call on the same task
+    # short-circuits (and evidence copy-forward has something to copy).
+    if [ "$predicate_result" = "0" ] && [ -n "$task_id" ]; then
+        local dir="${HOME}/.claude/.devforge-task-skills/${task_id}"
+        mkdir -p "$dir"
+        local vfile="${dir}/skills_validated"
+        touch "$vfile"
+        if ! grep -qxF "$skill" "$vfile" 2>/dev/null; then
+            printf '%s\n' "$skill" >> "$vfile"
+        fi
+    fi
+
+    return "$predicate_result"
 }
 
 _devforge_check_tdd_red_green() {

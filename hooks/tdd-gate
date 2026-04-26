@@ -26,9 +26,16 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || true
+# Track which libs actually loaded — a missing task-id.sh silently degrades
+# the gate to session-scope, which we want to record in telemetry.
+_LIB_MISSING=""
+source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || _LIB_MISSING="${_LIB_MISSING}file-taxonomy "
+source "${PLUGIN_ROOT}/lib/task-id.sh"       2>/dev/null || _LIB_MISSING="${_LIB_MISSING}task-id "
+source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || _LIB_MISSING="${_LIB_MISSING}evidence-check "
+if [ -n "$_LIB_MISSING" ] && command -v devforge_log >/dev/null 2>&1; then
+    devforge_log "hook_degraded" "warning" \
+        "{\"hook\":\"tdd-gate\",\"missing\":\"${_LIB_MISSING% }\"}" 2>/dev/null || true
+fi
 
 # Extract file_path from tool input
 if command -v jq >/dev/null 2>&1; then

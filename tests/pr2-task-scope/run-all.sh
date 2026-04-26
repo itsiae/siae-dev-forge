@@ -57,6 +57,9 @@ _run "coverage-force-run"            "tests/hooks/test_coverage_force_run.sh"
 _run "pr-blind-review-gate"          "tests/hooks/test_pr_blind_review_gate.sh"
 _run "plan-gate-write"               "tests/hooks/test_plan_gate_write.sh"
 
+# End-to-end integration (PR #2 review fixes)
+_run "task-scope e2e (ADR-001 wiring)" "tests/integration/test_task_scope_e2e.sh"
+
 # Shared suites — verify PR #1 invariants still hold after PR #2 changes
 _run "compression-regression (PR #1)" "tests/compression-regression/run-all.sh"
 

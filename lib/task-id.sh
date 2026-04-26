@@ -32,8 +32,18 @@ devforge_compute_task_id() {
 
     local branch design_doc design_mtime material
     branch=$(git branch --show-current 2>/dev/null || echo "")
-    # Tolerate detached HEAD — fall back to HEAD sha so gates still isolate work
-    [ -z "$branch" ] && branch="detached@$(git rev-parse HEAD 2>/dev/null || echo nohead)"
+    # Detached HEAD: prefer a stable reference (tag / tracking branch) over
+    # the raw HEAD sha — an amend or interactive rebase changes the sha and
+    # would pointlessly invalidate the task_id. Fall back to short-sha only
+    # when nothing else resolves.
+    if [ -z "$branch" ]; then
+        local ref
+        ref=$(git describe --all --contains HEAD 2>/dev/null | sed 's@.*/@@' || true)
+        if [ -z "$ref" ] || [ "$ref" = "HEAD" ]; then
+            ref=$(git rev-parse --short HEAD 2>/dev/null || echo nohead)
+        fi
+        branch="detached@${ref}"
+    fi
 
     design_doc=""
     design_mtime=0

@@ -18,13 +18,24 @@ ADR-007, ADR-008 attivati. Medium risk — cutover fasato dual-write.
 8 deliverable dal design doc (sezione "PR #2 — v1.47"):
 
 1. `lib/task-id.sh` — computazione task_id (ADR-001)
-2. 8 gate migrati a task-scoped (tdd, brainstorming, stop, pre-commit, plan, plan-gate-write, pr-blind-review, sub-skill)
+2. 8 gate migrati a task-scoped:
+   - **Task-scope decision-making** (evidence check via ledger): tdd-gate,
+     brainstorming-gate, stop-gate, pr-blind-review-gate, plan-gate-write
+   - **Task-scope shadow-log** (session-scope decide, task divergence
+     logged): pre-commit (git-workflow check), plan-gate (EnterPlanMode)
+   - **Session-scope by design** (prereq invocation is inherently
+     session-level, documented in task-09 §"Out of scope"): sub-skill-gate
 3. `lib/file-taxonomy.sh` — classificazione estensioni (ADR-005)
 4. Rimozione 3 escape hatches: stop-gate 2-block, brainstorming W2_DEFAULT=0, pre-commit regex substring (ADR-006)
-5. `lib/generate-prereq-map.sh` → `lib/prereq-map.generated` 39 entry (ADR-007)
+5. `lib/generate-prereq-map.sh` → `lib/prereq-map.generated` (ADR-007)
+   — **20 entry effettivi** (target design "39" era stima; solo 20/39
+   skill hanno prereq sequenziali reali. Le altre 19 sono skill
+   entry-point o flexible senza catena. Vedi
+   [task-04-prereq-map-autogen.md](task-04-prereq-map-autogen.md))
 6. Nuovo `hooks/pr-blind-review-gate` (ADR-008)
-7. `hooks/plan-gate` esteso a Write `docs/plans/*-design.md` (ADR-008)
-8. `hooks/stop-gate` → `evidence-stop-gate` + `coverage-force-run` rewrite (ADR-008)
+7. Nuovo `hooks/plan-gate-write` (ADR-008) per bloccare Write diretto su
+   `docs/plans/*-design.md`
+8. `hooks/stop-gate` rewrite evidence-based + `coverage-force-run` in pre-commit (ADR-008)
 
 Extra-scope assorbito da PR #215 auto-review: 5 MAJOR + 1 CRITICAL (task 1).
 
@@ -82,3 +93,34 @@ Vedi `task-XX-*.md` per dettaglio. Ordine sequenziale consigliato:
 | Rimozione W2_DEFAULT rompe sessioni headless | Media | Basso | DEVFORGE_USE_SESSION_SCOPE=1 + DEVFORGE_ENFORCEMENT_OFF=1 preservati |
 | Pre-commit parser nuovo falsi negativi | Bassa | Medio | Test suite comprehensive: 'git log commit', echo, in-string commands |
 | 39 prereq-map rompe skill legittime | Media | Alto | Generated + fallback hardcoded + test ogni skill post-gen |
+
+## Post-review patches (PR #216)
+
+Lo siae-devforge:code-reviewer ha trovato 2 CRITICAL + 5 MAJOR che sono
+stati tutti fixati **dentro PR #2** invece di deferrare a PR #3:
+
+1. **evidence-check.sh task-aware** (CRITICAL #1): la funzione
+   `devforge_skill_validated` ora controlla prima il ledger per-task e
+   cacha i success nel ledger stesso — prima era no-op con `task_id`
+   ignorato.
+2. **post-skill wiring** (CRITICAL #1): mirror di `skills_invoked` + write
+   di `metadata` (branch, design_doc) nel per-task dir. Senza questo il
+   ledger restava sempre vuoto.
+3. **devforge-context transition** (MAJOR #1): rileva cambio `task_id` e
+   chiama `devforge_task_id_transition` — prima era dead code.
+4. **3 gate restanti** (CRITICAL #2): `pre-commit` + `plan-gate` aggiungono
+   shadow-log task-divergence. `sub-skill-gate` resta session-scope by
+   design (documentato inline).
+5. **file-taxonomy `plans/*` pattern** (MAJOR #3): ristretto a
+   `docs/plans/*` e `docs/evals/*` — un package `src/plans/` legittimo
+   non è più escluso.
+6. **hook_degraded telemetry** (MAJOR #5): ogni hook logga quando il
+   source delle lib fallisce, così il fallback silenzioso è ora
+   osservabile.
+7. **detached HEAD stability** (MINOR): usa `git describe` invece del
+   sha raw — un amend mid-task non invalida task_id.
+8. **E2E integration tests** (MAJOR #4): `tests/integration/test_task_scope_e2e.sh`
+   con 9 scenari che coprono i claim centrali (wiring, 2-task discrimination,
+   transition copy-forward, branch-change-breaks, evidence cache).
+
+**Suite aggregata post-fix**: 148/148 PASS (era 137).

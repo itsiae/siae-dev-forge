@@ -27,9 +27,10 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Source activity logger + token parser (ADR-006 rewrite)
+# Source activity logger + token parser (ADR-006 rewrite) + task-id
 source "${PLUGIN_ROOT}/lib/logger.sh"
 source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
@@ -122,6 +123,26 @@ if [ "$IS_GIT_COMMIT" = "1" ]; then
 }
 BLOCK_EOF
         exit 0
+    fi
+
+    # Task-scope shadow-log (PR #2 ADR-001): session is still source of
+    # truth here because commits aggregate work across many gates — we
+    # just record divergence for post-deploy analysis.
+    _PC_USE_SESSION="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+    if [ "$_PC_USE_SESSION" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+        _PC_TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+        if [ -n "$_PC_TASK_ID" ]; then
+            _PC_INVOKED="${HOME}/.claude/.devforge-task-skills/${_PC_TASK_ID}/skills_invoked"
+            _PC_TASK_OK=0
+            if [ -f "$_PC_INVOKED" ] && grep -qxF "siae-git-workflow" "$_PC_INVOKED" 2>/dev/null; then
+                _PC_TASK_OK=1
+            fi
+            # session_ok = 1 here by construction (we're past the elif)
+            if [ "$_PC_TASK_OK" = "0" ]; then
+                devforge_log "pre_commit_task_divergence" "info" \
+                    "{\"task_id\":\"${_PC_TASK_ID}\",\"session\":1,\"task\":0}" 2>/dev/null || true
+            fi
+        fi
     fi
     SKILL_REMINDER=""
 

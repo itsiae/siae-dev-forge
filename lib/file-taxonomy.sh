@@ -26,15 +26,17 @@ _devforge_file_excluded() {
     # Markdown — always excluded
     case "$f" in *.md) return 0 ;; esac
 
-    # Test directories anywhere in the path
+    # Test directories anywhere in the path. NB: `plans/` and `evals/`
+    # are NOT excluded standalone — they only match when nested under
+    # docs/ (which is covered by docs/*|*/docs/*). An app-level package
+    # named `plans` (e.g. src/plans/action-plan.ts) must still trigger
+    # the gate. This is the PR #2 review fix for the over-broad pattern.
     case "$f" in
         test/*|*/test/*|\
         tests/*|*/tests/*|\
         __tests__/*|*/__tests__/*|\
         spec/*|*/spec/*|\
-        docs/*|*/docs/*|\
-        plans/*|*/plans/*|\
-        evals/*|*/evals/*) return 0 ;;
+        docs/*|*/docs/*) return 0 ;;
     esac
 
     # Test file naming conventions

@@ -82,7 +82,14 @@ if [ -z "$REQUIRED_PREREQS" ]; then
     exit 0
 fi
 
-# Check session skills
+# Check session skills.
+#
+# NB: sub-skill-gate is INTENTIONALLY session-scoped (not task-scoped) —
+# skill prerequisites are about invocation order within a session ("you
+# must have run siae-git-env before siae-git-workflow"), not per-task
+# evidence. A prereq satisfied once remains satisfied for the whole
+# session. See docs/plans/anti-dilution-pr2-task-scope/task-09-sub-skill-gate-autogen.md
+# (§"Out of scope") and ADR-007.
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 

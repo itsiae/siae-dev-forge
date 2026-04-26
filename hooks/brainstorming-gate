@@ -70,8 +70,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+if ! source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null \
+   || ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null; then
+    command -v devforge_log >/dev/null 2>&1 \
+        && devforge_log "hook_degraded" "warning" "{\"hook\":\"brainstorming-gate\"}" 2>/dev/null || true
+fi
 devforge_init_session 2>/dev/null || true
 
 # File-taxonomy with fallback to legacy regex if lib missing

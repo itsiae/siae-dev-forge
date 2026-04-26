@@ -191,8 +191,11 @@ fi
 #   DEVFORGE_FORCE_STOP=1 <command>
 # which is tracked daily and logs bypass_abuse_suspected on the 3rd use.
 
-source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
-source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || true
+if ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null \
+   || ! source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null; then
+    command -v devforge_log >/dev/null 2>&1 \
+        && devforge_log "hook_degraded" "warning" "{\"hook\":\"stop-gate\"}" 2>/dev/null || true
+fi
 
 USE_SESSION_SCOPE_STOP="${DEVFORGE_USE_SESSION_SCOPE:-0}"
 VERIFICATION_OK=0
