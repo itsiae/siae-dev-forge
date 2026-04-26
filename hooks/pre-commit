@@ -31,6 +31,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh"
 source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null || true
 source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
@@ -116,10 +117,15 @@ if [ "$IS_GIT_COMMIT" = "1" ]; then
     elif ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
         SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
         devforge_log "pre_commit" "blocked" "{\"command\":\"${SAFE_TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
+        _PC_EXPL=""
+        if command -v devforge_block_explainer >/dev/null 2>&1; then
+            _PC_EXPL=$(devforge_block_explainer siae-git-workflow 2>/dev/null || true)
+            [ -n "$_PC_EXPL" ] && _PC_EXPL=" ${_PC_EXPL}"
+        fi
         cat <<BLOCK_EOF
 {
   "decision": "block",
-  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.\n\nEmergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
+  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.${_PC_EXPL}\n\nEmergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
 }
 BLOCK_EOF
         exit 0

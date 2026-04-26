@@ -32,6 +32,7 @@ _LIB_MISSING=""
 source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || _LIB_MISSING="${_LIB_MISSING}file-taxonomy "
 source "${PLUGIN_ROOT}/lib/task-id.sh"       2>/dev/null || _LIB_MISSING="${_LIB_MISSING}task-id "
 source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || _LIB_MISSING="${_LIB_MISSING}evidence-check "
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 if [ -n "$_LIB_MISSING" ] && command -v devforge_log >/dev/null 2>&1; then
     devforge_log "hook_degraded" "warning" \
         "{\"hook\":\"tdd-gate\",\"missing\":\"${_LIB_MISSING% }\"}" 2>/dev/null || true
@@ -168,11 +169,16 @@ SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
 devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-tdd\",\"task_id\":\"${TASK_ID}\"}"
 
 BASENAME=$(basename "$FILE_PATH")
+EXPLAINER=""
+if command -v devforge_block_explainer >/dev/null 2>&1; then
+    EXPLAINER=$(devforge_block_explainer siae-tdd || true)
+    [ -n "$EXPLAINER" ] && EXPLAINER=" ${EXPLAINER}"
+fi
 
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere."
+  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere.${EXPLAINER}"
 }
 EOF
 exit 0

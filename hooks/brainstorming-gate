@@ -70,6 +70,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 if ! source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null \
    || ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null; then
     command -v devforge_log >/dev/null 2>&1 \
@@ -167,6 +168,11 @@ echo "${COUNTER_KEY}|${NEW_N}" > "${COUNTER_FILE}.tmp" && mv "${COUNTER_FILE}.tm
 
 SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
 BASENAME=$(basename "$FILE_PATH")
+EXPLAINER=""
+if command -v devforge_block_explainer >/dev/null 2>&1; then
+    EXPLAINER=$(devforge_block_explainer siae-brainstorming 2>/dev/null || true)
+    [ -n "$EXPLAINER" ] && EXPLAINER=" ${EXPLAINER}"
+fi
 
 if [ "$NEW_N" -eq 1 ]; then
     devforge_log "brainstorming_nudge_soft" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":1,\"scope\":\"${COUNTER_KEY}\"}"
@@ -177,7 +183,7 @@ elif [ "$NEW_N" -le 3 ]; then
     cat <<EOF_WARN
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>."
+  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>.${EXPLAINER}"
 }
 EOF_WARN
     exit 0
@@ -186,7 +192,7 @@ else
     cat <<EOF_BLOCK
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support."
+  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support.${EXPLAINER}"
 }
 EOF_BLOCK
     exit 0
