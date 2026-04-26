@@ -5,8 +5,16 @@
 # Evento:   PreToolUse
 # Matcher:  Edit, Write
 # Timeout:  5s
-# Formato:  decision:"block" se counter >= 2 (W1+ mode) e no brainstorming
-# History:  v1.45.0 NEW (progressive friction — KPI Rosario adoption)
+# Formato:  decision:"block" sul 2°/3° edit senza brainstorming (progressive)
+# History:  v1.45.0 NEW → v1.47.0 task-scoped + W2_DEFAULT removed (ADR-001+005+006)
+#
+# PR #2 changes:
+#   - W2_DEFAULT=0 escape hatch removed (gate always-on; global override
+#     DEVFORGE_ENFORCEMENT_OFF=1 preserved).
+#   - File scope extended to .tf/.hcl via lib/file-taxonomy.sh.
+#   - Counter is task-scoped (per task_id) by default, with
+#     DEVFORGE_USE_SESSION_SCOPE=1 restoring the legacy SID-anchored
+#     counter for rollback.
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -14,13 +22,13 @@ export DEVFORGE_CURRENT_HOOK="brainstorming-gate"
 
 HOOK_INPUT=$(cat)
 
-# Escape hatch: DEVFORGE_ENFORCEMENT_OFF=1 → skip immediato
+# Global escape hatch (unchanged from PR #1)
 if [ "${DEVFORGE_ENFORCEMENT_OFF:-0}" = "1" ]; then
     echo '{}'
     exit 0
 fi
 
-# Extract file_path (pattern tdd-gate)
+# Extract file_path
 if command -v jq >/dev/null 2>&1; then
     FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
 else
@@ -37,7 +45,7 @@ if [[ "$FILE_PATH" != /* ]]; then
     FILE_PATH="$(pwd)/${FILE_PATH#./}"
 fi
 
-# Scope: file dev essere dentro un repo git
+# Walk up to nearest existing dir (needed for Write of new files)
 FILE_DIR="$(dirname "$FILE_PATH")"
 while [ -n "$FILE_DIR" ] && [ ! -d "$FILE_DIR" ]; do
     FILE_DIR="$(dirname "$FILE_DIR")"
@@ -52,23 +60,9 @@ if [ -z "$FILE_GIT_ROOT" ]; then
     exit 0
 fi
 
-# Scope: solo repo itsiae
+# Scope: itsiae/* only
 REMOTE_URL="$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)"
 if ! echo "$REMOTE_URL" | grep -qE "[/:]itsiae/"; then
-    echo '{}'
-    exit 0
-fi
-
-# Scope: solo file prod (stessa regex di tdd-gate)
-PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
-if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
-    echo '{}'
-    exit 0
-fi
-
-# Esclude test files e docs
-EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
-if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
     echo '{}'
     exit 0
 fi
@@ -76,23 +70,39 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
-# Short-circuit: siae-brainstorming già invocato in session-skills
+# File-taxonomy with fallback to legacy regex if lib missing
+if command -v devforge_file_requires_brainstorming >/dev/null 2>&1; then
+    if ! devforge_file_requires_brainstorming "$FILE_PATH"; then
+        echo '{}'
+        exit 0
+    fi
+else
+    PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$|\.tf$|\.hcl$"
+    EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+    if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then echo '{}'; exit 0; fi
+    if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then echo '{}'; exit 0; fi
+fi
+
+# Short-circuit: siae-brainstorming invoked (session check remains as a
+# cheap precondition — task_id layer still validates when available)
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 if [ -f "$SESSION_SKILLS_FILE" ] && grep -qF "siae-brainstorming" "$SESSION_SKILLS_FILE" 2>/dev/null; then
+    # Dual-write: mirror into task-skills ledger for observability
+    if command -v devforge_compute_task_id >/dev/null 2>&1; then
+        TASK_ID=$(cd "$FILE_GIT_ROOT" && devforge_compute_task_id 2>/dev/null || echo "")
+        if [ -n "$TASK_ID" ] && command -v devforge_task_skill_invoked >/dev/null 2>&1; then
+            devforge_task_skill_invoked "$TASK_ID" siae-brainstorming 2>/dev/null || true
+        fi
+    fi
     echo '{}'
     exit 0
 fi
 
-# Rollout mode check
-W2_DEFAULT="${DEVFORGE_W2_DEFAULT:-0}"
-if [ "$W2_DEFAULT" != "1" ] && [ "${DEVFORGE_ENFORCEMENT_STRICT:-0}" != "1" ]; then
-    echo '{}'
-    exit 0
-fi
-
-# Bypass esplicito via env var + daily anti-abuse counter
+# Explicit bypass with daily abuse tracking (unchanged from PR #1)
 if [ "${DEVFORGE_SKIP_BRAINSTORMING:-0}" = "1" ]; then
     SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
 
@@ -121,28 +131,46 @@ if [ "${DEVFORGE_SKIP_BRAINSTORMING:-0}" = "1" ]; then
     exit 0
 fi
 
-# Counter SID-anchored
-CURRENT_SID=$(devforge_get_sid 2>/dev/null || echo "unknown")
-COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
+# Progressive counter — task-scoped by default, SID-anchored on rollback
+USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+COUNTER_KEY=""
+COUNTER_FILE=""
+
+if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+    TASK_ID=$(cd "$FILE_GIT_ROOT" && devforge_compute_task_id 2>/dev/null || echo "")
+    if [ -n "$TASK_ID" ]; then
+        COUNTER_KEY="task:${TASK_ID}"
+        COUNTER_FILE="${HOME}/.claude/.devforge-task-skills/${TASK_ID}/brainstorm-counter"
+        mkdir -p "$(dirname "$COUNTER_FILE")"
+    fi
+fi
+
+if [ -z "$COUNTER_FILE" ]; then
+    # Rollback / non-itsiae-taskable path → legacy SID-anchored counter
+    CURRENT_SID=$(devforge_get_sid 2>/dev/null || echo "unknown")
+    COUNTER_KEY="sid:${CURRENT_SID}"
+    COUNTER_FILE="${HOME}/.claude/.devforge-brainstorm-counter"
+fi
+
 CURRENT_DATA=$(cat "$COUNTER_FILE" 2>/dev/null || echo "")
-STORED_SID="${CURRENT_DATA%%|*}"
+STORED_KEY="${CURRENT_DATA%%|*}"
 STORED_N="${CURRENT_DATA##*|}"
-if [ "$STORED_SID" != "$CURRENT_SID" ] || [ -z "$STORED_N" ]; then
+if [ "$STORED_KEY" != "$COUNTER_KEY" ] || [ -z "$STORED_N" ]; then
     STORED_N=0
 fi
 
 NEW_N=$((STORED_N + 1))
-echo "${CURRENT_SID}|${NEW_N}" > "${COUNTER_FILE}.tmp" && mv "${COUNTER_FILE}.tmp" "$COUNTER_FILE"
+echo "${COUNTER_KEY}|${NEW_N}" > "${COUNTER_FILE}.tmp" && mv "${COUNTER_FILE}.tmp" "$COUNTER_FILE"
 
 SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
 BASENAME=$(basename "$FILE_PATH")
 
 if [ "$NEW_N" -eq 1 ]; then
-    devforge_log "brainstorming_nudge_soft" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":1}"
+    devforge_log "brainstorming_nudge_soft" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":1,\"scope\":\"${COUNTER_KEY}\"}"
     echo '{}'
     exit 0
 elif [ "$NEW_N" -le 3 ]; then
-    devforge_log "brainstorming_gate_warn" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N}}"
+    devforge_log "brainstorming_gate_warn" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N},\"scope\":\"${COUNTER_KEY}\"}"
     cat <<EOF_WARN
 {
   "decision": "block",
@@ -151,7 +179,7 @@ elif [ "$NEW_N" -le 3 ]; then
 EOF_WARN
     exit 0
 else
-    devforge_log "brainstorming_gate_blocked" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N},\"violation\":\"no_brainstorm\"}"
+    devforge_log "brainstorming_gate_blocked" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"counter\":${NEW_N},\"scope\":\"${COUNTER_KEY}\",\"violation\":\"no_brainstorm\"}"
     cat <<EOF_BLOCK
 {
   "decision": "block",

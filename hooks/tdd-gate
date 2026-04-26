@@ -4,9 +4,18 @@
 # Hook:     tdd-gate
 # Evento:   PreToolUse
 # Matcher:  Edit, Write
-# Timeout:  5s — Solo check file flat + estensione
+# Timeout:  5s
 # Formato:  decision:"block" se siae-tdd non invocata (HARD GATE)
-# History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK (determinismo SDLC)
+# History:  v1.3.0 ALLOW+warn → v1.4.0 BLOCK → v1.47.0 task-scoped (ADR-001+005)
+#
+# Task-scoped enforcement (PR #2 ADR-001):
+#   Instead of trusting "skill invoked once per session", the gate computes
+#   task_id = sha256(branch|latest-design-doc|mtime)[:12] and asks
+#   devforge_skill_validated(siae-tdd, task_id). A session can span N
+#   tasks — each needs its own TDD validation.
+#
+# Fallback: DEVFORGE_USE_SESSION_SCOPE=1 restores legacy session-scoped
+# behavior (per-sid grep on .devforge-session-skills).
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -14,7 +23,14 @@ export DEVFORGE_CURRENT_HOOK="tdd-gate"
 
 HOOK_INPUT=$(cat)
 
-# Extract file_path from tool input (jq handles escaped quotes in paths with spaces)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/file-taxonomy.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || true
+
+# Extract file_path from tool input
 if command -v jq >/dev/null 2>&1; then
     FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
 else
@@ -26,16 +42,13 @@ if [ -z "$FILE_PATH" ]; then
     exit 0
 fi
 
-# Normalize relative paths to absolute so gating is deterministic.
-# Claude can provide either relative or absolute file_path depending on tool flow.
+# Normalize relative → absolute (claude tool may pass either)
 if [[ "$FILE_PATH" != /* ]]; then
     FILE_PATH="$(pwd)/${FILE_PATH#./}"
 fi
 
-# Skip files not inside any git repository (temp scripts, /tmp/, one-shot generators).
-# Use the FILE's git root, not the hook dir — the hook runs from ~/.claude/plugins/ (non-git dir).
-# Walk up from FILE_PATH's directory to the nearest existing ancestor before calling git,
-# so that Write tool calls for new files in not-yet-created directories are handled correctly.
+# Walk up from FILE_PATH's directory to the nearest existing ancestor so
+# Write on a not-yet-created directory still resolves a git root.
 FILE_DIR="$(dirname "$FILE_PATH")"
 while [ -n "$FILE_DIR" ] && [ ! -d "$FILE_DIR" ]; do
     FILE_DIR="$(dirname "$FILE_DIR")"
@@ -50,57 +63,69 @@ if [ -z "$FILE_GIT_ROOT" ]; then
     exit 0
 fi
 
-# Gate applies only to SIAE repos (itsiae org on GitHub).
-# Personal projects, forks, and unrelated repos are excluded.
-# Use [/:]itsiae/ to match both HTTPS (/itsiae/) and SSH (:itsiae/) remotes,
-# avoiding false positives from orgs whose name ends with "itsiae" (e.g. notitsiae).
+# Scope: itsiae/* only (same policy as compute_task_id)
 REMOTE_URL="$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)"
 if ! echo "$REMOTE_URL" | grep -qE "[/:]itsiae/"; then
     echo '{}'
     exit 0
 fi
 
-# Check if file is production code with testable runtime behavior.
-# IaC (.tf, .hcl), config, CI, and docs are validated via plan/lint, NOT TDD.
-PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
-if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then
-    echo '{}'
-    exit 0
+# File-taxonomy decides whether this path triggers TDD. Falls back to the
+# legacy inline regex if file-taxonomy.sh failed to source (defense in depth).
+if command -v devforge_file_requires_tdd >/dev/null 2>&1; then
+    if ! devforge_file_requires_tdd "$FILE_PATH"; then
+        echo '{}'
+        exit 0
+    fi
+else
+    PROD_EXTENSIONS="\.java$|\.ts$|\.tsx$|\.js$|\.jsx$|\.py$|\.vue$|\.go$|\.kt$"
+    EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
+    if ! echo "$FILE_PATH" | grep -qE "$PROD_EXTENSIONS"; then echo '{}'; exit 0; fi
+    if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then echo '{}'; exit 0; fi
 fi
 
-# Exclude test files and non-production paths
-EXCLUDED_PATHS="test/|tests/|__tests__|spec/|Test\.(java|kt)$|IT\.(java|kt)$|\.spec\.|\.test\.|test_.*\.py$|_test\.go$|docs/|plans/|SKILL\.md|CLAUDE\.md|\.md$|evals/"
-if echo "$FILE_PATH" | grep -qE "$EXCLUDED_PATHS"; then
-    echo '{}'
-    exit 0
-fi
-
-# Check if siae-tdd was invoked this session
+# ─── Skill check: task-scoped (default) with session-scoped rollback ───
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
 
+# Is the skill recorded at all (either scope)?
+SKILL_INVOKED=0
 if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
-    # siae-tdd invoked — check TDD phase state machine
+    SKILL_INVOKED=1
+fi
+
+# Task-scoped layer: if the primitives are available and rollback is NOT
+# set, require that siae-tdd was validated inside the current task_id.
+USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+TASK_ID=""
+if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+    TASK_ID=$(cd "$FILE_GIT_ROOT" && devforge_compute_task_id 2>/dev/null || echo "")
+    if [ -n "$TASK_ID" ] && command -v devforge_task_skill_invoked >/dev/null 2>&1; then
+        # Dual-write: record session skill invocations into the per-task
+        # ledger so later checks find the evidence. Idempotent.
+        if [ "$SKILL_INVOKED" = "1" ]; then
+            devforge_task_skill_invoked "$TASK_ID" siae-tdd 2>/dev/null || true
+        fi
+    fi
+fi
+
+if [ "$SKILL_INVOKED" = "1" ]; then
+    # siae-tdd invocata — check TDD phase state machine
     TDD_STATE_FILE="${HOME}/.claude/.devforge-tdd-state"
     TDD_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
     TDD_PHASE=$(echo "$TDD_STATE" | cut -d'|' -f1)
 
     # TDD Phase State Machine:
     #   INIT = siae-tdd invocata, nessun test scritto/eseguito → BLOCCA codice prod
-    #   RED  = test scritto e FALLITO (confermato) → PERMETTI codice prod (è il passo GREEN)
+    #   RED  = test scritto e FALLITO (confermato) → PERMETTI codice prod (passo GREEN)
     #   GREEN = test passa → PERMETTI (refactor o nuovo ciclo)
     #   REFACTOR = refactor in corso → PERMETTI
     #   empty/unknown = nessuno stato → PERMETTI (graceful)
     if [ "$TDD_PHASE" = "INIT" ]; then
-        # INIT phase: siae-tdd invocata ma nessun test fallente ancora
-        # BLOCCA codice produzione — prima devi scrivere un test e vederlo fallire
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-        PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-        source "${PLUGIN_ROOT}/lib/logger.sh"
         devforge_init_session 2>/dev/null || true
         BASENAME=$(basename "$FILE_PATH")
         SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
-        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\"}"
+        devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"phase\":\"INIT\",\"violation\":\"prod_code_before_test\",\"task_id\":\"${TASK_ID}\"}"
 
         cat <<PHASE_EOF
 {
@@ -111,25 +136,36 @@ PHASE_EOF
         exit 0
     fi
 
-    # RED (test fallente confermato), GREEN, REFACTOR, empty → allow production code edits
+    # Evidence-based check (task-scoped only — session-scoped fallback keeps
+    # legacy behavior where invocation alone is enough).
+    if [ -n "$TASK_ID" ] && [ "$USE_SESSION_SCOPE" != "1" ] \
+       && command -v devforge_skill_validated >/dev/null 2>&1; then
+        if ! devforge_skill_validated siae-tdd "$TASK_ID" 2>/dev/null; then
+            # Invoked but no RED→GREEN transition observed for THIS task.
+            # Keep allow-with-log: phase-gate above already blocks INIT,
+            # and RED/GREEN/REFACTOR pass through. Emit divergence event so
+            # shadow analysis can measure dual-write delta.
+            devforge_log "tdd_gate_task_divergence" "info" \
+                "{\"task_id\":\"${TASK_ID}\",\"session_allow\":true,\"task_validated\":false}" 2>/dev/null || true
+        fi
+    fi
+
+    # RED / GREEN / REFACTOR / empty → allow
     echo '{}'
     exit 0
 fi
 
-# siae-tdd NOT invoked — BLOCK operation (hard gate)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-source "${PLUGIN_ROOT}/lib/logger.sh"
+# siae-tdd NOT invoked — BLOCK (hard gate)
 devforge_init_session 2>/dev/null || true
 SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
-devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-tdd\"}"
+devforge_log "tdd_gate" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-tdd\",\"task_id\":\"${TASK_ID}\"}"
 
 BASENAME=$(basename "$FILE_PATH")
 
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere con la modifica."
+  "reason": "DevForge TDD Gate — BLOCCATO. Stai modificando codice di produzione (${BASENAME}) ma NON hai invocato siae-tdd in questa sessione. La Legge di Ferro: TEST PRIMA DEL CODICE, SEMPRE. Invoca siae-tdd PRIMA di scrivere codice di produzione: Skill tool -> siae-devforge:siae-tdd. Dopo aver invocato la skill, potrai procedere."
 }
 EOF
 exit 0
