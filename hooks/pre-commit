@@ -27,8 +27,9 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Source activity logger
+# Source activity logger + token parser (ADR-006 rewrite)
 source "${PLUGIN_ROOT}/lib/logger.sh"
+source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
@@ -58,8 +59,37 @@ fi
 # Local alias for readability in this file.
 escape_for_json() { devforge_sanitize_json_str "$1"; }
 
-# Route to appropriate check based on command
-if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+# Route to appropriate check based on command. Use the token parser when
+# available — it eliminates false positives on inputs like
+# `git log | grep commit`, `echo "git commit"`, and `python run_git_commit.py`.
+# Fallback to the legacy regex only if cmd-parser failed to source.
+if command -v devforge_cmd_matches >/dev/null 2>&1; then
+    TC_FIRST=$(devforge_first_token "$TOOL_COMMAND")
+    TC_SECOND=$(devforge_second_token "$TOOL_COMMAND")
+    if [ "$TC_FIRST" = "git" ] && [ "$TC_SECOND" = "commit" ]; then
+        IS_GIT_COMMIT=1
+    else
+        IS_GIT_COMMIT=0
+    fi
+    if [ "$TC_FIRST" = "git" ] && { [ "$TC_SECOND" = "checkout" ] || [ "$TC_SECOND" = "switch" ]; }; then
+        IS_GIT_CHECKOUT=1
+    else
+        IS_GIT_CHECKOUT=0
+    fi
+else
+    if [[ "$TOOL_COMMAND" =~ ^[[:space:]]*git[[:space:]]+commit ]]; then
+        IS_GIT_COMMIT=1
+    else
+        IS_GIT_COMMIT=0
+    fi
+    if [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
+        IS_GIT_CHECKOUT=1
+    else
+        IS_GIT_CHECKOUT=0
+    fi
+fi
+
+if [ "$IS_GIT_COMMIT" = "1" ]; then
     # Explicit bypass (tracked abuse) — for emergency cases when session-skills
     # file is corrupted/reset by upstream bug (see fix in hooks/session-start
     # on matcher resume|clear|compact).
@@ -132,8 +162,34 @@ COV_BLOCK_EOF
         fi
     fi
 
+    # --- Coverage-Force-Run (PR #2 ADR-008) ---
+    # If the commit contains test files but the cached coverage data is
+    # stale (> 30 minutes) or missing, block and ask the developer to
+    # actually run the test suite. This prevents the coverage gate from
+    # passing silently just because tests were not executed.
+    STAGED_TEST_HITS=$(git diff --cached --name-only 2>/dev/null \
+        | grep -E "\.(spec|test)\.|Test\.java$|IT\.java$|test_.*\.py$|_test\.go$" || true)
+    if [ -n "$STAGED_TEST_HITS" ]; then
+        COVERAGE_AGE=9999
+        if [ -f "$COVERAGE_FILE" ]; then
+            COVERAGE_TS=$(cut -d'|' -f2 "$COVERAGE_FILE" 2>/dev/null || echo 0)
+            NOW_S=$(date +%s)
+            COVERAGE_AGE=$(( NOW_S - ${COVERAGE_TS:-0} ))
+        fi
+        if [ "$COVERAGE_AGE" -gt 1800 ]; then
+            devforge_log "coverage_force_run" "blocked" "{\"age_s\":${COVERAGE_AGE}}"
+            cat <<COV_FORCE_EOF
+{
+  "decision": "block",
+  "reason": "DevForge Coverage Force-Run — BLOCCATO. Stai committando file di test ma i dati di coverage sono stale (${COVERAGE_AGE}s > 1800s) o assenti. Esegui la test suite con coverage (mvn test, npm test -- --coverage, pytest --cov) prima del commit. Questo evita che la gate di coverage passi solo perche' i test non sono stati eseguiti."
+}
+COV_FORCE_EOF
+            exit 0
+        fi
+    fi
+
     : # proceed to quality gate below
-elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
+elif [ "$IS_GIT_CHECKOUT" = "1" ]; then
     # Branch check: warn if feature branch without design doc
     BRANCH_NAME=$(echo "$TOOL_COMMAND" | grep -oE '[a-zA-Z0-9/_.-]+$' || true)
     BRANCH_JIRA=$(git branch --show-current 2>/dev/null | grep -oE '(feature|bugfix|hotfix)/[A-Z]+-[0-9]+' | grep -oE '[A-Z]+-[0-9]+' || echo "")

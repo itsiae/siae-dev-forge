@@ -177,35 +177,75 @@ RETRO_EOF
     fi
 fi
 
-# --- BLOCCO 5: Verification gate ---
-if echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
-    # Verification invoked — all checks passed, stop permitted
+# --- BLOCCO 5: Verification gate — evidence-based (PR #2 ADR-006 + ADR-008) ---
+#
+# Gate passes when siae-verification can be proven to have run successfully
+# for the current task:
+#   task-scoped (default): evidence-check.sh::devforge_skill_validated
+#                          (looks for verification_run event exit=0)
+#   session-scoped (rollback, DEVFORGE_USE_SESSION_SCOPE=1):
+#                          legacy grep of session-skills file
+#
+# The old 2-block auto-escape is gone (ADR-006). The only way past the gate
+# without invoking verification is an EXPLICIT bypass:
+#   DEVFORGE_FORCE_STOP=1 <command>
+# which is tracked daily and logs bypass_abuse_suspected on the 3rd use.
+
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null || true
+
+USE_SESSION_SCOPE_STOP="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+VERIFICATION_OK=0
+
+if [ "$USE_SESSION_SCOPE_STOP" != "1" ] \
+   && command -v devforge_compute_task_id >/dev/null 2>&1 \
+   && command -v devforge_skill_validated >/dev/null 2>&1; then
+    TASK_ID_STOP=$(devforge_compute_task_id 2>/dev/null || echo "")
+    if [ -n "$TASK_ID_STOP" ] && devforge_skill_validated siae-verification "$TASK_ID_STOP" 2>/dev/null; then
+        VERIFICATION_OK=1
+    fi
+fi
+
+# Session-scope fallback: if task-scope didn't validate (or rollback is set),
+# accept the legacy grep. This keeps dual-write / rollback behaviour stable.
+if [ "$VERIFICATION_OK" != "1" ] && echo "$SKILLS_LIST" | grep -qF "siae-verification"; then
+    VERIFICATION_OK=1
+fi
+
+if [ "$VERIFICATION_OK" = "1" ]; then
     rm -f "${HOME}/.claude/.devforge-retro-reminded" 2>/dev/null
+    rm -f "${HOME}/.claude/.devforge-stop-block-count" 2>/dev/null
     _devforge_emit_session_end
     exit 0
 fi
 
-# Escape hatch: after 2 consecutive blocks, allow stop with strong warning
-STOP_BLOCK_COUNTER_FILE="${HOME}/.claude/.devforge-stop-block-count"
-STOP_BLOCK_COUNT=$(cat "$STOP_BLOCK_COUNTER_FILE" 2>/dev/null || echo "0")
-STOP_BLOCK_COUNT=$((STOP_BLOCK_COUNT + 1))
-echo "$STOP_BLOCK_COUNT" > "$STOP_BLOCK_COUNTER_FILE"
-
-if [ "$STOP_BLOCK_COUNT" -ge 2 ]; then
-    # Escape hatch: allow stop but log as violation
-    devforge_log "stop_gate" "escaped" "{\"reason\":\"escape_hatch_after_${STOP_BLOCK_COUNT}_blocks\"}"
-    rm -f "$STOP_BLOCK_COUNTER_FILE"
+# Explicit bypass — DEVFORGE_FORCE_STOP=1 (tracked, daily abuse counter)
+if [ "${DEVFORGE_FORCE_STOP:-0}" = "1" ]; then
+    FORCE_COUNT_FILE="${HOME}/.claude/.devforge-force-stop-count"
+    TODAY=$(date -u +%Y-%m-%d)
+    DATA=$(cat "$FORCE_COUNT_FILE" 2>/dev/null || echo "")
+    STORED_DATE="${DATA%%|*}"
+    STORED_N="${DATA##*|}"
+    if [ "$STORED_DATE" != "$TODAY" ] || [ -z "$STORED_N" ]; then
+        STORED_N=0
+    fi
+    NEW_N=$((STORED_N + 1))
+    echo "${TODAY}|${NEW_N}" > "${FORCE_COUNT_FILE}.tmp" && mv "${FORCE_COUNT_FILE}.tmp" "$FORCE_COUNT_FILE"
+    devforge_log "stop_gate_forced" "warning" "{\"count_today\":${NEW_N}}"
+    if [ "$NEW_N" -ge 3 ]; then
+        devforge_log "force_stop_abuse_suspected" "warning" "{\"count_today\":${NEW_N}}"
+    fi
     _devforge_emit_session_end
     exit 0
 fi
 
-# First block: hard gate
-devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\",\"block_count\":${STOP_BLOCK_COUNT}}"
+# Hard block — no auto-escape.
+devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\",\"task_id\":\"${TASK_ID_STOP:-}\"}"
 
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON hai invocato siae-verification in questa sessione. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Solo dopo potrai fermarti. (Tentativo ${STOP_BLOCK_COUNT}/2 — al secondo tentativo lo stop verra' permesso con warning)"
+  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Escape esplicito (tracciato 3/giorno): DEVFORGE_FORCE_STOP=1 <comando>."
 }
 EOF
 
