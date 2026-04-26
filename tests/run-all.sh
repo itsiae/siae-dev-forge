@@ -530,8 +530,11 @@ else
 fi
 
 # Check 17: sub-skill-gate silenzioso per skill senza prerequisiti
+# Use siae-architecture: a flexible skill that has no prerequisite in
+# lib/prereq-map.generated (PR #2, Task 4 expanded the map — siae-tdd is
+# no longer a prereq-free skill so it can't be used for this assertion).
 echo "" > "${HOME}/.claude/.devforge-session-skills"
-subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-tdd"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
+subskill_noreq_output=$(echo '{"skill":"siae-devforge:siae-architecture"}' | bash "${PLUGIN_ROOT}/hooks/sub-skill-gate" 2>/dev/null)
 if [ "$subskill_noreq_output" = "{}" ]; then
   echo "  PASS  hooks/sub-skill-gate: silenzioso per skill senza prerequisiti"
   hook_ok=$((hook_ok + 1))
