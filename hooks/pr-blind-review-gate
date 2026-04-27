@@ -17,6 +17,7 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 if ! source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null \
    || ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null \
    || ! source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null; then
@@ -120,10 +121,15 @@ fi
 
 # Block
 devforge_log "pr_blind_review_gate" "blocked" "{\"task_id\":\"${TASK_ID:-}\"}"
+_BR_EXPL=""
+if command -v devforge_block_explainer >/dev/null 2>&1; then
+    _BR_EXPL=$(devforge_block_explainer siae-blind-review 2>/dev/null || true)
+    [ -n "$_BR_EXPL" ] && _BR_EXPL=" ${_BR_EXPL}"
+fi
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Blind Review Gate — BLOCCATO. Stai aprendo o modificando una PR ma NON risulta evidenza di siae-blind-review per questo task. Il blind review verifica l'allineamento spec ↔ codice con atteggiamento da auditor ostile. Invoca siae-blind-review, completa il verdict, poi riprova. Bypass tracked (5/giorno): DEVFORGE_SKIP_BLIND_REVIEW=1 <comando>."
+  "reason": "DevForge Blind Review Gate — BLOCCATO. Stai aprendo o modificando una PR ma NON risulta evidenza di siae-blind-review per questo task. Il blind review verifica l'allineamento spec ↔ codice con atteggiamento da auditor ostile. Invoca siae-blind-review, completa il verdict, poi riprova.${_BR_EXPL} Bypass tracked (5/giorno): DEVFORGE_SKIP_BLIND_REVIEW=1 <comando>."
 }
 EOF
 exit 0

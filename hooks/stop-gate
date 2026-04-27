@@ -89,6 +89,16 @@ print(f'{d.get(\"total\",0)}\t{d.get(\"output\",0)}\t{d.get(\"cost_eur\",0)}')
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
         "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR}}"
 
+    # PR #3 ADR-009: 3-line recap to stderr so the operator sees adoption
+    # numbers at session close (non-blocking, does NOT affect decision).
+    # Opt-out via DEVFORGE_DISABLE_RECAP=1.
+    if [ "${DEVFORGE_DISABLE_RECAP:-0}" != "1" ] \
+       && command -v python3 >/dev/null 2>&1 \
+       && [ -f "${PLUGIN_ROOT}/lib/adoption-analyzer.py" ]; then
+        python3 "${PLUGIN_ROOT}/lib/adoption-analyzer.py" --format recap 2>/dev/null \
+            | sed 's/^/[devforge-recap] /' >&2 || true
+    fi
+
     # Flush telemetry
     devforge_upload_logs 2>/dev/null || true
 
@@ -191,6 +201,7 @@ fi
 #   DEVFORGE_FORCE_STOP=1 <command>
 # which is tracked daily and logs bypass_abuse_suspected on the 3rd use.
 
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 if ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null \
    || ! source "${PLUGIN_ROOT}/lib/evidence-check.sh" 2>/dev/null; then
     command -v devforge_log >/dev/null 2>&1 \
@@ -245,10 +256,16 @@ fi
 # Hard block — no auto-escape.
 devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\",\"task_id\":\"${TASK_ID_STOP:-}\"}"
 
+_SG_EXPL=""
+if command -v devforge_block_explainer >/dev/null 2>&1; then
+    _SG_EXPL=$(devforge_block_explainer siae-verification 2>/dev/null || true)
+    [ -n "$_SG_EXPL" ] && _SG_EXPL=" ${_SG_EXPL}"
+fi
+
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA. Escape esplicito (tracciato 3/giorno): DEVFORGE_FORCE_STOP=1 <comando>."
+  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA.${_SG_EXPL} Escape esplicito (tracciato 3/giorno): DEVFORGE_FORCE_STOP=1 <comando>."
 }
 EOF
 
