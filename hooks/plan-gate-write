@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# PreToolUse hook: BLOCCA Write su docs/plans/*-design.md senza siae-brainstorming
+# ─────────────────────────────────────────────────────────────────
+# Hook:     plan-gate-write
+# Evento:   PreToolUse
+# Matcher:  Write
+# Timeout:  5s
+# Formato:  decision:"block" se il file è un design doc e siae-brainstorming
+#           non è stato invocato in questa sessione / questo task.
+# History:  v1.47.0 NEW — PR #2 ADR-008, chiude gap #4 (plan-gate bypassable
+#           via Write diretto senza EnterPlanMode).
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="plan-gate-write"
+
+HOOK_INPUT=$(cat)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+if ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null; then
+    command -v devforge_log >/dev/null 2>&1 \
+        && devforge_log "hook_degraded" "warning" "{\"hook\":\"plan-gate-write\"}" 2>/dev/null || true
+fi
+
+# Extract file_path
+if command -v jq >/dev/null 2>&1; then
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
+else
+    FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
+
+[ -z "$FILE_PATH" ] && { echo '{}'; exit 0; }
+
+# Match only design docs (not plan docs, not random .md)
+if ! echo "$FILE_PATH" | grep -qE "(^|/)docs/plans/[^/]+-design\.md$"; then
+    echo '{}'
+    exit 0
+fi
+
+# Normalize to absolute for the itsiae scope check
+if [[ "$FILE_PATH" != /* ]]; then
+    FILE_PATH="$(pwd)/${FILE_PATH#./}"
+fi
+FILE_DIR="$(dirname "$FILE_PATH")"
+while [ -n "$FILE_DIR" ] && [ ! -d "$FILE_DIR" ]; do
+    FILE_DIR="$(dirname "$FILE_DIR")"
+done
+[ -z "$FILE_DIR" ] && { echo '{}'; exit 0; }
+FILE_GIT_ROOT=$(git -C "$FILE_DIR" rev-parse --show-toplevel 2>/dev/null || true)
+[ -z "$FILE_GIT_ROOT" ] && { echo '{}'; exit 0; }
+
+REMOTE_URL=$(git -C "$FILE_GIT_ROOT" remote get-url origin 2>/dev/null || true)
+if ! echo "$REMOTE_URL" | grep -qE "[/:]itsiae/"; then
+    echo '{}'
+    exit 0
+fi
+
+devforge_init_session 2>/dev/null || true
+
+# Check invocation.
+# NB: we check skills_invoked, NOT skills_validated — the design doc IS the
+# evidence for siae-brainstorming, and it has not been produced yet at the
+# moment of this Write. Invocation-only is sufficient here.
+USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+ALLOW=0
+
+if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+    TASK_ID=$(cd "$FILE_GIT_ROOT" && devforge_compute_task_id 2>/dev/null || echo "")
+    if [ -n "$TASK_ID" ]; then
+        TASK_INVOKED="${HOME}/.claude/.devforge-task-skills/${TASK_ID}/skills_invoked"
+        if [ -f "$TASK_INVOKED" ] && grep -qxF "siae-brainstorming" "$TASK_INVOKED"; then
+            ALLOW=1
+        fi
+    fi
+fi
+
+if [ "$ALLOW" != "1" ]; then
+    if grep -qF "siae-brainstorming" "${HOME}/.claude/.devforge-session-skills" 2>/dev/null; then
+        ALLOW=1
+    fi
+fi
+
+if [ "$ALLOW" = "1" ]; then
+    echo '{}'
+    exit 0
+fi
+
+SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
+devforge_log "plan_gate_write" "blocked" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"skill_missing\":\"siae-brainstorming\"}"
+
+cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge Plan Gate (Write) — BLOCCATO. Stai scrivendo un design doc (${FILE_PATH}) ma NON hai invocato siae-brainstorming in questa sessione. NESSUN DESIGN SENZA PROCESSO. Invoca siae-brainstorming PRIMA di materializzare il design doc: Skill tool -> siae-devforge:siae-brainstorming. Questo evita che design docs siano generati ad-hoc senza i trade-off del processo."
+}
+EOF
+exit 0

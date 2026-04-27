@@ -40,6 +40,11 @@
           },
           {
             "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-blind-review-gate",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-gate",
             "timeout": 15
           }
@@ -63,6 +68,11 @@
       {
         "matcher": "Write",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' plan-gate-write",
+            "timeout": 5
+          },
           {
             "type": "command",
             "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",

@@ -15,9 +15,100 @@
 
 **siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 30 skill, 7 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
 
-> **Versione:** 1.14.0-mvp
+> **Versione:** 1.48.0
 > **Autore:** SIAE AI Competence Center
 > **Licenza:** Proprietary
+
+---
+
+## Anti-Dilution Enforcement (v1.46 + v1.47)
+
+Due PR consecutive (aprile 2026) trasformano l'enforcement da cerimoniale a
+misurabile. Telemetria su 230 sessioni SIAE aveva rivelato adoption reale
+**38% brainstorming, 38% TDD, 3% verification, 0% blind-review** — gli
+hook scattavano ma non producevano evidenza. Root cause: enforcement
+session-scoped, 2636 righe di SKILL.md ripetute, 4 hook UserPromptSubmit
+in cascata che producevano wolf-cry effect sui tag `<EXTREMELY_IMPORTANT>`.
+
+### v1.46 (PR #1) — Foundation + Compression
+
+- **Evidence contract** (ADR-002): ogni skill backbone dichiara `validates_via`
+  nel frontmatter. 5 predicati attivi (`tdd_red_green_observed`,
+  `design_doc_produced`, `conventional_commit_made`,
+  `verification_run_passed`, `blind_review_completed`).
+- **Radical SKILL.md compression** (ADR-003): 5 backbone + using-devforge
+  passano da 2636 a 980 righe (**-62%**). Regole K (Legge di Ferro,
+  Hard-Gate, RED-GREEN-REFACTOR, 5-step Verification, Pre-Flight Card)
+  preservate verbatim, centralizzazioni in `lib/{risk-taxonomy,operational-limits,permission-denied-handling,checkpoint-schema}.md`.
+- **Prompt injection budget** (ADR-004): `hooks/devforge-context` fonde
+  3 hook UserPromptSubmit precedenti. Budget hard-cap 2KB, diff-based
+  dedup via state hash (include mtime design doc), tier-based tags
+  (default none / IMPORTANT se gate violato nell'ultimo minuto).
+
+**Metriche misurate:**
+
+| Dimensione | v1.45 | v1.46 | Δ |
+|---|---|---|---|
+| SKILL.md backbone | 2636 righe | 980 righe | **-62%** |
+| Context injection per turn | 2123 B | 663 B | **-69%** |
+| 50-turn session est. | ~150 KB | ~663 B | **-99.6%** |
+| Hook UserPromptSubmit | 4 | 2 | -50% |
+| `<EXTREMELY_IMPORTANT>` per sessione | ~5 | 0 (tier-guarded) | -100% |
+
+### v1.47 (PR #2) — Task-Scope + Scope Cleanup
+
+- **Task-scoped enforcement** (ADR-001): `skill_key = (task_id, skill_name)`
+  invece di `(session_id, skill_name)`. Una sessione può coprire N task;
+  ogni task richiede la propria validazione. `task_id = sha256(branch |
+  latest-design-doc | design-mtime)[:12]`, stato in
+  `~/.claude/.devforge-task-skills/<task_id>/`. Evidence copy-forward
+  automatica quando il design doc viene revisionato sullo stesso branch
+  (mitiga lo scenario "utente rivede il design a metà lavoro").
+- **File taxonomy centralizzata** (ADR-005): `lib/file-taxonomy.sh`
+  sostituisce le regex duplicate in tdd-gate e brainstorming-gate. `.tf` e
+  `.hcl` ora triggerano brainstorming (design-gated IaC). `.sh` / `.bash`
+  **deny-by-default**, opt-in via `DEVFORGE_BASH_TDD=1` (evita che gli
+  hook stessi del plugin blocchino la propria modifica).
+- **Rimozione 3 escape hatches** (ADR-006):
+  - `stop-gate` 2-block auto-escape → `DEVFORGE_FORCE_STOP=1` esplicito,
+    tracked 3/giorno.
+  - `brainstorming-gate` `DEVFORGE_W2_DEFAULT=0` → rimosso (gate sempre
+    attivo; escape globale `DEVFORGE_ENFORCEMENT_OFF=1` preservato).
+  - `pre-commit` regex substring `git commit` → token parser
+    (`lib/cmd-parser.sh`) immune a `git log | grep commit`,
+    `echo "git commit"`, `python run_git_commit.py`.
+- **Prereq map autogenerata** (ADR-007): `sub-skill-gate` legge
+  `lib/prereq-map.generated` (20 entry) costruito da
+  `lib/generate-prereq-map.sh`. Prima erano 7 entry hardcoded — 32/39
+  skill erano fuori copertura.
+- **Nuovi gate** (ADR-008):
+  - `pr-blind-review-gate` — blocca `gh pr create / edit` senza
+    siae-blind-review validata (chiude il gap 0% adoption).
+  - `plan-gate-write` — blocca `Write docs/plans/*-design.md` senza
+    siae-brainstorming invocata (chiude il bypass via Write diretto).
+  - `evidence-stop-gate` — rewrite basato su evidenza
+    `verification_run event exit=0` invece di session-skill grep.
+  - `coverage-force-run` — blocca `git commit` se il diff contiene file
+    di test ma il coverage cache è stale (> 30 min) o assente.
+
+**Rollback** per-gate:  `DEVFORGE_USE_SESSION_SCOPE=1` in shell ripristina
+comportamento v1.46 pure session-scoped. Vedi
+[`hooks/ENV_VARS.md`](hooks/ENV_VARS.md) per la matrix completa delle env
+var di bypass e tracking.
+
+**Obiettivi target (2 settimane post-merge):**
+
+| Dimensione | Baseline | Target |
+|---|---|---|
+| Adoption per-task brainstorming | 38% | ≥80% |
+| Adoption per-task TDD | 38% | ≥80% |
+| Adoption per-task verification | 3% | ≥60% |
+| Adoption per-task blind-review | 0% | ≥40% |
+| `gate_divergence` dual-write | n/a | <10% |
+
+Design doc: [`docs/plans/2026-04-25-anti-dilution-enforcement-design.md`](docs/plans/2026-04-25-anti-dilution-enforcement-design.md)
+Baseline: [`docs/measurements/baseline-2026-04-25/`](docs/measurements/baseline-2026-04-25/)
+Test suite aggregata PR #2:  137/137 PASS su `tests/pr2-task-scope/run-all.sh`
 
 ---
 

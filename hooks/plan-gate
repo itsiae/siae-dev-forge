@@ -11,19 +11,44 @@
 
 set -euo pipefail
 
-# Check if siae-brainstorming was invoked this session
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+
+# Check if siae-brainstorming was invoked this session (session-scope, primary)
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
 SESSION_SKILLS=$(cat "$SESSION_SKILLS_FILE" 2>/dev/null || echo "")
-
+SESSION_OK=0
 if echo "$SESSION_SKILLS" | grep -qF "siae-brainstorming"; then
+    SESSION_OK=1
+fi
+
+# Task-scope layer (PR #2 ADR-001): shadow-log divergence. Does not
+# change the decision yet — session-scope remains source of truth for
+# plan-gate until telemetry tells us the task ledger is consistent.
+USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+    _PG_TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+    if [ -n "$_PG_TASK_ID" ]; then
+        _PG_INVOKED="${HOME}/.claude/.devforge-task-skills/${_PG_TASK_ID}/skills_invoked"
+        _PG_TASK_OK=0
+        if [ -f "$_PG_INVOKED" ] && grep -qxF "siae-brainstorming" "$_PG_INVOKED" 2>/dev/null; then
+            _PG_TASK_OK=1
+        fi
+        if [ "$SESSION_OK" != "$_PG_TASK_OK" ]; then
+            devforge_log "plan_gate_task_divergence" "info" \
+                "{\"task_id\":\"${_PG_TASK_ID}\",\"session\":${SESSION_OK},\"task\":${_PG_TASK_OK}}" 2>/dev/null || true
+        fi
+    fi
+fi
+
+if [ "$SESSION_OK" = "1" ]; then
     echo '{}'
     exit 0
 fi
 
 # siae-brainstorming NOT invoked — BLOCK operation (hard gate)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-source "${PLUGIN_ROOT}/lib/logger.sh"
 devforge_init_session 2>/dev/null || true
 devforge_log "plan_gate" "blocked" "{\"skill_missing\":\"siae-brainstorming\"}"
 

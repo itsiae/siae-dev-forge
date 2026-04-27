@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Test: brainstorming-gate hook — progressive enforcement (nudge/warn/block)
+# Updated for PR #2 (Task 6): W2_DEFAULT/STRICT gate removed, .tf in scope,
+# counter may be task-scoped or sid-scoped depending on task_id availability.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,6 +17,8 @@ export HOME="$TEST_HOME"
 export DEVFORGE_LOG_FILE="$TEST_LOG"
 export DEVFORGE_SESSION_DIR=$(mktemp -d)
 export DEVFORGE_FORCE_BASH_FALLBACK=1
+# Force session-scope mode so counter is stable and parseable across scenarios.
+export DEVFORGE_USE_SESSION_SCOPE=1
 mkdir -p "${HOME}/.claude"
 
 cd "$TEST_REPO"
@@ -52,22 +56,23 @@ set_session_skill() {
 
 set_sid "test-sid-12345"
 
-# ─── Scenario 1: N=1 → nudge soft ───
-DEVFORGE_ENFORCEMENT_STRICT=1 invoke_gate "${TEST_REPO}/hello.ts"
+# ─── Scenario 1: N=1 → nudge soft (gate always-on, no STRICT needed) ───
+invoke_gate "${TEST_REPO}/hello.ts"
 if [ "$(count_events brainstorming_nudge_soft)" != "1" ]; then
     echo "FAIL scenario 1: nudge_soft count != 1"
     cat "$DEVFORGE_LOG_FILE"
     exit 1
 fi
 COUNTER=$(read_counter)
-if [ "$COUNTER" != "test-sid-12345|1" ]; then
-    echo "FAIL scenario 1: counter = '$COUNTER', atteso 'test-sid-12345|1'"
+# Format: "sid:<sid>|N" under DEVFORGE_USE_SESSION_SCOPE=1
+if ! echo "$COUNTER" | grep -qE '\|1$'; then
+    echo "FAIL scenario 1: counter = '$COUNTER', expected N=1"
     exit 1
 fi
 echo "PASS scenario 1: N=1 nudge_soft + counter=1"
 
 # ─── Scenario 2: N=2 → warn block ───
-OUT=$(DEVFORGE_ENFORCEMENT_STRICT=1 invoke_gate "${TEST_REPO}/hello.ts")
+OUT=$(invoke_gate "${TEST_REPO}/hello.ts")
 if [ "$(count_events brainstorming_gate_warn)" != "1" ]; then
     echo "FAIL scenario 2: gate_warn count != 1"
     exit 1
@@ -78,15 +83,15 @@ if ! echo "$OUT" | grep -qE '"decision":\s*"block"'; then
     exit 1
 fi
 COUNTER=$(read_counter)
-if [ "$COUNTER" != "test-sid-12345|2" ]; then
-    echo "FAIL scenario 2: counter='$COUNTER'"
+if ! echo "$COUNTER" | grep -qE '\|2$'; then
+    echo "FAIL scenario 2: counter='$COUNTER', expected N=2"
     exit 1
 fi
 echo "PASS scenario 2: N=2 warn + block + counter=2"
 
 # ─── Scenario 3: N=4 → hard block ───
-DEVFORGE_ENFORCEMENT_STRICT=1 invoke_gate "${TEST_REPO}/hello.ts" >/dev/null  # N=3
-OUT=$(DEVFORGE_ENFORCEMENT_STRICT=1 invoke_gate "${TEST_REPO}/hello.ts")       # N=4
+invoke_gate "${TEST_REPO}/hello.ts" >/dev/null  # N=3
+OUT=$(invoke_gate "${TEST_REPO}/hello.ts")       # N=4
 if [ "$(count_events brainstorming_gate_blocked)" != "1" ]; then
     echo "FAIL scenario 3: gate_blocked count != 1"
     exit 1
@@ -103,8 +108,8 @@ echo "PASS scenario 3: N=4 hard block"
 
 # ─── Scenario 5: siae-brainstorming in session → short-circuit ───
 set_session_skill "siae-brainstorming"
-echo "test-sid-12345|0" > "${HOME}/.claude/.devforge-brainstorm-counter"
-DEVFORGE_ENFORCEMENT_STRICT=1 invoke_gate "${TEST_REPO}/hello.ts"
+echo "sid:test-sid-12345|0" > "${HOME}/.claude/.devforge-brainstorm-counter"
+invoke_gate "${TEST_REPO}/hello.ts"
 COUNTER=$(read_counter)
 if echo "$COUNTER" | grep -qE "\|[1-9]"; then
     echo "FAIL scenario 5: counter incrementato con siae-brainstorming presente ($COUNTER)"
@@ -113,42 +118,10 @@ fi
 echo "PASS scenario 5: siae-brainstorming presente → no enforcement"
 rm -f "${HOME}/.claude/.devforge-session-skills"
 
-# ─── Scenario 10: senza STRICT → no enforcement ───
-rm -f "${HOME}/.claude/.devforge-brainstorm-counter"
-BLOCKED_BEFORE=$(count_events brainstorming_gate_blocked)
-invoke_gate "${TEST_REPO}/hello.ts"
-BLOCKED_AFTER=$(count_events brainstorming_gate_blocked)
-if [ "$BLOCKED_BEFORE" != "$BLOCKED_AFTER" ]; then
-    echo "FAIL scenario 10: blocked aumentato senza STRICT"
-    exit 1
-fi
-echo "PASS scenario 10: senza STRICT → no enforcement"
-
-# ─── Scenario 5b: post-skill reset su siae-brainstorming ───
-rm -f "${HOME}/.claude/.devforge-session-skills"
-echo "test-sid-12345|3" > "${HOME}/.claude/.devforge-brainstorm-counter"
-SKILL_INPUT='{"tool_name":"Skill","skill":"siae-devforge:siae-brainstorming","name":"siae-devforge:siae-brainstorming"}'
-echo "$SKILL_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
-COUNTER=$(read_counter)
-if [ "$COUNTER" != "test-sid-12345|0" ]; then
-    echo "FAIL scenario 5b: counter dopo reset = '$COUNTER'"
-    exit 1
-fi
-if [ "$(count_events brainstorming_invoked_post_gate)" = "0" ]; then
-    echo "FAIL scenario 5b: brainstorming_invoked_post_gate non emesso"
-    exit 1
-fi
-if ! grep -q '"trigger":"warn"' "$DEVFORGE_LOG_FILE"; then
-    echo "FAIL scenario 5b: trigger non è 'warn' (counter era 3)"
-    grep brainstorming_invoked_post_gate "$DEVFORGE_LOG_FILE" || true
-    exit 1
-fi
-echo "PASS scenario 5b: post-skill reset + invoked_post_gate trigger=warn"
-
 # ─── Scenario 4: DEVFORGE_SKIP_BRAINSTORMING=1 → bypass + log ───
 rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-bypass-count" "${HOME}/.claude/.devforge-session-skills"
 BYPASS_BEFORE=$(count_events brainstorming_gate_bypassed)
-DEVFORGE_ENFORCEMENT_STRICT=1 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
+DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
 BYPASS_AFTER=$(count_events brainstorming_gate_bypassed)
 if [ $((BYPASS_AFTER - BYPASS_BEFORE)) != "1" ]; then
     echo "FAIL scenario 4: bypass event non emesso"
@@ -161,9 +134,35 @@ if echo "$COUNTER" | grep -qE "\|[1-9]"; then
 fi
 echo "PASS scenario 4: bypass emette gate_bypassed + no counter increment"
 
+# ─── Scenario 5b: post-skill reset su siae-brainstorming ───
+# Seed counter in OLD format (post-skill v1.45 reads raw SID and writes back)
+rm -f "${HOME}/.claude/.devforge-session-skills"
+echo "test-sid-12345|3" > "${HOME}/.claude/.devforge-brainstorm-counter"
+SKILL_INPUT='{"tool_name":"Skill","skill":"siae-devforge:siae-brainstorming","name":"siae-devforge:siae-brainstorming"}'
+echo "$SKILL_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+COUNTER=$(read_counter)
+# post-skill resets counter to `<sid>|0` (legacy format). Just check it's reset.
+if echo "$COUNTER" | grep -qE "\|[1-9]"; then
+    echo "FAIL scenario 5b: counter non resettato dopo siae-brainstorming (='$COUNTER')"
+    exit 1
+fi
+if [ "$(count_events brainstorming_invoked_post_gate)" = "0" ]; then
+    echo "FAIL scenario 5b: brainstorming_invoked_post_gate non emesso"
+    exit 1
+fi
+if ! grep -q '"trigger":"warn"' "$DEVFORGE_LOG_FILE"; then
+    echo "FAIL scenario 5b: trigger non è 'warn' (counter era 3)"
+    exit 1
+fi
+echo "PASS scenario 5b: post-skill reset + invoked_post_gate trigger=warn"
+
 # ─── Scenario 11: anti-abuse > 5/giorno → abuse_suspected ───
+# Clear session-skills: scenario 5b leaves siae-brainstorming in the session
+# file (post-skill writes it), which would short-circuit the gate before the
+# bypass branch can emit abuse_suspected.
+rm -f "${HOME}/.claude/.devforge-session-skills"
 for i in 2 3 4 5 6; do
-    DEVFORGE_ENFORCEMENT_STRICT=1 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
+    DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
 done
 ABUSE_COUNT=$(count_events brainstorming_bypass_abuse_suspected)
 if [ "$ABUSE_COUNT" = "0" ]; then
@@ -197,16 +196,19 @@ if [ "$BEFORE_6" != "$AFTER_6" ]; then
 fi
 echo "PASS scenario 6: file .md → pass (out of scope)"
 
-# ─── Scenario 7: file IaC (.tf) → out of scope ───
+# ─── Scenario 7: file IaC (.tf) → IN SCOPE (PR #2 ADR-005) ───
+# Previously .tf was excluded by tdd-gate regex. ADR-005 folds .tf/.hcl into
+# brainstorming-gate because IaC is design-gated (even though TDD-exempt).
 echo "resource {}" > "${TEST_REPO}/main.tf"
+rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-session-skills"
 BEFORE_7=$(count_events brainstorming_nudge_soft)
 invoke_gate "${TEST_REPO}/main.tf"
 AFTER_7=$(count_events brainstorming_nudge_soft)
-if [ "$BEFORE_7" != "$AFTER_7" ]; then
-    echo "FAIL scenario 7: hook ha elaborato .tf"
+if [ "$BEFORE_7" = "$AFTER_7" ]; then
+    echo "FAIL scenario 7: hook NON ha elaborato .tf (expected in-scope)"
     exit 1
 fi
-echo "PASS scenario 7: file .tf → pass (out of scope)"
+echo "PASS scenario 7: file .tf → IN scope (ADR-005)"
 
 # ─── Scenario 8: repo non-itsiae → out of scope ───
 NON_ITSIAE_REPO=$(mktemp -d)
@@ -234,5 +236,22 @@ if [ "$BEFORE_9" != "$AFTER_9" ]; then
 fi
 echo "PASS scenario 9: DEVFORGE_ENFORCEMENT_OFF=1 → escape immediato"
 
-echo "SETUP OK"
+# ─── Scenario 13 (PR #2 new): gate always-on by default (no W2_DEFAULT) ───
+# Previously the gate no-op'd unless DEVFORGE_W2_DEFAULT=1 or STRICT=1.
+# ADR-006 removes both switches.
+rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-session-skills"
+BEFORE_13=$(count_events brainstorming_nudge_soft)
+invoke_gate "${TEST_REPO}/hello.ts"
+AFTER_13=$(count_events brainstorming_nudge_soft)
+if [ "$BEFORE_13" = "$AFTER_13" ]; then
+    echo "FAIL scenario 13: gate no-op'd without STRICT (ADR-006 requires always-on)"
+    exit 1
+fi
+echo "PASS scenario 13: gate always-on without STRICT/W2_DEFAULT (ADR-006)"
+
+# Summary (aggregator-compatible)
+PASS_COUNT=13
+FAIL_COUNT=0
+echo "Total: $PASS_COUNT — PASS: $PASS_COUNT — FAIL: $FAIL_COUNT"
+echo "ALL SCENARIOS OK"
 exit 0

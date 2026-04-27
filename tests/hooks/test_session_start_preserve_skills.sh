@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Test: session-start preserves session-skills on resume|clear|compact,
-# resets only on startup or unknown source.
+# Test: session-start preserves session-skills on resume|clear|compact
+# and on unknown/missing source (default-preserve policy from PR #2).
+# Resets ONLY on explicit source=startup.
 #
-# Fixes recurring sub-skill-gate false positives after auto-compact.
+# Rationale (PR #2, Task 3 bugfix):
+#   Claude Code emits session-start without a JSON source field during
+#   auto-compact and other mid-session resets. Previously this fell into
+#   the `*)` case and wiped session-skills, producing recurring sub-skill
+#   gate false positives. The safer default is preserve — over-preservation
+#   is noise, under-preservation is a hard block on the user.
 set -eu
 PASS=0; FAIL=0
 
@@ -52,12 +58,18 @@ _assert "startup resets skills (file empty or near-empty)" \
     "[ $SIZE -le 1 ]"
 
 echo ""
-echo "=== Case 5: no source field (unknown) resets (backward-compat) ==="
+echo "=== Case 5: missing source field preserves (default-preserve policy) ==="
 echo "siae-tdd" > "$SKILLS_FILE"
 echo '{}' | bash "$HOOK" >/dev/null 2>&1 || true
-SIZE=$(wc -c < "$SKILLS_FILE" | tr -d ' ')
-_assert "missing source field resets (safe default)" \
-    "[ $SIZE -le 1 ]"
+_assert "missing source field preserves skills (safer default)" \
+    "grep -q 'siae-tdd' $SKILLS_FILE"
+
+echo ""
+echo "=== Case 6: empty stdin preserves (no JSON payload) ==="
+echo "siae-brainstorming" > "$SKILLS_FILE"
+: | bash "$HOOK" >/dev/null 2>&1 || true
+_assert "empty stdin preserves skills" \
+    "grep -q 'siae-brainstorming' $SKILLS_FILE"
 
 echo ""
 echo "Total: $((PASS+FAIL))  PASS: $PASS  FAIL: $FAIL"

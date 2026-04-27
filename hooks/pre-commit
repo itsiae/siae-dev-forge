@@ -27,8 +27,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Source activity logger
+# Source activity logger + token parser (ADR-006 rewrite) + task-id
 source "${PLUGIN_ROOT}/lib/logger.sh"
+source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
 # --- Session-aware enforcement + catalog re-injection ---
@@ -54,19 +57,41 @@ if [ $((COUNTER % REINJECT_INTERVAL)) -eq 0 ]; then
 fi
 # --- End session-aware block ---
 
-# Escape string for JSON embedding using bash parameter substitution.
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+# JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
+# Local alias for readability in this file.
+escape_for_json() { devforge_sanitize_json_str "$1"; }
 
-# Route to appropriate check based on command
-if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
+# Route to appropriate check based on command. Use the token parser when
+# available — it eliminates false positives on inputs like
+# `git log | grep commit`, `echo "git commit"`, and `python run_git_commit.py`.
+# Fallback to the legacy regex only if cmd-parser failed to source.
+if command -v devforge_cmd_matches >/dev/null 2>&1; then
+    TC_FIRST=$(devforge_first_token "$TOOL_COMMAND")
+    TC_SECOND=$(devforge_second_token "$TOOL_COMMAND")
+    if [ "$TC_FIRST" = "git" ] && [ "$TC_SECOND" = "commit" ]; then
+        IS_GIT_COMMIT=1
+    else
+        IS_GIT_COMMIT=0
+    fi
+    if [ "$TC_FIRST" = "git" ] && { [ "$TC_SECOND" = "checkout" ] || [ "$TC_SECOND" = "switch" ]; }; then
+        IS_GIT_CHECKOUT=1
+    else
+        IS_GIT_CHECKOUT=0
+    fi
+else
+    if [[ "$TOOL_COMMAND" =~ ^[[:space:]]*git[[:space:]]+commit ]]; then
+        IS_GIT_COMMIT=1
+    else
+        IS_GIT_COMMIT=0
+    fi
+    if [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
+        IS_GIT_CHECKOUT=1
+    else
+        IS_GIT_CHECKOUT=0
+    fi
+fi
+
+if [ "$IS_GIT_COMMIT" = "1" ]; then
     # Explicit bypass (tracked abuse) — for emergency cases when session-skills
     # file is corrupted/reset by upstream bug (see fix in hooks/session-start
     # on matcher resume|clear|compact).
@@ -85,18 +110,45 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+commit ]]; then
         if [ "$NEW_BYPASS_COUNT" -ge 5 ]; then
             devforge_log "pre_commit_git_gate_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT}}"
         fi
-        # fall through to quality gate (not blocking)
+        # Bypass branch: no block, no early exit. Control continues past the
+        # if/elif chain below into the quality-gate instructions emitted at the
+        # bottom of the file (secret scan / naming / tests / file size / lint).
     # Check if siae-git-workflow was invoked this session — HARD GATE
     elif ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
         SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
         devforge_log "pre_commit" "blocked" "{\"command\":\"${SAFE_TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
+        _PC_EXPL=""
+        if command -v devforge_block_explainer >/dev/null 2>&1; then
+            _PC_EXPL=$(devforge_block_explainer siae-git-workflow 2>/dev/null || true)
+            [ -n "$_PC_EXPL" ] && _PC_EXPL=" ${_PC_EXPL}"
+        fi
         cat <<BLOCK_EOF
 {
   "decision": "block",
-  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.\n\nEmergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
+  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.${_PC_EXPL}\n\nEmergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
 }
 BLOCK_EOF
         exit 0
+    fi
+
+    # Task-scope shadow-log (PR #2 ADR-001): session is still source of
+    # truth here because commits aggregate work across many gates — we
+    # just record divergence for post-deploy analysis.
+    _PC_USE_SESSION="${DEVFORGE_USE_SESSION_SCOPE:-0}"
+    if [ "$_PC_USE_SESSION" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
+        _PC_TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+        if [ -n "$_PC_TASK_ID" ]; then
+            _PC_INVOKED="${HOME}/.claude/.devforge-task-skills/${_PC_TASK_ID}/skills_invoked"
+            _PC_TASK_OK=0
+            if [ -f "$_PC_INVOKED" ] && grep -qxF "siae-git-workflow" "$_PC_INVOKED" 2>/dev/null; then
+                _PC_TASK_OK=1
+            fi
+            # session_ok = 1 here by construction (we're past the elif)
+            if [ "$_PC_TASK_OK" = "0" ]; then
+                devforge_log "pre_commit_task_divergence" "info" \
+                    "{\"task_id\":\"${_PC_TASK_ID}\",\"session\":1,\"task\":0}" 2>/dev/null || true
+            fi
+        fi
     fi
     SKILL_REMINDER=""
 
@@ -137,8 +189,34 @@ COV_BLOCK_EOF
         fi
     fi
 
+    # --- Coverage-Force-Run (PR #2 ADR-008) ---
+    # If the commit contains test files but the cached coverage data is
+    # stale (> 30 minutes) or missing, block and ask the developer to
+    # actually run the test suite. This prevents the coverage gate from
+    # passing silently just because tests were not executed.
+    STAGED_TEST_HITS=$(git diff --cached --name-only 2>/dev/null \
+        | grep -E "\.(spec|test)\.|Test\.java$|IT\.java$|test_.*\.py$|_test\.go$" || true)
+    if [ -n "$STAGED_TEST_HITS" ]; then
+        COVERAGE_AGE=9999
+        if [ -f "$COVERAGE_FILE" ]; then
+            COVERAGE_TS=$(cut -d'|' -f2 "$COVERAGE_FILE" 2>/dev/null || echo 0)
+            NOW_S=$(date +%s)
+            COVERAGE_AGE=$(( NOW_S - ${COVERAGE_TS:-0} ))
+        fi
+        if [ "$COVERAGE_AGE" -gt 1800 ]; then
+            devforge_log "coverage_force_run" "blocked" "{\"age_s\":${COVERAGE_AGE}}"
+            cat <<COV_FORCE_EOF
+{
+  "decision": "block",
+  "reason": "DevForge Coverage Force-Run — BLOCCATO. Stai committando file di test ma i dati di coverage sono stale (${COVERAGE_AGE}s > 1800s) o assenti. Esegui la test suite con coverage (mvn test, npm test -- --coverage, pytest --cov) prima del commit. Questo evita che la gate di coverage passi solo perche' i test non sono stati eseguiti."
+}
+COV_FORCE_EOF
+            exit 0
+        fi
+    fi
+
     : # proceed to quality gate below
-elif [[ "$TOOL_COMMAND" =~ git[[:space:]]+(checkout[[:space:]]+-b|switch[[:space:]]+-c) ]]; then
+elif [ "$IS_GIT_CHECKOUT" = "1" ]; then
     # Branch check: warn if feature branch without design doc
     BRANCH_NAME=$(echo "$TOOL_COMMAND" | grep -oE '[a-zA-Z0-9/_.-]+$' || true)
     BRANCH_JIRA=$(git branch --show-current 2>/dev/null | grep -oE '(feature|bugfix|hotfix)/[A-Z]+-[0-9]+' | grep -oE '[A-Z]+-[0-9]+' || echo "")

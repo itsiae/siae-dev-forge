@@ -161,18 +161,9 @@ if [ -z "$skill_catalog" ]; then
     devforge_log "skill_catalog" "warning" "{\"reason\":\"skills-core.js returned empty or failed\"}" 2>/dev/null || true
 fi
 
-# Escape string for JSON embedding using bash parameter substitution.
-# Each ${s//old/new} is a single C-level pass - orders of magnitude
-# faster than the character-by-character loop this replaces.
-escape_for_json() {
-    local s="$1"
-    s="${s//\\/\\\\}"
-    s="${s//\"/\\\"}"
-    s="${s//$'\n'/\\n}"
-    s="${s//$'\r'/\\r}"
-    s="${s//$'\t'/\\t}"
-    printf '%s' "$s"
-}
+# JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
+# Local alias for readability in this file.
+escape_for_json() { devforge_sanitize_json_str "$1"; }
 
 using_devforge_escaped=$(escape_for_json "$using_devforge_content")
 
@@ -361,13 +352,24 @@ if [ ! -t 0 ]; then
     fi
 fi
 case "$SESSION_START_SOURCE" in
+    startup)
+        # Fresh session — reset skills invoked
+        echo "" > "${HOME}/.claude/.devforge-session-skills"
+        ;;
     resume|clear|compact)
         # Same logical session — preserve skills invoked so far
         devforge_log "session_start_preserved_skills" "success" "{\"source\":\"${SESSION_START_SOURCE}\"}" 2>/dev/null || true
         ;;
     *)
-        # startup or unknown → true reset
-        echo "" > "${HOME}/.claude/.devforge-session-skills"
+        # Empty or unknown source (Claude Code auto-compact without JSON
+        # payload, IDE relaunch, or non-interactive harness). Default to
+        # PRESERVE — resetting mid-work is the more damaging failure mode:
+        # it makes gate hooks blind to skills already invoked, blocking
+        # legitimate commits and forcing the user to re-invoke skills.
+        # The alternative (over-preservation across a real cold start) is
+        # visible and self-correcting: a stale entry is noise, a missing
+        # entry is a hard block.
+        devforge_log "session_start_preserved_skills" "success" "{\"source\":\"unknown\",\"reason\":\"default_preserve\"}" 2>/dev/null || true
         ;;
 esac
 echo "0" > "${HOME}/.claude/.devforge-tool-counter"

@@ -53,6 +53,35 @@ if [ -n "$SKILL_NAME" ]; then
         echo "${EXISTING_SKILLS},${SKILL_NAME}" > "${SESSION_SKILLS_FILE}.tmp" && mv "${SESSION_SKILLS_FILE}.tmp" "$SESSION_SKILLS_FILE"
     fi
 
+    # Step 1b (PR #2 ADR-001): mirror into per-task ledger.
+    # Also writes the task metadata file on first write so
+    # devforge_task_id_transition can decide if evidence copy-forward is
+    # warranted on a later design-doc revision.
+    if source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null; then
+        _POST_TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+        if [ -n "$_POST_TASK_ID" ]; then
+            _POST_TASK_DIR="${HOME}/.claude/.devforge-task-skills/${_POST_TASK_ID}"
+            mkdir -p "$_POST_TASK_DIR"
+            # Strip plugin prefix (e.g. "siae-devforge:siae-tdd" → "siae-tdd")
+            # for a stable ledger key — gates grep on the bare name.
+            _CLEAN_SKILL="${SKILL_NAME##*:}"
+            devforge_task_skill_invoked "$_POST_TASK_ID" "$_CLEAN_SKILL" 2>/dev/null || true
+            if [ ! -f "$_POST_TASK_DIR/metadata" ]; then
+                _POST_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+                _POST_DESIGN=""
+                if [ -d docs/plans ]; then
+                    _POST_DESIGN=$(ls -1t docs/plans/*-design.md 2>/dev/null | head -1 || true)
+                fi
+                {
+                    printf 'branch_name=%s\n' "$_POST_BRANCH"
+                    printf 'design_doc=%s\n' "$_POST_DESIGN"
+                    printf 'created_ns=%s\n' "$(_devforge_epoch_ns 2>/dev/null || date +%s)"
+                } > "${_POST_TASK_DIR}/metadata.tmp" \
+                  && mv "${_POST_TASK_DIR}/metadata.tmp" "${_POST_TASK_DIR}/metadata"
+            fi
+        fi
+    fi
+
     # Step 2: Logging (non-critical — || true prevents set -euo pipefail from
     # aborting the script if the JSONL log write fails).
     SAFE_SKILL_NAME=$(devforge_sanitize_json_str "$SKILL_NAME")
