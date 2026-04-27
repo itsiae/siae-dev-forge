@@ -1,0 +1,3 @@
+# Raw telemetry snapshots contain user data (emails, tokens, cost) and are large.
+# Only derived metric files (JSON) are committed.
+*/devforge-state-snapshot/

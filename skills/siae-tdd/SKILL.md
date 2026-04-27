@@ -6,26 +6,16 @@ description: >
   Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di
   codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi
   funzione, implementa, codifica, sviluppa.
+validates_via:
+  predicate: tdd_red_green_observed
+  evidence_type: state_file
+  evidence_path: ~/.claude/.devforge-tdd-state
+  evidence_check: "phase in (GREEN, REFACTOR), transitioned from RED"
 ---
 
 # SIAE TDD — Test-Driven Development
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨 DevForge · AI Competence Center                  ║
-║         "Il codice si forgia. Il developer cresce."              ║
-╚══════════════════════════════════════════════════════════════════╝
-```
-
 > **Tipo:** Rigid | **Fase SDLC:** 5. Testing
-
----
 
 ## LA LEGGE DI FERRO
 
@@ -41,524 +31,143 @@ Esiste gia' un test fallente che giustifica questa modifica?
 - NO → FERMATI. Scrivi il test prima. Poi torna qui.
 - SI → Procedi. Il test deve essere in stato RED (fallente).
 
-Stai per dire "scrivo il test dopo", "e' troppo semplice per testarlo", "aggiungo i test nello sprint dopo"?
-Stai razionalizzando. Leggi la tabella anti-razionalizzazione in fondo.
-
-Conseguenze documentate dello skip TDD:
-- Il 40% dei bug in produzione SIAE derivano da codice scritto senza test
-- "Scrivo il test dopo" → il test non viene mai scritto → il bug torna
-- Un test scritto dopo l'implementazione prova niente: passa subito, non sai se testa la cosa giusta
-- Il costo di un bug in produzione e' 10x il costo di scrivere il test ora
+Stai razionalizzando ("scrivo il test dopo", "troppo semplice")? Fermati.
+Un test scritto dopo l'implementazione prova niente: passa subito, non sai se testa la cosa giusta.
+Costo di un bug in produzione = 10x il costo di scrivere il test ora.
 </EXTREMELY-IMPORTANT>
 
-Hai scritto codice prima del test? **Cancellalo. Ricomincia.**
-
-Nessuna eccezione:
-- Non tenerlo come "riferimento"
-- Non "adattarlo" mentre scrivi i test
-- Non guardarlo nemmeno
-- Cancellare significa cancellare
-
-Reimplementa partendo dai test. Punto.
-
----
-
-> 📊 **Dai repo itsiae:** Il 73% dei bug in produzione negli ultimi 6 mesi proveniva da moduli con coverage < 40%. I repo con TDD attivo hanno 3.2x meno hotfix.
-> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+Hai scritto codice prima del test? **Cancellalo. Ricomincia.** Nessuna eccezione.
 
 ## Quando si applica
 
-**Sempre:**
-- Nuove feature
-- Bug fix
-- Refactoring
-- Qualsiasi modifica comportamentale
-
-**Eccezioni (chiedi esplicitamente al tuo partner umano):**
-- Prototipi usa-e-getta (che verranno cancellati, non "evoluti")
-- Codice generato automaticamente
-- File di configurazione puri
-
-Stai pensando "salto il TDD solo questa volta"? Fermati. Quella e' razionalizzazione.
-
----
+**Sempre:** feature nuove, bug fix, refactoring, qualsiasi modifica comportamentale. **Eccezioni (chiedi al partner umano):** prototipi usa-e-getta, codice generato, config puri.
 
 ## Scaling — Quando il TDD Completo Non Si Applica
 
-GATE: Valuta se il task modifica comportamento eseguibile.
+GATE: valuta se il task modifica comportamento eseguibile.
 
-| Tipo di modifica | TDD richiesto? | Perche' |
-|-----------------|----------------|---------|
-| Logica, endpoint, business rule | **SI — ciclo completo** | Modifica comportamento → serve test |
-| Refactoring con test esistenti | **SI — run test prima e dopo** | I test esistenti sono la rete |
-| Config pura (.env, .yml, terraform vars) | **NO — validate/plan basta** | Nessun comportamento da testare con unit test |
-| Documentazione (.md, commenti, changelog) | **NO** | Nessun codice eseguibile |
-| Rename/typo senza cambio di comportamento | **NO — run test esistenti per conferma** | Verifica che nulla si rompa |
+| Tipo di modifica | TDD? | Perche' |
+|---|---|---|
+| Logica, endpoint, business rule | **SI — ciclo completo** | Modifica comportamento |
+| Refactoring con test esistenti | **SI — run test prima/dopo** | Test esistenti = rete sicurezza |
+| Config pura (.env, .yml, tfvars) | **NO — validate/plan** | Nessun comportamento unit-testabile |
+| Documentazione (.md, commenti) | **NO** | Nessun codice eseguibile |
+| Rename/typo senza cambio comportamento | **NO — run test esistenti** | Verifica non-regressione |
 
-Per config e rename, esegui comunque i test esistenti come verifica di non-regressione.
-Il ciclo RED-GREEN-REFACTOR si applica solo a codice che ha comportamento testabile.
-
-Se hai dubbi: "Questa modifica cambia comportamento osservabile?" SI → TDD. NO → run test esistenti.
-
----
+Dubbio: "Questa modifica cambia comportamento osservabile?" SI → TDD. NO → test esistenti.
 
 ## Rilevamento Tipo Codice
 
-### Context-First Rule
+**Context-First Rule:** prima di leggere file o chiedere, verifica se l'informazione e' gia' nella conversazione (messaggi, output tool, skill invocate).
 
-Prima di leggere file, eseguire comandi, o fare domande all'utente,
-verifica se l'informazione e' gia' presente nella conversazione corrente
-(messaggi precedenti, output di tool, skill gia' invocate).
-Non chiedere cio' che e' gia' stato detto. Non rileggere cio' che e' gia' stato letto.
+| Segnale | Tipo | Framework test | Skill |
+|---|---|---|---|
+| `.vue`, vitest jsdom, `@testing-library/vue` | Frontend Vue | vitest + @testing-library/vue | siae-frontend |
+| `@angular/core`, `.component.ts` | Frontend Angular | vitest + @testing-library/angular | siae-frontend |
+| `react`/`react-dom`, `.tsx`/`.jsx` | Frontend React | vitest + @testing-library/react | siae-frontend |
+| `express`/`serverless-http`, `jest.config.ts` | TS Backend | Jest + ts-jest | — |
+| `pom.xml`, `.java`, `it.siae.*` | Java/Spring | JUnit 5 + Mockito + AssertJ | — |
+| `.py`, `pyproject.toml`, Glue job | Python | pytest + pytest-mock | — |
+| `.tf`, `.hcl`, `terragrunt.hcl` | IaC Terraform | terraform test (HCL) | siae-iac |
 
-**Prima del ciclo RED-GREEN-REFACTOR**, identifica il tipo di codice. Il tipo determina il framework di test e i pattern da applicare.
-
-### Detection — Segnali e Mapping
-
-| Segnale nel codice / progetto                                                         | Tipo                   | Framework test                        | Skill di riferimento |
-|---------------------------------------------------------------------------------------|------------------------|---------------------------------------|----------------------|
-| File `.vue`, `vitest.config.ts` con `environment: 'jsdom'`, import da `@testing-library/vue` | **Frontend (Vue.js)**  | vitest + @testing-library/vue         | **siae-frontend**    |
-| `package.json` con `"vue"`, `"vite"`, `"pinia"` nella stessa root                    | **Frontend (Vue.js)**  | vitest + @testing-library/vue         | **siae-frontend**    |
-| `package.json` con `"@angular/core"`, `angular.json`, file `.component.ts`           | **Frontend (Angular)** | vitest + @testing-library/angular     | **siae-frontend**    |
-| `package.json` con `"react"` / `"react-dom"`, file `.tsx` / `.jsx`                   | **Frontend (React)**   | vitest + @testing-library/react       | **siae-frontend**    |
-| `package.json` con `"express"` / `"serverless-http"`, `jest.config.ts`               | **TypeScript Backend** | Jest + ts-jest                        | —                    |
-| `pom.xml`, file `.java`, package `it.siae.*`                                          | **Java / Spring Boot** | JUnit 5 + Mockito + AssertJ           | —                    |
-| File `.py`, `pyproject.toml`, `requirements.txt`, Glue job                            | **Python**             | pytest + pytest-mock                  | —                    |
-| File `.tf`, `.hcl`, `terragrunt.hcl`                                                  | **IaC (Terraform)**    | terraform test (HCL)                  | siae-iac             |
-
-### Codice Frontend — integrazione con siae-frontend
-
-Se il tipo rilevato e' **Frontend** (Vue.js, Angular, React o qualsiasi altro framework UI), questa skill integra i pattern definiti in `siae-frontend`. Il runner e' sempre **vitest**, indipendentemente dal framework.
-
-**Cosa cambia rispetto agli altri stack:**
-- **Runner test**: vitest (uguale per tutti i framework frontend)
-- **Library DOM**: `@testing-library/{vue|angular|react}` in base al framework rilevato
-- **File test**: `{Component}.spec.ts`, affiancato al componente nella stessa directory
-- **Focus**: comportamento utente (render DOM, interazioni, eventi) — MAI implementazione interna
-- **Coverage**: `npx vitest run --coverage`, soglia minima >= 70%
-- **Setup file**: `src/test-setup.ts` con `import '@testing-library/jest-dom/vitest'`
-
-**Cosa NON cambia:** il ciclo RED-GREEN-REFACTOR e' identico per tutti i tipi di codice.
-
-> **Codice di produzione frontend:** se nel ciclo TDD devi creare o modificare componenti, hooks/composables o service, invoca `siae-frontend` per i pattern di struttura e le convenzioni di stile.
-
----
+Per frontend: ciclo RED-GREEN-REFACTOR identico; runner sempre vitest. Pattern UI in `siae-frontend`.
 
 ## Workflow Obbligatorio: RED-GREEN-REFACTOR
 
 ### 1. RED — Scrivi il test PRIMA del codice
-
 Scrivi UN test minimale che dimostra il comportamento atteso. Il test **DEVE fallire**.
-
-**Requisiti:**
-- Un solo comportamento per test
-- Nome chiaro che descrive il comportamento
-- Codice reale (mock solo se inevitabile)
-
-**Esegui il test. Verifica che:**
-- Il test fallisce (non errori di compilazione/sintassi)
-- Il messaggio di errore e' quello atteso
-- Fallisce perche' la feature manca, non per un typo
-
-Il test passa al primo colpo? Stai testando comportamento esistente. Riscrivi il test.
+- Un solo comportamento per test, nome chiaro, codice reale (mock solo se inevitabile)
+- Fallisce per feature mancante, non per typo/compile error
+- Passa al primo colpo? Stai testando comportamento esistente → riscrivi
 
 ### 2. GREEN — Scrivi il codice MINIMO per far passare il test
-
-Scrivi il codice piu' semplice possibile che fa passare il test. Niente di piu'.
-
-**Non aggiungere:**
-- Feature non richieste dal test
-- Refactoring di altro codice
-- "Miglioramenti" oltre lo scope del test
-- Gestione di edge case non ancora testati
-
-**Esegui tutti i test. Verifica che:**
-- Il nuovo test passa
-- Tutti i test precedenti passano ancora
-- Output pulito (nessun errore, nessun warning)
-
-Il test non passa? Correggi il codice, non il test.
-Altri test rotti? Correggi subito.
+Codice piu' semplice possibile. Niente di piu'.
+- No feature non richieste, no refactoring altrove, no edge case non testati
+- Nuovo test passa + tutti i precedenti passano + output pulito
+- Non passa? Correggi il codice, non il test.
 
 ### 3. REFACTOR — Migliora il codice mantenendo i test verdi
-
-Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
-
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-tdd |
-|:---|
-| 🔬 Ciclo: `RED-GREEN-REFACTOR` · 📁 File: `<file target>` |
-| **▼ Azione** |
-| 1. 🔀 Refactor codice → `<path file>` |
-| 💡 Perche': Si sta modificando codice funzionante (test GREEN). Il rischio e' rompere il comportamento esistente. |
-| 🚫 Se NO: Il refactoring non viene eseguito. Il codice rimane funzionante ma non ottimizzato. |
-
-Solo dopo il GREEN:
-- Rimuovi duplicazioni
-- Migliora i nomi
-- Estrai helper/utility
-- Semplifica la struttura
-
-I test devono restare verdi. Non aggiungere comportamento.
+Solo dopo GREEN: rimuovi duplicazioni, migliora nomi, estrai helper, semplifica struttura. Test restano verdi. Non aggiungere comportamento. Operazione 🟡 MEDIO — card pre-flight per refactor non banali.
 
 ### 4. COMMIT — Un commit per ciclo RED-GREEN-REFACTOR
-
-Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
-
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-tdd |
-|:---|
-| 🔬 Ciclo: `RED-GREEN-REFACTOR` · 📁 File: `<file target>` |
-| **▼ Azione** |
-| 1. 🔀 Git commit ciclo TDD → `<path file>` |
-| 💡 Perche': Si sta committando il ciclo completo RED-GREEN-REFACTOR. Un commit errato registra codice non verificato nella storia del repo. |
-| 🚫 Se NO: Il commit non viene eseguito. Le modifiche rimangono staged e il ciclo non viene chiuso. |
-
-Ogni commit contiene sia il test che l'implementazione. Nessun commit senza test.
+Ogni commit contiene sia il test che l'implementazione. **Nessun commit senza test.** Operazione 🟡 MEDIO — card pre-flight richiesta.
 
 ### Ripeti
-
 Prossimo test fallente per la prossima feature.
 
----
-
 ## Permission Denied Handling
-
-**Se Edit/Write viene negato:**
-1. Presenta il codice (test o implementazione) in un blocco code fenced
-2. Indica file path e nome dove deve essere scritto
-3. L'utente copia il codice manualmente nel file
-4. Procedi con la guida al passo successivo
-
-**Se Bash viene negato (esecuzione test):**
-1. Presenta il comando test esatto da eseguire (con flag e directory)
-2. Chiedi all'utente di eseguirlo e riportare l'output
-3. Analizza l'output riportato per determinare RED/GREEN
-4. NON assumere il risultato — attendi l'output reale
-
-**Se entrambi sono negati (Guida TDD Assistita):**
-La skill diventa una guida interattiva:
-- Genera codice test e implementazione come output testuale
-- Indica i comandi da eseguire per ogni fase (RED, GREEN, REFACTOR)
-- L'utente esegue manualmente e riporta i risultati
-- Claude analizza e guida il passo successivo
-
-**Fasi completabili senza permessi:** analisi, generazione codice, guida step-by-step
-**Fasi che richiedono permessi:** Edit/Write (scrittura file), Bash (esecuzione test)
-
-La disciplina TDD (test prima del codice, codice minimo, refactor solo dopo GREEN)
-si preserva anche in modalita' assistita.
-
-Se i permessi sono negati:
-1. Completa tutte le fasi di analisi e generazione codice
-2. Presenta riepilogo di cosa e' stato generato
-3. Lista comandi/operazioni per esecuzione manuale
-4. NON entrare in loop di retry su tool negato
-5. NON dichiarare completamento per fasi non eseguite
-
----
+Se Edit/Write/Bash negato, passa a modalita' assistita (presenta codice + comandi, utente esegue, Claude analizza output). Dettaglio in `lib/permission-denied-handling.md`.
 
 ## Framework per Linguaggio
 
-### Java
+| Linguaggio | Framework | File test | Run | Coverage |
+|---|---|---|---|---|
+| Java | JUnit 5 + Mockito + AssertJ | `{Class}Test.java`, `should_{behavior}_when_{condition}` | `mvn test -pl {module} -Dtest={TestClass}` | `mvn verify` JaCoCo ≥70% |
+| TS backend | Jest + ts-jest | `{file}.spec.ts` in `src/tests/` | `yarn test -- --testPathPattern={p}` | `yarn test --coverage` ≥70% |
+| TS frontend | vitest + @testing-library | `{Component}.spec.ts` affiancato | `npx vitest run {file}` | `npx vitest run --coverage` ≥70% |
+| Python | pytest + pytest-mock | `test_{module}.py` | `pytest tests/{path} -v` | `pytest --cov={module}` ≥70% |
+| Terraform/HCL | terraform test (≥1.6) | `{risorsa}.tftest.hcl` in `tests/` | `terraform test` (post init) | qualitativa (IAM/SG/encryption assert) |
 
-- **Framework:** JUnit 5 + Mockito + AssertJ
-- **Test class:** `{ClassName}Test.java`
-- **Test method:** `should_{behavior}_when_{condition}()`
-- **Run:** `mvn test -pl {module} -Dtest={TestClass}`
-- **Coverage:** `mvn verify -pl {module}` (JaCoCo, >= 70%)
+**Terraform RED/GREEN:** RED = assert su risorsa non esistente (errore riferimento o assert fail); GREEN = aggiungi la risorsa `.tf`; REFACTOR = riorganizza locals/moduli. Naming run block: `{risorsa}_{verifica}` snake_case. Config CI per framework: `reference/framework-configs.md`.
 
-```java
-@Test
-void should_reject_empty_email_when_submitting_form() {
-    // Arrange
-    var request = new SubmitFormRequest("");
+## Classificazione Rischio e Limiti
+RED/GREEN/verifica test = 🟢 Sicuro (no card). REFACTOR + COMMIT = 🟡 Medio (card richiesta). Taxonomy in `lib/risk-taxonomy.md`. Limiti: max 2 retry/step, max 5 step/ciclo, max 300 righe/output. Dettaglio in `lib/operational-limits.md`.
 
-    // Act
-    var result = formService.submit(request);
-
-    // Assert
-    assertThat(result.getErrors())
-        .containsExactly("Email obbligatoria");
-}
-```
-
-### TypeScript (backend)
-
-- **Framework:** Jest + ts-jest
-- **Test file:** `{filename}.spec.ts` (in `src/tests/`)
-- **Run:** `yarn test -- --testPathPattern={pattern}`
-- **Coverage:** `yarn test --coverage` (>= 70%)
-
-```typescript
-describe('FormService', () => {
-  it('should reject empty email when submitting form', async () => {
-    const result = await formService.submit({ email: '' });
-    expect(result.error).toBe('Email obbligatoria');
-  });
-});
-```
-
-### TypeScript (frontend)
-
-- **Framework:** vitest + @testing-library/vue
-- **Test file:** `{Component}.spec.ts`
-- **Run:** `npx vitest run {file}`
-- **Coverage:** `npx vitest run --coverage` (>= 70%)
-
-```typescript
-import { render, screen } from '@testing-library/vue';
-import EmailForm from './EmailForm.vue';
-
-test('should show error when email is empty', async () => {
-  render(EmailForm);
-  await screen.getByRole('button', { name: 'Invia' }).click();
-  expect(screen.getByText('Email obbligatoria')).toBeTruthy();
-});
-```
-
-### Python
-
-- **Framework:** pytest + pytest-mock
-- **Test file:** `test_{module}.py`
-- **Run:** `pytest tests/{path} -v`
-- **Coverage:** `pytest --cov={module}` (>= 70%)
-
-```python
-def test_should_reject_empty_email_when_submitting_form(form_service):
-    result = form_service.submit(email="")
-    assert result.error == "Email obbligatoria"
-```
-
-### Terraform/HCL (IaC)
-
-- **Framework:** terraform test (nativo, >= Terraform 1.6)
-- **Test file:** `{risorsa_logica}.tftest.hcl` (in directory `tests/` dentro il modulo)
-- **Run:** `terraform test` (dalla root del modulo, dopo `terraform init`)
-- **Coverage:** qualitativa — ogni risorsa con implicazioni di sicurezza (IAM, SG, encryption) ha almeno un assert sui suoi attributi critici
-
-**Struttura file:**
-```
-modules/
-  {module-name}/
-    main.tf
-    variables.tf
-    tests/
-      {risorsa_logica}.tftest.hcl
-```
-
-**Pattern test con mock_provider + command = plan:**
-```hcl
-mock_provider "aws" {}
-
-variables {
-  account_id = "123456789012"
-  region     = "eu-south-1"
-  env        = "dev"
-}
-
-run "policy_should_include_required_actions" {
-  command = plan
-
-  assert {
-    condition = contains(
-      jsondecode(aws_iam_policy.example.policy).Statement[0].Action,
-      "s3:GetObject"
-    )
-    error_message = "La policy deve includere s3:GetObject"
-  }
-}
-```
-
-**Naming dei run block:** `{risorsa}_{verifica}` in snake_case (es. `bedrock_policy_includes_agentcore_actions`).
-
-**Cosa testare:**
-- Attributi risorse derivati da variabili/locals (IAM actions, SG rules, tags)
-- Logica condizionale (`count`/`for_each` — "questa risorsa si crea solo se X")
-- Output values
-
-**Cosa NON testare:**
-- Comportamento del provider AWS (garantito da HashiCorp)
-- Sintassi HCL (validata da `terraform validate`)
-
-**RED/GREEN per Terraform:**
-- **RED:** scrivi assert su attributo/risorsa che non esiste ancora → `terraform test` fallisce (errore di riferimento o assert failure)
-- **GREEN:** aggiungi/modifica la risorsa `.tf` → `terraform test` passa
-- **REFACTOR:** riorganizza locals, variabili, estrai moduli → test ancora verdi
-
-> **Nota:** In Terraform il RED puo' manifestarsi come errore di riferimento (risorsa non ancora definita) anziche' come assert failure. Entrambi sono RED validi — il test fallisce, che e' il punto.
-
-> Per configurazioni CI dettagliate di ogni framework, vedi `reference/framework-configs.md`.
-
----
-
-## Classificazione Rischio Operazioni
-
-| Operazione | Livello | Card |
-|-----------|---------|------|
-| Scrittura test fallente (RED) | 🟢 Sicuro | No |
-| Esecuzione test per verifica RED | 🟢 Sicuro | No |
-| Implementazione minimale (GREEN) | 🟢 Sicuro | No |
-| Esecuzione test per verifica GREEN | 🟢 Sicuro | No |
-| Refactor del codice | 🟡 Medio | Si |
-| Git commit del ciclo RED-GREEN-REFACTOR | 🟡 Medio | Si |
-
----
-
-## Limiti Operativi
-
-| Vincolo | Limite | Se superato |
-|---------|--------|-------------|
-| Tentativi max per step | 2 | Fermati. Chiedi all'utente prima di riprovare. |
-| Step totali del ciclo RED-GREEN-REFACTOR | 5 | Se ne servono di piu', il task e' mal definito. Torna al design. |
-| Output max per analisi | 300 righe | Sintetizza. L'utente non legge wall-of-text. |
-
----
-
-REQUIRED SUB-SKILL: siae-verification
-
-Invoca `siae-verification` prima di dichiarare il ciclo TDD completato.
-
----
-
-## Tabella Anti-Razionalizzazione
-
-**Stai per razionalizzare? Leggila. Poi torna a scrivere il test.**
-
-| Pensiero | Realta' |
-|----------|---------|
-| "Il progetto legacy non ha test" | Inizia dal codice che stai toccando. Ogni nuovo codice ha un test. |
-| "E' solo una config change" | Se puo' rompersi, testa che funzioni. |
-| "La coverage e' gia' al 70%" | Il 70% e' il minimo, non il traguardo. |
-| "Scrivo il test dopo" | Dopo non arriva mai. Il test viene PRIMA. Un test scritto dopo prova niente: passa subito, non sai se testa la cosa giusta. |
-| "E' troppo semplice per testarlo" | Le cose semplici sono le piu' facili da testare. Fallo. Ci metti 30 secondi. |
-| "Il test rallenterebbe lo sviluppo" | I bug rallentano lo sviluppo. I test li prevengono. TDD e' piu' veloce del debugging in produzione. |
-| "Non so come testare questa cosa" | Chiedi. Non e' una scusa per saltare il test. Se e' difficile da testare, il design e' troppo accoppiato. |
-| "Sto solo facendo refactoring" | Il refactoring senza test e' roulette russa. I test sono la rete di sicurezza. |
-| "Ho gia' testato manualmente" | I test manuali non prevengono regressioni. Serve automazione. "Funzionava quando l'ho provato" non e' una prova. |
-| "Il framework non supporta questo tipo di test" | Cambia approccio, non saltare il test. Ogni comportamento e' testabile. |
-| "E' un prototipo, i test non servono" | I prototipi diventano produzione. Sempre. Testa dall'inizio o cancella tutto quando finisci di esplorare. |
-| "Ho fretta, aggiungo i test nello sprint dopo" | Il debito tecnico costa piu' dell'investimento iniziale. Lo "sprint dopo" non arriva mai. |
-| "Cancellare X ore di lavoro e' uno spreco" | Sunk cost fallacy. Il tempo e' gia' andato. Tenere codice non verificato e' debito tecnico. |
-| "TDD e' dogmatico, io sono pragmatico" | TDD E' pragmatico. Trova bug prima del commit, previene regressioni, documenta il comportamento. "Pragmatico" senza test = debugging in produzione = piu' lento. |
-| "I test dopo raggiungono lo stesso obiettivo" | No. Test-dopo = "cosa fa questo codice?" Test-prima = "cosa DEVE fare questo codice?" Test-dopo sono viziati dall'implementazione. |
-
----
+REQUIRED SUB-SKILL: siae-verification — invoca prima di dichiarare il ciclo TDD completato.
 
 ## Red Flags — FERMATI e Ricomincia
 
 Se riconosci uno di questi segnali, stai saltando il TDD. Fermati. Ricomincia.
-
 1. **Codice di implementazione scritto prima che esista il file di test**
 2. **Test che passa al primo run** — non hai iniziato dal RED
-3. **Commit multipli senza modifiche ai test** — stai scrivendo codice senza copertura
-4. **"Tutti i test passano" senza averli visti fallire** — non hai prove che testino qualcosa
+3. **Commit multipli senza modifiche ai test** — codice senza copertura
+4. **"Tutti i test passano" senza averli visti fallire** — non hai prove
 5. **Coverage in calo** — stai aggiungendo codice non testato
-6. **File di test creato dopo il file di implementazione** (controlla i timestamp git)
-7. **Test che verificano l'implementazione invece del comportamento** — mock ovunque, nessun assert reale
-8. **"Solo questa volta" ripetuto piu' di zero volte** — la razionalizzazione si accumula
-9. **Test copiati e incollati senza capirli** — non hai fatto design tramite test
+6. **File di test creato dopo il file di implementazione** (timestamp git)
+7. **Test che verificano l'implementazione invece del comportamento** — mock ovunque, no assert reale
+8. **"Solo questa volta" ripetuto piu' di zero volte** — razionalizzazione si accumula
+9. **Test copiati e incollati senza capirli** — nessun design tramite test
 10. **Nessun test di regressione nel commit di un bug fix** — il bug tornera'
 11. **Test commentati o con `@Disabled`/`.skip`/`@pytest.mark.skip`** — test che non girano non esistono
-12. **"Lo testo in staging/QA"** — staging non e' un sostituto per unit test
+12. **"Lo testo in staging/QA"** — staging non sostituisce unit test
 
 **Tutti questi significano: Cancella il codice. Ricomincia con TDD.**
 
----
-
 ## Coverage Target
 
-| Scope | Target | Note |
-|-------|--------|------|
-| Globale progetto | >= 70% linee | Soglia minima, non obiettivo |
-| Feature nuova | >= 80% linee | Standard piu' alto per codice nuovo |
-| Bug fix | Test di regressione obbligatorio | Il test che riproduce il bug, poi il fix |
-
-Il test di regressione per un bug fix segue esattamente il ciclo TDD:
-1. **RED:** Scrivi il test che riproduce il bug. Deve fallire.
-2. **GREEN:** Correggi il bug. Il test passa.
-3. **REFACTOR:** Pulisci se necessario.
-
-Il test garantisce che il bug non tornera' mai.
-
----
+| Scope | Target |
+|---|---|
+| Globale / TS frontend / Python / Java | ≥70% linee (soglia minima) |
+| Feature nuova | ≥80% linee |
+| Bug fix | Test di regressione obbligatorio (riproduce bug → fix → verde) |
 
 ## Output Strutturato Obbligatorio
 
-<EXTREMELY-IMPORTANT>
-Per OGNI transizione di fase TDD, DEVI emettere il seguente blocco strutturato.
-Non parafrasare. Non omettere campi. Copia il formato esattamente.
-</EXTREMELY-IMPORTANT>
+<EXTREMELY-IMPORTANT>Per OGNI transizione di fase TDD, DEVI emettere il blocco strutturato. Non parafrasare, non omettere campi.</EXTREMELY-IMPORTANT>
 
-**Transizione RED (scrivi test):**
 ```
 [TDD:RED] Test: {nome_test}
-  File: {path_file_test}
-  Assert: {cosa verifica il test}
-  Atteso: FAIL (il test DEVE fallire)
-  Comando: {comando per eseguire il test}
+  File: {path_file_test} | Assert: {cosa verifica}
+  Atteso: FAIL (il test DEVE fallire) | Comando: {comando}
 ```
-
-**Transizione GREEN (implementa):**
 ```
 [TDD:GREEN] Implementazione: {descrizione minima}
-  File: {path_file_produzione}
-  Test: {nome_test che deve passare}
-  Atteso: PASS (tutti i test DEVONO passare)
-  Comando: {comando per eseguire tutti i test}
+  File: {path_file_produzione} | Test: {nome_test che deve passare}
+  Atteso: PASS (tutti i test DEVONO passare) | Comando: {comando}
 ```
-
-**Transizione REFACTOR:**
 ```
 [TDD:REFACTOR] Refactor: {descrizione}
   File: {path_file_modificati}
-  Invariante: tutti i test DEVONO restare verdi
-  Comando: {comando per eseguire tutti i test}
+  Invariante: tutti i test DEVONO restare verdi | Comando: {comando}
 ```
-
-**Chiusura ciclo:**
 ```
 [TDD:COMMIT] Ciclo completato
-  Test: {nome_test}
-  Impl: {path_file_produzione}
+  Test: {nome_test} | Impl: {path_file_produzione}
   Copertura: {N test aggiunti, M esistenti passano}
   Commit: {tipo}({scope}): {descrizione}
 ```
 
-Questo formato serve a:
-1. Rendere tracciabile ogni transizione
-2. Forzare la dichiarazione del comando di test PRIMA dell'esecuzione
-3. Impedire skip di fasi (ogni blocco e' un checkpoint)
-
----
-
-## Checklist di Verifica
-
-Prima di dichiarare il lavoro completato:
-
-- [ ] Il test e' stato scritto PRIMA del codice?
-- [ ] Il test ha fallito (RED) prima dell'implementazione?
-- [ ] Il codice implementato e' il MINIMO necessario?
-- [ ] Tutti i test passano (GREEN)?
-- [ ] Il refactoring non ha rotto nessun test?
-- [ ] Il commit contiene sia test che implementazione?
-- [ ] La coverage e' >= 70% (>= 80% per feature nuove)?
-- [ ] Ogni bug fix ha il suo test di regressione?
-- [ ] I test usano codice reale (mock solo se inevitabile)?
-- [ ] I nomi dei test descrivono il comportamento, non l'implementazione?
-
-**Non riesci a spuntare tutte le caselle? Hai saltato il TDD. Ricomincia.**
-
----
-
-## Quando sei bloccato
-
-| Problema | Soluzione |
-|----------|-----------|
-| Non sai come testare | Scrivi l'API che vorresti usare. Scrivi l'assert prima. Chiedi al tuo partner umano. |
-| Test troppo complicato | Il design e' troppo complicato. Semplifica l'interfaccia. |
-| Devi mockare tutto | Il codice e' troppo accoppiato. Usa dependency injection. |
-| Setup del test enorme | Estrai helper. Ancora complesso? Semplifica il design. |
-
----
+Questo formato rende tracciabile ogni transizione, forza dichiarazione del comando test PRIMA dell'esecuzione, impedisce skip di fasi.
 
 ## Regola Finale
 
@@ -568,11 +177,3 @@ Altrimenti → non e' TDD
 ```
 
 Nessuna eccezione senza il permesso esplicito del tuo partner umano.
-
----
-
-## Tecniche di Supporto
-
-- **[testing-anti-patterns.md](testing-anti-patterns.md)** — 5 anti-pattern comuni nei test (mock sbagliati, metodi test-only nel codice di produzione, mock incompleti). Da leggere quando aggiungi mock o utility di test.
-
-- **[condition-based-waiting.md](condition-based-waiting.md)** — Elimina test flaky da `setTimeout` fissi. Pattern `waitFor()` per TypeScript, Python e Java (Awaitility). Da applicare quando un test fallisce sporadicamente in CI o usa sleep arbitrari.

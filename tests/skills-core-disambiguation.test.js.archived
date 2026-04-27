@@ -1,4 +1,10 @@
 /**
+ * ARCHIVED (T12, PR #1 anti-dilution):
+ * Questo test referenzia hooks/devforge-reinject, archiviato in hooks/.archived/
+ * e sostituito da hooks/devforge-context (unificato, budget 2KB, diff-based dedup).
+ * La coerenza contenuto skill-catalog vs devforge-context va riscritta ad-hoc
+ * in futuro. Test archiviato come snapshot storico v1.45.
+ *
  * Test: la disambiguazione del catalogo skill e del hook reinject
  * deve rendere brainstorming SEMPRE obbligatorio per task implementativi.
  */

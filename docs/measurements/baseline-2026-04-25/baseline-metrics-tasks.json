@@ -1,0 +1,126 @@
+{
+  "caveat": "PROXY baseline: task_id = sha256(dominant_branch + first_design_doc_path). Real task_id (PR #2 ADR-001) may differ. Use as ORDER-OF-MAGNITUDE reference, not exact.",
+  "snapshot_date": "2026-04-25",
+  "totals": {
+    "tasks_identified": 24,
+    "tasks_productive": 22,
+    "tasks_with_commit": 21,
+    "session_to_task_ratio": 9.58
+  },
+  "adoption_per_task_pct": {
+    "productive": {
+      "siae-brainstorming": 86.4,
+      "siae-tdd": 40.9,
+      "siae-verification": 13.6,
+      "siae-git-workflow": 81.8,
+      "siae-blind-review": 0.0,
+      "siae-security": 40.9,
+      "siae-retrospective": 40.9,
+      "siae-debugging": 27.3,
+      "siae-writing-plans": 72.7
+    },
+    "with_commit": {
+      "siae-brainstorming": 85.7,
+      "siae-tdd": 42.9,
+      "siae-verification": 14.3,
+      "siae-git-workflow": 85.7,
+      "siae-blind-review": 0.0,
+      "siae-security": 42.9,
+      "siae-retrospective": 42.9,
+      "siae-debugging": 28.6,
+      "siae-writing-plans": 71.4
+    }
+  },
+  "tasks_sample": [
+    {
+      "task_id": "09171a8ce322",
+      "branch": "fix/session-start-pipefail-stdout",
+      "design_doc": null,
+      "sessions": 6,
+      "commits": 1,
+      "skills": [
+        "siae-brainstorming",
+        "siae-git-env",
+        "siae-git-workflow",
+        "siae-security"
+      ]
+    },
+    {
+      "task_id": "93ba35aa806b",
+      "branch": "feat/brainstorming-enforcement-progressive",
+      "design_doc": null,
+      "sessions": 33,
+      "commits": 146,
+      "skills": [
+        "siae-architecture",
+        "siae-brainstorming",
+        "siae-code-standards",
+        "siae-debugging",
+        "siae-finishing-branch",
+        "siae-git-env",
+        "siae-git-workflow",
+        "siae-parallel-agents",
+        "siae-retrospective",
+        "siae-security",
+        "siae-subagent-development",
+        "siae-tdd",
+        "siae-verification",
+        "siae-writing-plans"
+      ]
+    },
+    {
+      "task_id": "54074b503f71",
+      "branch": "fix/remove-credentials-env-example",
+      "design_doc": null,
+      "sessions": 25,
+      "commits": 83,
+      "skills": [
+        "siae-architecture",
+        "siae-brainstorming",
+        "siae-code-standards",
+        "siae-debugging",
+        "siae-finishing-branch",
+        "siae-git-env",
+        "siae-git-workflow",
+        "siae-security",
+        "siae-tdd",
+        "siae-writing-plans",
+        "siae-writing-skills",
+        "using-devforge"
+      ]
+    },
+    {
+      "task_id": "e74303c19d32",
+      "branch": "feat/windows-telemetry-enforcement",
+      "design_doc": null,
+      "sessions": 13,
+      "commits": 196,
+      "skills": [
+        "siae-brainstorming",
+        "siae-executing-plans",
+        "siae-finishing-branch",
+        "siae-git-env",
+        "siae-git-workflow",
+        "siae-retrospective",
+        "siae-security",
+        "siae-subagent-development",
+        "siae-tdd",
+        "siae-writing-plans"
+      ]
+    },
+    {
+      "task_id": "a3975071e1bd",
+      "branch": "feature/efficiency-kpi-taxonomy",
+      "design_doc": null,
+      "sessions": 3,
+      "commits": 33,
+      "skills": [
+        "siae-code-standards",
+        "siae-git-env",
+        "siae-git-workflow",
+        "siae-iac",
+        "siae-tdd"
+      ]
+    }
+  ]
+}
