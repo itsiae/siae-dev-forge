@@ -1,6 +1,6 @@
 ---
 name: forge-mcp-preflight
-description: Esegue il pre-flight MCP sport-kg per il task corrente — dispatcha l'agent mcp-impact-analyst (output strutturato, context-isolated) e ritorna un blocco markdown con rischio + 3 vincoli + volumi da incollare in cima al design doc. Da invocare PRIMA di brainstorming/debugging quando il task tocca un servizio SIAE mappato nel KG (sport-*-service, pop-*-service, pae-*-service, ciam-*, dol-*, digital-channels-sport-*, esb-sport-*, esb-sso-*, mag-concertini-*, portal-*, ttpp-*).
+description: Esegue il pre-flight MCP sport-kg per il task corrente — dispatcha l'agent mcp-impact-analyst (output strutturato, context-isolated) e ritorna un blocco markdown con rischio + 3 vincoli + volumi da incollare in cima al design doc. Da invocare PRIMA di brainstorming/debugging quando il task tocca un servizio SIAE mappato nel KG. Prefissi servizio (allineati con hooks/sport-task-detect — single source of truth): sport-*-service, sport-*-drools, sport-gestione-*, pop-*-service, pop-be, pae-*, ciam-*, dol-be, digital-channels-sport-*, esb-sport-*, esb-sso-*, mag-concertini-*, portal-apigateway-*, ttpp-*-bff-service.
 ---
 
 # /forge-mcp-preflight
@@ -58,6 +58,8 @@ L'agent ritorna SOLO il blocco markdown standardizzato (no chit-chat, no preambo
 
 **Confidence:** <HIGH | MEDIUM | LOW>
 **Data sources:** Neo4j: <OK/N/A> · ES: <OK/N/A> · Oracle: <OK/N/A>
+
+**Tool MCP usati:** demand_impact · service_full_context · service_health · debug_service · who_calls (+ demand_impact_deep + impact_with_evidence se rischio MEDIO/ALTO)
 ```
 
 ## Quando usarlo

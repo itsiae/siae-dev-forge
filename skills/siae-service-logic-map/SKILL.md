@@ -41,11 +41,12 @@ Output: catalogo L1+L2+L3 multi-cluster in `docs/logic-catalog/`.
 
 ### B. Impact-analysis (single-task pre-flight) — vedi Pipeline Pre-flight MCP
 
-Trigger: il task corrente tocca un servizio gia' mappato nel KG sport-kg
-(prefissi: `sport-*-service`, `pop-*-service`, `pae-*-service`, `ciam-*`, `dol-*`,
-`digital-channels-sport-*`, `esb-sport-*`, `esb-sso-*`, `mag-concertini-*`,
-`portal-*`, `ttpp-*`). Tipicamente invocata come Stage 0 prima di brainstorming/debugging,
-oppure dispatchata all'agent `mcp-impact-analyst`.
+Trigger: il task corrente tocca un servizio gia' mappato nel KG sport-kg.
+Prefissi servizio (allineati con `hooks/sport-task-detect` — single source of truth):
+`sport-*-service`, `sport-*-drools`, `sport-gestione-*`, `pop-*-service`, `pop-be`,
+`pae-*`, `ciam-*`, `dol-be`, `digital-channels-sport-*`, `esb-sport-*`, `esb-sso-*`,
+`mag-concertini-*`, `portal-apigateway-*`, `ttpp-*-bff-service`. Tipicamente invocata
+come Stage 0 prima di brainstorming/debugging, oppure dispatchata all'agent `mcp-impact-analyst`.
 
 Output: blocco markdown standardizzato `## MCP Pre-flight: <service> — <feature>`
 copiabile in cima al design doc.
@@ -94,6 +95,8 @@ in design doc (`siae-writing-plans` lo include in cima al piano):
 
 **Confidence:** <HIGH | MEDIUM | LOW>
 **Data sources:** Neo4j: <OK/N/A> · ES: <OK/N/A> · Oracle: <OK/N/A>
+
+**Tool MCP usati:** demand_impact · service_full_context · service_health · debug_service · who_calls (+ demand_impact_deep + impact_with_evidence se rischio MEDIO/ALTO)
 ```
 
 ### Quando l'output va in design doc

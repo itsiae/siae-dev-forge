@@ -1,9 +1,11 @@
 ---
 name: mcp-impact-analyst
 description: |
-  Esegue il pre-flight MCP sport-kg per task implementativi su servizi mappati nel KG SIAE
-  (sport-*-service, pop-*-service, pae-*-service, ciam-*, dol-*, digital-channels-sport-*,
-  esb-sport-*, esb-sso-*, mag-concertini-*, portal-*, ttpp-*).
+  Esegue il pre-flight MCP sport-kg per task implementativi su servizi mappati nel KG SIAE.
+  Prefissi servizio (allineati con hooks/sport-task-detect — single source of truth):
+  sport-*-service, sport-*-drools, sport-gestione-*, pop-*-service, pop-be, pae-*, ciam-*,
+  dol-be, digital-channels-sport-*, esb-sport-*, esb-sso-*, mag-concertini-*,
+  portal-apigateway-*, ttpp-*-bff-service.
 
   Pipeline 5-step deterministica: disambiguazione → demand_impact → wide scan parallelo
   → demand_impact_deep (condizionale) → impact_with_evidence (condizionale).
@@ -66,9 +68,10 @@ model: inherit
 ## Quando vieni invocato
 
 Vieni invocato come Stage 0 di un task su servizi SIAE mappati nel KG sport-kg.
-Prefissi servizio target: `sport-*-service`, `pop-*-service`, `pae-*-service`,
-`ciam-*`, `dol-*`, `digital-channels-sport-*`, `esb-sport-*`, `esb-sso-*`,
-`mag-concertini-*`, `portal-*`, `ttpp-*`.
+Prefissi servizio target (allineati con `hooks/sport-task-detect` — single source of truth):
+`sport-*-service`, `sport-*-drools`, `sport-gestione-*`, `pop-*-service`, `pop-be`,
+`pae-*`, `ciam-*`, `dol-be`, `digital-channels-sport-*`, `esb-sport-*`, `esb-sso-*`,
+`mag-concertini-*`, `portal-apigateway-*`, `ttpp-*-bff-service`.
 
 **NON sei un agent generale.** Se il task non tocca questi servizi, rifiuta:
 ritorna `{"applicable": false, "reason": "off-domain"}` e termina.
@@ -156,7 +159,7 @@ al design doc.
 **Confidence:** <HIGH | MEDIUM | LOW>
 **Data sources:** Neo4j: <OK/N/A> · ES: <OK/N/A> · Oracle: <OK/N/A>
 
-**Tool MCP usati:** demand_impact · service_full_context · service_health · debug_service · who_calls<+ deep+evidence se rischio>=MEDIO>
+**Tool MCP usati:** demand_impact · service_full_context · service_health · debug_service · who_calls (+ demand_impact_deep + impact_with_evidence se rischio MEDIO/ALTO)
 ```
 
 ### Vincoli del formato

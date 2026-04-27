@@ -24,12 +24,17 @@ COOLDOWN_SECONDS=1800   # 30 minutes
 # Lista prefissi servizio SIAE mappati nel KG sport-kg.
 # Mantenere allineata con mcp__sport-kg__list_services output.
 # Pattern shell glob (case-insensitive via shopt nocasematch).
+# IMPORTANTE: questa lista e' la SINGLE SOURCE OF TRUTH dei prefissi
+# servizio mappati nel KG sport-kg. Quando la modifichi, allinea anche:
+#   - agents/mcp-impact-analyst.md (frontmatter description + body "Quando vieni invocato")
+#   - commands/forge-mcp-preflight.md (frontmatter description)
+#   - skills/siae-service-logic-map/SKILL.md (Modalita' B trigger + Pipeline 5-step)
 SPORT_PREFIXES=(
     "sport-*-service"
     "sport-*-drools"
     "sport-gestione-*"
     "pop-*-service"
-    "pae-*-be"
+    "pop-be"
     "pae-*"
     "ciam-*"
     "dol-be"
@@ -67,25 +72,46 @@ TARGET_SERVICE=$(detect_sport_domain) || {
 }
 
 # Cooldown check: same target within COOLDOWN_SECONDS → skip.
+# Defensive parsing: COOLDOWN_FILE corrotto/vuoto/non-numerico non deve far
+# fallire l'hook con `set -e` su aritmetica invalida.
 NOW=$(date +%s)
 if [ -f "$COOLDOWN_FILE" ]; then
     LAST_TARGET=$(awk -F'|' '{print $1}' "$COOLDOWN_FILE" 2>/dev/null || echo "")
+    LAST_TARGET="${LAST_TARGET:-}"
     LAST_TS=$(awk -F'|' '{print $2}' "$COOLDOWN_FILE" 2>/dev/null || echo 0)
+    LAST_TS="${LAST_TS:-0}"
+    [[ "$LAST_TS" =~ ^[0-9]+$ ]] || LAST_TS=0
     if [ "$LAST_TARGET" = "$TARGET_SERVICE" ] && [ $((NOW - LAST_TS)) -lt "$COOLDOWN_SECONDS" ]; then
         exit 0
     fi
 fi
 
-# Build the system reminder.
-# Tone: factual, action-oriented. No emoji, no chatty filler.
-REMINDER="[sport-kg domain detected: ${TARGET_SERVICE}]\\nQuesto repo e' un servizio SIAE mappato nel KG sport-kg. Per task implementativi (feature, bug fix, refactoring) o di debugging su questo servizio, esegui PRIMA del brainstorming/debugging il pre-flight MCP via uno di:\\n- Agent dedicato: dispatch agent \`mcp-impact-analyst\` (output strutturato, context-isolated)\\n- Skill: invoca \`siae-service-logic-map\` modalita' impact-analysis\\nL'output e' un blocco markdown standardizzato (rischio + 3 vincoli + volumi) da incollare in cima al design doc. Senza pre-flight, le opzioni di design sono cieche su latency, error rate, idempotenza, transazionalita' e failure coupling. Off-topic per task non-implementativi (domande, analisi, lettura)."
+# Sanitize TARGET_SERVICE before JSON interpolation. cwd basename can in theory
+# contain `"` or `\` (e.g. cloned in a path with quotes) — without escape the
+# heredoc emits malformed JSON and Claude Code rejects the whole hook output.
+# Fallback chain: devforge_sanitize_json_str (preferred) → manual sed → raw.
+if declare -F devforge_sanitize_json_str >/dev/null 2>&1; then
+    SAFE_TARGET=$(devforge_sanitize_json_str "$TARGET_SERVICE")
+else
+    SAFE_TARGET=$(printf '%s' "$TARGET_SERVICE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+fi
+SAFE_TARGET="${SAFE_TARGET:-$TARGET_SERVICE}"
 
-# Telemetry: log detection event (best-effort, don't fail if logger missing).
-SAFE_TARGET=$(devforge_sanitize_json_str "$TARGET_SERVICE" 2>/dev/null || echo "$TARGET_SERVICE")
-devforge_log "sport_domain_detected" "info" "{\"target\":\"${SAFE_TARGET}\"}" 2>/dev/null || true
+# Build the system reminder. Static body (controlled by this script) is not
+# user-input, so only ${SAFE_TARGET} needs escaping.
+# Tone: factual, action-oriented. No emoji, no chatty filler.
+REMINDER="[sport-kg domain detected: ${SAFE_TARGET}]\\nQuesto repo e' un servizio SIAE mappato nel KG sport-kg. Per task implementativi (feature, bug fix, refactoring) o di debugging su questo servizio, esegui PRIMA del brainstorming/debugging il pre-flight MCP via uno di:\\n- Agent dedicato: dispatch agent \`mcp-impact-analyst\` (output strutturato, context-isolated)\\n- Skill: invoca \`siae-service-logic-map\` modalita' impact-analysis\\nL'output e' un blocco markdown standardizzato (rischio + 3 vincoli + volumi) da incollare in cima al design doc. Senza pre-flight, le opzioni di design sono cieche su latency, error rate, idempotenza, transazionalita' e failure coupling. Off-topic per task non-implementativi (domande, analisi, lettura)."
+
+# Telemetry: log detection event (best-effort). Guard against missing logger.
+if declare -F devforge_log >/dev/null 2>&1; then
+    devforge_log "sport_domain_detected" "info" "{\"target\":\"${SAFE_TARGET}\"}" 2>/dev/null || true
+fi
 
 # Update cooldown ONLY on successful emission. If cat below fails (broken pipe,
 # disk full), cooldown is NOT updated → next prompt retries the emission.
+# PID suffix on tmp file prevents collision if concurrent hooks fire (rare but
+# possible under file-watcher races).
+TMP_FILE="${COOLDOWN_FILE}.tmp.$$"
 if cat <<EOF
 {
   "additional_context": "${REMINDER}",
@@ -96,8 +122,8 @@ if cat <<EOF
 }
 EOF
 then
-    printf '%s|%s\n' "$TARGET_SERVICE" "$NOW" > "${COOLDOWN_FILE}.tmp" \
-        && mv "${COOLDOWN_FILE}.tmp" "$COOLDOWN_FILE"
+    printf '%s|%s\n' "$TARGET_SERVICE" "$NOW" > "$TMP_FILE" \
+        && mv "$TMP_FILE" "$COOLDOWN_FILE"
 fi
 
 exit 0
