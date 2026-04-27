@@ -35,6 +35,11 @@
         "ORACLE_SERVICE_NAME": "SPORTPRD.NET.SIAE"
       }
     },
+    "sport-kg": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["exec", "-i", "-e", "MCP_TRANSPORT=stdio", "sport-kg-mcp", "python", "server.py"]
+    },
     "browserstack": {
       "type": "stdio",
       "command": "npx",

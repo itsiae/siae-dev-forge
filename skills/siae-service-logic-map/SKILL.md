@@ -2,10 +2,13 @@
 name: siae-service-logic-map
 description: >
   Profila microservizi: dominio, entita', workflow, regole business, cluster.
+  Modalita' A (build-catalog): build catalogo L1+L2+L3 multi-cluster.
+  Modalita' B (impact-analysis): pre-flight MCP single-task con output standardizzato.
   Trigger: "cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}",
   "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
-  "quali servizi gestiscono X", impact analysis, /forge-logic-build,
-  /forge-logic-search.
+  "quali servizi gestiscono X", impact analysis, pre-flight MCP, demand impact,
+  blast radius, "modifica su sport-*/pop-*/pae-*",
+  /forge-logic-build, /forge-logic-search, /forge-mcp-preflight.
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map
@@ -23,6 +26,91 @@ description: >
 ```
 
 > **Tipo:** Flexible | **Fase SDLC:** 1. Init & Setup
+
+---
+
+## Modalita' di invocazione
+
+La skill opera in 2 modalita' distinte. Riconosci la modalita' dal contesto del prompt utente.
+
+### A. Build-catalog (default) — vedi Step 0..6
+
+Trigger: `/forge-logic-build`, "build catalogo", "lanciamo su {pattern}", "mappa la logica".
+
+Output: catalogo L1+L2+L3 multi-cluster in `docs/logic-catalog/`.
+
+### B. Impact-analysis (single-task pre-flight) — vedi Pipeline Pre-flight MCP
+
+Trigger: il task corrente tocca un servizio gia' mappato nel KG sport-kg
+(prefissi: `sport-*-service`, `pop-*-service`, `pae-*-service`, `ciam-*`, `dol-*`,
+`digital-channels-sport-*`, `esb-sport-*`, `esb-sso-*`, `mag-concertini-*`,
+`portal-*`, `ttpp-*`). Tipicamente invocata come Stage 0 prima di brainstorming/debugging,
+oppure dispatchata all'agent `mcp-impact-analyst`.
+
+Output: blocco markdown standardizzato `## MCP Pre-flight: <service> — <feature>`
+copiabile in cima al design doc.
+
+---
+
+## Pipeline Pre-flight MCP (modalita' B)
+
+Pipeline 5-step deterministica, tool MCP sport-kg richiesti. Esegue questo ordine
+quando si invoca la modalita' impact-analysis.
+
+```
+1. disambiguazione servizio   → list_services o find_service_for_symbol
+2. pre-flight rischio         → demand_impact (output: ALTO/MEDIO/BASSO)
+3. wide scan parallelo        → service_full_context + service_health
+                                + debug_service + who_calls (parallel)
+4. drill-down condizionale    → demand_impact_deep se rischio MEDIO/ALTO
+5. verifica empirica          → impact_with_evidence sull'endpoint contratto
+```
+
+Step 1 e 2 sono sequenziali. Step 3 in parallelo. Step 4-5 condizionali.
+Mai saltare Step 2 (gating del rischio).
+
+### Output template — REQUIRED FORMAT
+
+Ogni invocazione modalita' B produce questo blocco esatto. Grep-abile per riferimento
+in design doc (`siae-writing-plans` lo include in cima al piano):
+
+```markdown
+## MCP Pre-flight: <service> — <feature>
+
+**Rischio:** <ALTO | MEDIO | BASSO>
+**Endpoint hot-path:** <path> (<req/24h>, err <%>)
+**Caller dormienti (30gg ES):** <list o "nessuno">
+
+**Top vincoli (decisione richiesta prima del codice):**
+1. <vincolo concreto> — <decisione richiesta>
+2. <vincolo concreto> — <decisione richiesta>
+3. <vincolo concreto> — <decisione richiesta>
+
+**Volumi stimati downstream:**
+- <servizio>: +<N> req/24h (<frazione>% carico attuale)
+
+**Ipotesi non verificate (da grep nel codice):**
+- <ipotesi>
+
+**Confidence:** <HIGH | MEDIUM | LOW>
+**Data sources:** Neo4j: <OK/N/A> · ES: <OK/N/A> · Oracle: <OK/N/A>
+```
+
+### Quando l'output va in design doc
+
+Il blocco va in cima al design doc generato da `siae-brainstorming` (sezione "Contesto"),
+prima delle opzioni proposte allo Step 4 di brainstorming. Senza il blocco, le opzioni
+sono cieche su latency, error rate, idempotenza, transazionalita', failure coupling.
+
+### Limiti tool MCP noti (workaround documentati)
+
+- `list_services(filter="X")` — bug case-sensitive, ritorna 0 anche con match. Usa `list_services()` full-dump se filter risulta vuoto.
+- `who_calls` — caller duplicati con confidence diverse, deduplicare per max(score).
+- `service_full_context` — output verboso (50KB+), preferire dispatch all'agent `mcp-impact-analyst` per protezione context window.
+- Endpoint con 0 caller in 30gg ma 100k+ req/24h = traffico esterno (frontend/gateway), non bug nei dati.
+- `change_type=feature` con free-text → confidence MEDIUM. Preferire `change_type=endpoint` o `table` quando possibile.
+
+Per gap aperti su MCP sport-kg vedi `~/.claude/projects/<project>/memory/mcp_sport_kg_gaps.md`.
 
 ---
 

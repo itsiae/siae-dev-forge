@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# sport-task-detect — UserPromptSubmit hook
+# ─────────────────────────────────────────────────────────────────
+# Rileva se il cwd o branch corrente e' su un servizio SIAE mappato
+# nel KG sport-kg. Se si', inietta un system reminder che orienta
+# Claude verso il pre-flight MCP (agent mcp-impact-analyst o skill
+# siae-service-logic-map modalita' impact-analysis).
+#
+# Cooldown: 1 emissione per cwd/branch ogni 30 minuti — evita spam.
+# Off-domain: exit 0 silenzioso, nessun output.
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="sport-task-detect"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+
+STATE_DIR="${HOME}/.claude"
+COOLDOWN_FILE="${STATE_DIR}/.devforge-sport-detect-last"
+COOLDOWN_SECONDS=1800   # 30 minutes
+
+# Lista prefissi servizio SIAE mappati nel KG sport-kg.
+# Mantenere allineata con mcp__sport-kg__list_services output.
+# Pattern shell glob (case-insensitive via shopt nocasematch).
+SPORT_PREFIXES=(
+    "sport-*-service"
+    "sport-*-drools"
+    "sport-gestione-*"
+    "pop-*-service"
+    "pae-*-be"
+    "pae-*"
+    "ciam-*"
+    "dol-be"
+    "digital-channels-sport-*"
+    "esb-sport-*"
+    "esb-sso-*"
+    "mag-concertini-*"
+    "portal-apigateway-*"
+    "ttpp-*-bff-service"
+)
+
+# Detection: match cwd basename or git branch contro i prefissi.
+detect_sport_domain() {
+    local cwd_base
+    cwd_base=$(basename "$(pwd)" 2>/dev/null || echo "")
+    [ -z "$cwd_base" ] && return 1
+
+    shopt -s nocasematch 2>/dev/null || true
+    local prefix
+    for prefix in "${SPORT_PREFIXES[@]}"; do
+        # shellcheck disable=SC2053
+        if [[ "$cwd_base" == $prefix ]]; then
+            shopt -u nocasematch 2>/dev/null || true
+            echo "$cwd_base"
+            return 0
+        fi
+    done
+    shopt -u nocasematch 2>/dev/null || true
+    return 1
+}
+
+TARGET_SERVICE=$(detect_sport_domain) || {
+    # Off-domain: silent exit, no output.
+    exit 0
+}
+
+# Cooldown check: same target within COOLDOWN_SECONDS → skip.
+NOW=$(date +%s)
+if [ -f "$COOLDOWN_FILE" ]; then
+    LAST_TARGET=$(awk -F'|' '{print $1}' "$COOLDOWN_FILE" 2>/dev/null || echo "")
+    LAST_TS=$(awk -F'|' '{print $2}' "$COOLDOWN_FILE" 2>/dev/null || echo 0)
+    if [ "$LAST_TARGET" = "$TARGET_SERVICE" ] && [ $((NOW - LAST_TS)) -lt "$COOLDOWN_SECONDS" ]; then
+        exit 0
+    fi
+fi
+
+# Build the system reminder.
+# Tone: factual, action-oriented. No emoji, no chatty filler.
+REMINDER="[sport-kg domain detected: ${TARGET_SERVICE}]\\nQuesto repo e' un servizio SIAE mappato nel KG sport-kg. Per task implementativi (feature, bug fix, refactoring) o di debugging su questo servizio, esegui PRIMA del brainstorming/debugging il pre-flight MCP via uno di:\\n- Agent dedicato: dispatch agent \`mcp-impact-analyst\` (output strutturato, context-isolated)\\n- Skill: invoca \`siae-service-logic-map\` modalita' impact-analysis\\nL'output e' un blocco markdown standardizzato (rischio + 3 vincoli + volumi) da incollare in cima al design doc. Senza pre-flight, le opzioni di design sono cieche su latency, error rate, idempotenza, transazionalita' e failure coupling. Off-topic per task non-implementativi (domande, analisi, lettura)."
+
+# Telemetry: log detection event (best-effort, don't fail if logger missing).
+SAFE_TARGET=$(devforge_sanitize_json_str "$TARGET_SERVICE" 2>/dev/null || echo "$TARGET_SERVICE")
+devforge_log "sport_domain_detected" "info" "{\"target\":\"${SAFE_TARGET}\"}" 2>/dev/null || true
+
+# Update cooldown ONLY on successful emission. If cat below fails (broken pipe,
+# disk full), cooldown is NOT updated → next prompt retries the emission.
+if cat <<EOF
+{
+  "additional_context": "${REMINDER}",
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "${REMINDER}"
+  }
+}
+EOF
+then
+    printf '%s|%s\n' "$TARGET_SERVICE" "$NOW" > "${COOLDOWN_FILE}.tmp" \
+        && mv "${COOLDOWN_FILE}.tmp" "$COOLDOWN_FILE"
+fi
+
+exit 0
