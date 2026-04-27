@@ -25,7 +25,9 @@ tutti i CRITICAL review fixati), ora serve il loop visibile.
 
 ## Scope
 
-7 deliverable:
+6 deliverable (il settimo, "Extension `siae-dev-analytics`", è stato
+deferrato a v1.49 con ADR dedicato —
+[`docs/plans/2026-04-26-dev-analytics-v149-deferral.md`](../2026-04-26-dev-analytics-v149-deferral.md)):
 
 1. `lib/adoption-analyzer.py` — legge ledger task-skills + activity.jsonl,
    calcola per-user + per-team adoption per-skill per-task (7d/30d).
@@ -33,26 +35,35 @@ tutti i CRITICAL review fixati), ora serve il loop visibile.
 3. Stop-gate 3-line recap a fine sessione (N task, skill X/Y, next nudge).
 4. Gate block explainer: i messaggi di block mostrano la tua adoption
    personale + team median ("La tua adoption siae-tdd: 42%, team 78%").
-5. Extension `siae-dev-analytics` — colonna nuova `adoption_per_task`
-   nel report Excel.
-6. Test suite + aggregator `tests/pr3-observability/run-all.sh`.
-7. README + `plugin.json` v1.48.0 + PR open.
+5. Test suite + aggregator `tests/pr3-observability/run-all.sh`.
+6. README + `plugin.json` v1.48.0 + PR open.
+
+**Deferred a v1.49** (post 2-week measurement window):
+- ~~Extension `siae-dev-analytics` — colonna `adoption_per_task`
+  nel report Excel~~. Razionale completo nel deferral ADR linkato sopra:
+  measurement-first, value già capturato dai 3 deliverable user-facing
+  sopra, label scope-mismatch meglio disegnata su dati reali.
 
 ## Out of scope
 
-- FSM backbone (deferred in `docs/plans/2026-04-25-fsm-backbone-decision.md`).
+- Extension `siae-dev-analytics` — deferred a v1.49 con
+  [ADR dedicato](../2026-04-26-dev-analytics-v149-deferral.md).
+- FSM backbone (deferred in [FSM decision doc](../2026-04-25-fsm-backbone-decision.md)).
 - Maturity levels W0-W3 (rejected dal design doc principale).
 - Nuovi gate — osservabilità non introduce enforcement.
 
 ## Criteri accettazione
 
-- [ ] `/forge-adoption` emette tabella adoption per le 5 skill core
-- [ ] Recap stop-gate 3 righe visibile a fine sessione reale
-- [ ] Block messages su tdd/brainstorming/pre-commit/stop/pr-blind-review
+- [x] `/forge-adoption` emette tabella adoption per le 5 skill core
+- [x] Recap stop-gate 3 righe visibile a fine sessione reale
+- [x] Block messages su tdd/brainstorming/pre-commit/stop/pr-blind-review
       contengono numero personale + team median
-- [ ] Extension dev-analytics produce colonna nuova senza rompere export
-- [ ] ≥30 test aggregator PASS
-- [ ] Baseline PR #2 invariato (148 + 161 Δ=0)
+- [ ] ~~Extension dev-analytics produce colonna nuova senza rompere export~~
+      → **deferred a v1.49** ([ADR](../2026-04-26-dev-analytics-v149-deferral.md))
+- [x] Test aggregator PASS (12/12 lib + 148/148 PR #2 regression + baseline 162)
+- [x] Baseline PR #2 invariato (148 + 162 Δ=0)
+- [x] **Review findings PR #3 chiusi** (MAJOR metrica scope-label,
+      recap empty-state, overview sync)
 
 ## Task list
 

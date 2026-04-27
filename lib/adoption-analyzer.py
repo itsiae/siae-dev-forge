@@ -164,7 +164,12 @@ def _team_median(events: list[dict]) -> dict[str, float]:
     return medians
 
 
-def _format_table(user: dict[str, float], team: dict[str, float], window: int) -> str:
+def _format_table(
+    user: dict[str, float],
+    team: dict[str, float],
+    window: int,
+    ledger_populated: bool = False,
+) -> str:
     lines = ["| Skill | User | Team median | Delta |",
              "|---|---:|---:|---:|"]
     for s in CORE_SKILLS:
@@ -173,12 +178,37 @@ def _format_table(user: dict[str, float], team: dict[str, float], window: int) -
         sign = "+" if delta >= 0 else ""
         lines.append(f"| `{s}` | {u:.0f}% | {t:.0f}% | {sign}{delta:.0f}pp |")
     lines.append("")
-    lines.append(f"_Window: last {window} days. `User` is task-scope when ledger is populated,"
-                 " session-scope fallback otherwise. `Team median` is always session-scope._")
+    if ledger_populated:
+        # MAJOR #1 fix: flag the scope mismatch explicitly. User is
+        # task-scope (from PR #2 ledger), Team is session-scope (from
+        # activity log). The delta is directional, not quantitative.
+        lines.append(
+            f"_Window: last {window} days. "
+            f"**User = task-scope** (da ledger), "
+            f"**Team median = session-scope** (da activity log). "
+            f"I due numeri **non sono direttamente comparabili** — la delta è "
+            f"direzionale, non quantitativa._"
+        )
+    else:
+        lines.append(
+            f"_Window: last {window} days. Both User and Team median are "
+            f"session-scope (task ledger not yet populated). Deltas comparabili 1:1._"
+        )
     return "\n".join(lines)
 
 
 def _format_recap(user: dict[str, float], team: dict[str, float]) -> str:
+    # MAJOR #2 fix: empty-state must say "no data" not "keep the rhythm".
+    # A fresh onboard with zero activity should not get a congratulatory nudge.
+    user_sum = sum(user.values())
+    team_sum = sum(team.values())
+    if user_sum == 0 and team_sum == 0:
+        return (
+            "📊 DevForge adoption — no data yet in this window\n"
+            "   Nessun dato raccolto: ledger task vuoto e activity log senza eventi rilevanti.\n"
+            "➡️  Invoca le skill core per costruire il baseline."
+        )
+
     gaps = [(s, user[s] - team[s]) for s in CORE_SKILLS]
     gaps.sort(key=lambda x: x[1])
     weakest, weakest_gap = gaps[0]
@@ -193,11 +223,25 @@ def _format_recap(user: dict[str, float], team: dict[str, float]) -> str:
     return "\n".join([line1, line2, line3])
 
 
-def _format_block(skill: str, user: dict[str, float], team: dict[str, float]) -> str:
+def _format_block(
+    skill: str,
+    user: dict[str, float],
+    team: dict[str, float],
+    ledger_populated: bool = False,
+) -> str:
     if skill not in user:
         return ""
+    # MAJOR #1 fix: when ledger is populated, spell out the scope difference
+    # inside the block explainer so the user doesn't read the delta as a
+    # personal-failure metric (user=task-scope, team=session-scope).
+    scope_note = (
+        " (task vs team session-scope — direzionale)"
+        if ledger_populated
+        else ""
+    )
     return (f"La tua adoption `{skill}`: {user[skill]:.0f}% · team median: "
-            f"{team[skill]:.0f}%. Closing the gap = meno block nelle prossime sessioni.")
+            f"{team[skill]:.0f}%{scope_note}. "
+            f"Closing the gap = meno block nelle prossime sessioni.")
 
 
 def main(argv: list[str]) -> int:
@@ -214,23 +258,27 @@ def main(argv: list[str]) -> int:
     ledger = _ledger_task_skills()
     user = _user_adoption(events, ledger)
     team = _team_median(events)
+    ledger_populated = bool(ledger)
 
     if args.format == "json":
         print(json.dumps({
             "window_days": args.window,
             "n_tasks": len(ledger),
+            "ledger_populated": ledger_populated,
+            "user_scope": "task" if ledger_populated else "session",
+            "team_scope": "session",
             "user_adoption": user,
             "team_median": team,
         }, indent=2))
     elif args.format == "table":
-        print(_format_table(user, team, args.window))
+        print(_format_table(user, team, args.window, ledger_populated))
     elif args.format == "recap":
         print(_format_recap(user, team))
     elif args.format == "block":
         if not args.skill:
             print("error: --skill required for --format block", file=sys.stderr)
             return 2
-        print(_format_block(args.skill, user, team))
+        print(_format_block(args.skill, user, team, ledger_populated))
     return 0
 
 

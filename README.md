@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 30 skill, 7 comandi, 3 agent, 3 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 39 skill, 11 comandi, 3 agent, 17 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.48.0
 > **Autore:** SIAE AI Competence Center
@@ -21,7 +21,7 @@
 
 ---
 
-## Anti-Dilution Enforcement (v1.46 + v1.47)
+## Anti-Dilution Enforcement (v1.46 + v1.47 + v1.48)
 
 Due PR consecutive (aprile 2026) trasformano l'enforcement da cerimoniale a
 misurabile. Telemetria su 230 sessioni SIAE aveva rivelato adoption reale
@@ -96,6 +96,23 @@ comportamento v1.46 pure session-scoped. Vedi
 [`hooks/ENV_VARS.md`](hooks/ENV_VARS.md) per la matrix completa delle env
 var di bypass e tracking.
 
+### v1.48 (PR #3) — Observability Loop (ADR-009)
+
+- **`lib/adoption-analyzer.py`**: legge il ledger task-skills di PR #2 e
+  aggrega `~/.claude/devforge-activity.jsonl`. Calcola adoption per-user
+  (task-scope quando ledger è popolato, session-scope fallback), team
+  median session-scope, delta. Output modes: `json` / `table` / `recap`
+  (3-line per stop-gate) / `block` (singolo skill per gate messages).
+- **`/forge-adoption`** (NEW slash command): stampa la tabella adoption
+  per le 5 skill core del workflow.
+- **Stop-gate 3-line recap**: a fine sessione stampa tasks tracked +
+  skill più debole vs team + nudge per la prossima sessione. Opt-out
+  `DEVFORGE_DISABLE_RECAP=1`.
+- **Gate block explainer**: i messaggi di block su `tdd`, `brainstorming`,
+  `pre-commit`, `stop`, `pr-blind-review` ora includono "La tua adoption
+  `<skill>`: X% · team median: Y%". Cache 24h. Opt-out
+  `DEVFORGE_DISABLE_EXPLAINER=1`.
+
 **Obiettivi target (2 settimane post-merge):**
 
 | Dimensione | Baseline | Target |
@@ -108,7 +125,11 @@ var di bypass e tracking.
 
 Design doc: [`docs/plans/2026-04-25-anti-dilution-enforcement-design.md`](docs/plans/2026-04-25-anti-dilution-enforcement-design.md)
 Baseline: [`docs/measurements/baseline-2026-04-25/`](docs/measurements/baseline-2026-04-25/)
-Test suite aggregata PR #2:  137/137 PASS su `tests/pr2-task-scope/run-all.sh`
+
+**Test suite aggregata**:
+- PR #2 (`tests/pr2-task-scope/run-all.sh`): **148/148 PASS**
+- PR #3 (`tests/pr3-observability/run-all.sh`): **12/12 PASS**
+- Baseline pre-existing: **162/6/1** (Δ=0 vs pre-initiative)
 
 ---
 
@@ -118,22 +139,22 @@ Test suite aggregata PR #2:  137/137 PASS su `tests/pr2-task-scope/run-all.sh`
 - [Installazione](#installazione)
 - [La Catena SDLC a 7 Fasi](#la-catena-sdlc-a-7-fasi)
 - [Comandi Disponibili](#comandi-disponibili)
-- [Skill (30)](#skill-30)
+- [Skill (39)](#skill-39)
   - [Meta-skill](#meta-skill)
   - [Skill di Processo](#skill-di-processo)
   - [Skill Tech-Specific](#skill-tech-specific)
   - [Skill Cross-cutting e Meta](#skill-cross-cutting-e-meta)
 - [Agent (3)](#agent-3)
-- [Hook (3)](#hook-3)
+- [Hook (17)](#hook-17)
 - [Design System Visivo](#design-system-visivo)
 - [Test Suite](#test-suite)
 - [Struttura del Repository](#struttura-del-repository)
 - [Stack Supportati](#stack-supportati)
 - [Integrazione Atlassian (MCP)](#integrazione-atlassian-mcp)
 - [Pattern di Compliance](#pattern-di-compliance)
-  - [Social Proof](#social-proof-3030-skill)
-  - [Limiti Operativi](#limiti-operativi-3030-skill)
-  - [Chaining Profondo](#chaining-profondo-2830-skill)
+  - [Social Proof](#social-proof-3939-skill)
+  - [Limiti Operativi](#limiti-operativi-3939-skill)
+  - [Chaining Profondo](#chaining-profondo-2839-skill)
 - [Architettura del Plugin](#architettura-del-plugin)
   - [Token Efficiency](#token-efficiency)
 - [Come Contribuire](#come-contribuire)
@@ -147,7 +168,9 @@ siae-devforge e' un **plugin Claude Code** che agisce come "sistema operativo" p
 1. **All'avvio** — L'hook `SessionStart` inietta automaticamente la meta-skill `using-devforge`, che insegna a Claude come e quando usare tutte le altre skill
 2. **Su ogni task** — Claude controlla se esiste una skill applicabile (con la regola dell'1%: se c'e' anche solo l'1% di possibilita' che una skill sia rilevante, la invoca)
 3. **Catena SDLC** — Le skill sono organizzate in 7 fasi ordinate. Claude segue l'ordine corretto: non puo' scrivere codice senza aver fatto brainstorming, non puo' committare senza test
-4. **Al commit** — L'hook `PreToolUse` intercetta i comandi `git commit` ed esegue un quality gate a 5 punti (secret scan, naming, test, file size, lint) prima di ogni commit
+4. **Enforcement task-scoped** (v1.47+) — I gate `tdd-gate`, `brainstorming-gate`, `stop-gate`, `pr-blind-review-gate` validano le skill **per task** (task_id = sha256(branch|design-doc|mtime)), non per sessione. Una sessione può coprire N task; ciascuno richiede la propria evidenza.
+5. **Al commit** — L'hook `PreToolUse` intercetta `git commit` ed esegue un quality gate a 5 punti (secret scan, naming, test, file size, lint) + coverage-force-run se il diff contiene file di test.
+6. **Feedback loop** (v1.48+) — Block messages e stop-gate recap mostrano la tua adoption per-skill vs team median: non è solo un "no", è un "ecco dove sei rispetto al team".
 
 Il risultato: ogni interazione con Claude Code segue automaticamente gli standard SIAE senza che il developer debba ricordarli.
 
@@ -247,6 +270,11 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality)                       | `siae-subagent-development` |
 | `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e PlantUML                       | `siae-documentation`       |
 | `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per microservizi | `siae-service-logic-map`   |
+| `/forge-flows`     | Mappa no-regression test flows per repo frontend/mobile (Xray-ready)                            | `siae-nr-test-flows`       |
+| `/forge-cost`, `/forge-finops` | Review costi AWS + stima impatto PR + tag compliance + risorse idle                 | `siae-finops`              |
+| `/forge-jasper`    | Reverse-engineering PDF → JasperReports JRXML con iterazione pixel-diff                         | `siae-jasper-from-pdf`     |
+| `/forge-analytics` | ROI + DORA + DX AI Measurement: 11 KPI dev SIAE in report Excel                                 | `siae-dev-analytics`       |
+| `/forge-adoption`  | **v1.48 NEW.** Adoption per-task delle 5 skill core vs team median                              | `lib/adoption-analyzer.py` |
 
 > **Nota:** Le funzionalita' precedentemente disponibili come comandi dedicati (`/forge-map`, `/forge-sysmap`, `/forge-plan`, `/forge-qa`, `/forge-review`, `/forge-rca`, `/forge-logic-search`) sono ora invocabili direttamente come skill via `using-devforge` (auto-discovery).
 
@@ -328,7 +356,7 @@ all'ultima domanda in un unico comando.
 
 ---
 
-## Skill (30)
+## Skill (39)
 
 ### Meta-skill
 
@@ -759,9 +787,11 @@ Se MCP Atlassian e' disponibile, pubblica direttamente su Confluence.
 
 ---
 
-## Hook (3)
+## Hook (17)
 
 Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
+
+> ⚠️ **v1.48 note:** la lista sotto descrive i 3 hook foundational (SessionStart, pre-commit Bash, post-skill). Dall'initiative anti-dilution (v1.46→v1.48) il sistema ne ha **17 attivi** organizzati per matcher in [`hooks/hooks.json`](hooks/hooks.json). Gate nuovi post-v1.46: `tdd-gate`, `brainstorming-gate`, `stop-gate`, `sub-skill-gate`, `plan-gate`, `plan-gate-write`, `pr-blind-review-gate`, `pr-gate`, `coverage-force-run` (dentro pre-commit), `devforge-context` (fusione 3 hook precedenti), `post-commit-review`, `batch-checkpoint`, `batch-reset`, `capture-test-result`, `devforge-flusher`. Env var di bypass/rollback: [`hooks/ENV_VARS.md`](hooks/ENV_VARS.md).
 
 ### `SessionStart` — Bootstrap del Plugin
 
@@ -882,7 +912,7 @@ Tutte le skill seguono il **DevForge Visual Design System** definito in `design-
 - **Classificazione Rischio Operazioni** — tabella con colonna Card (Si/No) per ogni step
 - **Tabella Anti-Razionalizzazione** — blocca le scorciatoie cognitive tipiche del dominio
 
-> Copertura completa su tutte le 26 skill: ogni skill Rigid ha Legge di Ferro + Anti-Razi,
+> Copertura completa su tutte le 39 skill: ogni skill Rigid ha Legge di Ferro + Anti-Razi,
 > ogni skill ha Risk Table e pre-flight cards per le operazioni con rischio >= MEDIO.
 
 ---
@@ -896,16 +926,40 @@ siae-devforge/
 ├── .mcp.json                    # Configurazione MCP server (Atlassian)
 ├── .gitignore
 │
-├── hooks/
-│   ├── hooks.json               # Registro hook (SessionStart, PreToolUse, PostToolUse)
+├── hooks/                        # 17 hook attivi — dettagli in hooks.json + ENV_VARS.md
+│   ├── hooks.json               # Registro hook per matcher (SessionStart, PreToolUse, PostToolUse, Stop, UserPromptSubmit)
+│   ├── ENV_VARS.md              # Matrix env var bypass/rollback (v1.47+)
 │   ├── run-hook.cmd             # Script dispatcher cross-platform (polyglot bash/cmd)
-│   ├── session-start            # Hook bootstrap: inietta using-devforge al boot
-│   ├── pre-commit               # Hook quality gate: 5 check prima di ogni commit
-│   └── post-skill               # Hook activity log: traccia skill invocate
+│   ├── session-start            # Bootstrap: inietta using-devforge + preserve-on-compact (v1.47)
+│   ├── devforge-context         # Fusione 3 hook UserPromptSubmit precedenti (v1.46, budget 2KB, tier-guard)
+│   ├── batch-reset              # Reset batch-checkpoint counter (UserPromptSubmit)
+│   ├── pre-commit               # Quality gate 5-punti + git-workflow + coverage-force-run (v1.48)
+│   ├── pr-gate                  # Dispatch automatico code-reviewer + spec-reviewer agent
+│   ├── pr-blind-review-gate     # v1.47: blocca gh pr create/edit senza siae-blind-review
+│   ├── tdd-gate                 # v1.4+: blocca Edit/Write su codice prod senza siae-tdd (task-scoped)
+│   ├── brainstorming-gate       # v1.45+: progressive friction senza siae-brainstorming (task-scoped)
+│   ├── plan-gate                # Blocca EnterPlanMode senza siae-brainstorming
+│   ├── plan-gate-write          # v1.47: blocca Write su docs/plans/*-design.md senza siae-brainstorming
+│   ├── stop-gate                # Evidence-based verification + 3-line recap (v1.47/v1.48)
+│   ├── sub-skill-gate           # v1.47: carica lib/prereq-map.generated (20 entry)
+│   ├── post-skill               # Activity log + task-ledger dual-write (v1.47)
+│   ├── post-commit-review       # Trigger code-reviewer su commit locale
+│   ├── batch-checkpoint         # Checkpoint per batch multi-turno
+│   ├── capture-test-result      # Intercetta output test per coverage cache
+│   └── devforge-flusher         # Async telemetry flush a fine sessione
 │
-├── lib/
+├── lib/                          # Librerie bash/python sorgenti + file generati
 │   ├── skills-core.js           # Discovery dinamica skill e catalogo auto-generato
-│   └── logger.sh                # Activity logger centralizzato (JSONL append)
+│   ├── logger.sh                # Activity logger centralizzato (JSONL append)
+│   ├── task-id.sh               # v1.47: task_id + evidence copy-forward (ADR-001)
+│   ├── file-taxonomy.sh         # v1.47: classificazione estensioni (ADR-005)
+│   ├── cmd-parser.sh            # v1.47: token parser per pre-commit (ADR-006)
+│   ├── evidence-check.sh        # v1.46+v1.47: validates_via predicati + task ledger
+│   ├── block-explainer.sh       # v1.48: user adoption vs team median per block message
+│   ├── generate-prereq-map.sh   # v1.47: autogen PREREQ_MAP da frontmatter (ADR-007)
+│   ├── prereq-map.generated     # v1.47: 20 entry, sorgente per sub-skill-gate
+│   ├── adoption-analyzer.py     # v1.48: /forge-adoption + recap + block explainer
+│   ├── {risk-taxonomy,operational-limits,permission-denied-handling,checkpoint-schema}.md   # v1.46: centralizations
 │
 ├── skills/
 │   ├── using-devforge/          # Meta-skill: sistema operativo del plugin
@@ -995,19 +1049,18 @@ siae-devforge/
 │           ├── testing-skills.md
 │           └── skill-template.md
 │
-├── commands/
-│   ├── forge-map.md             # /forge-map → siae-codebase-map
-│   ├── forge-sysmap.md         # /forge-sysmap → siae-microservices-map
-│   ├── forge-plan.md            # /forge-plan → siae-brainstorming
+├── commands/                    # 11 slash command
 │   ├── forge-test.md            # /forge-test → siae-tdd
-│   ├── forge-qa.md              # /forge-qa → siae-qa
 │   ├── forge-automate.md        # /forge-automate → siae-automation
-│   ├── forge-review.md          # /forge-review → code-reviewer + spec-reviewer
 │   ├── forge-implement.md       # /forge-implement → siae-subagent-development
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
-│   ├── forge-rca.md             # /forge-rca → siae-debugging
 │   ├── forge-logic-build.md     # /forge-logic-build → siae-service-logic-map
-│   └── forge-logic-search.md    # /forge-logic-search → siae-service-logic-map
+│   ├── forge-flows.md           # /forge-flows → siae-nr-test-flows
+│   ├── forge-cost.md            # /forge-cost → siae-finops
+│   ├── forge-finops.md          # /forge-finops → siae-finops
+│   ├── forge-jasper.md          # /forge-jasper → siae-jasper-from-pdf
+│   ├── forge-analytics.md       # /forge-analytics → siae-dev-analytics
+│   └── forge-adoption.md        # v1.48: /forge-adoption → lib/adoption-analyzer.py
 │
 ├── agents/
 │   ├── code-reviewer.md         # Review a 6 punti con distrust pattern
@@ -1063,7 +1116,7 @@ Per configurare MCP Atlassian, segui la [documentazione ufficiale](https://devel
 
 Ogni skill integra tre meccanismi derivati dalla ricerca sulla persuasione applicata agli LLM, che insieme portano la compliance dell'agente dal ~50% al ~75%.
 
-### Social Proof (30/30 skill)
+### Social Proof (39/39 skill)
 
 Ogni skill contiene un blocco di statistiche plausibili derivate dall'analisi dei 816 repository GitHub itsiae. Posizionato subito dopo la regola principale della skill, rinforza il comportamento corretto mostrando che e' la norma nell'organizzazione.
 
@@ -1075,7 +1128,7 @@ Ogni skill contiene un blocco di statistiche plausibili derivate dall'analisi de
 
 Il principio: quando l'agente vede che un comportamento e' diffuso e produce risultati misurabili, e' significativamente piu' propenso a seguirlo. Da solo, il social proof aumenta la compliance del +39%.
 
-### Limiti Operativi (30/30 skill)
+### Limiti Operativi (39/39 skill)
 
 Ogni skill ha una sezione `## Limiti Operativi` con vincoli concreti che prevengono loop infiniti, output eccessivi e tentativi ripetuti senza cambiamento di strategia.
 
@@ -1097,7 +1150,7 @@ Ogni skill ha una sezione `## Limiti Operativi` con vincoli concreti che preveng
 
 Il principio di scarcita': vincoli espliciti creano urgenza e prevengono il pattern "provo ancora la stessa cosa finche' non funziona".
 
-### Chaining Profondo (28/30 skill)
+### Chaining Profondo (28/39 skill)
 
 Le skill sono collegate tra loro con marker `REQUIRED SUB-SKILL` che dichiarano dipendenze esplicite. Quando una skill ha un marker, l'agente DEVE invocare la sub-skill indicata prima di procedere o prima di dichiarare il completamento.
 
@@ -1113,7 +1166,8 @@ Due tipi di chaining:
 
 Le uniche 2 skill senza chaining sono `siae-onboarding` (entry point del sistema) e `siae-verification` (leaf node terminale — non puo' richiamare se stessa).
 
-Copertura: 28/30 skill (93%) con dipendenze esplicite dichiarate.
+Copertura: 20/39 skill con prerequisiti sequenziali espliciti (entry-points e
+flexible-domain skills non hanno prereq per design). Vedi `lib/prereq-map.generated`.
 
 ---
 
@@ -1129,7 +1183,7 @@ Ogni parola nel context window **costa token ad ogni singolo messaggio** della s
 
 | Tecnica | Implementazione | Impatto |
 |---------|----------------|---------|
-| **Lazy Loading** | `SessionStart` inietta solo `using-devforge`. Le 20 skill operative sono caricate on-demand via Skill tool, solo quando servono | Le skill non usate non pesano nulla in sessione |
+| **Lazy Loading** | `SessionStart` inietta solo `using-devforge`. Le 38 skill operative sono caricate on-demand via Skill tool, solo quando servono | Le skill non usate non pesano nulla in sessione |
 | **Sub-skill Extraction** | `siae-verification` e' una skill separata, caricata solo su commit/PR/claim di completamento — non sempre in context | Meno token in boot, caricata solo quando serve |
 | **Description Trap Fix** | Le description YAML devono essere trigger-only: Claude carica il corpo completo solo quando serve, non segue la description come sostituto | Compliance: Claude legge sempre il corpo della skill |
 
@@ -1144,7 +1198,7 @@ Ogni parola nel context window **costa token ad ogni singolo messaggio** della s
 7. **Verification Before Completion** — 5 passi obbligatori prima di dichiarare qualsiasi task completo
 8. **Social Proof** — Ogni skill cita statistiche dai 816 repo itsiae per rinforzare il comportamento corretto (+39% compliance)
 9. **Scarcity / Limiti Operativi** — Vincoli concreti (retry, step, output) prevengono loop e output eccessivi
-10. **Deep Chaining** — 28/30 skill collegate con `REQUIRED SUB-SKILL` markers per dipendenze esplicite
+10. **Deep Chaining** — 20/39 skill con prerequisiti sequenziali autogenerati in `lib/prereq-map.generated` (v1.47 ADR-007), letti da `sub-skill-gate`
 
 ### Flusso Dati
 

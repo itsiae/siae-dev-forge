@@ -29,3 +29,9 @@ evals/reports/*
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Claude Code session state (locale per utente)
+.claude/
+
+# Pytest-hypothesis cache
+.hypothesis/

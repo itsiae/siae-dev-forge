@@ -155,3 +155,72 @@ def test_cli_json_output(tmp_home):
     assert "user_adoption" in payload
     assert "team_median" in payload
     assert payload["n_tasks"] == 1
+
+
+# ─── MAJOR #2 — recap empty-state must not congratulate ────────────────
+
+def test_format_recap_empty_state_not_congratulatory(tmp_home):
+    """When ledger and activity are both empty, recap must NOT say
+    'keep the rhythm' — the user has literally zero signal.
+    """
+    mod = _load()
+    user = {s: 0.0 for s in mod.CORE_SKILLS}
+    team = {s: 0.0 for s in mod.CORE_SKILLS}
+    out = mod._format_recap(user, team)
+    assert "keep the rhythm" not in out.lower(), \
+        "empty state must not produce a congratulatory nudge"
+    assert ("no data" in out.lower()
+            or "nessun dato" in out.lower()
+            or "no baseline" in out.lower()), \
+        f"recap should explicitly say no data. Got: {out!r}"
+
+
+def test_format_recap_with_data_still_produces_nudge(tmp_home):
+    """Sanity: recap with real data still works as before."""
+    mod = _load()
+    # Populate: user above team on one skill, below on another
+    user = dict.fromkeys(mod.CORE_SKILLS, 50.0)
+    user["siae-tdd"] = 20.0
+    team = dict.fromkeys(mod.CORE_SKILLS, 50.0)
+    team["siae-tdd"] = 80.0
+    out = mod._format_recap(user, team)
+    assert "siae-tdd" in out
+    # Weakest-gap nudge must fire (−60pp)
+    assert "invoke" in out.lower() or "close the gap" in out.lower()
+
+
+# ─── MAJOR #1 — scope label on comparison ─────────────────────────────
+
+def test_format_table_flags_scope_mismatch(tmp_home):
+    """Table output must flag that user is task-scope and team is
+    session-scope so the reader doesn't read the delta as directly
+    comparable. Mitigation of the review finding: apples-to-oranges.
+    """
+    mod = _load()
+    user = {s: 50.0 for s in mod.CORE_SKILLS}
+    team = {s: 30.0 for s in mod.CORE_SKILLS}
+    # With ledger populated → user IS task-scope
+    ledger = {"abc123": {"siae-tdd"}}
+    out = mod._format_table(user, team, 7, ledger_populated=bool(ledger))
+    # Must include an explicit warning or label about scope difference
+    assert "task-scope" in out.lower() or "task scope" in out.lower()
+    assert "session-scope" in out.lower() or "session scope" in out.lower()
+    assert ("not directly comparable" in out.lower()
+            or "non direttamente comparabil" in out.lower()
+            or "direzionale" in out.lower())
+
+
+def test_format_block_mentions_scope_difference(tmp_home):
+    """Block explainer must hint that user and team use different
+    measures so the user doesn't think a -40pp delta is personal failure.
+    """
+    mod = _load()
+    user = {s: 42.0 for s in mod.CORE_SKILLS}
+    team = {s: 80.0 for s in mod.CORE_SKILLS}
+    out = mod._format_block("siae-tdd", user, team, ledger_populated=True)
+    assert "siae-tdd" in out
+    assert "42" in out
+    assert "80" in out
+    # Must carry scope hint when ledger is populated (directional comparison)
+    assert ("task" in out.lower() and "team" in out.lower()), \
+        f"block must label scopes. Got: {out!r}"
