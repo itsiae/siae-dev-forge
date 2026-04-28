@@ -30,12 +30,16 @@
     },
     {
       "serverName": "a11y-accessibility"
+    },
+    {
+      "serverName": "sport-kg"
     }
   ],
   "attribution": {
     "commit": "\nCo-Authored-By: SIAE DevForge",
     "pr": "\nCo-Authored-By: SIAE DevForge"
   },
+  "channelsEnabled": true,
   "companyAnnouncements": [],
   "deniedMcpServers": [],
   "language": "italian",
@@ -70,6 +74,10 @@
     },
     {
       "repo": "itsiae/siae-sport-mcp",
+      "source": "github"
+    },
+    {
+      "repo": "itsiae/siae-sport-oracle",
       "source": "github"
     },
     {
