@@ -104,6 +104,29 @@ I template si trovano in `skills/siae-documentation/template/` e sono **obbligat
 
 ## Flusso Operativo
 
+### Step 0 — Tool Loading (se documenti servizi SPORT/POP/PAE/CIAM)
+
+Se la documentazione riguarda servizi SIAE mappati nel KG sport-kg (prefissi
+`sport-*`, `pop-*`, `pae-*`, `ciam-*`, `digital-channels-sport-*`,
+`esb-sport-*`, `mag-concertini-*`, `portal-apigateway-*`, `ttpp-*-bff-service`),
+usa i tool MCP per **discovery topology** (caller, dipendenze, endpoint
+attivi, tabelle DB, external systems) e arricchire HLD/LLD/API doc con dati
+di runtime reali.
+
+I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
+`ToolSearch` PRIMA di chiamarli:
+
+```
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables"
+```
+
+Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con
+generazione doc solo basata su codice statico, annotando "topology runtime
+non disponibile".
+
+**Anti-pattern**: dichiarare "MCP non disponibile in subagent" senza aver
+tentato ToolSearch. Pain point #1 sessione 2026-04-29.
+
 ### Step 1 — Capire la richiesta
 
 Chiedi o deduci dal contesto:

@@ -80,6 +80,30 @@ cognitivi sulla propria implementazione. Il tuo compito e' essere la rete di sic
 
 ---
 
+## Step 0 — Tool Loading (se review tocca servizi SPORT/POP/PAE/CIAM)
+
+Se la review riguarda servizi SIAE mappati nel KG sport-kg (prefissi `sport-*`,
+`pop-*`, `pae-*`, `ciam-*`, `digital-channels-sport-*`, `esb-sport-*`,
+`mag-concertini-*`, `portal-apigateway-*`, `ttpp-*-bff-service`), puoi usare
+i tool MCP per **cross-check architetturale** (impact_with_evidence, who_calls,
+service_full_context).
+
+I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
+`ToolSearch` PRIMA di chiamarli, altrimenti `InputValidationError`.
+
+```
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health"
+```
+
+Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con review
+solo basata su diff + repo locale, annotando come limite "review architetturale
+non incrociata con KG".
+
+**Anti-pattern**: dichiarare "MCP non disponibile in subagent" senza aver
+tentato ToolSearch. Pain point #1 sessione 2026-04-29.
+
+---
+
 ## PRIMA DELLA REVIEW — Raccolta Contesto
 
 Prima di iniziare la review, raccogli queste informazioni:
