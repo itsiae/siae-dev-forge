@@ -108,7 +108,7 @@ result, e da quel momento sono callabili come tool nativi.
 
 | Sintomo | Diagnosi | Azione |
 |---------|----------|--------|
-| ToolSearch ritorna 0 match per `mcp__sport-kg__*` | Server MCP sport-kg non registrato in sessione | Fallback a grep diretto su `/Users/detomasi/Library/Mobile Documents/com~apple~CloudDocs/sport-kg/data/repos/` (repos clonati) |
+| ToolSearch ritorna 0 match per `mcp__sport-kg__*` | Server MCP sport-kg non registrato in sessione | Fallback a grep diretto su `${SPORT_KG_REPOS_DIR:-$HOME/sport-kg/data/repos}` (repos clonati). Se la variabile non e' settata e il default non esiste, declina con `{"applicable": false, "reason": "sport_kg_repos_not_configured"}` |
 | ToolSearch trova lo schema ma la chiamata ritorna `connection refused` / `timeout` | Server MCP giù o rebooting (vedi memory `feedback_mcp_tool_registry_boot_snapshot.md`) | Ritorna `{"applicable": true, "blocked": "mcp_unavailable"}` con istruzioni recovery (`pkill processo python` server-side) |
 | Schema caricato ma tool ritorna "not found" | Servizio non indicizzato nel KG (es. `opcon-batch`, `apigateway-service-ext` — Gap #21) | Fallback a grep diretto sul repo |
 

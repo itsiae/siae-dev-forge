@@ -109,7 +109,7 @@ ToolSearch query="select:mcp__elasticsearch__search_by_service,mcp__elasticsearc
 
 | Sintomo | Azione |
 |---------|--------|
-| ToolSearch 0 match `mcp__sport-kg__*` | Grep diretto su `~/sport-kg/data/repos/` (repos clonati) — ma documenta come limite |
+| ToolSearch 0 match `mcp__sport-kg__*` | Grep diretto su `${SPORT_KG_REPOS_DIR:-$HOME/sport-kg/data/repos}` (repos clonati). Se variabile non settata e default non esiste, declina con `applicable:false`, `reason: sport_kg_repos_not_configured` — documenta come limite |
 | ToolSearch OK ma chiamate falliscono (timeout/connection) | Annota `mcp_blocked` nei findings, prosegui con ES + grep |
 | Servizio non indicizzato nel KG (Gap #21: opcon-batch, apigateway-service-ext) | Grep diretto + ES su nome servizio |
 | ES MCP cap 200 risultati | Annota "sample-based, non aggregato" — non inferire totali |
@@ -173,7 +173,7 @@ Obiettivo: chiudere gap quando KG e ES non bastano:
 - Feign client routing (`@FeignClient(name=..., url=...)`)
 - Config dinamica (`application.yml` profili, env vars)
 
-**Repo clonati**: `/Users/detomasi/Library/Mobile Documents/com~apple~CloudDocs/sport-kg/data/repos/<service-name>/`.
+**Repo clonati**: `${SPORT_KG_REPOS_DIR:-$HOME/sport-kg/data/repos}/<service-name>/`. La variabile e' opzionale: se non settata, fallback a `$HOME/sport-kg/data/repos`. Se nessuno dei due esiste, declina con `applicable:false`.
 
 **Tool**:
 - `Glob` per trovare file (`**/*.java`, `**/*.drl`, `**/application*.yml`, `**/pom.xml`)
@@ -325,3 +325,15 @@ nessun problema.
 | Generazione output blocco markdown | 🟢 Sicuro |
 
 Nessuna operazione di scrittura sul codebase. Read-only.
+
+### Modello di trust del server MCP sport-kg
+
+Il server MCP sport-kg e' raggiunto via SSE su `http://localhost:3456/sse` (config in `.mcp.json`). Modello di trust:
+
+- **Endpoint**: SSE su `localhost:3456`. Il container Docker (`sport-kg-mcp`) bind di default a `0.0.0.0:3456` — quindi tecnicamente raggiungibile da rete locale (LAN/Wi-Fi), non solo da loopback.
+- **Auth**: ASSENTE. Nessun token bearer, nessun mTLS, nessuna API key.
+- **Threat model**:
+  - **Mac dev workstation personale**: il firewall macOS default blocca connessioni LAN inbound non autorizzate → effettivamente loopback-only. Trust accettabile.
+  - **Shared dev box / CI runner / server multi-tenant**: il server MCP e' raggiungibile da chiunque sia sulla stessa rete. Trust NON accettabile senza auth bearer.
+- **Mitigazione raccomandata per ambienti shared**: cambiare port mapping Docker a `127.0.0.1:3456:3456` (bind loopback-only) o aggiungere auth bearer prima di esporre l'host.
+- **Implicazione per qa-investigator**: i tool KG hanno accesso completo alla topology aziendale SIAE. Se la macchina e' compromessa o condivisa, un attaccante locale puo' interrogare il KG senza credenziali.
