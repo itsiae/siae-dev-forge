@@ -78,6 +78,48 @@ ritorna `{"applicable": false, "reason": "off-domain"}` e termina.
 
 ---
 
+## Step 0 — Tool Loading (PRIMA DI TUTTO, OBBLIGATORIO)
+
+Quando vieni invocato come subagent, **i tool MCP non sono caricati di default
+nel registry attivo**. Appaiono come "deferred" e calling diretto fallisce con
+`InputValidationError`. Devi caricarli esplicitamente con `ToolSearch` PRIMA di
+chiamare qualsiasi tool MCP.
+
+### Caricamento bulk (1 chiamata sola)
+
+Prima di ogni altra azione, esegui:
+
+```
+ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__demand_impact,mcp__sport-kg__demand_impact_deep,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_by_service,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method"
+```
+
+Poi, separatamente, carica i tool ES se ti servono evidenze runtime:
+
+```
+ToolSearch query="select:mcp__elasticsearch__search_by_service,mcp__elasticsearch__search_logs,mcp__elasticsearch__search_by_transaction_id,mcp__elasticsearch__get_error_stacktrace,mcp__elasticsearch__list_indices"
+```
+
+### Verifica caricamento
+
+Dopo `ToolSearch` i tool richiesti compaiono nel `<functions>` block del tool
+result, e da quel momento sono callabili come tool nativi.
+
+### Fallback se ToolSearch ritorna vuoto / errore
+
+| Sintomo | Diagnosi | Azione |
+|---------|----------|--------|
+| ToolSearch ritorna 0 match per `mcp__sport-kg__*` | Server MCP sport-kg non registrato in sessione | Fallback a grep diretto su `${SPORT_KG_REPOS_DIR:-$HOME/sport-kg/data/repos}` (repos clonati). Se la variabile non e' settata e il default non esiste, declina con `{"applicable": false, "reason": "sport_kg_repos_not_configured"}` |
+| ToolSearch trova lo schema ma la chiamata ritorna `connection refused` / `timeout` | Server MCP giù o rebooting (vedi memory `feedback_mcp_tool_registry_boot_snapshot.md`) | Ritorna `{"applicable": true, "blocked": "mcp_unavailable"}` con istruzioni recovery (`pkill processo python` server-side) |
+| Schema caricato ma tool ritorna "not found" | Servizio non indicizzato nel KG (es. `opcon-batch`, `apigateway-service-ext` — Gap #21) | Fallback a grep diretto sul repo |
+
+### Anti-pattern (da evitare assolutamente)
+
+- ❌ Dichiarare "MCP sport-kg non disponibile in sessione subagent" SENZA aver tentato `ToolSearch`. Questo è il pain point #1 osservato in 2026-04-29 Q&A session — 4/7 agent saltarono ToolSearch e andarono di grep, perdendo evidence KG.
+- ❌ Chiamare `mcp__sport-kg__*` direttamente senza preliminare ToolSearch (fallisce con InputValidationError).
+- ❌ Caricare i tool MCP uno alla volta — usa una singola query bulk con `select:tool1,tool2,...`.
+
+---
+
 ## Pipeline 5-step (rigida)
 
 ### Step 1 — Disambiguazione servizio
