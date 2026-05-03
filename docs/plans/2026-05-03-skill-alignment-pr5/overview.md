@@ -34,9 +34,9 @@ NB: design doc cita "39 skill" come stima preliminare; conta reale `ls skills/` 
 | 4 | Scrivi `evaluator.py` (output parser + match logic + report markdown) | `task-04-evaluator-py.md` | [DONE] |
 | 5 | Smoke test runner end-to-end con 3 prompt (validazione setup) | `task-05-smoke-test.md` | [PENDING] |
 | 6 | Run baseline completa 30 prompt + commit `baseline-2026-05-03.md` | `task-06-baseline-run.md` | [PENDING] |
-| 7 | Description audit batch 1 (skill 1-13: backbone già fatte PR-4 verifica + early non-backbone) | `task-07-description-audit-batch1.md` | [PENDING] |
-| 8 | Description audit batch 2 (skill 14-26: domain skills) | `task-08-description-audit-batch2.md` | [PENDING] |
-| 9 | Description audit batch 3 (skill 27-37: tooling + meta) | `task-09-description-audit-batch3.md` | [PENDING] |
+| 7 | Description audit batch 1 (skill 1-13: backbone già fatte PR-4 verifica + early non-backbone) | `task-07-description-audit-batch1.md` | [DONE] |
+| 8 | Description audit batch 2 (skill 14-26: domain skills) | `task-08-description-audit-batch2.md` | [DONE] |
+| 9 | Description audit batch 3 (skill 27-37: tooling + meta) | `task-09-description-audit-batch3.md` | [DONE] |
 | 10 | Hook `skill-advisory` implementation (PostToolUse advisory) | `task-10-hook-skill-advisory.md` | [PENDING] |
 | 11 | State file `.skill-state` schema + writer hooks (brainstorm/debug/tdd PostToolUse) | `task-11-state-file-writers.md` | [PENDING] |
 | 12 | Registra hook in `hooks/hooks.json` + plugin manifest | `task-12-register-hook.md` | [PENDING] |
