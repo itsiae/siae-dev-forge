@@ -137,7 +137,32 @@ Tool da chiamare (in parallelo quando possibile):
 | "X chi chiama?" | `endpoints_called(X)` | `service_full_context(X)` |
 | "Esiste un servizio che fa Y?" | `list_services(filter=*Y*)` + `search_endpoints(keyword=Y)` | `search_by_service(Y)` |
 | "Dove e' scritta la tabella T?" | `search_tables(T)` | `data_flow_for_method` se trovi metodo |
-| "Chi e' l'IdP di X?" | `describe_service(X)` + `refresh_external_systems(X)` | `who_calls(ciam-*)` |
+| "Chi e' l'IdP di X?" | `who_authenticates(X)` (Onda 9 — primario) | `describe_service(X)` + `refresh_external_systems(X)` |
+| "Esiste un batch per Z?" | `find_batch_for_keyword(Z)` (Onda 10) | `service_full_context(<host>)` per cron schedule |
+| "Quale regola Drools governa W?" | `list_rules(filter=W)` (Onda 6) | `describe_rule(rule_id)` per drill-down |
+| "Quale auth filter chain usa X?" | `describe_auth_chain(X)` | `describe_feign_client(X)` per outbound auth |
+
+#### Priors check freshness (opzionale)
+
+Se la domanda riguarda dati storici >30gg (es. "chi era il caller a inizio 2025?"),
+chiama prima `mcp__sport-kg__graph_staleness_report()` per verificare se i nodi
+rilevanti sono entro TTL. Se HIGH staleness, annota nel report:
+
+```
+⚠️ Staleness: KG ultimo refresh <observed_at>, TTL hint <ttl_hint_seconds>s
+   I claim possono riflettere stato passato.
+```
+
+Non bloccare l'investigazione, solo qualificare confidence.
+
+#### Estrazione nodi v2 da Stage 1
+
+Quando chiami `describe_service` o `service_full_context`, estrai esplicitamente
+(se presenti):
+
+- **`batch_jobs[]`** — BatchJob (@Scheduled) hostati dal servizio. Usa per Q&A "chi triggera Z?", "quale batch elabora W?"
+- **`business_rules[]`** — BusinessRule (Drools/Kogito) hostate. Usa per Q&A "quale regola applica logica X?"
+- **`external_systems[]`** — ExternalSystem M2M caller con `<userId>_<sourceSystem>`. Usa per Q&A "chi sono i clienti M2M di X?"
 
 **Fail-fast**: se Stage 1 risponde completamente alla domanda con confidence
 HIGH (es. who_calls ritorna 1 caller con 100% match), salta Stage 2 e 3.
