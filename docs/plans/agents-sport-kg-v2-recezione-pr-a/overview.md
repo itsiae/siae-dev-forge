@@ -21,11 +21,11 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Baseline pre-modifica (snapshot 2 dispatch) | `task-01-baseline-snapshot.md` | [PENDING] |
-| 2 | mcp-impact-analyst: estensione bulk loading Step 0 | `task-02-mia-bulk-loading.md` | [PENDING] |
-| 3 | mcp-impact-analyst: Stage 3 5° check + sezioni nodi | `task-03-mia-stage3-nodes.md` | [PENDING] |
-| 4 | mcp-impact-analyst: output card envelope D1 + enum v2 | `task-04-mia-output-envelope.md` | [PENDING] |
-| 5 | qa-investigator: estensione bulk loading Step 0 | `task-05-qa-bulk-loading.md` | [PENDING] |
+| 1 | Baseline pre-modifica (snapshot 2 dispatch) | `task-01-baseline-snapshot.md` | [DONE] |
+| 2 | mcp-impact-analyst: estensione bulk loading Step 0 | `task-02-mia-bulk-loading.md` | [DONE] |
+| 3 | mcp-impact-analyst: Stage 3 5° check + sezioni nodi | `task-03-mia-stage3-nodes.md` | [DONE] |
+| 4 | mcp-impact-analyst: output card envelope D1 + enum v2 | `task-04-mia-output-envelope.md` | [DONE] |
+| 5 | qa-investigator: estensione bulk loading Step 0 | `task-05-qa-bulk-loading.md` | [DONE] |
 | 6 | qa-investigator: Stage 1 nuove righe domanda-tipo | `task-06-qa-stage1-rows.md` | [PENDING] |
 | 7 | qa-investigator: Stage 2 alternate_hypotheses | `task-07-qa-stage2-hypotheses.md` | [PENDING] |
 | 8 | qa-investigator: enum status v2 + mapping legacy | `task-08-qa-enum-mapping.md` | [PENDING] |
