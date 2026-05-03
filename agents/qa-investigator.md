@@ -119,6 +119,19 @@ ToolSearch query="select:mcp__elasticsearch__search_by_service,mcp__elasticsearc
 - ❌ Dichiarare "MCP non disponibile" SENZA aver tentato ToolSearch
 - ❌ Chiamare `mcp__*` direttamente senza preliminare ToolSearch
 - ❌ Inventare conteggi quando ES ritorna sample (cap 200)
+- ❌ **Concludere "feature non deployata" su singolo `Unknown tool: X`** — `Unknown tool` è ambiguo, distingui i 3 stati MCP (vedi sotto)
+
+### Distinguere 3 stati MCP (regola operativa)
+
+`Unknown tool: X` ≠ "feature non deployata". I 3 stati distinti:
+
+| Stato | Sintomo | Diagnosi | Azione |
+|---|---|---|---|
+| **1. Tool not in registry (client)** | Chiamata diretta `InputValidationError`; ToolSearch ha schema | Tool deferred, non caricato | `ToolSearch query="select:<tool>"` |
+| **2. Schema OK, dispatcher KO (server)** | ToolSearch ha schema, chiamata ritorna `Unknown tool: X` | Manifest aggiornato ma container MCP non rebuilt post-deploy | Fallback documentato + segnala a sport-kg ops per rebuild |
+| **3. Feature not deployed** | ToolSearch search restituisce 0 match | Onda non rilasciata | Fallback grep diretto + nota nel report |
+
+**Procedura**: ToolSearch select PRIMA → invoca → se `Unknown tool` → distingui stato 2 vs 3 con secondo ToolSearch search per nome tool. Mai concludere stato 3 da singolo `Unknown tool`.
 
 ---
 

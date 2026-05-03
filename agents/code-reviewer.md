@@ -100,8 +100,17 @@ Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con review
 solo basata su diff + repo locale, annotando come limite "review architetturale
 non incrociata con KG".
 
-**Anti-pattern**: dichiarare "MCP non disponibile in subagent" senza aver
-tentato ToolSearch. Pain point #1 sessione 2026-04-29.
+**Anti-pattern**:
+- ❌ dichiarare "MCP non disponibile in subagent" senza aver tentato ToolSearch (pain point #1 sessione 2026-04-29).
+- ❌ concludere "feature non deployata" su singolo `Unknown tool: X` — distingui i 3 stati MCP:
+
+| Stato | Sintomo | Azione |
+|---|---|---|
+| 1. Tool not in registry | `InputValidationError` su call diretta | `ToolSearch query="select:<tool>"` |
+| 2. Schema OK, dispatcher KO | ToolSearch ha schema, call ritorna `Unknown tool: X` | Fallback skip + segnala a ops per rebuild container |
+| 3. Feature not deployed | ToolSearch search ritorna 0 match | Skip silenzioso (review continua) |
+
+Mai concludere stato 3 da singolo `Unknown tool`. ToolSearch search PRIMA di classificare.
 
 ---
 

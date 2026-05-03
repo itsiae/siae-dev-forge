@@ -118,6 +118,19 @@ result, e da quel momento sono callabili come tool nativi.
 - ❌ Dichiarare "MCP sport-kg non disponibile in sessione subagent" SENZA aver tentato `ToolSearch`. Questo è il pain point #1 osservato in 2026-04-29 Q&A session — 4/7 agent saltarono ToolSearch e andarono di grep, perdendo evidence KG.
 - ❌ Chiamare `mcp__sport-kg__*` direttamente senza preliminare ToolSearch (fallisce con InputValidationError).
 - ❌ Caricare i tool MCP uno alla volta — usa una singola query bulk con `select:tool1,tool2,...`.
+- ❌ **Concludere "feature non deployata" su singolo `Unknown tool: X`**: `Unknown tool` è ambiguo — può significare 2 stati distinti. Vedi sezione sotto.
+
+### Distinguere 3 stati MCP (regola operativa)
+
+`Unknown tool: X` ≠ "feature non deployata". Distingui i 3 stati PRIMA di concludere:
+
+| Stato | Sintomo | Diagnosi | Azione |
+|---|---|---|---|
+| **1. Tool not in registry (client)** | Chiamata diretta fallisce con `InputValidationError`; ToolSearch ritorna lo schema | Tool deferred, non caricato nella sessione corrente | Esegui `ToolSearch query="select:<tool>"` per caricare |
+| **2. Schema OK, dispatcher KO (server)** | ToolSearch ritorna lo schema completo, ma chiamata ritorna `{"error": "Unknown tool: X"}` | Manifest aggiornato ma container MCP non rebuilt post-deploy (es. Onda 6 PR #18 mergiata, container non ricostruito) | Fallback documentato (es. directory `rules/` per `list_rules`); segnala a sport-kg ops per rebuild container `sport-kg-mcp` |
+| **3. Feature not deployed** | ToolSearch query restituisce 0 match per il tool | Onda non rilasciata o tool effettivamente non esistente | Fallback grep diretto su repo + nota nel report |
+
+**Procedura corretta**: ToolSearch select PRIMA → invoca → se `Unknown tool` → distingui stato 2 vs 3 con un secondo ToolSearch search per nome tool. Mai concludere stato 3 da singolo `Unknown tool`.
 
 ---
 
