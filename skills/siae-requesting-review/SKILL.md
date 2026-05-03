@@ -1,7 +1,8 @@
 ---
 name: siae-requesting-review
 description: >
-  Completa la PR con description e reviewer assegnato dopo l'apertura.
+  Use when a PR has been opened and you need to complete it with description
+  and assigned reviewer before requesting review.
   Trigger: "pronto per review", "ho aperto la PR", "chiedo il review", PR aperta
   senza reviewer assegnato, assegna reviewer, richiedi review, PR creata, post-PR,
   reviewer mancante.

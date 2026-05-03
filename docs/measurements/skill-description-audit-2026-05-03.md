@@ -147,3 +147,118 @@ debugging, dev-analytics, documentation, executing-plans, finishing-branch)_
 - **Trigger keyword preservation:** 13/13 (NO-REGRESSION)
 - **Description length max:** 508 char (siae-git-workflow) — well under 1024 limit
 - **Verify post-PR-4 OK:** siae-git-workflow (leakage strip preservato), siae-microservices-map (SPORT strip preservato)
+
+---
+
+## Batch 3 (skill 27-39) — Task 09
+
+### siae-brainstorming
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Pattern compliance: YES (Use when designing any implementation task before writing code ...)
+- Notes: backbone PR-4, gia' in pattern target
+
+### siae-receiving-review
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when receiving code review feedback on a PR ...)
+- Trigger keyword count: 8 (ho ricevuto feedback su una PR, il reviewer ha lasciato commenti, CHANGES REQUESTED, commenti su PR, review ricevuta, fix richiesti dal reviewer, rispondi ai commenti, il reviewer ha chiesto modifiche)
+- Notes: trigger originali preservati al 100%
+
+### siae-requesting-review
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when a PR has been opened and you need to complete it with description and assigned reviewer ...)
+- Trigger keyword count: 9 ("pronto per review", "ho aperto la PR", "chiedo il review", PR aperta senza reviewer assegnato, assegna reviewer, richiedi review, PR creata, post-PR, reviewer mancante)
+- Notes: trigger originali preservati al 100%
+
+### siae-retrospective
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when closing a session, opening a PR, or extracting lessons learned ...)
+- Trigger keyword count: 8 (fine sessione, lezioni apprese, cosa ho imparato, retrospettiva, salva per la prossima volta, /forge-retro, apertura PR, REQUIRED da post-commit-review hook su gh pr create)
+- Notes: trigger originali preservati al 100%, hook chain (post-commit-review) preservato
+
+### siae-robot-framework
+
+- Status: OK_AS_IS (gia' in pattern target da scrittura originale)
+- Pattern compliance: YES (Use when: file .robot/.resource aperti/creati/modificati ...)
+- Notes: gia' compliant pre-PR-5, no rewrite needed
+
+### siae-security
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when handling security-sensitive code: credentials, IAM policy, encryption, PII ...)
+- Trigger keyword count: 6 (codice security-sensitive, gestione credenziali, IAM policy, encryption, dati personali autori/artisti, codici ISWC/ISRC)
+- Notes: trigger originali preservati al 100%, riferimenti OWASP/AWS/PII espliciti nella prima frase
+
+### siae-service-logic-map
+
+- Status: REWRITTEN (verify post-PR-4 task 02 — pattern non era ancora "Use when", ora allineato)
+- Pattern compliance: YES (Use when profiling microservizi or running a single-task impact analysis pre-flight ...)
+- Trigger keyword count: 14 ("cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}", "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in", "quali servizi gestiscono X", impact analysis, pre-flight MCP, demand impact, blast radius, "modifica su servizio business-critical o microservizio", /forge-logic-build, /forge-logic-search, /forge-mcp-preflight)
+- Notes: trigger originali preservati al 100%, modalita' A/B preservate, slash commands preservati
+
+### siae-subagent-development
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when dispatching parallel implementer subagents from a validated plan ...)
+- Trigger keyword count: 7 (/forge-implement, implementa il piano, dispatcha task, lancia implementer, subagent, controller-subagent, orchestrazione implementazione)
+- Notes: trigger originali preservati al 100%, disambiguazione vs siae-executing-plans aggiunta nella prima frase
+
+### siae-tdd
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Pattern compliance: YES (Use when implementing production code (feature, bug fix, refactor) ...)
+- Notes: backbone PR-4 task 06, validates_via preservato
+
+### siae-verification
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Pattern compliance: YES (Use when verifying that a fix or change is complete BEFORE declaring it done ...)
+- Notes: backbone PR-4, validates_via preservato
+
+### siae-writing-plans
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Pattern compliance: YES (Use when transforming an approved design doc into a step-by-step implementation plan ...)
+- Notes: backbone PR-4
+
+### siae-writing-skills
+
+- Status: REWRITTEN
+- Pattern compliance: YES (Use when creating or improving DevForge skills ...)
+- Trigger keyword count: 6 (nuova skill DevForge, migliora skill, scrivi skill, behaviour change, template skill, progetta skill)
+- Notes: trigger originali preservati al 100%
+
+### using-devforge
+
+- Status: OK_AS_IS (verify post-PR-4 — pattern "Use at session start" semanticamente equivalente, accettato in PR-4 validation report sezione "Description pattern compliance")
+- Pattern compliance: YES (Use at session start or new project context to establish the DevForge backbone ...)
+- Notes: pattern "Use at" deliberato per session-start hook trigger
+
+---
+
+## Batch 3 — Summary
+
+- **Skill rewritten:** 7/13
+- **Skill OK_AS_IS (verify-only):** 6/13 (siae-brainstorming, siae-robot-framework, siae-tdd, siae-verification, siae-writing-plans, using-devforge)
+- **YAML valid:** 7/7 rewritten
+- **Pattern "Use when" compliance:** 13/13 (incluso "Use at" semanticamente equivalente per using-devforge)
+- **Trigger keyword preservation:** 7/7 rewritten (NO-REGRESSION, 58/58 trigger preservati totali)
+
+---
+
+## Verifica finale 39/39
+
+```
+$ COUNT=$(for f in skills/*/SKILL.md; do grep -A 30 '^description:' "$f" | head -30 | grep -q 'Use when\|Use at' && echo OK; done | wc -l)
+$ TOTAL=$(ls -d skills/*/ | wc -l)
+Total skills: 39, Compliant: 39
+```
+
+**Result: 39/39 PASS** — PR-5 description audit completato (PR-4 backbone 8 + Task 07 batch 1 + Task 08 batch 2 + Task 09 batch 3 = 39).
+
+## Smoke test (deferred a post-merge blind-review)
+
+I smoke test attivazione skill richiedono session restart (skill registry e' snapshot-ata al boot della sessione Claude Code). Vedi PR-4 validation report per la stessa motivazione tecnica. Eseguire in sessione fresca dopo merge PR-5 con i prompt elencati nei task 07/08/09 spec.

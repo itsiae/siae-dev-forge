@@ -1,9 +1,10 @@
 ---
 name: siae-service-logic-map
 description: >
-  Profila microservizi: dominio, entita', workflow, regole business, cluster.
-  Modalita' A (build-catalog): build catalogo L1+L2+L3 multi-cluster.
-  Modalita' B (impact-analysis): pre-flight MCP single-task con output standardizzato.
+  Use when profiling microservizi (domain, entities, workflow, business rules,
+  cluster) or running a single-task impact analysis pre-flight on a SIAE service.
+  Mode A (build-catalog): build catalogo L1+L2+L3 multi-cluster. Mode B
+  (impact-analysis): pre-flight MCP single-task con output standardizzato.
   Trigger: "cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}",
   "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
   "quali servizi gestiscono X", impact analysis, pre-flight MCP, demand impact,
