@@ -3,8 +3,9 @@ name: siae-verification
 description: >
   Use when verifying that a fix or change is complete BEFORE declaring it done.
   Forces evidence-based verification (run tests, check output, confirm behaviour)
-  prima di commit, PR, task complete declarations. Examples: "il fix funziona",
-  "test passano", "ho finito", "tutto ok", "completato", "implementato".
+  prima di commit, PR, task complete declarations. Trigger: "il fix funziona",
+  "test passano", "ho finito", "tutto ok", "completato", "implementato",
+  "fatto", "fixato", "pronto", "risolto", "build verde", "funziona", "finito".
 validates_via:
   predicate: verification_run_passed
   evidence_type: log_event
