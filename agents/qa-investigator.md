@@ -184,6 +184,30 @@ Tool:
 - **Volume validation**: search_by_service con timestamp range, conta hit per endpoint
 - **Auth fingerprint**: search_logs su pattern `token`, `Authorization`, `userid` — il token format `<UUID>@<ISO8601>` indica AAS legacy SIAE
 
+#### Disambiguazione evidence ambigua (alternate_hypotheses)
+
+Se Stage 2 produce evidence ambigua (almeno uno dei seguenti):
+- ES ritorna sample con cap=200 raggiunto e i campioni non concordano
+- Multipli sourceSystem candidati per uno stesso caller M2M
+- KG e ES divergono su attribution (es. KG dice IdP=AAS, ES log mostrano CIAM)
+
+Chiama:
+
+```
+mcp__sport-kg__alternate_hypotheses(claim="<claim oggetto della Q&A>")
+```
+
+Output atteso: 2-3 ipotesi ranked con `plausibility_score` (0.0-1.0) e
+`falsifiable_by` per ognuna. **NON sostituire il tuo reasoning** — usa il
+ranking come input per arricchire il report:
+
+- Ipotesi #1 (top score): claim primario, status `PARTIAL` con plausibility=<X>
+- Ipotesi #2: claim alternativo nel "Gap residui" come "ipotesi non scartata"
+- Ipotesi #3: claim alternativo nel "Gap residui" se plausibility ≥ 0.3
+
+Il report finale cita esplicitamente "alternate_hypotheses ha suggerito N ipotesi
+con scores [X, Y, Z]" come evidence_type=`inference` (non come fatto).
+
 **Fail-fast**: se Stage 2 conferma o smentisce l'ipotesi con evidenza
 runtime, salta Stage 3 a meno che non serva conferma codice (es. ipotesi
 "esiste cron @Scheduled" → richiede grep).
@@ -229,6 +253,10 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 |---|---|---|---|---|
 | 1 | <claim atomico> | HIGH/MED/LOW | code / KG / ES-runtime / inference | <file:line OR tool:result OR ES query> |
 | 2 | <claim atomico> | HIGH/MED/LOW | code / KG / ES-runtime / inference | ... |
+
+**Note evidence_type aggiuntivi (Stage 2 v2)**:
+- `alternate_hypotheses` → evidence_type = `inference` con score esplicitato (es. "plausibility=0.72 da alternate_hypotheses")
+- `graph_consistency_check INCONSISTENT` → evidence_type = `KG-drift` (nuovo) per signal di drift KG↔ES
 
 ### Dettagli (sezione narrativa breve, max 300 parole)
 
@@ -328,6 +356,8 @@ nessun problema.
 | "Stage 3 sempre obbligatoria per completezza" | NO — fail-fast. Se Stage 1+2 rispondono, ferma. |
 | "Confidence HIGH e' default" | NO — HIGH solo con 2+ fonti concordi. Default e' MEDIUM. |
 | "Posso skip lo scratchpad se sono solo" | NO — scrivilo comunque. La prossima sessione potrebbe usarlo. |
+| "Top hypothesis di alternate_hypotheses è la verità" | NO — è un primitivo MCP-side che ranks ipotesi. La verità si stabilisce con evidence concorrenti, non con score. Cita score come `inference`, non come fatto. |
+| "Posso skip alternate_hypotheses se il sample concorda" | OK skip se evidence è univoca. Usa solo se ambigua (cap raggiunto, sourceSystem multipli, KG↔ES divergenti). |
 
 ---
 
