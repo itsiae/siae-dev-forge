@@ -89,10 +89,11 @@ i tool MCP per **cross-check architetturale** (impact_with_evidence, who_calls,
 service_full_context).
 
 I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
-`ToolSearch` PRIMA di chiamarli, altrimenti `InputValidationError`.
+`ToolSearch` PRIMA di chiamarli, altrimenti `InputValidationError`. Set minimal:
+6 tool sport-kg per cross-check architetturale (5 base topology + graph_consistency_check D3 per drift KG↔codice).
 
 ```
-ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health"
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__graph_consistency_check"
 ```
 
 Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con review
