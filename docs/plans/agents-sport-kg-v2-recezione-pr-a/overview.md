@@ -26,10 +26,10 @@
 | 3 | mcp-impact-analyst: Stage 3 5° check + sezioni nodi | `task-03-mia-stage3-nodes.md` | [DONE] |
 | 4 | mcp-impact-analyst: output card envelope D1 + enum v2 | `task-04-mia-output-envelope.md` | [DONE] |
 | 5 | qa-investigator: estensione bulk loading Step 0 | `task-05-qa-bulk-loading.md` | [DONE] |
-| 6 | qa-investigator: Stage 1 nuove righe domanda-tipo | `task-06-qa-stage1-rows.md` | [PENDING] |
-| 7 | qa-investigator: Stage 2 alternate_hypotheses | `task-07-qa-stage2-hypotheses.md` | [PENDING] |
-| 8 | qa-investigator: enum status v2 + mapping legacy | `task-08-qa-enum-mapping.md` | [PENDING] |
-| 9 | Smoke test Test 1 + Test 2 + diff baseline | `task-09-smoke-test.md` | [PENDING] |
+| 6 | qa-investigator: Stage 1 nuove righe domanda-tipo | `task-06-qa-stage1-rows.md` | [DONE] |
+| 7 | qa-investigator: Stage 2 alternate_hypotheses | `task-07-qa-stage2-hypotheses.md` | [DONE] |
+| 8 | qa-investigator: enum status v2 + mapping legacy | `task-08-qa-enum-mapping.md` | [DONE] |
+| 9 | Smoke test Test 1 + Test 2 + diff baseline | `task-09-smoke-test.md` | [DONE-PARTIAL] (MCP degraded, AC-2 deferred — vedi diff-pr-a-validation.md) |
 
 ## Dipendenze
 
