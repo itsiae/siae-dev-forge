@@ -28,13 +28,7 @@ Presenta le inferenze in tabella compatta `Campo | Valore | [Confidence] | file:
 
 ## 3b. Option Zero Gate
 
-Prima di proporre codice, verifica se il problema si risolve con configurazione, infrastruttura o processo.
-
-**Verifiche:** AWS Parameter Store / SSM, Terraform variables, feature flag esistente, env var, ticket DevOps/infra, servizio o libreria SIAE esistente, config applicativa (`application.yml`, `.env`).
-
-**Se applicabile:** presenta la soluzione config/infra, chiedi conferma. Anche config/infra passa per design doc (breve) e piano (anche 1-subtask). Emetti checkpoint `[BRAINSTORM:OPTION-ZERO]`.
-
-**Se non applicabile:** documenta brevemente perche' ("non esiste parameter store per X") e procedi a Step 4.
+Step gate critico mantenuto INLINE nel SKILL.md (vedi `../SKILL.md` § "Step 3b — Option Zero Gate"). Non duplicato qui per principio progressive disclosure.
 
 ## 4. Proponi 2-3 approcci con trade-off e raccomandazione
 
