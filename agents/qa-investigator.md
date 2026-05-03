@@ -93,10 +93,10 @@ Quando vieni invocato come subagent, i tool MCP appaiono come "deferred" e
 calling diretto fallisce con `InputValidationError`. Devi caricarli con
 `ToolSearch` PRIMA di chiamarli.
 
-### Bulk loading (1 chiamata sola, all'inizio)
+### Bulk loading (1 chiamata sola, all'inizio — 23 tool sport-kg v2: 13 base + 9 nuovi Onde 6/9/10 + D3 + 1 fix consistenza frontmatter)
 
 ```
-ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence"
+ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__who_authenticates,mcp__sport-kg__describe_auth_chain,mcp__sport-kg__describe_feign_client,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__answer_impact_question"
 ```
 
 Poi:
