@@ -21,13 +21,13 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Baseline pre-modifica (snapshot HLD + review) | `task-01-baseline-snapshot.md` | [PENDING] |
-| 2 | doc-generator: estensione bulk loading Step 0 | `task-02-dg-bulk-loading.md` | [PENDING] |
-| 3 | doc-generator: HLD swim lane Batch Schedulers + footer freshness | `task-03-dg-batch-footer.md` | [PENDING] |
-| 4 | doc-generator: HLD Authentication chain + Domain rules | `task-04-dg-auth-rules.md` | [PENDING] |
-| 5 | code-reviewer: estensione bulk loading Step 0 | `task-05-cr-bulk-loading.md` | [PENDING] |
-| 6 | code-reviewer: Point 4 sotto-checklist drift KG↔codice | `task-06-cr-point4-drift.md` | [PENDING] |
-| 7 | Smoke test Test 3 + Test 4 + diff baseline | `task-07-smoke-test.md` | [PENDING] |
+| 1 | Baseline pre-modifica (snapshot HLD + review) | `task-01-baseline-snapshot.md` | [DONE] |
+| 2 | doc-generator: estensione bulk loading Step 0 | `task-02-dg-bulk-loading.md` | [DONE] |
+| 3 | doc-generator: HLD swim lane Batch Schedulers + footer freshness | `task-03-dg-batch-footer.md` | [DONE] |
+| 4 | doc-generator: HLD Authentication chain + Domain rules | `task-04-dg-auth-rules.md` | [DONE] |
+| 5 | code-reviewer: estensione bulk loading Step 0 | `task-05-cr-bulk-loading.md` | [DONE] |
+| 6 | code-reviewer: Point 4 sotto-checklist drift KG↔codice | `task-06-cr-point4-drift.md` | [DONE] |
+| 7 | Smoke test Test 3 + Test 4 + diff baseline | `task-07-smoke-test.md` | [DONE-PARTIAL] (MCP degraded, AC-5 deferred — vedi diff-pr-b-validation.md; AC-6 PASS via static review) |
 
 ## Dipendenze
 
