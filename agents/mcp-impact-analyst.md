@@ -37,6 +37,27 @@ description: |
   <commentary>Modifica DTO library = potenziale breaking change cross-service. L'agent usa impact_of_dto_change + impact_with_evidence per identificare consumer attivi negli ultimi 30gg ES.</commentary>
   </example>
 model: inherit
+tools:
+  - Read
+  - Bash
+  - Grep
+  - Glob
+  - ToolSearch
+  - mcp__sport-kg__answer_impact_question
+  - mcp__sport-kg__demand_impact
+  - mcp__sport-kg__demand_impact_deep
+  - mcp__sport-kg__describe_service
+  - mcp__sport-kg__find_service_for_endpoint
+  - mcp__sport-kg__find_service_for_symbol
+  - mcp__sport-kg__impact_of_dto_change
+  - mcp__sport-kg__impact_of_endpoint_change
+  - mcp__sport-kg__impact_with_evidence
+  - mcp__sport-kg__list_services
+  - mcp__sport-kg__service_full_context
+  - mcp__sport-kg__service_health
+  - mcp__sport-kg__who_calls
+  - mcp__elasticsearch__search_by_service
+  - mcp__elasticsearch__search_logs
 ---
 
 ```
