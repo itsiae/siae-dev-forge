@@ -114,10 +114,11 @@ attivi, tabelle DB, external systems) e arricchire HLD/LLD/API doc con dati
 di runtime reali.
 
 I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
-`ToolSearch` PRIMA di chiamarli:
+`ToolSearch` PRIMA di chiamarli (11 tool sport-kg v2: 7 base topology + 4 nuovi
+HLD-specific da Onde 6/9/10 + D3):
 
 ```
-ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables"
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__graph_staleness_report"
 ```
 
 Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con
