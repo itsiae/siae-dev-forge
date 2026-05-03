@@ -7,7 +7,7 @@ description: >
   Trigger: "cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}",
   "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
   "quali servizi gestiscono X", impact analysis, pre-flight MCP, demand impact,
-  blast radius, "modifica su sport-*/pop-*/pae-*",
+  blast radius, "modifica su servizio business-critical o microservizio",
   /forge-logic-build, /forge-logic-search, /forge-mcp-preflight.
 ---
 
