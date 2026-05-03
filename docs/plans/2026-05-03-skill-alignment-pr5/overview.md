@@ -37,12 +37,12 @@ NB: design doc cita "39 skill" come stima preliminare; conta reale `ls skills/` 
 | 7 | Description audit batch 1 (skill 1-13: backbone già fatte PR-4 verifica + early non-backbone) | `task-07-description-audit-batch1.md` | [DONE] |
 | 8 | Description audit batch 2 (skill 14-26: domain skills) | `task-08-description-audit-batch2.md` | [DONE] |
 | 9 | Description audit batch 3 (skill 27-37: tooling + meta) | `task-09-description-audit-batch3.md` | [DONE] |
-| 10 | Hook `skill-advisory` implementation (PostToolUse advisory) | `task-10-hook-skill-advisory.md` | [PENDING] |
-| 11 | State file `.skill-state` schema + writer hooks (brainstorm/debug/tdd PostToolUse) | `task-11-state-file-writers.md` | [PENDING] |
-| 12 | Registra hook in `hooks/hooks.json` + plugin manifest | `task-12-register-hook.md` | [PENDING] |
-| 13 | Verification tone-down (rimuovi 4+ "ALWAYS/NEVER", aggiungi "Eccezioni" sezione) | `task-13-verification-tone-down.md` | [PENDING] |
-| 14 | Run post-PR + diff vs baseline + regression check no-regression | `task-14-post-pr-run-diff.md` | [PENDING] |
-| 15 | Final validation (39/39 description "Use when X", hook attivo, KPI report) | `task-15-validation.md` | [PENDING] |
+| 10 | Hook `skill-advisory` implementation (PostToolUse advisory) | `task-10-hook-skill-advisory.md` | [DONE] |
+| 11 | State file `.skill-state` schema + writer hooks (brainstorm/debug/tdd PostToolUse) | `task-11-state-file-writers.md` | [DONE] |
+| 12 | Registra hook in `hooks/hooks.json` + plugin manifest | `task-12-register-hook.md` | [DONE] |
+| 13 | Verification tone-down (rimuovi 4+ "ALWAYS/NEVER", aggiungi "Eccezioni" sezione) | `task-13-verification-tone-down.md` | [DONE] |
+| 14 | Run post-PR + diff vs baseline + regression check no-regression | `task-14-post-pr-run-diff.md` | [BLOCKED] AWS Bedrock — defer to AWS-active session |
+| 15 | Final validation (39/39 description "Use when X", hook attivo, KPI report) | `task-15-validation.md` | [DONE] (static; Bedrock comparison BLOCKED) |
 
 ## Dipendenze
 
