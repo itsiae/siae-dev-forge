@@ -20,7 +20,7 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Baseline measurement (line count + leakage grep + skill-activation snapshot) | `task-01-baseline.md` | [PENDING] |
+| 1 | Baseline measurement (line count + leakage grep + skill-activation snapshot) | `task-01-baseline.md` | [DONE] |
 | 2 | Strip leakage `siae-service-logic-map` line 10 | `task-02-strip-leakage-service-logic-map.md` | [PENDING] |
 | 3 | Strip leakage `siae-microservices-map` line 6 | `task-03-strip-leakage-microservices-map.md` | [PENDING] |
 | 4 | Strip leakage `siae-git-workflow` PRODUZIONE/CERTIFICAZIONE | `task-04-strip-leakage-git-workflow.md` | [PENDING] |
