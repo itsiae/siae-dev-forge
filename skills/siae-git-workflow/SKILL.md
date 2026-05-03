@@ -5,7 +5,7 @@ description: >
   Trigger: git checkout -b, git commit, git push, git merge, git tag, creazione
   branch, naming branch, conventional commits, pre-flight card, inizio feature,
   preparazione deploy, promozione ambiente, hotfix, rollback, push remoto,
-  tag COLLAUDO/CERTIFICAZIONE/PRODUZIONE.
+  tag deploy ambiente.
 validates_via:
   predicate: conventional_commit_made
   evidence_type: git_state
@@ -63,11 +63,11 @@ Se fuori perimetro: NON eseguire, chiedi prima. Espandere autonomamente = VIETAT
 ## 1. Branch Strategy SIAE
 
 ```
-feature/{JIRA-ID}-descrizione  →(squash)→  sviluppo  →(merge, tag COLLAUDO)→  collaudo
-  →(merge, tag CERTIFICAZIONE)→  certificazione  →(merge, tag PRODUZIONE)→  produzione/main
+feature/{JIRA-ID}-descrizione  →(squash)→  sviluppo  →(merge, tag <ENV_TAG_UAT>)→  collaudo
+  →(merge, tag <ENV_TAG_CERT>)→  certificazione  →(merge, tag <ENV_TAG_PROD>)→  produzione/main
 ```
 
-Flusso unidirezionale. Ogni ambiente ha la sua branch protetta.
+Flusso unidirezionale. Ogni ambiente ha la sua branch protetta. `<ENV_TAG_*>` = tag deploy specifico del progetto (es. SIAE: `COLLAUDO`, `CERTIFICAZIONE`, `PRODUZIONE`).
 
 ## 2. Branch Naming
 
@@ -91,14 +91,14 @@ Scope opzionale ma consigliato (es. `feat(auth): add JWT validation`). Messaggio
 
 ## 4. Tag-Based Deployment
 
-| Tag              | Ambiente       | Trigger                        |
-|------------------|----------------|--------------------------------|
-| `sviluppo`       | Sviluppo (dev) | Push tag → CD deploy sviluppo  |
-| `COLLAUDO`       | Collaudo (UAT) | Push tag → CD deploy collaudo  |
-| `CERTIFICAZIONE` | Certificazione | Push tag → CD deploy cert      |
-| `PRODUZIONE`     | Produzione     | Push tag → CD deploy prod      |
+| Tag                | Ambiente       | Trigger                        |
+|--------------------|----------------|--------------------------------|
+| `<ENV_TAG_DEV>`    | Sviluppo (dev) | Push tag → CD deploy sviluppo  |
+| `<ENV_TAG_UAT>`    | Collaudo (UAT) | Push tag → CD deploy collaudo  |
+| `<ENV_TAG_CERT>`   | Certificazione | Push tag → CD deploy cert      |
+| `<ENV_TAG_PROD>`   | Produzione     | Push tag → CD deploy prod      |
 
-Qualsiasi tag = rischio CRITICO. Delete + recreate = re-deploy. Il tag **è** il trigger: senza tag niente deploy. Tutti i tag richiedono pre-flight card + ATTENDI CONFERMA ESPLICITA.
+`<ENV_TAG_*>` placeholder = nome tag specifico del progetto (es. SIAE: `sviluppo`, `COLLAUDO`, `CERTIFICAZIONE`, `PRODUZIONE`). Qualsiasi tag = rischio CRITICO. Delete + recreate = re-deploy. Il tag **è** il trigger: senza tag niente deploy. Tutti i tag richiedono pre-flight card + ATTENDI CONFERMA ESPLICITA.
 CI/CD: reusable Actions da `itsiae/siae-gh-actions` (v2.x). IaC: Makefile (`make deploy-{ambiente}`).
 
 ## 5. Merge Strategy
@@ -167,8 +167,9 @@ Merge e tag sono step SEPARATI con card SEPARATE — non accorpare in un'unica c
 
 ```bash
 # card ALTO merge + ATTENDI → git checkout collaudo && git merge sviluppo
-# card CRITICO tag + ATTENDI → git tag COLLAUDO && git push origin COLLAUDO
+# card CRITICO tag + ATTENDI → git tag <ENV_TAG_UAT> && git push origin <ENV_TAG_UAT>
 # Ripeti per certificazione → produzione
+# es. SIAE: <ENV_TAG_UAT>=COLLAUDO, <ENV_TAG_CERT>=CERTIFICAZIONE, <ENV_TAG_PROD>=PRODUZIONE
 ```
 
 ## Hotfix e Rollback
@@ -183,7 +184,7 @@ git push origin hotfix/{JIRA-ID}-descrizione
 # → PR verso produzione (merge commit, review obbligatoria)
 # Deploy: card ALTO merge + ATTENDI, poi card CRITICO tag + ATTENDI
 git checkout produzione && git merge --no-ff hotfix/{JIRA-ID}-descrizione
-git tag PRODUZIONE && git push origin PRODUZIONE
+git tag <ENV_TAG_PROD> && git push origin <ENV_TAG_PROD>
 # Back-merge obbligatorio
 git checkout sviluppo && git merge --no-ff hotfix/{JIRA-ID}-descrizione && git push origin sviluppo
 ```
@@ -192,16 +193,16 @@ git checkout sviluppo && git merge --no-ff hotfix/{JIRA-ID}-descrizione && git p
 
 ```bash
 git revert {SHA_COMMIT} --no-edit && git push origin produzione
-git tag PRODUZIONE -f && git push origin PRODUZIONE -f
+git tag <ENV_TAG_PROD> -f && git push origin <ENV_TAG_PROD> -f
 ```
 
 Se revert non praticabile — re-tag su commit stabile (operazione **CRITICO**, card + ATTENDI ad ogni step):
 
 ```bash
 # Solo dopo "sì, procedi" sulla card CRITICO:
-git push origin :refs/tags/PRODUZIONE   # rimozione tag (trigga rollback)
-git tag PRODUZIONE {SHA_COMMIT_STABILE}
-git push origin PRODUZIONE              # richiede SECONDA card CRITICO + ATTENDI
+git push origin :refs/tags/<ENV_TAG_PROD>   # rimozione tag (trigga rollback)
+git tag <ENV_TAG_PROD> {SHA_COMMIT_STABILE}
+git push origin <ENV_TAG_PROD>              # richiede SECONDA card CRITICO + ATTENDI
 ```
 
 Non concatenare i 3 step automaticamente. Apri ticket JIRA subito: il rollback è temporaneo.
