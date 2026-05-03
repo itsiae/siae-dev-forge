@@ -20,18 +20,18 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | tdd trigger keyword reduction (20+ → 5-8) + CHANGELOG removed list | `task-01-tdd-trigger-reduction.md` | [PENDING] |
-| 2 | service-logic-map disambiguazione 2 modalità (frontmatter + flowchart) | `task-02-service-logic-map-disambiguation.md` | [PENDING] |
-| 3 | Subagent `code-reviewer` tool whitelist | `task-03-agent-code-reviewer-tools.md` | [PENDING] |
-| 4 | Subagent `spec-reviewer` tool whitelist | `task-04-agent-spec-reviewer-tools.md` | [PENDING] |
-| 5 | Subagent `mcp-impact-analyst` tool whitelist | `task-05-agent-mcp-impact-analyst-tools.md` | [PENDING] |
-| 6 | Subagent `qa-investigator` tool whitelist | `task-06-agent-qa-investigator-tools.md` | [PENDING] |
-| 7 | Subagent `doc-generator` tool whitelist | `task-07-agent-doc-generator-tools.md` | [PENDING] |
-| 8 | Sequence hint advisory `siae-verification` | `task-08-sequence-hint-verification.md` | [PENDING] |
-| 9 | Sequence hint advisory `siae-architecture` | `task-09-sequence-hint-architecture.md` | [PENDING] |
-| 10 | Sequence hint advisory `siae-finishing-branch` | `task-10-sequence-hint-finishing-branch.md` | [PENDING] |
-| 11 | Smoke test pre-merge: 10 prompt vecchi tdd keyword + diff baseline | `task-11-smoke-test-tdd-regression.md` | [PENDING] |
-| 12 | Final validation (5/5 agent whitelist, frontmatter coherent, KPI globali) | `task-12-validation.md` | [PENDING] |
+| 1 | tdd trigger keyword reduction (20+ → 5-8) + CHANGELOG removed list | `task-01-tdd-trigger-reduction.md` | [DONE] |
+| 2 | service-logic-map disambiguazione 2 modalità (frontmatter + flowchart) | `task-02-service-logic-map-disambiguation.md` | [DONE] |
+| 3 | Subagent `code-reviewer` tool whitelist | `task-03-agent-code-reviewer-tools.md` | [DONE] |
+| 4 | Subagent `spec-reviewer` tool whitelist | `task-04-agent-spec-reviewer-tools.md` | [DONE] |
+| 5 | Subagent `mcp-impact-analyst` tool whitelist | `task-05-agent-mcp-impact-analyst-tools.md` | [DONE] |
+| 6 | Subagent `qa-investigator` tool whitelist | `task-06-agent-qa-investigator-tools.md` | [DONE] |
+| 7 | Subagent `doc-generator` tool whitelist | `task-07-agent-doc-generator-tools.md` | [DONE] |
+| 8 | Sequence hint advisory `siae-verification` | `task-08-sequence-hint-verification.md` | [DONE] |
+| 9 | Sequence hint advisory `siae-architecture` | `task-09-sequence-hint-architecture.md` | [DONE] |
+| 10 | Sequence hint advisory `siae-finishing-branch` | `task-10-sequence-hint-finishing-branch.md` | [DONE] (verify-only, già fatto PR-4 task 06) |
+| 11 | Smoke test pre-merge: 10 prompt vecchi tdd keyword + diff baseline | `task-11-smoke-test-tdd-regression.md` | [BLOCKED] AWS Bedrock runtime |
+| 12 | Final validation (5/5 agent whitelist, frontmatter coherent, KPI globali) | `task-12-validation.md` | [DONE] |
 
 ## Dipendenze
 
