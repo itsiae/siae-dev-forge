@@ -150,13 +150,32 @@ allo Step 4.
 
 Esegui in PARALLELO (singolo messaggio, multipli tool call):
 
-- `mcp__sport-kg__service_full_context(service, hours=24)` — topology + DB + health
+- `mcp__sport-kg__service_full_context(service, hours=24)` — topology + DB + health (include `batch_jobs[]`, `business_rules[]` se presenti — sport-kg v2)
 - `mcp__sport-kg__service_health(service, hours=24)` — error rate per livello
 - `mcp__sport-kg__debug_service(service, hours=24, keyword=<topic>)` — top eccezioni
-- `mcp__sport-kg__who_calls(service, identifier_type=endpoint|class, identifier=...)` — caller statici + ES
+- `mcp__sport-kg__who_calls(service, identifier_type=endpoint|class, identifier=...)` — caller statici + ES (include `ExternalSystem` M2M con `<userId>_<sourceSystem>` — Onda 10)
+- `mcp__sport-kg__graph_consistency_check(service)` — drift KG↔ES (auth/DTO/schedule). Se ritorna `INCONSISTENT`, listare i mismatch nei vincoli. Se MCP non disponibile, skip silenzioso.
 
 Estrai dai risultati: top 3 endpoint hot, error rate, top eccezioni, caller dormienti
-(0 traffico 30gg), Kafka producers/consumers, tabelle DB toccate.
+(0 traffico 30gg), Kafka producers/consumers, tabelle DB toccate, **BatchJob attivi**
+(da `service_full_context.batch_jobs[]`), **BusinessRule attive** (da
+`service_full_context.business_rules[]`), **ExternalSystem M2M caller**
+(da `who_calls` con `discovered_via=inbound_principal`), **drift signals**
+(da `graph_consistency_check`).
+
+#### Condizionale: task auth-touching
+
+Se la modifica tocca autenticazione/autorizzazione (es. modifica filtro Spring Security,
+nuovo header auth, integrazione IdP), aggiungi al wide scan:
+
+- `mcp__sport-kg__who_authenticates(service)` — IdP primary + additional + M2M registrati (Onda 9)
+
+#### Condizionale: task business-rule-touching
+
+Se la modifica tocca regole Drools/Kogito (file `.drl`, `KieSession`, package rule),
+aggiungi al wide scan:
+
+- `mcp__sport-kg__list_rules(service_filter=<service>)` — enumera BusinessRule (Onda 6)
 
 ### Step 4 — Drill-down (condizionale, rischio MEDIO/ALTO)
 
@@ -196,6 +215,11 @@ al design doc.
 **Volumi stimati downstream:**
 - <servizio>: +<N> req/24h (<frazione>% carico attuale)
 
+**Batch jobs:** <list di BatchJob con name + cron + last_seen, o "nessuno">
+**Business rules:** <list di BusinessRule con package + activation_count, o "nessuna">
+**External callers M2M:** <list di ExternalSystem userId+sourceSystem, o "nessuno">
+**Drift signals (KG↔ES):** <list mismatch da graph_consistency_check, o "consistent">
+
 **Ipotesi non verificate (da grep nel codice):**
 - <ipotesi>
 
@@ -211,6 +235,8 @@ al design doc.
 - "Decisione richiesta" deve essere actionable: chi decide, cosa decide, quando.
 - "Ipotesi non verificate" punta a cose che richiedono grep nel codice (es. "Hystrix configurato sul Feign client X?", "@Transactional racchiude la chiamata REST?").
 - Confidence: HIGH se Neo4j+ES+Oracle tutti OK, MEDIUM se 1-2 source N/A, LOW se solo 1 source disponibile.
+- "Batch jobs/Business rules/External callers M2M" → ometti la riga se la lista è vuota e il servizio non ha mai avuto questi nodi (evita "nessuno" se confonde). Scrivi "nessuno" SOLO se il KG ha esplicitamente cercato e non trovato.
+- "Drift signals" → "consistent" se graph_consistency_check ritorna OK; lista mismatch se INCONSISTENT; "n/d" se MCP non ha risposto.
 
 ---
 
@@ -224,6 +250,9 @@ al design doc.
 | Endpoint con 0 caller 30gg ma 100k+ req/24h | Etichetta come "external traffic", non bug |
 | `service_full_context` 50KB+ output | Pull, ma estrai solo: top 3 endpoint, error rate, top 5 eccezioni, kafka, callers |
 | `describe_service` non mostra metriche req/24h per endpoint | Combina con `service_full_context` |
+| `graph_consistency_check` ritorna `INCONSISTENT` | Listare mismatch nei vincoli; non auto-risolvere — è human-decision |
+| Servizio mappato in v2 ma client v1 | Envelope D1 additive: leggi i campi se presenti, ometti sezioni se assenti |
+| Blast-radius richiede prova di assenza (no false negative) | Preferire `*_prove_absent` variants invece di default tool |
 
 ---
 
