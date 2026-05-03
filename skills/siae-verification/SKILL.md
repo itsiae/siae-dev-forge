@@ -24,7 +24,8 @@ NESSUN CLAIM DI COMPLETAMENTO SENZA EVIDENZA FRESCA
 
 <EXTREMELY-IMPORTANT>
 Affermare che il lavoro e' completo senza verifica e' disonesta', non efficienza.
-Questa skill e' NON NEGOZIABILE. Si applica SEMPRE, senza eccezioni.
+Questa skill si applica nei contesti rilevanti — vedi sezione **Eccezioni & proporzionalita'**
+per la matrice scaled (typo/comment/doc → check minimi; feature nuova → full battery).
 </EXTREMELY-IMPORTANT>
 
 ## Context-First Rule (canonical)
@@ -39,7 +40,23 @@ Questa regola e' riferita da tutte le altre skill DevForge — qui e' la version
 
 **SEMPRE** prima di: dichiarare un task "completato"/"fatto", creare un commit, aprire/aggiornare una PR,
 dire "funziona"/"fixato"/"passano"/"pronto", qualsiasi affermazione di successo.
-Se stai per dire una di queste cose, **FERMATI** e segui i 5 step.
+Se stai per dire una di queste cose, **considera di fermarti** e segui i 5 step
+(o la versione scaled in **Eccezioni & proporzionalita'** per cambi triviali).
+
+## Eccezioni & proporzionalita'
+
+La verifica deve essere **proporzionata al rischio del cambio**. Non tutti i cambi richiedono full battery di test.
+
+| Tipo cambio | Verifica richiesta |
+|---|---|
+| Typo fix in commento o doc | Sintassi check (no test funzionali) |
+| Comment-only change | Diff review, no test |
+| Doc update (README, CHANGELOG) | Lint markdown, no test |
+| Config rename (no semantic change) | Smoke test feature interessata |
+| Bug fix isolato | Test unit + smoke test feature |
+| Feature nuova / cross-module | Full battery (unit + integration + smoke) |
+
+**Default**: piuttosto verificare in eccesso che in difetto. Ma in ottica DX, evita cerimoniale per cambi triviali.
 
 ## Scaling — Verifica Proporzionata al Task
 
