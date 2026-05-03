@@ -242,6 +242,75 @@ Estrai questi campi dalla response di `describe_service` o
 Se i campi sono assenti (KG v1 ancora deployato), **OMETTI** il footer —
 non scrivere "n/d".
 
+#### Authentication chain (Onda 9)
+
+Nella sezione "Security" dell'HLD, aggiungi un blocco "Authentication chain"
+con dati da `who_authenticates`. Queste istruzioni dicono all'agent come
+arricchire la sezione Security del template HLD generato (NON modifichiamo un
+HLD esistente — istruiamo l'agent a generare contenuto aggiuntivo).
+
+**Discovery**:
+
+```
+mcp__sport-kg__who_authenticates(service=<target-service>)
+```
+
+**Output template** (markdown da inserire in HLD):
+
+```markdown
+##### Authentication chain
+
+| Categoria | Valore |
+|---|---|
+| **IdP primary** | <idp_primary o "n/d"> |
+| **Additional IdP** | <list o "nessuno"> |
+| **Registered M2M callers** | <list di userId+sourceSystem o "nessuno"> |
+| **Confidence** | <HIGH/MEDIUM/LOW> |
+| **Observed at** | <ISO8601 da envelope D1> |
+```
+
+**Note**:
+- Se `who_authenticates` ritorna `applicable=false` (servizio non auth-aware),
+  **OMETTI** il blocco intero. Non scrivere "nessuna auth" — è informazione
+  fuorviante.
+- "Registered M2M callers" deduplicare per userId (può apparire con sourceSystem
+  multipli — es. `OPCON_M2M_CONC` e `OPCON_M2M_DIGITAL`).
+
+#### Domain rules (Onda 6)
+
+Se il servizio ospita BusinessRule (Drools/Kogito), genera una sezione dedicata
+nell'HLD (posizione consigliata nel template: dopo "Domain model" o prima di
+"Security").
+
+**Discovery**:
+
+```
+mcp__sport-kg__list_rules(service_filter=<target-service>)
+```
+
+**Output template** (markdown da inserire in HLD):
+
+```markdown
+##### Domain rules
+
+| Package | Rule name | Activation pattern | Salience |
+|---|---|---|---|
+| <package> | <rule_name> | <when_summary> | <salience> |
+| ... (top 10 più rilevanti) | | | |
+
+*Totale rules: <count>. Per drill-down completo, consultare
+`mcp__sport-kg__describe_rule(<rule_id>)` o repo `<service-name>` directory
+`src/main/resources/rules/`.*
+```
+
+**Note**:
+- Limita a top 10 per package o per salience desc (HLD non è il posto per
+  dump di 22.257 rules — link al repo è sufficiente per tail)
+- Se `list_rules` ritorna 0 rules per il servizio, **OMETTI** la sezione
+- Se `list_rules` non disponibile (Onda 6 non installata), aggiungi nota
+  "Rules: vedi `<service-name>/src/main/resources/rules/` (introspection KG
+  non disponibile)"
+
 ### Step 4 — Presentazione e revisione
 
 Mostra il documento completo all'utente in Markdown. Chiedi se vuole:
