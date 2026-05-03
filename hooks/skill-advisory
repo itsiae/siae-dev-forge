@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Skill Advisory Hook — PostToolUse event
+# Suggerisce skill prerequisita SE mancante nello state file.
+# NEVER blocca: exit 0 sempre, output via additionalContext stdout.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/skill-advisory-helpers.sh
+source "$SCRIPT_DIR/lib/skill-advisory-helpers.sh"
+
+# Hook receives JSON via stdin (Claude Code hook protocol)
+# Extract tool_name and tool_input.skill_name (if applicable)
+INPUT="$(cat)"
+
+SKILL_NAME=$(echo "$INPUT" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    skill = data.get('tool_input', {}).get('skill', '') or data.get('tool_input', {}).get('skill_name', '')
+    # Strip plugin namespace prefix
+    if ':' in skill:
+        skill = skill.split(':', 1)[1]
+    print(skill)
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+
+[ -z "$SKILL_NAME" ] && exit 0  # Not a skill invocation, silent pass
+
+SUGGESTION=$(suggestion_for "$SKILL_NAME")
+
+if [ -n "$SUGGESTION" ]; then
+    # Output additionalContext (max 2KB) — Claude Code hook protocol
+    cat <<EOF
+{
+  "additionalContext": "[skill-advisory] $SUGGESTION"
+}
+EOF
+fi
+
+exit 0  # Always 0 — non-blocking
