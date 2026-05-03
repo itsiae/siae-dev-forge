@@ -21,9 +21,9 @@
 | # | Task | File | Stato |
 |---|------|------|-------|
 | 1 | Baseline measurement (line count + leakage grep + skill-activation snapshot) | `task-01-baseline.md` | [DONE] |
-| 2 | Strip leakage `siae-service-logic-map` line 10 | `task-02-strip-leakage-service-logic-map.md` | [PENDING] |
-| 3 | Strip leakage `siae-microservices-map` line 6 | `task-03-strip-leakage-microservices-map.md` | [PENDING] |
-| 4 | Strip leakage `siae-git-workflow` PRODUZIONE/CERTIFICAZIONE | `task-04-strip-leakage-git-workflow.md` | [PENDING] |
+| 2 | Strip leakage `siae-service-logic-map` line 10 | `task-02-strip-leakage-service-logic-map.md` | [DONE] |
+| 3 | Strip leakage `siae-microservices-map` line 6 | `task-03-strip-leakage-microservices-map.md` | [DONE] |
+| 4 | Strip leakage `siae-git-workflow` PRODUZIONE/CERTIFICAZIONE | `task-04-strip-leakage-git-workflow.md` | [DONE] |
 | 5 | Refactor `siae-debugging` (progressive disclosure + description rewrite) | `task-05-refactor-debugging.md` | [PENDING] |
 | 6 | Refactor `siae-finishing-branch` (PD + DR) | `task-06-refactor-finishing-branch.md` | [PENDING] |
 | 7 | Refactor `siae-writing-plans` (PD + DR) | `task-07-refactor-writing-plans.md` | [PENDING] |
