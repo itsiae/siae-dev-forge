@@ -244,8 +244,10 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 
 **Risposta sintetica (1-2 frasi)**: <claim principale>
 
-**Confidence**: HIGH | MEDIUM | LOW
-**Stato hint utente** (se l'utente ha fornito un'ipotesi): CONFIRMED | PARTIAL | REFUTED
+**Confidence**: HIGH | MEDIUM | LOW (inference_type=<value from envelope D1>)
+**Freshness**: observed_at=<ISO8601> · ttl_hint=<seconds> (se KG v2 risponde)
+**Stato hint utente** (se l'utente ha fornito un'ipotesi): CONFIRMED | PARTIAL | NOT_FOUND_IN_INDEX | PROVEN_ABSENT_UNDER_SCOPE | REFUTED
+**scope_completeness**: full | incomplete | n/d (da envelope se presente)
 
 ### Evidenze per claim
 
@@ -280,6 +282,29 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 - **Confidence HIGH** solo se almeno 2 fonti concordi (es. KG + ES, o code + ES).
 - **Evidence type `inference`**: usato per claim derivati ma non direttamente osservati. Esempio: "il pattern `<UUID>@<timestamp>` indica IdP custom SIAE" → inference, perche' nessun tool ha ritornato esplicitamente "IdP=AAS".
 - **Stato hint utente** obbligatorio se l'utente ha fornito un'aspettativa nel prompt (es. "dovrebbe essere SAP via M2M"). Possibili: CONFIRMED (evidenze allineate), PARTIAL (alcune sotto-affermazioni vere, altre no), REFUTED (evidenze contrarie).
+
+### Mapping legacy v1 → v2 (dual-format 60gg)
+
+Per la finestra di deprecation 60gg (28-apr → 27-giu 2026), il MCP può ancora
+ritornare valori v1 legacy. Mapping da applicare PRIMA di scrivere il report:
+
+| MCP ritorna v1 | scope_completeness | Agent scrive v2 | Nota |
+|---|---|---|---|
+| `"NOT_EXISTS"` | qualsiasi | `NOT_FOUND_IN_INDEX` | Mapping D2 § 2.3 |
+| `"REFUTED"` | `incomplete` | `NOT_FOUND_IN_INDEX` | Aggiungi nota "legacy v1 mapped" |
+| `"REFUTED"` | `full` | `REFUTED` | Match diretto |
+| `"REFUTED"` | assente (v1 puro) | `NOT_FOUND_IN_INDEX` | Conservativo: assenza non dimostrata |
+| `"CONFIRMED"` | qualsiasi | `CONFIRMED` | Match diretto |
+| `"PARTIAL"` | qualsiasi | `PARTIAL` | Match diretto |
+| valore sconosciuto | qualsiasi | `PARTIAL` + nota "unknown enum value <X>" | Defensive |
+
+### Semantica enum v2
+
+- **`CONFIRMED`**: 2+ fonti concordi, claim verificato
+- **`PARTIAL`**: alcune sotto-affermazioni vere, altre n/d (parzialmente verificato)
+- **`NOT_FOUND_IN_INDEX`**: KG/ES non hanno la entity, MA scope ricerca limitato. **≠ assenza**, è "fuori dal nostro scope di ricerca"
+- **`PROVEN_ABSENT_UNDER_SCOPE`**: `*_prove_absent` variants hanno confermato assenza nel scope (richiede `scope_completeness=full` nell'envelope D1)
+- **`REFUTED`**: evidenze contrarie all'hint utente (KG ha A, hint diceva B)
 
 ---
 
@@ -342,6 +367,8 @@ nessun problema.
 5. **Cita sempre evidenze**: ogni claim ha file:line, tool:result, o ES query come fonte.
 6. **Itera prima di concludere**: se la prima query non risponde, rilancia con parametri diversi (window 30gg invece di 7gg, alias service name, ecc.) prima di dichiarare gap.
 7. **Hint utente come direzione, non verita'**: l'utente puo' sbagliare. Valida sempre con evidenze. Esempio osservato (sessione 2026-04-29): hint "opcon-batch processa notifica_movimento" REFUTED — il batch reale e' `sport-batch-service`.
+8. **Hint user "non esiste" → preferire `*_prove_absent` variants**: se l'utente afferma "X non esiste", non basta che il default tool non lo trovi. Usa la variant `*_prove_absent` (es. `who_calls_prove_absent`) per disambiguare assenza dimostrata vs ricerca incompleta. Se la variant non è disponibile, scrivi `NOT_FOUND_IN_INDEX` (non `REFUTED`).
+9. **Status enum v2 vs v1 legacy**: leggi sempre `scope_completeness` se presente. Se assente (v1 puro), assumi `incomplete` e mappa `REFUTED` → `NOT_FOUND_IN_INDEX` per essere conservativi.
 
 ---
 
@@ -358,6 +385,9 @@ nessun problema.
 | "Posso skip lo scratchpad se sono solo" | NO — scrivilo comunque. La prossima sessione potrebbe usarlo. |
 | "Top hypothesis di alternate_hypotheses è la verità" | NO — è un primitivo MCP-side che ranks ipotesi. La verità si stabilisce con evidence concorrenti, non con score. Cita score come `inference`, non come fatto. |
 | "Posso skip alternate_hypotheses se il sample concorda" | OK skip se evidence è univoca. Usa solo se ambigua (cap raggiunto, sourceSystem multipli, KG↔ES divergenti). |
+| "PARTIAL e NOT_FOUND_IN_INDEX sono sinonimi" | NO — `PARTIAL` = parzialmente verificato; `NOT_FOUND_IN_INDEX` = fuori dal nostro scope di ricerca. Distinzione critica per design downstream. |
+| "REFUTED legacy = REFUTED v2" | NO — leggi `scope_completeness`. Se assente o `incomplete`, mappa a `NOT_FOUND_IN_INDEX` (conservativo). |
+| "Posso saltare il mapping legacy" | NO — finestra dual-format 60gg attiva (28-apr → 27-giu). Applica sempre il mapping prima di scrivere il report. |
 
 ---
 
