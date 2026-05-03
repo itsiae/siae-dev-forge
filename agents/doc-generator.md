@@ -180,6 +180,68 @@ Leggi e analizza il codice in modo sistematico:
    - `#999999` — Sistema esterno
 5. Compila la metadata del documento (versione, data, autore, stato)
 
+### Step 3a — Istruzioni HLD generation v2 (sport-kg v2)
+
+Queste istruzioni si applicano **solo se** stai generando un HLD per un servizio
+SIAE mappato nel KG (vedi Step 0 per la lista prefissi). Sono additive rispetto
+al template HLD standard: arricchiscono il C4 Container e la cover page con
+informazioni provenienti dai nuovi nodi sport-kg v2 (BatchJob Onda 10, envelope
+D1 freshness).
+
+#### Swim lane "Batch Schedulers" (Onda 10)
+
+Se il servizio target ha BatchJob (@Scheduled, cron, scheduler), aggiungi una
+swim lane dedicata nel C4 Container diagram.
+
+**Discovery**:
+1. Chiama `mcp__sport-kg__describe_service(<service>)` ed estrai `batch_jobs[]`
+   se presente
+2. Se assente, chiama `mcp__sport-kg__find_batch_for_keyword(<service-domain>)`
+   per discovery alternativa
+3. Se entrambi vuoti, **OMETTI** la swim lane (no "nessun batch" in HLD —
+   è rumore informativo)
+
+**PlantUML pattern** (se BatchJob trovati):
+
+```plantuml
+@startuml
+package "Batch Schedulers" as Batch <<scheduler>> {
+    component "<batch_name_1>" as B1 <<@Scheduled>> {
+        note right: cron: <cron_expr>
+    }
+    component "<batch_name_2>" as B2 <<@Scheduled>> {
+        note right: cron: <cron_expr>
+    }
+}
+Batch --> Service : triggers
+@enduml
+```
+
+**Naming**: usa il nome esatto della classe Java/metodo `@Scheduled` da KG.
+Cron expression nel `note right`.
+
+#### Footer freshness (envelope D1)
+
+Inserisci alla fine della cover page dell'HLD (o nel footer del documento):
+
+```markdown
+---
+*Topologia osservata a `<observed_at ISO8601>` — TTL stimato `<ttl_hint_seconds>`s
+(da sport-kg v2 envelope D1). Per topology aggiornata, ri-generare l'HLD dopo
+`<ttl_expiration ISO8601>`.*
+```
+
+**Source fields**:
+- `observed_at` — ISO8601 timestamp dell'ultima indicizzazione KG
+- `ttl_hint_seconds` — TTL stimato per ri-fetch topology (es. 86400 = 24h)
+- `ttl_expiration` — calcolato come `observed_at + ttl_hint_seconds`
+
+Estrai questi campi dalla response di `describe_service` o
+`service_full_context` (envelope D1, sport-kg v2).
+
+Se i campi sono assenti (KG v1 ancora deployato), **OMETTI** il footer —
+non scrivere "n/d".
+
 ### Step 4 — Presentazione e revisione
 
 Mostra il documento completo all'utente in Markdown. Chiedi se vuole:
