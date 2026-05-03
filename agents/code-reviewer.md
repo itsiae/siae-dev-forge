@@ -241,6 +241,51 @@ Verifica:
 - Mancanza di retry/circuit breaker per chiamate esterne
 - IaC mancante per risorse create (ogni risorsa AWS deve avere il suo Terragrunt)
 
+#### Sotto-checklist 4.X — Drift KG↔codice (D3, opzionale)
+
+Se la review tocca un servizio SIAE mappato in sport-kg, esegui cross-check
+drift architetturale:
+
+```
+mcp__sport-kg__graph_consistency_check(service=<service-name>)
+```
+
+**Interpretazione output**:
+
+| Status | Significato | Azione review |
+|---|---|---|
+| `CONSISTENT` | KG e codice/runtime allineati | ✅ Nessuna azione |
+| `INCONSISTENT` | Drift rilevato (auth/DTO/schedule) | ⚠️ Listare mismatch nei findings come **BLOCK** se drift è in scope della PR; come **WARN** se preesistente |
+| `INSUFFICIENT_DATA` | KG non ha dati sufficienti per consistency check | 📝 Nota nei findings, no blocco |
+
+**Pattern findings**:
+
+```markdown
+**4.X — Drift KG↔codice**: <CONSISTENT/INCONSISTENT/INSUFFICIENT_DATA>
+
+[Se INCONSISTENT]
+Mismatch rilevati:
+- <signal_1>: KG dice <X>, codice/ES dice <Y>
+- <signal_2>: ...
+
+Severity: <BLOCK se drift introdotto da PR / WARN se preesistente>
+```
+
+**Fallback (no MCP)**:
+Se `ToolSearch` non ha caricato `graph_consistency_check` o il tool ritorna
+errore, **skip silenzioso**. La review continua senza cross-check (status:
+"KG cross-check non disponibile" nei findings opzionale, mai bloccante).
+
+**Quando NON eseguire**:
+- Servizio non mappato in KG (prefissi non `sport-*/pop-*/pae-*/ciam-*/...`)
+- PR su file non architetturali (es. solo test, solo docs, solo config minor)
+- Review express/tactical (focus solo Point 1+2 per fix puntuali)
+
+**Anti-pattern (drift KG↔codice)**:
+- ❌ Trattare `INCONSISTENT` come BLOCK automatico senza verificare se il drift è nello scope della PR. Una drift preesistente non bloccata da review precedenti non diventa colpa della PR corrente — segnalalo come WARN tracciabile.
+- ❌ Ignorare `INSUFFICIENT_DATA` come "tutto ok". È un signal che il KG non sta osservando il servizio — vale la pena capire perché (refresh KG? servizio dormiente?).
+- ❌ Skippare il check perché "MCP probabilmente non c'è" — tenta sempre `ToolSearch`, fallback solo se errore reale.
+
 ---
 
 ### Punto 5: Code Quality
