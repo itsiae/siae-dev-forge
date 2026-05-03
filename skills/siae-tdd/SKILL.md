@@ -1,11 +1,11 @@
 ---
 name: siae-tdd
 description: >
-  Guida il ciclo TDD per qualsiasi scrittura di codice di produzione. Test PRIMA
-  del codice, sempre.
-  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura di
-  codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint, scrivi
-  funzione, implementa, codifica, sviluppa.
+  Use when implementing production code (feature, bug fix, refactor). Enforces
+  Red-Green-Refactor cycle: failing test BEFORE implementation, every time.
+  Trigger: implementazione feature, bug fix, refactoring, qualsiasi scrittura
+  di codice, aggiungi metodo, crea classe, modifica logica, nuovo endpoint,
+  scrivi funzione, implementa, codifica, sviluppa.
 validates_via:
   predicate: tdd_red_green_observed
   evidence_type: state_file
