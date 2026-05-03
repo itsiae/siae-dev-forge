@@ -28,10 +28,10 @@ NB: design doc cita "39 skill" come stima preliminare; conta reale `ls skills/` 
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Setup `tests/skill-activation/` directory + README + cost-cap doc | `task-01-test-scaffold.md` | [PENDING] |
-| 2 | Scrivi `cases.yml` (30 prompt rappresentativi) | `task-02-cases-yml.md` | [PENDING] |
-| 3 | Scrivi `run.sh` (Bedrock runner Sonnet 4.6 / Haiku fallback) | `task-03-run-sh.md` | [PENDING] |
-| 4 | Scrivi `evaluator.py` (output parser + match logic + report markdown) | `task-04-evaluator-py.md` | [PENDING] |
+| 1 | Setup `tests/skill-activation/` directory + README + cost-cap doc | `task-01-test-scaffold.md` | [DONE] |
+| 2 | Scrivi `cases.yml` (30 prompt rappresentativi) | `task-02-cases-yml.md` | [DONE] |
+| 3 | Scrivi `run.sh` (Bedrock runner Sonnet 4.6 / Haiku fallback) | `task-03-run-sh.md` | [DONE] |
+| 4 | Scrivi `evaluator.py` (output parser + match logic + report markdown) | `task-04-evaluator-py.md` | [DONE] |
 | 5 | Smoke test runner end-to-end con 3 prompt (validazione setup) | `task-05-smoke-test.md` | [PENDING] |
 | 6 | Run baseline completa 30 prompt + commit `baseline-2026-05-03.md` | `task-06-baseline-run.md` | [PENDING] |
 | 7 | Description audit batch 1 (skill 1-13: backbone già fatte PR-4 verifica + early non-backbone) | `task-07-description-audit-batch1.md` | [PENDING] |
