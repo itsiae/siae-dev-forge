@@ -57,10 +57,11 @@ for c in cases:
 
   echo "=== $id ==="
 
-  # Build Bedrock payload
+  # Build Bedrock payload — M2 fix: pass SKILL_CTX path as argv[2]
+  # to prevent shell expansion fragility when path contains apostrophes/spaces.
   payload=$(python3 -c "
 import json, sys
-ctx = open('$SKILL_CTX').read()
+ctx = open(sys.argv[2], encoding='utf-8').read()
 prompt = sys.argv[1]
 body = {
     'anthropic_version': 'bedrock-2023-05-31',
@@ -69,8 +70,8 @@ body = {
     'system': ctx,
     'messages': [{'role': 'user', 'content': prompt}]
 }
-print(json.dumps(body))
-" "$prompt")
+print(json.dumps(body, ensure_ascii=False))
+" "$prompt" "$SKILL_CTX")
 
   # Invoke Bedrock (via aws cli)
   resp=$(aws bedrock-runtime invoke-model \

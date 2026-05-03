@@ -31,12 +31,17 @@ except Exception:
 SUGGESTION=$(suggestion_for "$SKILL_NAME")
 
 if [ -n "$SUGGESTION" ]; then
-    # Output additionalContext (max 2KB) — Claude Code hook protocol
-    cat <<EOF
-{
-  "additionalContext": "[skill-advisory] $SUGGESTION"
-}
-EOF
+    # M1 fix code-review: truncate to ~1900 char per stay under additionalContext 2KB cap
+    # (Claude Code hook protocol limite). Suffix "..." se troncato.
+    if [ "${#SUGGESTION}" -gt 1900 ]; then
+        SUGGESTION="${SUGGESTION:0:1897}..."
+    fi
+    # JSON-safe escape via python (handles quotes, backslash, newline, unicode).
+    PAYLOAD=$(python3 -c '
+import json, sys
+print(json.dumps({"additionalContext": "[skill-advisory] " + sys.argv[1]}))
+' "$SUGGESTION" 2>/dev/null)
+    [ -n "$PAYLOAD" ] && echo "$PAYLOAD"
 fi
 
 exit 0  # Always 0 — non-blocking

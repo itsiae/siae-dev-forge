@@ -1,6 +1,11 @@
-# tests/skill-activation/cases.yml
+# tests/skill-activation/cases.yml (v2 — backbone-first expected)
 # 30 prompt rappresentativi per misurare skill activation accuracy
 # Format: id, prompt, expected_primary, expected_chain (optional), forbidden (optional)
+#
+# v2 (2026-05-03): aggiornato expected_primary a backbone-first per case dove
+# il modello correttamente attiva siae-brainstorming canonico (memory feedback:
+# "siae-brainstorming SEMPRE per QUALSIASI task implementativo, zero eccezioni").
+# Skill specialistiche (architecture/frontend/jasper) AGGANCIANO al backbone via chain.
 
 # === Bug/debug (8) ===
 - id: bug-npe-endpoint
@@ -74,6 +79,7 @@
 - id: feature-jasper-from-pdf
   prompt: "ricostruisci template JasperReports da questo PDF"
   expected_primary: siae-brainstorming
+  expected_chain: [siae-brainstorming, siae-jasper-from-pdf]
 
 # === Verification/PR (6) ===
 - id: verify-fix-works
@@ -102,13 +108,18 @@
   expected_primary: siae-receiving-review
 
 # === Architecture/microservices (4) ===
+# NB: arch-* deviano a siae-brainstorming per design (backbone-first canonico).
+# siae-architecture è skill specialistica che si AGGANCIA al backbone via chain
+# (memory: "siae-brainstorming SEMPRE per QUALSIASI task implementativo").
 - id: arch-c4-system
   prompt: "creiamo il C4 model per il sistema di gestione licenze"
-  expected_primary: siae-architecture
+  expected_primary: siae-brainstorming
+  expected_chain: [siae-brainstorming, siae-architecture]
 
 - id: arch-bounded-context
   prompt: "definiamo i bounded context per il dominio pagamenti"
-  expected_primary: siae-architecture
+  expected_primary: siae-brainstorming
+  expected_chain: [siae-brainstorming, siae-architecture]
 
 - id: ms-map-system
   prompt: "mappa il sistema a microservizi del dominio sport"
@@ -119,9 +130,12 @@
   expected_primary: siae-service-logic-map
 
 # === Misc (4) ===
+# frontend-vue-component devia a brainstorming (canonico per nuove feature),
+# siae-frontend è skill specialistica che si AGGANCIA via chain.
 - id: frontend-vue-component
   prompt: "creo un componente Vue.js per drag & drop file upload"
-  expected_primary: siae-frontend
+  expected_primary: siae-brainstorming
+  expected_chain: [siae-brainstorming, siae-frontend, siae-tdd]
 
 - id: iac-terraform-vpc
   prompt: "modifico il modulo Terraform per aggiungere subnet private alla VPC"
