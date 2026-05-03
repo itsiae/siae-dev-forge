@@ -24,11 +24,11 @@
 | 2 | Strip leakage `siae-service-logic-map` line 10 | `task-02-strip-leakage-service-logic-map.md` | [DONE] |
 | 3 | Strip leakage `siae-microservices-map` line 6 | `task-03-strip-leakage-microservices-map.md` | [DONE] |
 | 4 | Strip leakage `siae-git-workflow` PRODUZIONE/CERTIFICAZIONE | `task-04-strip-leakage-git-workflow.md` | [DONE] |
-| 5 | Refactor `siae-debugging` (progressive disclosure + description rewrite) | `task-05-refactor-debugging.md` | [PENDING] |
-| 6 | Refactor `siae-finishing-branch` (PD + DR) | `task-06-refactor-finishing-branch.md` | [PENDING] |
-| 7 | Refactor `siae-writing-plans` (PD + DR) | `task-07-refactor-writing-plans.md` | [PENDING] |
-| 8 | Refactor `siae-executing-plans` (PD + DR) | `task-08-refactor-executing-plans.md` | [PENDING] |
-| 9 | Refactor `siae-brainstorming` (PD + DR) | `task-09-refactor-brainstorming.md` | [PENDING] |
+| 5 | Refactor `siae-debugging` (progressive disclosure + description rewrite) | `task-05-refactor-debugging.md` | [DONE] |
+| 6 | Refactor `siae-finishing-branch` (PD + DR) | `task-06-refactor-finishing-branch.md` | [DONE] |
+| 7 | Refactor `siae-writing-plans` (PD + DR) | `task-07-refactor-writing-plans.md` | [DONE] |
+| 8 | Refactor `siae-executing-plans` (PD + DR) | `task-08-refactor-executing-plans.md` | [DONE] |
+| 9 | Refactor `siae-brainstorming` (PD + DR) | `task-09-refactor-brainstorming.md` | [DONE] |
 | 10 | Description rewrite `siae-tdd` (no PD, già <200) | `task-10-rewrite-tdd-description.md` | [PENDING] |
 | 11 | Description rewrite `siae-verification` (no PD) | `task-11-rewrite-verification-description.md` | [PENDING] |
 | 12 | Description rewrite `using-devforge` (no PD) | `task-12-rewrite-using-devforge-description.md` | [PENDING] |
