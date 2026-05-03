@@ -1,7 +1,9 @@
 ---
 name: siae-qa
 description: >
-  Genera documentazione test formale per Xray a completamento implementazione.
+  Use when generating formal Xray test documentation at brainstorming completion
+  (Phase 2) or TDD cycle completion (Phase 5). Genera documentazione test
+  formale per Xray.
   Trigger: completamento brainstorming (Fase 2), completamento ciclo TDD (Fase 5),
   /forge-qa.
 ---

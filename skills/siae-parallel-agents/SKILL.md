@@ -1,7 +1,9 @@
 ---
 name: siae-parallel-agents
 description: >
-  Dispatcha agenti paralleli per debug o task indipendenti simultanei (2+).
+  Use when dispatching 2+ independent parallel agents for debugging,
+  multi-domain investigation, or simultaneous fixes on unrelated modules.
+  Dispatcha agenti paralleli per task indipendenti.
   Trigger: failure indipendenti, task paralleli, fix paralleli, investigazione
   multi-dominio, agenti paralleli, bug indipendenti, moduli rotti contemporaneamente.
 ---

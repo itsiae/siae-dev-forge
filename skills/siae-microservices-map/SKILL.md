@@ -1,7 +1,9 @@
 ---
 name: siae-microservices-map
 description: >
-  Mappa un sistema a microservizi multi-repository (10+ repo) senza allucinare.
+  Use when mapping a multi-repository microservices system (10+ repos)
+  without hallucinating dependencies, or onboarding on a distributed system.
+  Mappa un sistema a microservizi.
   Trigger: "mappa sistema", "sistema a microservizi", "topologia distribuita",
   "dipendenze tra servizi", "chi chiama chi", "topologia sistema",
   /forge-sysmap, onboarding su sistema distribuito.

@@ -1,7 +1,10 @@
 ---
 name: siae-git-workflow
 description: >
-  Gestisce tutte le operazioni git secondo il branch flow SIAE.
+  Use when running any git operation (checkout/commit/push/merge/tag), creating
+  a branch, writing a conventional commit, preparing a deploy, promoting an
+  environment, performing hotfix or rollback. Gestisce tutte le operazioni git
+  secondo il branch flow SIAE.
   Trigger: git checkout -b, git commit, git push, git merge, git tag, creazione
   branch, naming branch, conventional commits, pre-flight card, inizio feature,
   preparazione deploy, promozione ambiente, hotfix, rollback, push remoto,
