@@ -1,11 +1,10 @@
 ---
 name: siae-verification
 description: >
-  Verifica con evidenza prima di qualsiasi dichiarazione di completamento.
-  Nessun "fatto" senza prova.
-  Trigger: prima di commit, PR, task complete, dichiarazioni di successo, "fatto",
-  "fixato", "funziona", "completato", "pronto", "implementato", "risolto",
-  "test passano", "build verde", "tutto ok", "finito".
+  Use when verifying that a fix or change is complete BEFORE declaring it done.
+  Forces evidence-based verification (run tests, check output, confirm behaviour)
+  prima di commit, PR, task complete declarations. Examples: "il fix funziona",
+  "test passano", "ho finito", "tutto ok", "completato", "implementato".
 validates_via:
   predicate: verification_run_passed
   evidence_type: log_event
