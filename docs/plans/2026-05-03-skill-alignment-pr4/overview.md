@@ -32,7 +32,7 @@
 | 10 | Description rewrite `siae-tdd` (no PD, già <200) | `task-10-rewrite-tdd-description.md` | [DONE] |
 | 11 | Description rewrite `siae-verification` (no PD) | `task-11-rewrite-verification-description.md` | [DONE] |
 | 12 | Description rewrite `using-devforge` (no PD) | `task-12-rewrite-using-devforge-description.md` | [DONE] |
-| 13 | Final validation (line count + grep + accuracy diff vs baseline) | `task-13-validation.md` | [PENDING] |
+| 13 | Final validation (line count + grep + accuracy diff vs baseline) | `task-13-validation.md` | [DONE] |
 
 ## Dipendenze
 
