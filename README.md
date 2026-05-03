@@ -269,7 +269,6 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 | `/forge-automate`  | Automation QA: matcha TC Xray, esegue test con appium-mcp (mobile) o Cypress (web)              | `siae-automation`          |
 | `/forge-implement` | Implementa piano con subagent freschi e review a 2 stadi (spec + quality)                       | `siae-subagent-development` |
 | `/forge-doc`       | Genera documentazione tecnica (HLD, LLD, API doc) con template e PlantUML                       | `siae-documentation`       |
-| `/forge-logic-build` | Costruisce catalogo L1+L2+L3 (domain profile + workflow map + business rules) per microservizi | `siae-service-logic-map`   |
 | `/forge-flows`     | Mappa no-regression test flows per repo frontend/mobile (Xray-ready)                            | `siae-nr-test-flows`       |
 | `/forge-cost`, `/forge-finops` | Review costi AWS + stima impatto PR + tag compliance + risorse idle                 | `siae-finops`              |
 | `/forge-jasper`    | Reverse-engineering PDF → JasperReports JRXML con iterazione pixel-diff                         | `siae-jasper-from-pdf`     |
@@ -294,9 +293,6 @@ I comandi sono scorciatoie per invocare le funzionalita' piu' comuni del plugin.
 
 > /forge-doc HLD
 # Claude genera un High Level Design doc con diagrammi C4 in PlantUML
-
-> /forge-logic-build sport-fdc-*
-# Costruisce catalogo L1+L2+L3 per cluster di microservizi
 ```
 
 ---
@@ -308,13 +304,13 @@ che insieme danno una comprensione completa del sistema:
 
 | Skill | Comando | Risponde a | Output |
 |---|---|---|---|
-| `siae-service-logic-map` | `/forge-logic-build` | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile L1+L2+L3 per cluster |
+| `siae-service-logic-map` | (dispatch skill direttamente) | "Cosa fa ogni cluster?" | `docs/logic-catalog/cluster-*.md` — domain profile L1+L2+L3 per cluster |
 | `siae-microservices-map` | `/forge-sysmap` | "Chi chiama chi?" | `docs/SYSTEM_MAP.md` — grafo dipendenze con edge CONFIRMED/INFERRED |
 
-**Workflow tipico (comando singolo):**
+**Workflow tipico (dispatch skill diretto):**
 
 ```
-/forge-logic-build sport-fdc-*
+siae-service-logic-map sport-fdc-*
    → Step 0: cerca SYSTEM_MAP.md — se non esiste, esegue /forge-sysmap automaticamente
    → Step 3: cluster detection dal grafo (evidenza-based, conferma utente)
    → Step 4: pre-fetch dati L1+L2+L3 per cluster + dispatch agenti paralleli
@@ -405,7 +401,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
 
 #### `siae-service-logic-map` — Domain Profile e Workflow Map L1+L2+L3 (Fase 1: Init)
 
-- **Trigger:** "cosa fa `{servizio}`", `/forge-logic-build`, "mappa la logica", "regole business di", "build catalogo", "quali servizi gestiscono X", impact analysis
+- **Trigger:** "cosa fa `{servizio}`", "mappa la logica", "regole business di", "build catalogo", "quali servizi gestiscono X", impact analysis
 - **Anti-hallucination protocol:** ogni workflow citato DEVE avere un file sorgente. Tag obbligatori: `[CONFIRMED]` / `[INFERRED]` / `[UNVERIFIED]` / `[FILE_NOT_FOUND]`
 - **3 livelli di analisi:**
   - **L1 Domain Profile:** dominio, entità principali, API esposte (da OpenAPI), dipendenze dichiarate
@@ -413,7 +409,7 @@ Caricata automaticamente all'avvio di ogni sessione. Insegna a Claude:
   - **L3 Business Rules:** regole Drools (`KieSession`, `fireAllRules`), query JPA con business logic, condizioni di dominio significative
 - **Processo:** SYSTEM_MAP.md discovery (auto-genera con `siae-microservices-map` se assente) → cluster detection → pre-fetch parallelo → dispatch agenti (1 per cluster) → POST-BUILD con `siae-documentation`
 - **Output:** `docs/logic-catalog/cluster-{nome}.md` (L1+L2+L3), `clusters.yaml`, `system-overview.md`
-- **Comandi:** `/forge-logic-build` (costruisce), `/forge-logic-search` (cerca concetto nel catalogo)
+- **Comandi:** `/forge-logic-search` (cerca concetto nel catalogo)
 - **Tipo:** Flexible
 
 #### `siae-microservices-map` — Mappa sistemi distribuiti multi-repo senza allucinare (Fase 1: Init)
@@ -1054,7 +1050,6 @@ siae-devforge/
 │   ├── forge-automate.md        # /forge-automate → siae-automation
 │   ├── forge-implement.md       # /forge-implement → siae-subagent-development
 │   ├── forge-doc.md             # /forge-doc → siae-documentation
-│   ├── forge-logic-build.md     # /forge-logic-build → siae-service-logic-map
 │   ├── forge-flows.md           # /forge-flows → siae-nr-test-flows
 │   ├── forge-cost.md            # /forge-cost → siae-finops
 │   ├── forge-finops.md          # /forge-finops → siae-finops
