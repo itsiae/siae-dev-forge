@@ -1,11 +1,13 @@
 ---
 name: siae-autoresearch
 description: >
-  Ottimizza iterativamente una skill DevForge usando il metodo autoresearch (Karpathy).
-  Trigger: ottimizza skill, migliora description, autoresearch, migliora trigger,
-  ottimizza prompt, /forge-autoresearch, analizza performance skill.
-  NON usare per: scrivere nuove skill (usa siae-writing-skills), eseguire eval singoli
-  (usa runner.py direttamente), debug skill (usa siae-debugging).
+  Use when iteratively optimizing an existing DevForge skill (description,
+  trigger, prompt) via the autoresearch method (Karpathy). Ottimizza
+  iterativamente una skill DevForge. Trigger: ottimizza skill, migliora
+  description, autoresearch, migliora trigger, ottimizza prompt,
+  /forge-autoresearch, analizza performance skill. NON usare per: scrivere
+  nuove skill (usa siae-writing-skills), eseguire eval singoli (usa runner.py
+  direttamente), debug skill (usa siae-debugging).
 ---
 
 # SIAE Autoresearch — Ottimizzazione Iterativa Skill

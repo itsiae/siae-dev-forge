@@ -1,12 +1,12 @@
 ---
 name: siae-branching-strategy-check
 description: >
-  Verifica compliance alla branching strategy SIAE: PR in review nell'org itsiae,
-  repo corrente, espansione per topic GitHub. Default branch deve essere main,
-  solo release/** apre PR verso main.
-  Trigger: "branching check", "/branching-strategy-check",
-  "PR verso main", "verifica branching strategy", "violazioni branching",
-  "default branch errato", "release branch".
+  Use when checking SIAE branching strategy compliance across PRs in itsiae
+  org, the current repo, or repos selected by GitHub topic. Verifica compliance
+  alla branching strategy SIAE: default branch deve essere main, solo
+  release/** apre PR verso main. Trigger: "branching check",
+  "/branching-strategy-check", "PR verso main", "verifica branching strategy",
+  "violazioni branching", "default branch errato", "release branch".
 ---
 
 # Branching Strategy Check — DevForge

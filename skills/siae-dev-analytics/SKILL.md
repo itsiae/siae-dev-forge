@@ -1,6 +1,14 @@
 ---
 name: siae-dev-analytics
-description: Misura velocità e qualità degli sviluppatori SIAE che usano Claude Code + DevForge. Genera report Excel con 11 KPI (DORA + DX AI Measurement) + ROI Index. Trigger keywords, "misura produttività dev", "ROI Claude Code", "KPI sviluppatori", "analytics dev", "report performance team", "/forge-analytics", "dev metrics", "velocity quality report", "dashboard produttività", "cosa fanno gli sviluppatori", "benchmark dev", "ROI AI coding".
+description: >
+  Use when measuring velocity and quality of SIAE developers using Claude Code
+  + DevForge, or generating the ROI / KPI Excel report. Misura velocità e
+  qualità degli sviluppatori SIAE che usano Claude Code + DevForge. Genera
+  report Excel con 11 KPI (DORA + DX AI Measurement) + ROI Index. Trigger:
+  "misura produttività dev", "ROI Claude Code", "KPI sviluppatori", "analytics
+  dev", "report performance team", "/forge-analytics", "dev metrics",
+  "velocity quality report", "dashboard produttività", "cosa fanno gli
+  sviluppatori", "benchmark dev", "ROI AI coding".
 ---
 
 # siae-dev-analytics — Developer Analytics & ROI Report

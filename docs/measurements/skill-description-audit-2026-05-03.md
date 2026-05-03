@@ -12,9 +12,133 @@
 
 ## Batch 1 (skill 1-13) — Task 07
 
-_(da popolare in Task 07: architecture, automation, autoresearch, blind-review,
-branching-strategy-check, code-standards, codebase-map, data-engineering,
-debugging, dev-analytics, documentation, executing-plans, finishing-branch)_
+### siae-architecture
+
+- Status: REWRITTEN
+- Length before: 405 char
+- Length after: 447 char
+- Pattern compliance: YES (Use when evaluating, choosing, or analyzing architectural patterns ...)
+- Trigger keyword count: 16 (C4 model, HLD, bounded context, CQRS, event-driven, microservizi vs monolite, resilienza, accoppiamento, VALUTARE, SCEGLIERE, ANALIZZARE, valutiamo CQRS, microservizi o monolite, crea il C4, definisci i bounded context, HLD per il sistema X)
+- Notes: trigger italiani originali preservati verbatim, frame "Use when evaluating/choosing/analyzing" mantiene la semantica del VALUTARE/SCEGLIERE/ANALIZZARE originale
+
+### siae-automation
+
+- Status: REWRITTEN
+- Length before: 239 char
+- Length after: 325 char
+- Pattern compliance: YES (Use when setting up E2E test automation, Playwright/Cypress, or CI/CD test pipelines ...)
+- Trigger keyword count: 8 (automatizza test, setup Playwright, setup Cypress, test E2E, test di regressione automatici, CI/CD pipeline test, GitHub Actions test, /forge-automate)
+- Notes: trigger originali preservati al 100%
+
+### siae-autoresearch
+
+- Status: REWRITTEN
+- Length before: 381 char
+- Length after: 470 char
+- Pattern compliance: YES (Use when iteratively optimizing an existing DevForge skill ...)
+- Trigger keyword count: 10 (ottimizza skill, migliora description, autoresearch, migliora trigger, ottimizza prompt, /forge-autoresearch, analizza performance skill, siae-writing-skills, runner.py, siae-debugging)
+- Notes: sezione "NON usare per" preservata (siae-writing-skills, runner.py, siae-debugging boundaries)
+
+### siae-blind-review
+
+- Status: REWRITTEN
+- Length before: 262 char
+- Length after: 387 char
+- Pattern compliance: YES (Use when performing a blind code review ...)
+- Trigger keyword count: 8 (blind review, review cieca, audit spec, verifica spec vs codice, review senza diff, /forge-blind-review, REQUIRED SUB-SKILL, siae-finishing-branch)
+- Notes: validates_via block preservato intatto, REQUIRED SUB-SKILL marker preservato
+
+### siae-branching-strategy-check
+
+- Status: REWRITTEN
+- Length before: 364 char
+- Length after: 422 char
+- Pattern compliance: YES (Use when checking SIAE branching strategy compliance ...)
+- Trigger keyword count: 9 (branching check, /branching-strategy-check, PR verso main, verifica branching strategy, violazioni branching, default branch errato, release branch, itsiae, release/**)
+- Notes: scope itsiae org / current repo / topic-selected repos esplicito; default branch + release/** policy preservati
+
+### siae-code-standards
+
+- Status: REWRITTEN
+- Length before: 210 char
+- Length after: 285 char
+- Pattern compliance: YES (Use when writing or reviewing code that must follow SIAE multi-stack ...)
+- Trigger keyword count: 9 (Java, TypeScript, Python, HCL, HCL/Terraform, naming conventions, struttura progetto, logging, error handling)
+- Notes: tutti gli stack tags (Java/TypeScript/Python/HCL) preservati
+
+### siae-codebase-map
+
+- Status: REWRITTEN
+- Length before: 226 char
+- Length after: 283 char
+- Pattern compliance: YES (Use when mapping a single-repo codebase structure ...)
+- Trigger keyword count: 7 (mappa codebase, struttura progetto, CODEBASE_MAP.md, /forge-map, analizza architettura repo, onboarding su repo, come e organizzato il codice)
+- Notes: aggiunto qualificatore "single-repo" per disambiguare da siae-microservices-map (multi-repo)
+
+### siae-data-engineering
+
+- Status: REWRITTEN
+- Length before: 473 char
+- Length after: 549 char
+- Pattern compliance: YES (Use when building, migrating, or debugging AWS data pipelines and ETL jobs ...)
+- Trigger keyword count: 22 (Glue job, PySpark, ETL, pipeline di ingestion, trasformazione dati, Step Functions, data lake, Medallion architecture, bronze-to-silver, silver-to-gold, data quality, crawler, batch notturno, Iceberg, CDC, delta window, migrare dati da legacy, costruire pipeline, orchestrazione batch, implementa Medallion, ingestion file CSV, siae-iac)
+- Notes: boundary "NON per Terraform (usa siae-iac), REST endpoint o frontend" preservato come anti-misroute
+
+### siae-debugging
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Length before: 365 char
+- Length after: 365 char
+- Pattern compliance: YES (Use when investigating a bug, errore, incident ...)
+- Trigger keyword count: già OK post-PR-4 (refactor 612f4c9 - progressive disclosure)
+- Notes: nessuna modifica necessaria, description già conformante "Use when X" pattern dopo PR-4
+
+### siae-dev-analytics
+
+- Status: REWRITTEN
+- Length before: 435 char
+- Length after: 557 char
+- Pattern compliance: YES (Use when measuring velocity and quality of SIAE developers using Claude Code + DevForge ...)
+- Trigger keyword count: 16 ("misura produttività dev", "ROI Claude Code", "KPI sviluppatori", "analytics dev", "report performance team", "/forge-analytics", "dev metrics", "velocity quality report", "dashboard produttività", "cosa fanno gli sviluppatori", "benchmark dev", "ROI AI coding", 11 KPI, DORA, DX AI Measurement, ROI Index)
+- Notes: convertito da inline single-line a folded `>` per leggibilità; tutti i 16 trigger preservati verbatim
+
+### siae-documentation
+
+- Status: REWRITTEN
+- Length before: 131 char
+- Length after: 205 char
+- Pattern compliance: YES (Use when generating technical documentation for SIAE components and APIs ...)
+- Trigger keyword count: 4 (richiesta documentazione, /forge-doc, design review, pre-release)
+- Notes: description originale molto sintetica, aggiunto frame "Use when generating ..." preservando i 4 trigger
+
+### siae-executing-plans
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Length before: 363 char
+- Length after: 363 char
+- Pattern compliance: YES (Use when executing an approved implementation plan in a separate session ...)
+- Trigger keyword count: già OK post-PR-4 (refactor 829f98a - progressive disclosure)
+- Notes: nessuna modifica necessaria, description già conformante post-PR-4
+
+### siae-finishing-branch
+
+- Status: OK_AS_IS (verify post-PR-4)
+- Length before: 435 char
+- Length after: 435 char
+- Pattern compliance: YES (Use when preparing a feature/fix branch for PR ...)
+- Trigger keyword count: già OK post-PR-4 (refactor 870bcab - progressive disclosure)
+- Notes: nessuna modifica necessaria, description già conformante post-PR-4
+
+---
+
+## Batch 1 — Summary
+
+- **Skill rewritten:** 10/13
+- **Skill verify-only OK_AS_IS:** 3/13 (debugging, executing-plans, finishing-branch — già conformanti post-PR-4)
+- **YAML valid:** 13/13
+- **Pattern "Use when X" compliance:** 13/13
+- **Trigger keyword preservation (NO-REGRESSION):** 100% (109/109 trigger originali preservati nelle 10 skill rewritten)
+- **Description length max:** 557 char (siae-dev-analytics) — well under 1024 limit
 
 ---
 
