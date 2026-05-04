@@ -112,10 +112,10 @@ Quando vieni invocato come subagent, i tool MCP appaiono come "deferred" e
 calling diretto fallisce con `InputValidationError`. Devi caricarli con
 `ToolSearch` PRIMA di chiamarli.
 
-### Bulk loading (1 chiamata sola, all'inizio)
+### Bulk loading (1 chiamata sola, all'inizio — 23 tool sport-kg v2: 13 base + 9 nuovi Onde 6/9/10 + D3 + 1 fix consistenza frontmatter)
 
 ```
-ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence"
+ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__who_authenticates,mcp__sport-kg__describe_auth_chain,mcp__sport-kg__describe_feign_client,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__answer_impact_question"
 ```
 
 Poi:
@@ -138,6 +138,19 @@ ToolSearch query="select:mcp__elasticsearch__search_by_service,mcp__elasticsearc
 - ❌ Dichiarare "MCP non disponibile" SENZA aver tentato ToolSearch
 - ❌ Chiamare `mcp__*` direttamente senza preliminare ToolSearch
 - ❌ Inventare conteggi quando ES ritorna sample (cap 200)
+- ❌ **Concludere "feature non deployata" su singolo `Unknown tool: X`** — `Unknown tool` è ambiguo, distingui i 3 stati MCP (vedi sotto)
+
+### Distinguere 3 stati MCP (regola operativa)
+
+`Unknown tool: X` ≠ "feature non deployata". I 3 stati distinti:
+
+| Stato | Sintomo | Diagnosi | Azione |
+|---|---|---|---|
+| **1. Tool not in registry (client)** | Chiamata diretta `InputValidationError`; ToolSearch ha schema | Tool deferred, non caricato | `ToolSearch query="select:<tool>"` |
+| **2. Schema OK, dispatcher KO (server)** | ToolSearch ha schema, chiamata ritorna `Unknown tool: X` | Manifest aggiornato ma container MCP non rebuilt post-deploy | Fallback documentato + segnala a sport-kg ops per rebuild |
+| **3. Feature not deployed** | ToolSearch search restituisce 0 match | Onda non rilasciata | Fallback grep diretto + nota nel report |
+
+**Procedura**: ToolSearch select PRIMA → invoca → se `Unknown tool` → distingui stato 2 vs 3 con secondo ToolSearch search per nome tool. Mai concludere stato 3 da singolo `Unknown tool`.
 
 ---
 
@@ -156,7 +169,32 @@ Tool da chiamare (in parallelo quando possibile):
 | "X chi chiama?" | `endpoints_called(X)` | `service_full_context(X)` |
 | "Esiste un servizio che fa Y?" | `list_services(filter=*Y*)` + `search_endpoints(keyword=Y)` | `search_by_service(Y)` |
 | "Dove e' scritta la tabella T?" | `search_tables(T)` | `data_flow_for_method` se trovi metodo |
-| "Chi e' l'IdP di X?" | `describe_service(X)` + `refresh_external_systems(X)` | `who_calls(ciam-*)` |
+| "Chi e' l'IdP di X?" | `who_authenticates(X)` (Onda 9 — primario) | `describe_service(X)` + `refresh_external_systems(X)` |
+| "Esiste un batch per Z?" | `find_batch_for_keyword(Z)` (Onda 10) | `service_full_context(<host>)` per cron schedule |
+| "Quale regola Drools governa W?" | `list_rules(filter=W)` (Onda 6) | `describe_rule(rule_id)` per drill-down |
+| "Quale auth filter chain usa X?" | `describe_auth_chain(X)` | `describe_feign_client(X)` per outbound auth |
+
+#### Priors check freshness (opzionale)
+
+Se la domanda riguarda dati storici >30gg (es. "chi era il caller a inizio 2025?"),
+chiama prima `mcp__sport-kg__graph_staleness_report()` per verificare se i nodi
+rilevanti sono entro TTL. Se HIGH staleness, annota nel report:
+
+```
+⚠️ Staleness: KG ultimo refresh <observed_at>, TTL hint <ttl_hint_seconds>s
+   I claim possono riflettere stato passato.
+```
+
+Non bloccare l'investigazione, solo qualificare confidence.
+
+#### Estrazione nodi v2 da Stage 1
+
+Quando chiami `describe_service` o `service_full_context`, estrai esplicitamente
+(se presenti):
+
+- **`batch_jobs[]`** — BatchJob (@Scheduled) hostati dal servizio. Usa per Q&A "chi triggera Z?", "quale batch elabora W?"
+- **`business_rules[]`** — BusinessRule (Drools/Kogito) hostate. Usa per Q&A "quale regola applica logica X?"
+- **`external_systems[]`** — ExternalSystem M2M caller con `<userId>_<sourceSystem>`. Usa per Q&A "chi sono i clienti M2M di X?"
 
 **Fail-fast**: se Stage 1 risponde completamente alla domanda con confidence
 HIGH (es. who_calls ritorna 1 caller con 100% match), salta Stage 2 e 3.
@@ -177,6 +215,30 @@ Tool:
 - **Caller breakdown**: search_by_service + extract `data.userName`, `data.userId`, `data.sourceSystem` come labels (campioni, non aggregati a causa cap 200)
 - **Volume validation**: search_by_service con timestamp range, conta hit per endpoint
 - **Auth fingerprint**: search_logs su pattern `token`, `Authorization`, `userid` — il token format `<UUID>@<ISO8601>` indica AAS legacy SIAE
+
+#### Disambiguazione evidence ambigua (alternate_hypotheses)
+
+Se Stage 2 produce evidence ambigua (almeno uno dei seguenti):
+- ES ritorna sample con cap=200 raggiunto e i campioni non concordano
+- Multipli sourceSystem candidati per uno stesso caller M2M
+- KG e ES divergono su attribution (es. KG dice IdP=AAS, ES log mostrano CIAM)
+
+Chiama:
+
+```
+mcp__sport-kg__alternate_hypotheses(claim="<claim oggetto della Q&A>")
+```
+
+Output atteso: 2-3 ipotesi ranked con `plausibility_score` (0.0-1.0) e
+`falsifiable_by` per ognuna. **NON sostituire il tuo reasoning** — usa il
+ranking come input per arricchire il report:
+
+- Ipotesi #1 (top score): claim primario, status `PARTIAL` con plausibility=<X>
+- Ipotesi #2: claim alternativo nel "Gap residui" come "ipotesi non scartata"
+- Ipotesi #3: claim alternativo nel "Gap residui" se plausibility ≥ 0.3
+
+Il report finale cita esplicitamente "alternate_hypotheses ha suggerito N ipotesi
+con scores [X, Y, Z]" come evidence_type=`inference` (non come fatto).
 
 **Fail-fast**: se Stage 2 conferma o smentisce l'ipotesi con evidenza
 runtime, salta Stage 3 a meno che non serva conferma codice (es. ipotesi
@@ -214,8 +276,10 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 
 **Risposta sintetica (1-2 frasi)**: <claim principale>
 
-**Confidence**: HIGH | MEDIUM | LOW
-**Stato hint utente** (se l'utente ha fornito un'ipotesi): CONFIRMED | PARTIAL | REFUTED
+**Confidence**: HIGH | MEDIUM | LOW (inference_type=<value from envelope D1>)
+**Freshness**: observed_at=<ISO8601> · ttl_hint=<seconds> (se KG v2 risponde)
+**Stato hint utente** (se l'utente ha fornito un'ipotesi): CONFIRMED | PARTIAL | NOT_FOUND_IN_INDEX | PROVEN_ABSENT_UNDER_SCOPE | REFUTED
+**scope_completeness**: full | incomplete | n/d (da envelope se presente)
 
 ### Evidenze per claim
 
@@ -223,6 +287,10 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 |---|---|---|---|---|
 | 1 | <claim atomico> | HIGH/MED/LOW | code / KG / ES-runtime / inference | <file:line OR tool:result OR ES query> |
 | 2 | <claim atomico> | HIGH/MED/LOW | code / KG / ES-runtime / inference | ... |
+
+**Note evidence_type aggiuntivi (Stage 2 v2)**:
+- `alternate_hypotheses` → evidence_type = `inference` con score esplicitato (es. "plausibility=0.72 da alternate_hypotheses")
+- `graph_consistency_check INCONSISTENT` → evidence_type = `KG-drift` (nuovo) per signal di drift KG↔ES
 
 ### Dettagli (sezione narrativa breve, max 300 parole)
 
@@ -246,6 +314,29 @@ chit-chat. Il chiamante incollera' il blocco in un report consolidato.
 - **Confidence HIGH** solo se almeno 2 fonti concordi (es. KG + ES, o code + ES).
 - **Evidence type `inference`**: usato per claim derivati ma non direttamente osservati. Esempio: "il pattern `<UUID>@<timestamp>` indica IdP custom SIAE" → inference, perche' nessun tool ha ritornato esplicitamente "IdP=AAS".
 - **Stato hint utente** obbligatorio se l'utente ha fornito un'aspettativa nel prompt (es. "dovrebbe essere SAP via M2M"). Possibili: CONFIRMED (evidenze allineate), PARTIAL (alcune sotto-affermazioni vere, altre no), REFUTED (evidenze contrarie).
+
+### Mapping legacy v1 → v2 (dual-format 60gg)
+
+Per la finestra di deprecation 60gg (28-apr → 27-giu 2026), il MCP può ancora
+ritornare valori v1 legacy. Mapping da applicare PRIMA di scrivere il report:
+
+| MCP ritorna v1 | scope_completeness | Agent scrive v2 | Nota |
+|---|---|---|---|
+| `"NOT_EXISTS"` | qualsiasi | `NOT_FOUND_IN_INDEX` | Mapping D2 § 2.3 |
+| `"REFUTED"` | `incomplete` | `NOT_FOUND_IN_INDEX` | Aggiungi nota "legacy v1 mapped" |
+| `"REFUTED"` | `full` | `REFUTED` | Match diretto |
+| `"REFUTED"` | assente (v1 puro) | `NOT_FOUND_IN_INDEX` | Conservativo: assenza non dimostrata |
+| `"CONFIRMED"` | qualsiasi | `CONFIRMED` | Match diretto |
+| `"PARTIAL"` | qualsiasi | `PARTIAL` | Match diretto |
+| valore sconosciuto | qualsiasi | `PARTIAL` + nota "unknown enum value <X>" | Defensive |
+
+### Semantica enum v2
+
+- **`CONFIRMED`**: 2+ fonti concordi, claim verificato
+- **`PARTIAL`**: alcune sotto-affermazioni vere, altre n/d (parzialmente verificato)
+- **`NOT_FOUND_IN_INDEX`**: KG/ES non hanno la entity, MA scope ricerca limitato. **≠ assenza**, è "fuori dal nostro scope di ricerca"
+- **`PROVEN_ABSENT_UNDER_SCOPE`**: `*_prove_absent` variants hanno confermato assenza nel scope (richiede `scope_completeness=full` nell'envelope D1)
+- **`REFUTED`**: evidenze contrarie all'hint utente (KG ha A, hint diceva B)
 
 ---
 
@@ -308,6 +399,8 @@ nessun problema.
 5. **Cita sempre evidenze**: ogni claim ha file:line, tool:result, o ES query come fonte.
 6. **Itera prima di concludere**: se la prima query non risponde, rilancia con parametri diversi (window 30gg invece di 7gg, alias service name, ecc.) prima di dichiarare gap.
 7. **Hint utente come direzione, non verita'**: l'utente puo' sbagliare. Valida sempre con evidenze. Esempio osservato (sessione 2026-04-29): hint "opcon-batch processa notifica_movimento" REFUTED — il batch reale e' `sport-batch-service`.
+8. **Hint user "non esiste" → preferire `*_prove_absent` variants**: se l'utente afferma "X non esiste", non basta che il default tool non lo trovi. Usa la variant `*_prove_absent` (es. `who_calls_prove_absent`) per disambiguare assenza dimostrata vs ricerca incompleta. Se la variant non è disponibile, scrivi `NOT_FOUND_IN_INDEX` (non `REFUTED`).
+9. **Status enum v2 vs v1 legacy**: leggi sempre `scope_completeness` se presente. Se assente (v1 puro), assumi `incomplete` e mappa `REFUTED` → `NOT_FOUND_IN_INDEX` per essere conservativi.
 
 ---
 
@@ -322,6 +415,11 @@ nessun problema.
 | "Stage 3 sempre obbligatoria per completezza" | NO — fail-fast. Se Stage 1+2 rispondono, ferma. |
 | "Confidence HIGH e' default" | NO — HIGH solo con 2+ fonti concordi. Default e' MEDIUM. |
 | "Posso skip lo scratchpad se sono solo" | NO — scrivilo comunque. La prossima sessione potrebbe usarlo. |
+| "Top hypothesis di alternate_hypotheses è la verità" | NO — è un primitivo MCP-side che ranks ipotesi. La verità si stabilisce con evidence concorrenti, non con score. Cita score come `inference`, non come fatto. |
+| "Posso skip alternate_hypotheses se il sample concorda" | OK skip se evidence è univoca. Usa solo se ambigua (cap raggiunto, sourceSystem multipli, KG↔ES divergenti). |
+| "PARTIAL e NOT_FOUND_IN_INDEX sono sinonimi" | NO — `PARTIAL` = parzialmente verificato; `NOT_FOUND_IN_INDEX` = fuori dal nostro scope di ricerca. Distinzione critica per design downstream. |
+| "REFUTED legacy = REFUTED v2" | NO — leggi `scope_completeness`. Se assente o `incomplete`, mappa a `NOT_FOUND_IN_INDEX` (conservativo). |
+| "Posso saltare il mapping legacy" | NO — finestra dual-format 60gg attiva (28-apr → 27-giu). Applica sempre il mapping prima di scrivere il report. |
 
 ---
 

@@ -117,6 +117,30 @@ Vincoli: Solo il timeout, nessun'altra modifica, segui siae-iac
 Output:  .tf aggiornato + terraform plan pulito
 ```
 
+### Step 2.5 — Step 0 MCP per il prompt del subagent
+
+Se almeno uno degli agenti userà tool MCP (`mcp__sport-kg__*`, `mcp__elasticsearch__*`,
+`mcp__atlassian__*`, `mcp__siae-sport-oracle__*`, etc.), il prompt del subagent
+DEVE iniziare con questo step 0:
+
+> **Step 0 obbligatorio:** invoca `ToolSearch` con `query="select:<tool1>,<tool2>,..."`
+> per caricare gli schemi MCP necessari. Non chiamare alcun tool MCP prima di averne
+> caricato lo schema in questo modo — fallirebbe con `InputValidationError`.
+
+**Why:** dispatch multi-agent del 2026-04-29 ha visto 4/7 agenti fare fallback a
+`grep` su repo clonati perché i tool MCP apparivano come deferred ma non risolvibili
+dentro l'Agent. L'agente vede solo "tool deferred" nel system reminder e tipicamente
+non sa che `ToolSearch` è il bridge — fallback a grep silente, output sample-based
+invece che KG-based.
+
+**Sintomo:** se un agente report "ho usato grep / clonato repo / risposta sample-based"
+su domande che l'MCP doveva risolvere, ridispatch con istruzione esplicita.
+
+**Tip operativo:** lista nei task gli specifici tool MCP necessari (es. `select:list_services,describe_service`)
+invece di lasciare l'agent indovinare quali caricare. In alternativa, chiama il tool MCP
+nella sessione padre e passa il risultato come contesto al subagent, eliminando del
+tutto la dipendenza MCP nel subagent.
+
 ### Step 3 — Dispatch
 
 🟡 MEDIO — Mostra pre-flight card prima del dispatch

@@ -40,7 +40,7 @@ La skill opera in 2 modalita' distinte. Riconosci la modalita' dal contesto del 
 
 ### A. Build-catalog (default) — vedi Step 0..6
 
-Trigger: `/forge-logic-build`, "build catalogo", "lanciamo su {pattern}", "mappa la logica".
+Trigger: "build catalogo", "lanciamo su {pattern}", "mappa la logica".
 
 Output: catalogo L1+L2+L3 multi-cluster in `docs/logic-catalog/`.
 
@@ -207,7 +207,7 @@ Cerca SYSTEM_MAP.md in questo ordine:
 **Sempre:**
 - Onboarding su servizio sconosciuto: "cosa fa sport-X?"
 - Impact analysis cross-repo: "quali servizi gestiscono Y?"
-- Build catalogo logic per cluster: `/forge-logic-build`
+- Build catalogo logic per cluster: dispatch skill `siae-service-logic-map` direttamente (modalità A)
 - Ricerca concetti/workflow: `/forge-logic-search`
 
 **Output:** un documento per cluster (non per singolo servizio) che descrive
