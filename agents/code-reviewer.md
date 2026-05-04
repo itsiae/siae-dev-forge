@@ -89,18 +89,28 @@ i tool MCP per **cross-check architetturale** (impact_with_evidence, who_calls,
 service_full_context).
 
 I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
-`ToolSearch` PRIMA di chiamarli, altrimenti `InputValidationError`.
+`ToolSearch` PRIMA di chiamarli, altrimenti `InputValidationError`. Set minimal:
+6 tool sport-kg per cross-check architetturale (5 base topology + graph_consistency_check D3 per drift KG↔codice).
 
 ```
-ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health"
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__graph_consistency_check"
 ```
 
 Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con review
 solo basata su diff + repo locale, annotando come limite "review architetturale
 non incrociata con KG".
 
-**Anti-pattern**: dichiarare "MCP non disponibile in subagent" senza aver
-tentato ToolSearch. Pain point #1 sessione 2026-04-29.
+**Anti-pattern**:
+- ❌ dichiarare "MCP non disponibile in subagent" senza aver tentato ToolSearch (pain point #1 sessione 2026-04-29).
+- ❌ concludere "feature non deployata" su singolo `Unknown tool: X` — distingui i 3 stati MCP:
+
+| Stato | Sintomo | Azione |
+|---|---|---|
+| 1. Tool not in registry | `InputValidationError` su call diretta | `ToolSearch query="select:<tool>"` |
+| 2. Schema OK, dispatcher KO | ToolSearch ha schema, call ritorna `Unknown tool: X` | Fallback skip + segnala a ops per rebuild container |
+| 3. Feature not deployed | ToolSearch search ritorna 0 match | Skip silenzioso (review continua) |
+
+Mai concludere stato 3 da singolo `Unknown tool`. ToolSearch search PRIMA di classificare.
 
 ---
 
@@ -239,6 +249,51 @@ Verifica:
 - Chiamate dirette tra microservizi senza API Gateway
 - Mancanza di retry/circuit breaker per chiamate esterne
 - IaC mancante per risorse create (ogni risorsa AWS deve avere il suo Terragrunt)
+
+#### Sotto-checklist 4.X — Drift KG↔codice (D3, opzionale)
+
+Se la review tocca un servizio SIAE mappato in sport-kg, esegui cross-check
+drift architetturale:
+
+```
+mcp__sport-kg__graph_consistency_check(service=<service-name>)
+```
+
+**Interpretazione output**:
+
+| Status | Significato | Azione review |
+|---|---|---|
+| `CONSISTENT` | KG e codice/runtime allineati | ✅ Nessuna azione |
+| `INCONSISTENT` | Drift rilevato (auth/DTO/schedule) | ⚠️ Listare mismatch nei findings come **BLOCK** se drift è in scope della PR; come **WARN** se preesistente |
+| `INSUFFICIENT_DATA` | KG non ha dati sufficienti per consistency check | 📝 Nota nei findings, no blocco |
+
+**Pattern findings**:
+
+```markdown
+**4.X — Drift KG↔codice**: <CONSISTENT/INCONSISTENT/INSUFFICIENT_DATA>
+
+[Se INCONSISTENT]
+Mismatch rilevati:
+- <signal_1>: KG dice <X>, codice/ES dice <Y>
+- <signal_2>: ...
+
+Severity: <BLOCK se drift introdotto da PR / WARN se preesistente>
+```
+
+**Fallback (no MCP)**:
+Se `ToolSearch` non ha caricato `graph_consistency_check` o il tool ritorna
+errore, **skip silenzioso**. La review continua senza cross-check (status:
+"KG cross-check non disponibile" nei findings opzionale, mai bloccante).
+
+**Quando NON eseguire**:
+- Servizio non mappato in KG (prefissi non `sport-*/pop-*/pae-*/ciam-*/...`)
+- PR su file non architetturali (es. solo test, solo docs, solo config minor)
+- Review express/tactical (focus solo Point 1+2 per fix puntuali)
+
+**Anti-pattern (drift KG↔codice)**:
+- ❌ Trattare `INCONSISTENT` come BLOCK automatico senza verificare se il drift è nello scope della PR. Una drift preesistente non bloccata da review precedenti non diventa colpa della PR corrente — segnalalo come WARN tracciabile.
+- ❌ Ignorare `INSUFFICIENT_DATA` come "tutto ok". È un signal che il KG non sta osservando il servizio — vale la pena capire perché (refresh KG? servizio dormiente?).
+- ❌ Skippare il check perché "MCP probabilmente non c'è" — tenta sempre `ToolSearch`, fallback solo se errore reale.
 
 ---
 

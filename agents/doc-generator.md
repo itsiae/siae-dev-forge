@@ -114,18 +114,28 @@ attivi, tabelle DB, external systems) e arricchire HLD/LLD/API doc con dati
 di runtime reali.
 
 I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
-`ToolSearch` PRIMA di chiamarli:
+`ToolSearch` PRIMA di chiamarli (11 tool sport-kg v2: 7 base topology + 4 nuovi
+HLD-specific da Onde 6/9/10 + D3):
 
 ```
-ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables"
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__graph_staleness_report"
 ```
 
 Se ToolSearch ritorna 0 match (server MCP non registrato), prosegui con
 generazione doc solo basata su codice statico, annotando "topology runtime
 non disponibile".
 
-**Anti-pattern**: dichiarare "MCP non disponibile in subagent" senza aver
-tentato ToolSearch. Pain point #1 sessione 2026-04-29.
+**Anti-pattern**:
+- ❌ dichiarare "MCP non disponibile in subagent" senza aver tentato ToolSearch (pain point #1 sessione 2026-04-29).
+- ❌ concludere "feature non deployata" su singolo `Unknown tool: X` — `Unknown tool` è ambiguo, distingui i 3 stati MCP:
+
+| Stato | Sintomo | Azione |
+|---|---|---|
+| 1. Tool not in registry | `InputValidationError` su call diretta | `ToolSearch query="select:<tool>"` |
+| 2. Schema OK, dispatcher KO | ToolSearch ha schema, call ritorna `Unknown tool: X` | Fallback (es. directory `rules/` per `list_rules`) + segnala a ops per rebuild container |
+| 3. Feature not deployed | ToolSearch search ritorna 0 match | Fallback grep + nota |
+
+Mai concludere stato 3 da singolo `Unknown tool`. ToolSearch search PRIMA di classificare.
 
 ### Step 1 — Capire la richiesta
 
@@ -178,6 +188,137 @@ Leggi e analizza il codice in modo sistematico:
    - `#85bbf0` — Componente dentro il container
    - `#999999` — Sistema esterno
 5. Compila la metadata del documento (versione, data, autore, stato)
+
+### Step 3a — Istruzioni HLD generation v2 (sport-kg v2)
+
+Queste istruzioni si applicano **solo se** stai generando un HLD per un servizio
+SIAE mappato nel KG (vedi Step 0 per la lista prefissi). Sono additive rispetto
+al template HLD standard: arricchiscono il C4 Container e la cover page con
+informazioni provenienti dai nuovi nodi sport-kg v2 (BatchJob Onda 10, envelope
+D1 freshness).
+
+#### Swim lane "Batch Schedulers" (Onda 10)
+
+Se il servizio target ha BatchJob (@Scheduled, cron, scheduler), aggiungi una
+swim lane dedicata nel C4 Container diagram.
+
+**Discovery**:
+1. Chiama `mcp__sport-kg__describe_service(<service>)` ed estrai `batch_jobs[]`
+   se presente
+2. Se assente, chiama `mcp__sport-kg__find_batch_for_keyword(<service-domain>)`
+   per discovery alternativa
+3. Se entrambi vuoti, **OMETTI** la swim lane (no "nessun batch" in HLD —
+   è rumore informativo)
+
+**PlantUML pattern** (se BatchJob trovati):
+
+```plantuml
+@startuml
+package "Batch Schedulers" as Batch <<scheduler>> {
+    component "<batch_name_1>" as B1 <<@Scheduled>> {
+        note right: cron: <cron_expr>
+    }
+    component "<batch_name_2>" as B2 <<@Scheduled>> {
+        note right: cron: <cron_expr>
+    }
+}
+Batch --> Service : triggers
+@enduml
+```
+
+**Naming**: usa il nome esatto della classe Java/metodo `@Scheduled` da KG.
+Cron expression nel `note right`.
+
+#### Footer freshness (envelope D1)
+
+Inserisci alla fine della cover page dell'HLD (o nel footer del documento):
+
+```markdown
+---
+*Topologia osservata a `<observed_at ISO8601>` — TTL stimato `<ttl_hint_seconds>`s
+(da sport-kg v2 envelope D1). Per topology aggiornata, ri-generare l'HLD dopo
+`<ttl_expiration ISO8601>`.*
+```
+
+**Source fields**:
+- `observed_at` — ISO8601 timestamp dell'ultima indicizzazione KG
+- `ttl_hint_seconds` — TTL stimato per ri-fetch topology (es. 86400 = 24h)
+- `ttl_expiration` — calcolato come `observed_at + ttl_hint_seconds`
+
+Estrai questi campi dalla response di `describe_service` o
+`service_full_context` (envelope D1, sport-kg v2).
+
+Se i campi sono assenti (KG v1 ancora deployato), **OMETTI** il footer —
+non scrivere "n/d".
+
+#### Authentication chain (Onda 9)
+
+Nella sezione "Security" dell'HLD, aggiungi un blocco "Authentication chain"
+con dati da `who_authenticates`. Queste istruzioni dicono all'agent come
+arricchire la sezione Security del template HLD generato (NON modifichiamo un
+HLD esistente — istruiamo l'agent a generare contenuto aggiuntivo).
+
+**Discovery**:
+
+```
+mcp__sport-kg__who_authenticates(service=<target-service>)
+```
+
+**Output template** (markdown da inserire in HLD):
+
+```markdown
+##### Authentication chain
+
+| Categoria | Valore |
+|---|---|
+| **IdP primary** | <idp_primary o "n/d"> |
+| **Additional IdP** | <list o "nessuno"> |
+| **Registered M2M callers** | <list di userId+sourceSystem o "nessuno"> |
+| **Confidence** | <HIGH/MEDIUM/LOW> |
+| **Observed at** | <ISO8601 da envelope D1> |
+```
+
+**Note**:
+- Se `who_authenticates` ritorna `applicable=false` (servizio non auth-aware),
+  **OMETTI** il blocco intero. Non scrivere "nessuna auth" — è informazione
+  fuorviante.
+- "Registered M2M callers" deduplicare per userId (può apparire con sourceSystem
+  multipli — es. `OPCON_M2M_CONC` e `OPCON_M2M_DIGITAL`).
+
+#### Domain rules (Onda 6)
+
+Se il servizio ospita BusinessRule (Drools/Kogito), genera una sezione dedicata
+nell'HLD (posizione consigliata nel template: dopo "Domain model" o prima di
+"Security").
+
+**Discovery**:
+
+```
+mcp__sport-kg__list_rules(service_filter=<target-service>)
+```
+
+**Output template** (markdown da inserire in HLD):
+
+```markdown
+##### Domain rules
+
+| Package | Rule name | Activation pattern | Salience |
+|---|---|---|---|
+| <package> | <rule_name> | <when_summary> | <salience> |
+| ... (top 10 più rilevanti) | | | |
+
+*Totale rules: <count>. Per drill-down completo, consultare
+`mcp__sport-kg__describe_rule(<rule_id>)` o repo `<service-name>` directory
+`src/main/resources/rules/`.*
+```
+
+**Note**:
+- Limita a top 10 per package o per salience desc (HLD non è il posto per
+  dump di 22.257 rules — link al repo è sufficiente per tail)
+- Se `list_rules` ritorna 0 rules per il servizio, **OMETTI** la sezione
+- Se `list_rules` non disponibile (Onda 6 non installata), aggiungi nota
+  "Rules: vedi `<service-name>/src/main/resources/rules/` (introspection KG
+  non disponibile)"
 
 ### Step 4 — Presentazione e revisione
 
