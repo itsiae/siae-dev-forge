@@ -38,6 +38,25 @@ description: |
   <commentary>Pattern multi-domanda parallel: 4 invocazioni concorrenti, ognuna con scope ristretto. Lo scratchpad evita re-discovery di entita' trasversali (es. AAS IdP scoperto in domanda 4 ma usato anche in 1+3).</commentary>
   </example>
 model: inherit
+tools:
+  - Read
+  - Bash
+  - Grep
+  - Glob
+  - ToolSearch
+  - mcp__sport-kg__list_services
+  - mcp__sport-kg__describe_service
+  - mcp__sport-kg__find_service_for_endpoint
+  - mcp__sport-kg__find_service_for_symbol
+  - mcp__sport-kg__service_full_context
+  - mcp__sport-kg__service_health
+  - mcp__sport-kg__who_calls
+  - mcp__sport-kg__describe_auth_chain
+  - mcp__sport-kg__who_authenticates
+  - mcp__sport-kg__describe_feign_client
+  - mcp__elasticsearch__search_by_service
+  - mcp__elasticsearch__search_logs
+  - mcp__elasticsearch__list_indices
 ---
 
 ```

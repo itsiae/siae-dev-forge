@@ -42,6 +42,20 @@ description: |
   assistant: "Analizzo il codebase di order-management per generare HLD, LLD e API doc..."
   <commentary>The agent generates all three document types: HLD for system overview, LLD for implementation details, and API doc for endpoint reference.</commentary>
   </example>
+tools:
+  - Read
+  - Bash
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - ToolSearch
+  - mcp__atlassian__authenticate
+  - mcp__atlassian__complete_authentication
+  - mcp__sport-kg__describe_service
+  - mcp__sport-kg__service_full_context
+  - mcp__sport-kg__describe_auth_chain
+  - mcp__sport-kg__describe_table
 model: inherit
 ---
 

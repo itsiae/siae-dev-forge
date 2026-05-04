@@ -1,7 +1,9 @@
 ---
 name: siae-git-worktrees
 description: >
-  Configura workspace isolati con git worktree prima di implementazioni multi-file.
+  Use when setting up an isolated workspace with git worktree before executing
+  a multi-file implementation plan or starting a multi-commit feature.
+  Configura workspace isolati con git worktree.
   Trigger: prima di eseguire un piano implementativo, setup workspace isolato,
   implementazione su branch separato, /forge-implement, inizio feature
   multi-commit, isola lavoro, worktree, branch dedicato per implementazione.

@@ -1,7 +1,9 @@
 ---
 name: siae-git-env
 description: >
-  Rileva la disponibilita' di GitHub CLI (gh) e stabilisce GH_MODE o FALLBACK_MODE.
+  Use when a parent skill needs to detect GitHub CLI (gh) availability and
+  establish GH_MODE or FALLBACK_MODE before running gh commands. Rileva la
+  disponibilita' di GitHub CLI e stabilisce la modalita'.
   Trigger: REQUIRED SUB-SKILL da siae-git-workflow e siae-finishing-branch.
 ---
 

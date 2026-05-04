@@ -1,9 +1,11 @@
 ---
 name: using-devforge
 description: >
-  Stabilisce il backbone core di discovery e invocazione skill DevForge
-  all'inizio di ogni conversazione.
-  Trigger: inizio sessione, apertura nuovo progetto, prima interazione.
+  Use at session start or new project context to establish the DevForge backbone
+  (brainstorm → plan → tdd → verification) and discover available skills. Acts
+  as the discovery entry point for the marketplace and is invoked automatically
+  by the session-start hook. Trigger: inizio sessione, apertura nuovo progetto,
+  prima interazione, session-start hook trigger.
 ---
 
 ## SUBAGENT-STOP — Gate Check

@@ -1,10 +1,11 @@
 ---
 name: siae-automation
 description: >
-  Configura test automation E2E, setup Playwright/Cypress e pipeline CI/CD test.
-  Trigger: automatizza test, setup Playwright, setup Cypress, test E2E,
-  test di regressione automatici, CI/CD pipeline test, GitHub Actions test,
-  /forge-automate.
+  Use when setting up E2E test automation, Playwright/Cypress, or CI/CD test
+  pipelines. Configura test automation E2E, setup Playwright/Cypress e pipeline
+  CI/CD test. Trigger: automatizza test, setup Playwright, setup Cypress, test
+  E2E, test di regressione automatici, CI/CD pipeline test, GitHub Actions
+  test, /forge-automate.
 ---
 
 # SIAE Automation — E2E Test Generation & Xray Sync

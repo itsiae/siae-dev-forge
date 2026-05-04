@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# State Writer Hook — PostToolUse event per skill backbone.
+# Aggiorna .skill-state con timestamp completion. Non-blocking.
+
+set -euo pipefail
+
+STATE_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/projects/$(basename "$(pwd)")"
+STATE_FILE="$STATE_DIR/.skill-state"
+mkdir -p "$STATE_DIR"
+
+INPUT="$(cat)"
+
+# Estrai skill name + result status
+DATA=$(echo "$INPUT" | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    skill = d.get('tool_input', {}).get('skill', '') or d.get('tool_input', {}).get('skill_name', '')
+    if ':' in skill:
+        skill = skill.split(':', 1)[1]
+    success = d.get('tool_response', {}).get('is_error', True) is False
+    print(f'{skill}\t{success}')
+except Exception:
+    print('\\tFalse')
+")
+
+SKILL=$(echo "$DATA" | cut -f1)
+SUCCESS=$(echo "$DATA" | cut -f2)
+
+[ -z "$SKILL" ] && exit 0
+[ "$SUCCESS" != "True" ] && exit 0
+
+NOW=$(date -u +%FT%TZ)
+
+# Skill-specific state update
+python3 <<PYEOF
+import json, os
+sf = "$STATE_FILE"
+state = {}
+if os.path.exists(sf):
+    try:
+        state = json.load(open(sf))
+    except Exception:
+        state = {}
+
+skill = "$SKILL"
+now = "$NOW"
+state['version'] = state.get('version', 1)
+
+if skill == "siae-brainstorming":
+    state['last_brainstorm_completed'] = now
+    state['last_brainstorm_step'] = 7
+elif skill == "siae-debugging":
+    state['last_debug_phase'] = 4
+elif skill == "siae-tdd":
+    state['last_tdd_cycle'] = now
+    state['last_fix_or_implementation_done'] = now
+elif skill == "siae-verification":
+    state['last_verification_passed'] = now
+elif skill == "siae-writing-plans":
+    state['last_plan_written'] = now
+
+with open(sf, 'w') as f:
+    json.dump(state, f, indent=2)
+PYEOF
+
+exit 0
