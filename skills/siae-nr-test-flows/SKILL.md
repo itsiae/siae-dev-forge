@@ -1,8 +1,10 @@
 ---
 name: siae-nr-test-flows
 description: >
-  Analizza repository frontend/mobile e genera NRT flow map + test list deterministici
-  pronti per Xray. Trigger: no-regression test flows, NRT suite, /forge-flows,
+  Use when QA needs to analyze a frontend/mobile repo (Vue/React/Angular/Ionic/Flutter)
+  and generate a deterministic NRT flow map + Xray test list for regression coverage.
+  Analizza repository frontend/mobile e genera NRT flow map + test list.
+  Trigger: no-regression test flows, NRT suite, /forge-flows,
   repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione.
 ---
 

@@ -27,6 +27,11 @@ description: |
   assistant: "Invoco l'agent siae-devforge:spec-reviewer con il piano specificato per verificare completezza e conformita'."
   <commentary>L'agent puo' essere invocato con un riferimento esplicito a un design doc specifico in docs/plans/.</commentary>
   </example>
+tools:
+  - Read
+  - Bash
+  - Grep
+  - Glob
 model: inherit
 ---
 

@@ -31,6 +31,12 @@ description: |
   <commentary>Per moduli IaC la review enfatizza security, struttura file (_input.tf, _local.tf, _output.tf), e aderenza ai pattern Terragrunt documentati.</commentary>
   </example>
 model: inherit
+tools:
+  - Read
+  - Bash
+  - Grep
+  - Glob
+  - WebFetch
 ---
 
 ```

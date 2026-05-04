@@ -1,8 +1,9 @@
 ---
 name: siae-iac
 description: >
-  Guida la scrittura e modifica di moduli Terraform, file terragrunt.hcl e
-  infrastruttura AWS.
+  Use when writing or modifying Terraform modules, terragrunt.hcl files, or AWS
+  infrastructure (VPC, ECS, Lambda, DynamoDB, S3, security groups, API Gateway).
+  Guida la scrittura e modifica di IaC.
   Trigger: modulo Terraform, terragrunt, file .tf, .hcl, VPC, ECS, Lambda,
   DynamoDB table, S3 bucket, security group, API Gateway, infrastruttura AWS.
 ---
