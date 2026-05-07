@@ -1,0 +1,93 @@
+# Single source of truth: tool MCP sport-kg disponibili per agenti DevForge.
+# Aggiornare QUESTO file ogni volta che sport-kg aggiunge/modifica un tool.
+# Poi verificare che i frontmatter `tools:` di ogni agent siano allineati.
+#
+# Ultima sync: 2026-05-07 (Onda 12.2 — endpoint + dto + library kinds)
+# sport-kg branch: feat/dto-library-vector-search
+
+semantic_search_kinds:
+  - business_rule   # Onda 12 — Drools/decision-table intent
+  - service         # Onda 12 — microservizio description
+  - batch           # Onda 12 — BatchJob Spring/@Scheduled
+  - table           # Onda 12 — tabelle Oracle description
+  - endpoint        # Onda 12.1 — REST endpoint (method+path+DTO+domain)
+  - dto             # Onda 12.2 — DTO Java (fields + used_by services)
+  - library         # Onda 12.2 — Maven library interna (groupId:artifactId)
+  - any             # cross-kind ranking unificato
+
+tools_by_role:
+
+  # ─── Impact Analyst (pre-flight design) ───────────────────────────────
+  impact-analyst:
+    core:
+      - demand_impact
+      - demand_impact_deep
+      - impact_with_evidence
+      - impact_of_dto_change
+      - impact_of_endpoint_change
+      - answer_impact_question
+    topology:
+      - list_services
+      - describe_service
+      - service_full_context
+      - service_health
+      - who_calls
+      - find_service_for_endpoint
+      - find_service_for_symbol
+    semantic:
+      - semantic_search            # Onda 12 — disambiguazione per significato
+    elasticsearch:
+      - search_by_service
+      - search_logs
+
+  # ─── QA Investigator (Q&A multi-fonte) ────────────────────────────────
+  qa-investigator:
+    topology:
+      - list_services
+      - describe_service
+      - service_full_context
+      - service_health
+      - who_calls
+      - find_service_for_endpoint
+      - find_service_for_symbol
+      - describe_feign_client
+    auth:
+      - describe_auth_chain
+      - who_authenticates
+    semantic:
+      - semantic_search            # Onda 12 — discovery per significato
+      - semantic_resolve           # Stream D — arricchimento on-demand
+    elasticsearch:
+      - search_by_service
+      - search_logs
+      - list_indices
+
+  # ─── Doc Generator (HLD/LLD/API doc) ─────────────────────────────────
+  doc-generator:
+    topology:
+      - describe_service
+      - service_full_context
+      - describe_auth_chain
+      - describe_table
+    semantic:
+      - semantic_search            # Onda 12 — discovery correlati per dominio
+      - semantic_resolve           # Stream D — descrizione nodi senza intent
+
+  # ─── Code Reviewer (cross-check architetturale, conditional load) ────
+  code-reviewer:
+    topology:
+      - describe_service
+      - service_full_context
+      - who_calls
+      - impact_with_evidence
+      - service_health
+      - graph_consistency_check
+
+  # ─── Spec Reviewer (conformance check) ───────────────────────────────
+  spec-reviewer:
+    # Nessun tool MCP — read-only su file, verifica design vs codice.
+    topology: []
+
+# ─── Changelog ──────────────────────────────────────────────────────────
+# 2026-05-07: creato. Wiring semantic_search + semantic_resolve su qa-investigator,
+#             mcp-impact-analyst, doc-generator. Fix enum kind server.py.
