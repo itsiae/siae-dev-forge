@@ -1,6 +1,11 @@
-# Single source of truth: tool MCP sport-kg disponibili per agenti DevForge.
+# Single source of truth: tool MCP sport-kg dichiarati nei FRONTMATTER degli agenti DevForge.
 # Aggiornare QUESTO file ogni volta che sport-kg aggiunge/modifica un tool.
 # Poi verificare che i frontmatter `tools:` di ogni agent siano allineati.
+#
+# NOTA: questo YAML copre i tool dichiarati in frontmatter (quelli che Claude Code
+# rende visibili all'agent). I ToolSearch bulk string nei body degli agent caricano
+# tool addizionali di pipeline (debug_service, alternate_hypotheses, ecc.) che NON
+# servono nel frontmatter ma sono risolti a runtime via ToolSearch select:.
 #
 # Ultima sync: 2026-05-07 (Onda 12.2 — endpoint + dto + library kinds)
 # sport-kg branch: feat/dto-library-vector-search
@@ -90,4 +95,4 @@ tools_by_role:
 
 # ─── Changelog ──────────────────────────────────────────────────────────
 # 2026-05-07: creato. Wiring semantic_search + semantic_resolve su qa-investigator,
-#             mcp-impact-analyst, doc-generator. Fix enum kind server.py.
+#             mcp-impact-analyst, doc-generator. (sport-kg PR #30 aggiunge dto+library kinds)

@@ -130,11 +130,11 @@ attivi, tabelle DB, external systems) e arricchire HLD/LLD/API doc con dati
 di runtime reali.
 
 I tool MCP appaiono come "deferred" nei subagent — devi caricarli con
-`ToolSearch` PRIMA di chiamarli (13 tool sport-kg v2: 7 base topology + 4 Onde
+`ToolSearch` PRIMA di chiamarli (15 tool sport-kg v2: 9 base topology + 4 Onde
 6/9/10/D3 + 2 semantic Onda 12):
 
 ```
-ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__semantic_search,mcp__sport-kg__semantic_resolve"
+ToolSearch query="select:mcp__sport-kg__describe_service,mcp__sport-kg__service_full_context,mcp__sport-kg__describe_auth_chain,mcp__sport-kg__describe_table,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__semantic_search,mcp__sport-kg__semantic_resolve"
 ```
 
 #### Uso semantic per HLD/LLD
