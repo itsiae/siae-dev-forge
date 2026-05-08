@@ -54,6 +54,8 @@ tools:
   - mcp__sport-kg__describe_auth_chain
   - mcp__sport-kg__who_authenticates
   - mcp__sport-kg__describe_feign_client
+  - mcp__sport-kg__semantic_search
+  - mcp__sport-kg__semantic_resolve
   - mcp__elasticsearch__search_by_service
   - mcp__elasticsearch__search_logs
   - mcp__elasticsearch__list_indices
@@ -112,10 +114,10 @@ Quando vieni invocato come subagent, i tool MCP appaiono come "deferred" e
 calling diretto fallisce con `InputValidationError`. Devi caricarli con
 `ToolSearch` PRIMA di chiamarli.
 
-### Bulk loading (1 chiamata sola, all'inizio — 23 tool sport-kg v2: 13 base + 9 nuovi Onde 6/9/10 + D3 + 1 fix consistenza frontmatter)
+### Bulk loading (1 chiamata sola, all'inizio — 25 tool sport-kg v2: 13 base + 9 Onde 6/9/10/D3 + 2 semantic Onda 12 + 1 fix consistenza)
 
 ```
-ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__who_authenticates,mcp__sport-kg__describe_auth_chain,mcp__sport-kg__describe_feign_client,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__answer_impact_question"
+ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__who_calls,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_by_service,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__who_authenticates,mcp__sport-kg__describe_auth_chain,mcp__sport-kg__describe_feign_client,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__answer_impact_question,mcp__sport-kg__semantic_search,mcp__sport-kg__semantic_resolve"
 ```
 
 Poi:
@@ -167,12 +169,23 @@ Tool da chiamare (in parallelo quando possibile):
 |---|---|---|
 | "Chi chiama X?" | `who_calls(X)` | `describe_service(X)` |
 | "X chi chiama?" | `endpoints_called(X)` | `service_full_context(X)` |
-| "Esiste un servizio che fa Y?" | `list_services(filter=*Y*)` + `search_endpoints(keyword=Y)` | `search_by_service(Y)` |
-| "Dove e' scritta la tabella T?" | `search_tables(T)` | `data_flow_for_method` se trovi metodo |
+| "Esiste un servizio che fa Y?" | **`semantic_search(query=Y, kind="service")`** (Onda 12) | `list_services(filter=*Y*)` fallback |
+| "Quali endpoint gestiscono Z?" | **`semantic_search(query=Z, kind="endpoint")`** (Onda 12.1) | `find_service_for_endpoint` se sai il path |
+| "DTO per richieste di tipo W?" | **`semantic_search(query=W, kind="dto")`** (Onda 12.2) | grep su repo fallback |
+| "Libreria che fa X?" | **`semantic_search(query=X, kind="library")`** (Onda 12.2) | grep `pom.xml` fallback |
+| "Dove e' scritta la tabella T?" | `search_tables(T)` — oppure **`semantic_search(query=T, kind="table")`** se nome criptico | `data_flow_for_method` se trovi metodo |
+| "Cosa fa esattamente il batch/servizio X?" | **`semantic_resolve(entity_kind, entity_id)`** (Stream D) | grep Stage 3 su repo |
 | "Chi e' l'IdP di X?" | `who_authenticates(X)` (Onda 9 — primario) | `describe_service(X)` + `refresh_external_systems(X)` |
-| "Esiste un batch per Z?" | `find_batch_for_keyword(Z)` (Onda 10) | `service_full_context(<host>)` per cron schedule |
-| "Quale regola Drools governa W?" | `list_rules(filter=W)` (Onda 6) | `describe_rule(rule_id)` per drill-down |
+| "Esiste un batch per Z?" | **`semantic_search(query=Z, kind="batch")`** (Onda 12) | `find_batch_for_keyword(Z)` fallback |
+| "Quale regola Drools governa W?" | **`semantic_search(query=W, kind="business_rule")`** (Onda 12) | `list_rules(filter=W)` fallback |
 | "Quale auth filter chain usa X?" | `describe_auth_chain(X)` | `describe_feign_client(X)` per outbound auth |
+
+#### Regola decisionale semantic vs deterministico
+
+- Sai il **nome esatto** → tool deterministico (`describe_service`, `find_service_for_endpoint`, `describe_rule`)
+- Sai il **significato** ma non il nome → `semantic_search(query=..., kind=...)`
+- Hai trovato il nodo ma non capisci cosa fa → `semantic_resolve(entity_kind, entity_id, question=...)`
+- `semantic_search` NON sostituisce `who_calls`/`describe_auth_chain` — quelli rispondono a relazioni, non a significato
 
 #### Priors check freshness (opzionale)
 

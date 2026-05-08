@@ -56,6 +56,7 @@ tools:
   - mcp__sport-kg__service_full_context
   - mcp__sport-kg__service_health
   - mcp__sport-kg__who_calls
+  - mcp__sport-kg__semantic_search
   - mcp__elasticsearch__search_by_service
   - mcp__elasticsearch__search_logs
 ---
@@ -108,11 +109,10 @@ chiamare qualsiasi tool MCP.
 
 ### Caricamento bulk (1 chiamata sola)
 
-Prima di ogni altra azione, esegui (24 tool sport-kg v2: 15 base + 9 nuovi
-da Onde 6/9/10 + D3, vedi design doc 2026-05-03):
+Prima di ogni altra azione, esegui (25 tool sport-kg v2: 15 base + 9 Onde 6/9/10/D3 + 1 semantic Onda 12):
 
 ```
-ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__demand_impact,mcp__sport-kg__demand_impact_deep,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_by_service,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__impact_of_rule_change,mcp__sport-kg__answer_impact_question"
+ToolSearch query="select:mcp__sport-kg__list_services,mcp__sport-kg__describe_service,mcp__sport-kg__demand_impact,mcp__sport-kg__demand_impact_deep,mcp__sport-kg__service_full_context,mcp__sport-kg__service_health,mcp__sport-kg__debug_service,mcp__sport-kg__who_calls,mcp__sport-kg__impact_with_evidence,mcp__sport-kg__refresh_external_systems,mcp__sport-kg__search_by_service,mcp__sport-kg__endpoints_called,mcp__sport-kg__search_endpoints,mcp__sport-kg__search_tables,mcp__sport-kg__data_flow_for_method,mcp__sport-kg__graph_consistency_check,mcp__sport-kg__alternate_hypotheses,mcp__sport-kg__graph_staleness_report,mcp__sport-kg__find_batch_for_keyword,mcp__sport-kg__who_authenticates,mcp__sport-kg__list_rules,mcp__sport-kg__describe_rule,mcp__sport-kg__impact_of_rule_change,mcp__sport-kg__answer_impact_question,mcp__sport-kg__semantic_search"
 ```
 
 Poi, separatamente, carica i tool ES se ti servono evidenze runtime:
@@ -164,8 +164,12 @@ Identifica il servizio target dal prompt utente. Strategia:
 1. Se il prompt nomina esplicitamente un servizio (es. `sport-gestione-licenze-service`), usalo.
 2. Se nomina una classe (es. `PagamentoServiceImpl`, `LicPermesso`), grepa nel codice
    o usa pattern naming SIAE per inferire il servizio.
-3. Se ambiguo, chiama `mcp__sport-kg__list_services()` (full-dump, NON con filter
-   — bug noto: filter case-sensitive ritorna 0).
+3. Se descrive una **funzione/dominio** senza nome tecnico (es. "il servizio che
+   gestisce i concertini", "l'endpoint per il pagamento licenze"), chiama
+   `mcp__sport-kg__semantic_search(query=<descrizione>, kind="service"|"endpoint"|"dto"|"any")`
+   per risolvere per significato (Onda 12).
+4. Se ambiguo e semantic non ha risolto, chiama `mcp__sport-kg__list_services()`
+   (full-dump, NON con filter — bug noto: filter case-sensitive ritorna 0).
 
 Output Step 1: `target_service: <name>`.
 
