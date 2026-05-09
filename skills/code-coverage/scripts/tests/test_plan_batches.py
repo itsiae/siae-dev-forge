@@ -69,3 +69,55 @@ def test_cli_entry_point():
     plan = run_planner_via_cli(FIXTURES / "with-coverage")
     assert plan["ordering_strategy"] == "tier-first"
     assert plan["total_files"] > 0
+
+
+def test_e2e_with_estimate_size_real_output(tmp_path):
+    """E2E: verifica che estimate_size.py emetta REALMENTE tier+priority,
+    e che plan_batches.py possa consumarli senza fixture hand-written.
+    Previene regressione: fixture pre-cotti potrebbero mascherare un
+    estimate_size che non emette i campi.
+    """
+    import subprocess
+
+    # Crea micro-repo con file in dirs riconoscibili
+    (tmp_path / "src" / "services").mkdir(parents=True)
+    (tmp_path / "src" / "utils").mkdir(parents=True)
+    (tmp_path / "src" / "handlers").mkdir(parents=True)
+    (tmp_path / "src" / "services" / "payment.ts").write_text("export class P {}")
+    (tmp_path / "src" / "utils" / "format.ts").write_text("export const f = (x) => x")
+    (tmp_path / "src" / "handlers" / "api.ts").write_text(
+        "import { Handler } from 'aws-lambda'; export const handler: Handler = async () => {}"
+    )
+
+    # Run estimate_size.py
+    estimate_script = SCRIPT.parent / "estimate_size.py"
+    result = subprocess.run(
+        ["python3", str(estimate_script), str(tmp_path), "--file-list"],
+        capture_output=True, text=True, check=True,
+    )
+    size_data = json.loads(result.stdout)
+
+    # Verifica che TUTTI i file abbiano tier+priority popolati (not fallback "T4"/"P3")
+    assert size_data["file_list"], "file_list vuoto"
+    for f in size_data["file_list"]:
+        assert "tier" in f, f"tier mancante in {f['path']}"
+        assert "priority" in f, f"priority mancante in {f['path']}"
+        assert f["tier"] in {"T1", "T2", "T3", "T4"}, f"tier invalido: {f['tier']}"
+        assert f["priority"] in {"P1", "P2", "P3"}, f"priority invalida: {f['priority']}"
+
+    # Sanity check classifier output reale
+    by_path = {f["path"]: f for f in size_data["file_list"]}
+    assert by_path["src/handlers/api.ts"]["tier"] == "T4"
+    assert by_path["src/handlers/api.ts"]["priority"] == "P1"
+    assert by_path["src/utils/format.ts"]["tier"] == "T1"
+    assert by_path["src/utils/format.ts"]["priority"] == "P2"
+
+    # Run plan_batches.py con questo size_data reale (no fixture pre-cotti)
+    stack_data = {"module_coverage": [{"path": "src/utils/format.ts", "lines_pct": 0}]}
+    rules = pb.load_priority_rules()
+    plan = pb.build_plan(size_data, stack_data, rules)
+
+    # Con module_coverage non-empty → tier-first
+    assert plan["ordering_strategy"] == "tier-first"
+    # Primo batch deve essere T1 (tier-first ordering)
+    assert plan["batches"][0]["tier"] == "T1"

@@ -9,8 +9,70 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
+
+SKILL_ROOT = Path(__file__).resolve().parent.parent
+PRIORITY_RULES_PATH = SKILL_ROOT / "assets" / "priority-rules.json"
+
+
+def _load_priority_rules() -> dict:
+    try:
+        with open(PRIORITY_RULES_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _classify_priority(rel_path: str, priority_rules: dict) -> str | None:
+    """P1/P2/P3 da priority_levels.path_patterns in priority-rules.json."""
+    levels = priority_rules.get("priority_levels", {})
+    for level_name in ("P1", "P2", "P3"):
+        patterns = levels.get(level_name, {}).get("path_patterns", [])
+        for pattern in patterns:
+            regex = pattern.replace("**/", ".*/").replace("**", ".*").replace("*", "[^/]*")
+            if re.search(regex, rel_path):
+                return level_name
+    return None
+
+
+_T4_PATH_RE = re.compile(r"(?:^|/)(handlers?|controllers?|repositor(?:y|ies)|gateways?|adapters?)/")
+_T3_PATH_RE = re.compile(r"(?:^|/)(components?|hooks?|stores?|reducers?|pages?|views?)/")
+_T1_PATH_RE = re.compile(r"(?:^|/)(utils?|helpers?|lib|formatters?|validators?)/")
+_IO_IMPORT_RE = re.compile(
+    r"(?:from\s+|import\s+)(['\"]?)("
+    r"@aws-sdk|aws-sdk|aws-lambda|axios|node-fetch|got|undici|"
+    r"boto3|botocore|requests|httpx|aiohttp|urllib|"
+    r"java\.io|java\.net|jakarta\.servlet|"
+    r"reqwest|hyper|tokio::net"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _classify_tier(rel_path: str, abs_path: Path) -> str:
+    """T1-T4 testability classifier:
+      - T4 I/O: path match handlers/repos/gateways OR import AWS SDK / HTTP client
+      - T3 Components: path match components/hooks/stores/views (frontend) OR services
+      - T1 Pure: path match utils/helpers/lib AND nessun import esterno significativo
+      - T2 Injectable: default
+    """
+    if _T4_PATH_RE.search(rel_path):
+        return "T4"
+    try:
+        head = abs_path.read_text(encoding="utf-8", errors="ignore")[:4096]
+        if _IO_IMPORT_RE.search(head):
+            return "T4"
+        import_count = len(re.findall(r"^\s*(?:import|from)\s+\S", head, re.MULTILINE))
+    except OSError:
+        head = ""
+        import_count = 0
+    if _T3_PATH_RE.search(rel_path):
+        return "T3"
+    if _T1_PATH_RE.search(rel_path) and import_count <= 1:
+        return "T1"
+    return "T2"
 
 SOURCE_EXTENSIONS = {
     ".ts", ".tsx", ".js", ".jsx", ".mjs",
@@ -76,6 +138,8 @@ def main() -> None:
         if idx + 1 < len(sys.argv):
             coverage_path = Path(sys.argv[idx + 1])
 
+    priority_rules = _load_priority_rules() if want_file_list else {}
+
     breakdown: dict[str, dict] = {}
     file_entries: list[dict] = []
     total_files = 0
@@ -118,10 +182,13 @@ def main() -> None:
             total_loc += loc
 
             if want_file_list:
+                rel_path = str(fpath.relative_to(root))
                 file_entries.append({
-                    "path": str(fpath.relative_to(root)),
+                    "path": rel_path,
                     "loc": loc,
                     "lang": lang,
+                    "tier": _classify_tier(rel_path, fpath),
+                    "priority": _classify_priority(rel_path, priority_rules) or "P2",
                 })
 
     module_count = max(1, round(total_files * 0.85))
