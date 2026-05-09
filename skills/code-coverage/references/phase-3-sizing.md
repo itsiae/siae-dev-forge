@@ -94,7 +94,7 @@ Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio 
 
 ## Batch Plan File Format
 
-`.code-coverage/batch-plan.json` (written to target repo with approval):
+`.code-coverage/batch-plan.json` (written to target repo autonomously, vedi Principle 1):
 
 ```json
 {

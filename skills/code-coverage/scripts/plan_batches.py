@@ -140,8 +140,12 @@ def main() -> int:
         print(json.dumps({"error": f"stack file not found: {args.stack}"}), file=sys.stderr)
         return 1
 
-    size_data = json.loads(args.size.read_text())
-    stack_data = json.loads(args.stack.read_text())
+    try:
+        size_data = json.loads(args.size.read_text())
+        stack_data = json.loads(args.stack.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        print(json.dumps({"error": f"input parse error: {e}"}), file=sys.stderr)
+        return 1
     rules = load_priority_rules()
 
     plan = build_plan(size_data, stack_data, rules)

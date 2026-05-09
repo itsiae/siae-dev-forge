@@ -161,10 +161,13 @@ def assign_priority_and_threshold(
 
 def load_priority_rules(skill_root: Path) -> dict | None:
     rules_path = skill_root / "assets" / "priority-rules.json"
-    if rules_path.exists():
+    if not rules_path.exists():
+        return None
+    try:
         with open(rules_path) as f:
             return json.load(f)
-    return None
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def parse(framework: str, input_path: Path, priority_rules: dict | None) -> dict:
