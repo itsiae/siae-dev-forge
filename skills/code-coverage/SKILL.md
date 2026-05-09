@@ -54,16 +54,27 @@ These six rules govern every decision made during this skill's execution. They a
 
 6. **Progressive disclosure — load references on demand.** SKILL.md is the entry point only. Load each `skills/code-coverage/references/phase-N-*.md` file at the start of the corresponding phase. Never preload all reference files upfront.
 
+7. **State persistence + cache.** Tutti gli output strutturati delle fasi sono persisti in `.code-coverage/`. File `stack.json`, `size.json`, `env.json` sono cache-friendly: ri-letti da fasi successive solo se mtime > `package.json`/`pom.xml`/`Cargo.toml`/`pyproject.toml`. Template files (`templates/*.template.*`) caricati ONCE per (framework, session) — successivi batch rifiutano re-load. Schema completo: `skills/code-coverage/lib/state-schema.json`.
+
 ---
 
 ## WORKFLOW — 7 Phases
 
+### Phase 0 — Init (before Phase 1)
+Source `skills/code-coverage/lib/cache-helper.sh` and run `init_workdir <target_repo>`. This creates `.code-coverage/`, ensures `.gitignore` is updated (idempotent), initializes `decisions.log`.
+
 ### Phase 1 — Discovery
 **Load `skills/code-coverage/references/phase-1-discovery.md` before starting this phase.**
 
-Run `python3 skills/code-coverage/scripts/detect_stack.py <repo_path>` to produce the stack detection JSON.
+Run, in parallelo, redirect output a `.code-coverage/`:
+- `python3 skills/code-coverage/scripts/detect_stack.py <repo_path> > <repo_path>/.code-coverage/stack.json`
+- `python3 skills/code-coverage/scripts/estimate_size.py <repo_path> --file-list > <repo_path>/.code-coverage/size.json`
+- `python3 skills/code-coverage/scripts/validate_env.py <repo_path> > <repo_path>/.code-coverage/env.json`
+
+Cache check (skip esecuzione se valida): per ogni file, `is_cache_valid <cache-file> <pinnacle>` (sourcing cache-helper.sh). Se exit 0 → leggi cache esistente, NON eseguire script. Pinnacle file: `package.json` (JS/TS), `pyproject.toml` (Python), `pom.xml` (Maven), `build.gradle` (Gradle), `Cargo.toml` (Rust), `pubspec.yaml` (Flutter), `go.mod` (Go).
+
 If the repo is remote, auto-clone in `mktemp -d` senza prompt (cleanup automatico, path loggato in `.code-coverage/decisions.log`).
-Output: `{languages, frameworks, package_managers, build_systems, monorepo, ci_cd, architecture_style, existing_test_frameworks}`.
+Output `stack.json`: `{languages, frameworks, package_managers, build_systems, monorepo, ci_cd, architecture_style, existing_test_frameworks}`.
 
 **Runtime pre-check (after Phase 1, before Phase 2):** immediately after Phase 1 completes, run steps 1 and 2 of `phase-4-environment.md` (Runtime Availability + Package Manager Availability) for the languages detected. If any check returns `blocking: true`, stop immediately using the Blocking Check Handler template — do not proceed to Phase 2. This early check avoids wasting Phase 2–3 work when the runtime is unavailable.
 

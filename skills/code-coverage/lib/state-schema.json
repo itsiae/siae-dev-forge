@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "code-coverage skill persistence state",
+  "description": "Schema dei file persisti in .code-coverage/ durante session. Gli artefatti dal naming *.json seguono i contratti dei rispettivi script Python; gli artefatti *.txt/*.log sono testuali per audit trail.",
+  "type": "object",
+  "properties": {
+    "stack.json": {
+      "description": "Output di detect_stack.py — invalidato da package.json/pom.xml/Cargo.toml/pyproject.toml/build.gradle/pubspec.yaml/go.mod mtime",
+      "ref": "scripts/detect_stack.py output contract"
+    },
+    "size.json": {
+      "description": "Output di estimate_size.py --file-list — invalidato dallo stesso pinnacle file di stack.json",
+      "ref": "scripts/estimate_size.py output contract"
+    },
+    "env.json": {
+      "description": "Output di validate_env.py — invalidato dallo stesso pinnacle file di stack.json",
+      "ref": "scripts/validate_env.py output contract"
+    },
+    "batch-plan.json": {
+      "description": "Output di plan_batches.py — TTL session",
+      "ref": "scripts/plan_batches.py output contract (PR8)"
+    },
+    "coverage-summary.json": {
+      "description": "Output framework --coverage.reporter=json-summary — TTL session",
+      "ref": "framework-specific format (vitest/jest json-summary, jacoco xml-to-json, etc.)"
+    },
+    "coverage-report.json": {
+      "description": "Output di parse_coverage.py — TTL session",
+      "ref": "scripts/parse_coverage.py output contract (PR3)"
+    },
+    "failures.json": {
+      "description": "Output di categorize_failure.py per Phase 7 — TTL per-iter",
+      "ref": "scripts/categorize_failure.py output contract (PR4)"
+    },
+    "deferred_files.json": {
+      "description": "File deferred-by-design da Phase 5 (P2/P3 hit precoce) — escluso da Phase 6→7 gate",
+      "type": "object",
+      "properties": {
+        "deferred": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": "string"}
+      }
+    },
+    "install-log.txt": {
+      "description": "Log auto-install in target repo (Phase 4)",
+      "type": "string"
+    },
+    "lockfile.bak": {
+      "description": "Snapshot lockfile pre-install per rollback",
+      "type": "string"
+    },
+    "generation-plan.txt": {
+      "description": "Lista files da generare in Phase 5 (audit trail)",
+      "type": "string"
+    },
+    "decisions.log": {
+      "description": "Log centralizzato decisioni autonome (audit trail). Scritto da log_decision() in cache-helper.sh.",
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "session": "Una singola invocazione /code-coverage. Re-invocazione = nuova session = invalida tutto eccetto stack.json/size.json/env.json (mtime check vs pinnacle file)."
+  }
+}

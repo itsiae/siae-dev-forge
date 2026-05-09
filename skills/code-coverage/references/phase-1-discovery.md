@@ -6,6 +6,29 @@ without reading any source code. Detection is purely file-system and manifest-ba
 
 ---
 
+## Persistence layer
+
+Tutti gli output di Phase 1 sono persisti in `<repo>/.code-coverage/`:
+- `stack.json` — output di `detect_stack.py`
+- `size.json` — output di `estimate_size.py --file-list`
+- `env.json` — output di `validate_env.py`
+
+Per ogni script, prima di eseguire:
+1. Source `skills/code-coverage/lib/cache-helper.sh`
+2. `is_cache_valid .code-coverage/<file>.json <repo>/<pinnacle>` (pinnacle = `package.json` / `pyproject.toml` / `pom.xml` / `build.gradle` / `Cargo.toml` / `pubspec.yaml` / `go.mod` in base allo stack)
+3. Se exit 0: leggi cache esistente, NON eseguire script.
+4. Se exit 1: esegui script e redirect output a `.code-coverage/<file>.json`.
+
+Le 3 invocazioni script sono indipendenti — possono girare in parallelo:
+```bash
+(detect_stack.py <repo> > .code-coverage/stack.json &) ; \
+(estimate_size.py <repo> --file-list > .code-coverage/size.json &) ; \
+(validate_env.py <repo> > .code-coverage/env.json &) ; \
+wait
+```
+
+---
+
 ## Detection File Inventory
 
 Run `scripts/detect_stack.py <repo_path>` which inspects the following files.

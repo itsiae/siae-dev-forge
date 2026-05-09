@@ -39,6 +39,17 @@ Batch ceilings by tier:
 
 ---
 
+## Template caching policy
+
+Per ogni framework selezionato (es. `vitest`, `pytest`, `junit5`):
+1. **PRIMO batch**: leggi `skills/code-coverage/templates/<framework>.template.*` UNA volta. Salva contenuto in variabile di sessione `_TEMPLATE_<FRAMEWORK>` (es. `_TEMPLATE_VITEST`).
+2. **BATCH SUCCESSIVI** nella stessa session: NON ri-leggere il template file. Riusa la variabile cached.
+3. Cache invalidata solo da nuova invocazione skill.
+
+Razionale: per MEDIUM repo con 10 batch, ri-lettura template = ~3-9 KB × 10 = ~30-90 KB di token sprecati.
+
+---
+
 ## Pre-Generation Checklist
 
 Before writing any test file:
