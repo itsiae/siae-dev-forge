@@ -18,7 +18,7 @@
 
 | # | Task | File | SP | Fix IDs | Stato |
 |---|------|------|----|---------|-------|
-| 0 | Benchmark Baseline | `task-00-benchmark-baseline.md` | 0.5 | (prerequisito) | [PENDING] |
+| 0 | Benchmark Baseline | `task-00-benchmark-baseline.md` | 0.5 | (prerequisito) | [DONE-PARTIAL] script+smoke; metriche [BLOCKED:USER-MANUAL] |
 | 1 | Quick Wins | `task-01-quick-wins.md` | 1 | P1, P2, P6, P12 + QW1-QW10 | [PENDING] |
 | 2 | Persistence Layer | `task-02-persistence-layer.md` | 1.5 | P3 + ST7 | [PENDING] |
 | 3 | Coverage Parser | `task-03-coverage-parser.md` | 1.5 | P4 + ST1 | [PENDING] |

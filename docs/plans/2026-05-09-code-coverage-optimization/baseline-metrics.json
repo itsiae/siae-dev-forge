@@ -1,0 +1,37 @@
+{
+  "repo_pinning": {
+    "small": {
+      "name": "esb-common-utils",
+      "url": "https://github.com/itsiae/esb-common-utils",
+      "sha": "3664602",
+      "stack": "java",
+      "rationale": "Sostituto di sport-utils-service (non esistente). Repository utility Java minimale, ~1 source file dominante."
+    },
+    "medium": {
+      "name": "mag-concertini-fe",
+      "url": "https://github.com/itsiae/mag-concertini-fe",
+      "sha": "581e83e",
+      "stack": "vue",
+      "rationale": "Sostituto di digital-channels-sport-fe (non esistente). Frontend Vue.js, 1228 source files (.vue/.ts/.js), classifica MEDIUM-LARGE per il target."
+    },
+    "large": {
+      "name": "sport-gestione-licenze-service",
+      "url": "https://github.com/itsiae/sport-gestione-licenze-service",
+      "sha": "3232832",
+      "stack": "java-spring",
+      "rationale": "Match esatto col piano. ~1592 source files Java/Spring."
+    }
+  },
+  "metric_collection_status": {
+    "status": "PENDING_USER_MANUAL",
+    "blocker": "Le metriche baseline richiedono l'invocazione interattiva della skill /code-coverage su ognuno dei 3 repo per popolare <repo>/.code-coverage/{decisions.log, coverage-report.json}. Operazione non eseguibile da Claude in modalita' executing-plans.",
+    "user_action_required": [
+      "Per ogni repo (small/medium/large), eseguire in sessione Claude separata: /code-coverage <repo-path>",
+      "Al termine di ogni run, eseguire: bash tools/benchmark-skill.sh <repo-path> baseline",
+      "Compilare manualmente il campo transcript_tokens dalla telemetria Claude API o dalla stima da wc -c sul transcript"
+    ],
+    "expected_runs_per_repo": 1,
+    "expected_run_labels_post_pr": ["baseline", "post-pr1", "post-pr4", "final"]
+  },
+  "runs": []
+}
