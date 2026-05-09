@@ -150,12 +150,9 @@
       "phased_mode_message": "Repository exceeds safe single-session capacity. Switching to phased enterprise mode."
     }
   },
-  "coverage_target": {
-    "global_minimum_pct": 70,
-    "p1_minimum_pct": 80,
-    "p2_minimum_pct": 70,
-    "p3_minimum_pct": 60,
-    "best_effort_threshold_pct": 50,
-    "abort_threshold_pct": 30
+  "ordering_constants": {
+    "tier_order": {"T1": 0, "T2": 1, "T3": 2, "T4": 3},
+    "priority_order": {"P1": 0, "P2": 1, "P3": 2},
+    "batch_ceiling_per_tier": {"T1": 3, "T2": 2, "T3": 1, "T4": 1}
   }
 }

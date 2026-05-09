@@ -111,7 +111,26 @@ Esegui install autonomamente in base a policy P1 (Autonomous Execution Policy). 
 
 Apply `skills/code-coverage/assets/priority-rules.json` P1/P2/P3 classification and skip patterns.
 
-**Processing order is mandatory:** process ALL P1 modules before starting P2; process ALL P2 modules before starting P3. Within each priority tier, sort files by composite priority score `(1 - current_coverage) × loc` descending — `current_coverage` from Phase 1 `module_coverage` output, `loc` from Phase 3 `file_list`. Never sacrifice P1 completeness for P2/P3 breadth.
+**Processing order is conditional (D1 resolved):**
+
+```python
+import json
+stack = json.loads(open(".code-coverage/stack.json").read())
+has_module_coverage = bool(stack.get("module_coverage"))
+
+if has_module_coverage:
+    # TIER-FIRST (T1 → T2 → T3 → T4) — priority_score reale,
+    # ROI coverage-per-token massimo iniziando da T1 (pure logic).
+    sort_key = lambda f: (TIER_ORDER[f["tier"]], -f["priority_score"])
+else:
+    # P-TIER FALLBACK (P1 → P2 → P3) — senza segnale di coverage,
+    # tier-first rischia di lasciare P1 sotto soglia.
+    sort_key = lambda f: (PRIORITY_ORDER[f["priority"]], -f["loc"])
+
+batch_plan = sorted(file_list, key=sort_key)
+```
+
+Within either ordering: process the entire current group before moving to the next. Hard floor: `min(P1 modules lines_pct) ≥ 80%` finale. Constants in `assets/priority-rules.json.ordering_constants`. Implementazione concreta in `scripts/plan_batches.py`.
 
 **Selective source reading:** for files with LOC > 150, use targeted grep before full read — see `phase-5-generation.md` Pre-Generation Checklist, point 3 (selective read rule).
 

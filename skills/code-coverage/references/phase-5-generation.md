@@ -50,6 +50,47 @@ Razionale: per MEDIUM repo con 10 batch, ri-lettura template = ~3-9 KB × 10 = ~
 
 ---
 
+## Ordering Strategy (D1 conditional)
+
+```mermaid
+graph TD
+    Start[Read stack.json] --> Check{module_coverage<br/>non-empty?}
+    Check -->|Yes| TierFirst[TIER-FIRST<br/>T1 → T2 → T3 → T4]
+    Check -->|No| PTier[P-TIER FALLBACK<br/>P1 → P2 → P3]
+
+    TierFirst --> ScoreT[priority_score = 1-cov × loc<br/>per ogni file]
+    PTier --> ScoreP[ordering = priority + LOC desc<br/>per ogni file]
+
+    ScoreT --> Batch[Apply batch ceiling<br/>T1=3 T2=2 T3=1 T4=1]
+    ScoreP --> Batch
+
+    Batch --> Generate[Generate tests in order]
+```
+
+### Razionale della scelta condizionale
+
+| Caso | Behavior | Motivo |
+|------|----------|--------|
+| `module_coverage` disponibile | TIER-FIRST | priority_score reale → ROI coverage-per-token maxed; T1 prima abbatte mock cost iniziale |
+| `module_coverage` empty/missing | P-TIER | Senza segnale di coverage, tier-first rischia di lasciare P1 sotto 80% se hit globale avviene prima di toccare P1-T4 (handler business-critical) |
+
+### Sicurezza floor P1 ≥ 80%
+
+In ENTRAMBE le strategie, dopo ogni iterazione di Phase 5/6/7, se `min(P1 modules lines_pct) < 80%` → forza inclusione di file P1 sub-threshold a tier=T4 nelle prossime iterazioni, sopra qualsiasi ordering tier o priority. Enforcing per `priority-rules.json` `min_coverage_pct: 80` per P1 (Principle 5).
+
+### Batch ceiling (D2 resolved 8-2)
+
+| Tier | Files per call | Razionale |
+|------|----------------|-----------|
+| T1 (pure logic) | 3 (was 5) | Riduce blast radius su template error sistemico; evita quality drop on tail items |
+| T2 (light deps) | 2 (was 3) | Stesso |
+| T3 (heavy deps) | 1 | Mock setup complesso, batch=1 evita errori cascade |
+| T4 (I/O handlers) | 1 | Massimo mock cost, isolato sempre |
+
+A5 e A8 hanno documentato il rischio "round-trip non ammortizzati" da rivedere in retrospettiva post-PR8 con A/B test su repo LARGE.
+
+---
+
 ## Pre-Generation Checklist
 
 Before writing any test file:
