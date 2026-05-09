@@ -1,0 +1,188 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-05-07",
+  "default_rule": "Vitest is ALWAYS default for JS/TS. Deviate only under jest_fallback_conditions.",
+  "stacks": {
+    "javascript_frontend": {
+      "detection_files": ["package.json"],
+      "detection_keywords": ["react", "next", "vue", "nuxt", "@angular/core", "svelte", "@remix-run", "astro"],
+      "test_framework": "vitest",
+      "vitest_environment": "jsdom",
+      "runner_command": "npx vitest run",
+      "coverage_command": "npx vitest run --coverage",
+      "coverage_provider": "@vitest/coverage-v8",
+      "install_dev_deps": ["vitest", "@vitest/coverage-v8"],
+      "config_file": "vitest.config.ts",
+      "template": "vitest.template.ts",
+      "min_node_version": "18"
+    },
+    "javascript_node": {
+      "detection_files": ["package.json"],
+      "detection_keywords": ["express", "fastify", "koa", "hapi", "@nestjs/core"],
+      "test_framework": "vitest",
+      "vitest_environment": "node",
+      "runner_command": "npx vitest run",
+      "coverage_command": "npx vitest run --coverage",
+      "coverage_provider": "@vitest/coverage-v8",
+      "install_dev_deps": ["vitest", "@vitest/coverage-v8"],
+      "config_file": "vitest.config.ts",
+      "template": "vitest.template.ts",
+      "min_node_version": "18"
+    },
+    "javascript_serverless": {
+      "detection_files": ["package.json", "serverless.yml", "serverless.ts", "template.yaml", "cdk.json", "sst.config.ts"],
+      "detection_keywords": ["aws-lambda", "aws-cdk", "@aws-sdk", "@sst/core", "serverless"],
+      "test_framework": "vitest",
+      "vitest_environment": "node",
+      "runner_command": "npx vitest run",
+      "coverage_command": "npx vitest run --coverage",
+      "coverage_provider": "@vitest/coverage-v8",
+      "install_dev_deps": ["vitest", "@vitest/coverage-v8", "@aws-sdk/client-dynamodb", "@aws-sdk/client-s3"],
+      "config_file": "vitest.config.ts",
+      "template": "vitest-lambda.template.ts",
+      "lambda_event_mocks": ["APIGateway", "SQS", "SNS", "EventBridge", "DynamoDB", "S3"],
+      "min_node_version": "18"
+    },
+    "javascript_jest_fallback": {
+      "activation_note": "Conditions (a)→(b)→(c/d) evaluated in order. First match wins. SKILL.md Principle 4 is the single authoritative definition — do not re-evaluate from this file.",
+      "test_framework": "jest",
+      "runner_command": "npx jest",
+      "coverage_command": "npx jest --coverage",
+      "coverage_provider": "@jest/coverage",
+      "install_dev_deps": ["jest", "@types/jest", "ts-jest"],
+      "config_file": "jest.config.ts",
+      "template": "jest.template.ts"
+    },
+    "python": {
+      "detection_files": ["requirements.txt", "pyproject.toml", "setup.py", "setup.cfg", "Pipfile", "poetry.lock"],
+      "detection_keywords": ["fastapi", "flask", "django", "celery", "boto3", "pydantic"],
+      "test_framework": "pytest",
+      "runner_command": "python -m pytest",
+      "coverage_command": "python -m pytest --cov=. --cov-report=term-missing --cov-report=html",
+      "coverage_provider": "pytest-cov",
+      "install_dev_deps": ["pytest", "pytest-cov", "pytest-asyncio", "pytest-mock"],
+      "config_file": "pyproject.toml",
+      "template": "pytest.template.py",
+      "min_python_version": "3.10"
+    },
+    "pyspark": {
+      "detection_files": ["requirements.txt", "pyproject.toml"],
+      "detection_keywords": ["pyspark", "databricks", "delta", "spark"],
+      "test_framework": "pytest+chispa",
+      "runner_command": "python -m pytest",
+      "coverage_command": "python -m pytest --cov=. --cov-report=term-missing",
+      "coverage_provider": "pytest-cov",
+      "install_dev_deps": ["pytest", "pytest-cov", "chispa", "pyspark"],
+      "config_file": "pyproject.toml",
+      "template": "pyspark.template.py",
+      "notes": "Use SparkSession fixture with local[*] master. Never use real cluster."
+    },
+    "java": {
+      "detection_files": ["pom.xml", "build.gradle", "build.gradle.kts"],
+      "detection_keywords": ["spring-boot", "quarkus", "micronaut", "jakarta"],
+      "test_framework": "junit5",
+      "runner_command_maven": "mvn test",
+      "runner_command_gradle": "./gradlew test",
+      "runner_command_gradle_windows": "gradlew.bat test",
+      "coverage_command_maven": "mvn test jacoco:report",
+      "coverage_command_gradle": "./gradlew test jacocoTestReport",
+      "coverage_command_gradle_windows": "gradlew.bat test jacocoTestReport",
+      "coverage_provider": "jacoco",
+      "install_deps": {
+        "maven": ["junit-jupiter:5.11+", "mockito-core:5+", "jacoco-maven-plugin:0.8+"],
+        "gradle": ["junit-jupiter", "mockito-core", "jacoco"]
+      },
+      "template": "junit5.template.java",
+      "min_java_version": "17"
+    },
+    "kotlin": {
+      "detection_files": ["pom.xml", "build.gradle.kts"],
+      "detection_keywords": ["kotlin", "ktor", "spring-boot", "android"],
+      "test_framework": "junit5+mockk",
+      "runner_command_gradle": "./gradlew test",
+      "runner_command_gradle_windows": "gradlew.bat test",
+      "coverage_command_gradle": "./gradlew test koverHtmlReport koverXmlReport",
+      "coverage_command_gradle_windows": "gradlew.bat test koverHtmlReport koverXmlReport",
+      "coverage_report_html": "build/reports/kover/html/index.html",
+      "coverage_report_xml": "build/reports/kover/report.xml",
+      "coverage_provider": "kover",
+      "install_deps": {
+        "gradle": ["io.mockk:mockk:1.13+", "org.junit.jupiter:junit-jupiter:5.11+", "kotlinx-coroutines-test"]
+      },
+      "template": "mockk.template.kt",
+      "min_kotlin_version": "1.9"
+    },
+    "flutter": {
+      "detection_files": ["pubspec.yaml"],
+      "detection_keywords": ["flutter", "dart"],
+      "test_framework": "flutter_test",
+      "runner_command": "flutter test",
+      "coverage_command": "flutter test --coverage && genhtml coverage/lcov.info -o coverage/html",
+      "coverage_provider": "lcov",
+      "install_dev_deps": ["mockito: ^5.0.0", "flutter_test (SDK)"],
+      "template": "flutter_test.template.dart",
+      "min_flutter_version": "3.0"
+    },
+    "go": {
+      "detection_files": ["go.mod", "go.sum"],
+      "detection_keywords": ["gin", "echo", "fiber", "chi", "gorilla"],
+      "test_framework": "testing",
+      "runner_command": "go test ./...",
+      "coverage_command": "go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out",
+      "coverage_provider": "go-cover",
+      "install_dev_deps": ["github.com/stretchr/testify"],
+      "template": "go-testing.template.go",
+      "min_go_version": "1.21"
+    },
+    "rust": {
+      "detection_files": ["Cargo.toml", "Cargo.lock"],
+      "detection_keywords": ["actix-web", "axum", "tokio", "hyper"],
+      "test_framework": "cargo-test",
+      "runner_command": "cargo test",
+      "coverage_command_linux": "cargo tarpaulin --out Lcov --output-dir coverage",
+      "coverage_command_macos": "cargo llvm-cov --html --output-dir coverage",
+      "coverage_command_windows": "cargo llvm-cov --html --output-dir coverage",
+      "coverage_provider_linux": "cargo-tarpaulin",
+      "coverage_provider_macos": "cargo-llvm-cov",
+      "coverage_provider_windows": "cargo-llvm-cov",
+      "install_dev_deps_linux": ["cargo-tarpaulin (cargo install)"],
+      "install_dev_deps_macos": ["cargo-llvm-cov (cargo install)"],
+      "install_dev_deps_windows": ["cargo-llvm-cov (cargo install)"],
+      "template": "cargo-test.template.rs",
+      "notes": "Use coverage_command_linux/macos/windows to select the right tool per platform."
+    },
+    "csharp": {
+      "detection_files": ["*.csproj", "*.sln", "global.json"],
+      "detection_keywords": ["Microsoft.AspNetCore", "Azure.Functions", "Microsoft.EntityFrameworkCore"],
+      "test_framework": "xunit",
+      "runner_command": "dotnet test",
+      "coverage_command": "dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov",
+      "coverage_provider": "coverlet",
+      "install_dev_deps": ["xunit", "xunit.runner.visualstudio", "Moq", "coverlet.msbuild"],
+      "template": "xunit.template.cs",
+      "min_dotnet_version": "8.0"
+    },
+    "ruby": {
+      "detection_files": ["Gemfile", "Gemfile.lock", ".ruby-version"],
+      "detection_keywords": ["rails", "sinatra", "sidekiq", "hanami"],
+      "test_framework": "rspec",
+      "runner_command": "bundle exec rspec",
+      "coverage_command": "COVERAGE=true bundle exec rspec",
+      "coverage_provider": "simplecov",
+      "install_dev_deps": ["rspec-rails", "simplecov", "factory_bot_rails", "webmock"],
+      "template": null,
+      "notes": "Add simplecov at top of spec_helper.rb"
+    },
+    "php": {
+      "detection_files": ["composer.json", "composer.lock"],
+      "detection_keywords": ["laravel", "symfony", "wordpress", "slim"],
+      "test_framework": "phpunit",
+      "runner_command": "vendor/bin/phpunit",
+      "coverage_command": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-html coverage",
+      "coverage_provider": "xdebug",
+      "install_dev_deps": ["phpunit/phpunit", "mockery/mockery"],
+      "template": null,
+      "notes": "Requires xdebug extension or pcov for coverage"
+    }
+  }
+}
