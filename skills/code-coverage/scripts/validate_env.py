@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -36,40 +37,43 @@ FRAMEWORK_RUNTIME_MAP = {
 }
 
 RUNTIME_CHECKS = [
-    ("node",    ["node", "--version"], "18.0.0"),
-    ("python3", ["python3", "--version"], "3.10.0"),
-    ("java",    ["java", "-version"], "17"),
-    ("go",      ["go", "version"], "1.21"),
-    ("cargo",   ["cargo", "--version"], "1.70.0"),
-    ("dotnet",  ["dotnet", "--version"], "8.0.0"),
-    ("flutter", ["flutter", "--version"], "3.0.0"),
+    ("node",    ["node", "--version"], "18.0.0", 5),
+    ("python3", ["python3", "--version"], "3.10.0", 5),
+    ("java",    ["java", "-version"], "17", 30),
+    ("go",      ["go", "version"], "1.21", 5),
+    ("cargo",   ["cargo", "--version"], "1.70.0", 5),
+    ("dotnet",  ["dotnet", "--version"], "8.0.0", 5),
+    ("flutter", ["flutter", "--version"], "3.0.0", 30),
 ]
 
 PM_CHECKS = [
-    ("npm",      ["npm", "--version"]),
-    ("yarn",     ["yarn", "--version"]),
-    ("pnpm",     ["pnpm", "--version"]),
-    ("bun",      ["bun", "--version"]),
-    ("pip",      ["pip3", "--version"]),
-    ("poetry",   ["poetry", "--version"]),
-    ("pipenv",   ["pipenv", "--version"]),
-    ("maven",    ["mvn", "--version"]),
-    ("gradle",   ["gradle", "--version"]),
-    ("bundler",  ["bundle", "--version"]),
-    ("composer", ["composer", "--version"]),
+    ("npm",      ["npm", "--version"], 5),
+    ("yarn",     ["yarn", "--version"], 5),
+    ("pnpm",     ["pnpm", "--version"], 5),
+    ("bun",      ["bun", "--version"], 5),
+    ("pip",      ["pip3", "--version"], 5),
+    ("poetry",   ["poetry", "--version"], 5),
+    ("pipenv",   ["pipenv", "--version"], 5),
+    ("maven",    ["mvn", "--version"], 30),
+    ("gradle",   ["gradle", "--version"], 30),
+    ("bundler",  ["bundle", "--version"], 5),
+    ("composer", ["composer", "--version"], 5),
 ]
 
 
-def _run(cmd: list[str]) -> tuple[bool, str]:
+def _run(cmd: list[str], timeout: int = 5) -> tuple[bool, str, str | None]:
+    """Run subprocess. Return (ok, version_line, reason). reason='TIMEOUT' se scaduto."""
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=5
+            cmd, capture_output=True, text=True, timeout=timeout
         )
         output = (result.stdout + result.stderr).strip().splitlines()
         version_line = output[0] if output else ""
-        return True, version_line
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False, ""
+        return True, version_line, None
+    except subprocess.TimeoutExpired:
+        return False, "", "TIMEOUT"
+    except (FileNotFoundError, OSError):
+        return False, "", None
 
 
 def _parse_version(version_str: str) -> tuple[int, ...]:
@@ -123,39 +127,102 @@ def _detect_required_framework(repo_path: Path) -> str:
 
 
 def _check_framework_installed(repo_path: Path, framework: str) -> dict:
-    """Check if the test framework is already installed in the project."""
-    result = {"installed": False, "location": "unknown"}
+    """Real check su manifest dei build tool per framework presence (P10/ST4).
 
+    Returns: {"installed": bool, "version": str | None, "source": str, "location": str}
+    """
     if framework == "vitest":
+        pkg = repo_path / "package.json"
+        if pkg.exists():
+            try:
+                data = json.loads(pkg.read_text(encoding="utf-8", errors="ignore"))
+                dev = {**data.get("devDependencies", {}), **data.get("dependencies", {})}
+                if "vitest" in dev:
+                    return {"installed": True, "version": dev["vitest"], "source": "package.json", "location": "node_modules/vitest"}
+            except Exception:
+                pass
         nm = repo_path / "node_modules" / "vitest"
-        result["installed"] = nm.exists()
-        result["location"] = "node_modules/vitest"
-    elif framework == "jest":
-        nm = repo_path / "node_modules" / "jest"
-        result["installed"] = nm.exists()
-        result["location"] = "node_modules/jest"
-    elif framework == "pytest":
-        ok, _ = _run([_python_bin(), "-c", "import pytest"])
-        result["installed"] = ok
-        result["location"] = "site-packages/pytest"
-    elif framework == "junit5":
-        result["installed"] = True
-        result["location"] = "via Maven/Gradle (check pom.xml/build.gradle)"
-    elif framework == "flutter_test":
-        result["installed"] = True
-        result["location"] = "flutter SDK (built-in)"
-    elif framework == "go-test":
-        result["installed"] = True
-        result["location"] = "go stdlib (built-in)"
-    elif framework == "cargo-test":
-        result["installed"] = True
-        result["location"] = "cargo (built-in)"
-    elif framework == "xunit":
-        nm = repo_path / "packages" / "xunit"
-        result["installed"] = nm.exists() or (repo_path / "bin").exists()
-        result["location"] = "NuGet packages"
+        if nm.exists():
+            return {"installed": True, "version": None, "source": "node_modules", "location": "node_modules/vitest"}
+        return {"installed": False, "version": None, "source": "package.json", "location": "node_modules/vitest"}
 
-    return result
+    if framework == "jest":
+        pkg = repo_path / "package.json"
+        if pkg.exists():
+            try:
+                data = json.loads(pkg.read_text(encoding="utf-8", errors="ignore"))
+                dev = {**data.get("devDependencies", {}), **data.get("dependencies", {})}
+                if "jest" in dev:
+                    return {"installed": True, "version": dev["jest"], "source": "package.json", "location": "node_modules/jest"}
+            except Exception:
+                pass
+        nm = repo_path / "node_modules" / "jest"
+        if nm.exists():
+            return {"installed": True, "version": None, "source": "node_modules", "location": "node_modules/jest"}
+        return {"installed": False, "version": None, "source": "package.json", "location": "node_modules/jest"}
+
+    if framework == "pytest":
+        for f in ["pyproject.toml", "requirements-dev.txt", "requirements.txt", "setup.cfg"]:
+            p = repo_path / f
+            if p.exists():
+                try:
+                    if "pytest" in p.read_text(encoding="utf-8", errors="ignore"):
+                        return {"installed": True, "version": None, "source": f, "location": "site-packages/pytest"}
+                except Exception:
+                    continue
+        ok, _, _ = _run([_python_bin(), "-c", "import pytest"])
+        if ok:
+            return {"installed": True, "version": None, "source": "site-packages", "location": "site-packages/pytest"}
+        return {"installed": False, "version": None, "source": "pyproject.toml", "location": "site-packages/pytest"}
+
+    if framework == "junit5":
+        pom = repo_path / "pom.xml"
+        if pom.exists():
+            content = pom.read_text(encoding="utf-8", errors="ignore")
+            if re.search(r"<artifactId>junit-jupiter(?:-api)?</artifactId>", content):
+                return {"installed": True, "version": None, "source": "pom.xml", "location": "Maven dependencies"}
+        for gradle_file in ["build.gradle.kts", "build.gradle"]:
+            gradle = repo_path / gradle_file
+            if gradle.exists():
+                content = gradle.read_text(encoding="utf-8", errors="ignore")
+                if "junit-jupiter" in content or "useJUnitPlatform" in content:
+                    return {"installed": True, "version": None, "source": gradle_file, "location": "Gradle dependencies"}
+        return {"installed": False, "version": None, "source": "pom.xml | build.gradle", "location": "Maven/Gradle dependencies"}
+
+    if framework == "mockk":
+        for gradle_file in ["build.gradle.kts", "build.gradle"]:
+            gradle = repo_path / gradle_file
+            if gradle.exists() and "mockk" in gradle.read_text(encoding="utf-8", errors="ignore"):
+                return {"installed": True, "version": None, "source": gradle_file, "location": "Gradle dependencies"}
+        return {"installed": False, "version": None, "source": "build.gradle.kts", "location": "Gradle dependencies"}
+
+    if framework == "cargo-test":
+        if (repo_path / "Cargo.toml").exists():
+            return {"installed": True, "version": "stdlib", "source": "Cargo.toml", "location": "cargo (built-in)"}
+        return {"installed": False, "version": None, "source": "Cargo.toml", "location": "cargo (built-in)"}
+
+    if framework == "go-test":
+        if (repo_path / "go.mod").exists():
+            return {"installed": True, "version": "stdlib", "source": "go.mod", "location": "go stdlib (built-in)"}
+        return {"installed": False, "version": None, "source": "go.mod", "location": "go stdlib (built-in)"}
+
+    if framework == "flutter_test":
+        pubspec = repo_path / "pubspec.yaml"
+        if pubspec.exists() and "flutter_test:" in pubspec.read_text(encoding="utf-8", errors="ignore"):
+            return {"installed": True, "version": None, "source": "pubspec.yaml", "location": "flutter SDK (built-in)"}
+        return {"installed": False, "version": None, "source": "pubspec.yaml", "location": "flutter SDK"}
+
+    if framework == "xunit":
+        for csproj in repo_path.rglob("*.csproj"):
+            try:
+                content = csproj.read_text(encoding="utf-8", errors="ignore")
+                if 'Include="xunit"' in content or 'Include="xunit.runner' in content:
+                    return {"installed": True, "version": None, "source": str(csproj.relative_to(repo_path)), "location": "NuGet packages"}
+            except Exception:
+                continue
+        return {"installed": False, "version": None, "source": "*.csproj", "location": "NuGet packages"}
+
+    return {"installed": False, "version": None, "source": "unknown", "location": "unknown"}
 
 
 def _build_install_commands(framework: str, repo_path: Path) -> list[str]:
@@ -271,23 +338,27 @@ def main() -> None:
     py_bin = _python_bin()
     pip_bin = _pip_bin()
     runtime_checks = list(RUNTIME_CHECKS)
-    runtime_checks[1] = ("python3", [py_bin, "--version"], "3.10.0")
+    runtime_checks[1] = ("python3", [py_bin, "--version"], "3.10.0", 5)
     pm_checks = list(PM_CHECKS)
-    pm_checks[4] = ("pip", [pip_bin, "--version"])
+    pm_checks[4] = ("pip", [pip_bin, "--version"], 5)
 
-    for tool, cmd, min_ver in runtime_checks:
-        ok, version_line = _run(cmd)
+    for tool, cmd, min_ver, timeout in runtime_checks:
+        ok, version_line, reason = _run(cmd, timeout=timeout)
         entry = {"tool": tool, "version": version_line, "min_required": min_ver, "ok": ok}
+        if reason:
+            entry["reason"] = reason
         if ok:
             entry["version_ok"] = _version_ok(version_line, min_ver)
             available.append(entry)
         else:
             missing.append(entry)
 
-    for tool, cmd in pm_checks:
-        ok, version_line = _run(cmd)
+    for tool, cmd, timeout in pm_checks:
+        ok, version_line, reason = _run(cmd, timeout=timeout)
         if ok:
             available.append({"tool": tool, "version": version_line, "ok": True})
+        elif reason == "TIMEOUT":
+            available.append({"tool": tool, "version": None, "ok": False, "reason": "TIMEOUT"})
 
     # B-03: prefer ./gradlew wrapper over global gradle for enterprise repos
     gradlew_bin = repo_path / "gradlew"
@@ -299,9 +370,12 @@ def main() -> None:
         if not _is_safe_gradlew(gradlew_path, repo_path):
             available.append({"tool": "gradle", "version": "wrapper present (skipped — safety check failed)", "ok": False})
         else:
-            ok_gw, ver_gw = _run([str(gradlew_path), "--version"])
+            ok_gw, ver_gw, reason_gw = _run([str(gradlew_path), "--version"], timeout=30)
             label = f"wrapper: {ver_gw}" if ok_gw else "wrapper present (run failed — JDK required)"
-            available.append({"tool": "gradle", "version": label, "ok": True})
+            entry = {"tool": "gradle", "version": label, "ok": True}
+            if reason_gw:
+                entry["reason"] = reason_gw
+            available.append(entry)
 
     fw_status = _check_framework_installed(repo_path, framework)
     if not fw_status["installed"]:
@@ -323,6 +397,7 @@ def main() -> None:
         "repo_path": str(repo_path),
         "required_framework": framework,
         "framework_installed": fw_status["installed"],
+        "framework_check": {framework: fw_status},
         "available": available,
         "missing": missing,
         "install_commands": install_commands,

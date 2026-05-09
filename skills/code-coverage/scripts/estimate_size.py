@@ -70,6 +70,12 @@ def main() -> None:
 
     want_file_list = "--file-list" in sys.argv
 
+    coverage_path: Path | None = None
+    if "--with-coverage" in sys.argv:
+        idx = sys.argv.index("--with-coverage")
+        if idx + 1 < len(sys.argv):
+            coverage_path = Path(sys.argv[idx + 1])
+
     breakdown: dict[str, dict] = {}
     file_entries: list[dict] = []
     total_files = 0
@@ -130,7 +136,19 @@ def main() -> None:
         "breakdown": breakdown,
     }
     if want_file_list:
-        output["file_list"] = sorted(file_entries, key=lambda e: e["loc"], reverse=True)
+        if coverage_path and coverage_path.exists():
+            try:
+                cov_data = json.loads(coverage_path.read_text(encoding="utf-8", errors="ignore"))
+                cov_map = {m["path"]: m.get("lines_pct", 0) / 100.0 for m in cov_data.get("modules", [])}
+                for f in file_entries:
+                    current = cov_map.get(f["path"], 0.0)
+                    f["current_coverage"] = current
+                    f["priority_score"] = round((1 - current) * f["loc"], 2)
+                output["file_list"] = sorted(file_entries, key=lambda e: e.get("priority_score", e["loc"]), reverse=True)
+            except (json.JSONDecodeError, OSError):
+                output["file_list"] = sorted(file_entries, key=lambda e: e["loc"], reverse=True)
+        else:
+            output["file_list"] = sorted(file_entries, key=lambda e: e["loc"], reverse=True)
 
     print(json.dumps(output, indent=2))
 

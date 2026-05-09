@@ -10,6 +10,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -263,6 +264,122 @@ def detect_existing_test_frameworks(root: Path) -> list[str]:
     return sorted(existing)
 
 
+def detect_test_infrastructure(repo_path: Path, frameworks: list[str]) -> dict:
+    test_dirs = []
+    for d in ["__tests__", "tests", "test", "spec"]:
+        for found in repo_path.rglob(d):
+            if found.is_dir() and not any(
+                excl in str(found) for excl in ("node_modules", ".venv", "target", "dist", "build", ".git")
+            ):
+                test_dirs.append(str(found.relative_to(repo_path)))
+    test_dirs = sorted(set(test_dirs))[:10]
+
+    pattern_sample = ""
+    test_files: list[Path] = []
+    for ext_glob in ["*.test.ts", "*.test.tsx", "*.test.js", "*.spec.ts", "test_*.py", "*_test.py", "*Test.java", "*_test.go", "*_test.rs"]:
+        for f in repo_path.rglob(ext_glob):
+            if any(excl in str(f) for excl in ("node_modules", ".venv", "target", "dist", "build", ".git")):
+                continue
+            test_files.append(f)
+            if len(test_files) >= 3:
+                break
+        if len(test_files) >= 3:
+            break
+
+    if test_files:
+        try:
+            content = test_files[0].read_text(encoding="utf-8", errors="ignore")[:1000]
+            for line in content.split("\n"):
+                if any(sig in line for sig in ["vi.mock(", "jest.mock(", "@patch", "@mock", "mockito.when", "MockK", "mocker.patch"]):
+                    pattern_sample = line.strip()[:120]
+                    break
+        except Exception:
+            pass
+
+    return {
+        "frameworks_detected": frameworks,
+        "test_dirs": test_dirs,
+        "patterns_sample": pattern_sample,
+    }
+
+
+def parse_lcov_info(lcov_path: Path) -> tuple[float, list[dict]]:
+    if not lcov_path.exists():
+        return 0.0, []
+    content = _read_text_safe(lcov_path)
+    modules = []
+    total_lf = 0
+    total_lh = 0
+    current_path = None
+    current_lf = 0
+    current_lh = 0
+    for line in content.splitlines():
+        if line.startswith("SF:"):
+            current_path = line[3:].strip()
+            current_lf = 0
+            current_lh = 0
+        elif line.startswith("LF:"):
+            try:
+                current_lf = int(line[3:].strip())
+            except ValueError:
+                current_lf = 0
+        elif line.startswith("LH:"):
+            try:
+                current_lh = int(line[3:].strip())
+            except ValueError:
+                current_lh = 0
+        elif line.startswith("end_of_record"):
+            if current_path and current_lf > 0:
+                pct = (current_lh / current_lf) * 100
+                modules.append({"path": current_path, "lines_pct": round(pct, 2)})
+                total_lf += current_lf
+                total_lh += current_lh
+            current_path = None
+    global_pct = (total_lh / total_lf * 100) if total_lf > 0 else 0.0
+    return round(global_pct, 2), modules
+
+
+def parse_jacoco_for_existing(jacoco_path: Path) -> tuple[float, list[dict]]:
+    if not jacoco_path.exists():
+        return 0.0, []
+    content = _read_text_safe(jacoco_path)
+    line_match = re.search(r'<counter type="LINE" missed="(\d+)" covered="(\d+)"', content)
+    if not line_match:
+        return 0.0, []
+    missed, covered = int(line_match.group(1)), int(line_match.group(2))
+    total = missed + covered
+    pct = (covered / total * 100) if total else 0.0
+    return round(pct, 2), [{"path": "(jacoco-aggregate)", "lines_pct": round(pct, 2)}]
+
+
+def detect_coverage_exclude(repo_path: Path) -> list[str]:
+    excludes: list[str] = []
+    for cfg in ["vitest.config.ts", "vitest.config.js", "vite.config.ts"]:
+        p = repo_path / cfg
+        if p.exists():
+            content = _read_text_safe(p)
+            m = re.search(r"exclude\s*:\s*\[([^\]]+)\]", content, re.DOTALL)
+            if m:
+                items = re.findall(r"['\"]([^'\"]+)['\"]", m.group(1))
+                excludes.extend(items)
+    for cfg in ["jest.config.js", "jest.config.ts"]:
+        p = repo_path / cfg
+        if p.exists():
+            content = _read_text_safe(p)
+            m = re.search(r"coveragePathIgnorePatterns\s*:\s*\[([^\]]+)\]", content, re.DOTALL)
+            if m:
+                items = re.findall(r"['\"]([^'\"]+)['\"]", m.group(1))
+                excludes.extend(items)
+    pyproject = repo_path / "pyproject.toml"
+    if pyproject.exists():
+        content = _read_text_safe(pyproject)
+        m = re.search(r"\[tool\.coverage\.run\][^[]*omit\s*=\s*\[([^\]]+)\]", content, re.DOTALL)
+        if m:
+            items = re.findall(r"['\"]([^'\"]+)['\"]", m.group(1))
+            excludes.extend(items)
+    return sorted(set(excludes))
+
+
 def main() -> None:
     if sys.version_info < (3, 8):
         print(json.dumps({"error": f"Python 3.8+ required. Found: {sys.version}"}), file=sys.stderr)
@@ -278,6 +395,14 @@ def main() -> None:
 
     languages = detect_languages(root)
     frameworks = detect_frameworks(root)
+    existing_tf = detect_existing_test_frameworks(root)
+
+    test_infra = detect_test_infrastructure(root, existing_tf)
+    pre_existing_pct, module_cov = parse_lcov_info(root / "coverage" / "lcov.info")
+    if pre_existing_pct == 0.0 and not module_cov:
+        jacoco_path = root / "target" / "site" / "jacoco" / "jacoco.xml"
+        pre_existing_pct, module_cov = parse_jacoco_for_existing(jacoco_path)
+    coverage_exclude = detect_coverage_exclude(root)
 
     print(json.dumps({
         "repo_path": str(root),
@@ -288,7 +413,11 @@ def main() -> None:
         "monorepo": detect_monorepo(root),
         "ci_cd": detect_ci_cd(root),
         "architecture_style": detect_architecture(root, frameworks),
-        "existing_test_frameworks": detect_existing_test_frameworks(root),
+        "existing_test_frameworks": existing_tf,
+        "test_infrastructure": test_infra,
+        "pre_existing_coverage_pct": pre_existing_pct,
+        "module_coverage": module_cov,
+        "coverage_exclude": coverage_exclude,
     }, indent=2))
 
 

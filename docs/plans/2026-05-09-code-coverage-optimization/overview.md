@@ -23,7 +23,7 @@
 | 2 | Persistence Layer | `task-02-persistence-layer.md` | 1.5 | P3 + ST7 | [DONE] |
 | 3 | Coverage Parser | `task-03-coverage-parser.md` | 1.5 | P4 + ST1 | [DONE] |
 | 4 | Repair Loop Refactor | `task-04-repair-loop-refactor.md` | 2 | P5 + ST2 + ST6 | [DONE] |
-| 5 | Stack Detection Extension | `task-05-stack-detection-extension.md` | 2 | P10 + ST4 | [PENDING] |
+| 5 | Stack Detection Extension | `task-05-stack-detection-extension.md` | 2 | P10 + ST4 | [DONE] |
 | 6 | Conditional Ordering | `task-06-conditional-ordering.md` | 0.5 | (D1 risolto) | [PENDING] |
 | 7 | SKILL.md Refactor | `task-07-skill-md-refactor.md` | 1.5 | P7 + P9 + P11 + ST5 | [PENDING] |
 | 8 | Plan Batches + Template Fixes | `task-08-plan-batches.md` | 1 | P8 + ST3 + ST8 | [PENDING] |

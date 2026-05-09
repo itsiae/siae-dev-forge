@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<report name="maven-fixture">
+  <counter type="LINE" missed="20" covered="80"/>
+  <counter type="BRANCH" missed="5" covered="15"/>
+</report>
