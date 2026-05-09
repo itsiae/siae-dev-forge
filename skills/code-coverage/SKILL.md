@@ -142,11 +142,19 @@ Before loading Phase 7, check the coverage results from Phase 6. Enter Phase 7 *
 If all conditions are false (every module meets its per-priority threshold AND global ≥ 70%), **skip Phase 7** and proceed directly to OUTPUT.
 
 ### Phase 7 — Repair
-**Load `skills/code-coverage/references/phase-7-repair.md` before starting this phase.**
+**Load `skills/code-coverage/references/phase-7-repair.md` per il pseudocodice completo.**
 
-For each failing test or module below its per-priority threshold, apply the deterministic repair loop.
-Categorize failures as: dependency / import / runtime / mock / assertion.
-Apply the fix strategy for each category. Iterate until per-priority coverage targets are met or loop limit (3 iterations) is reached.
+Categorize via `python3 skills/code-coverage/scripts/categorize_failure.py` (deterministic, 6 categorie + normalize() signature).
+
+Budget rules (deterministic, zero prompt utente):
+- max iterazioni: 3 (autonomous early-abort iter 1 può ridurre a 2)
+- max 1 full coverage run per iterazione
+- progress guard: Δglobal_coverage < 0.5pp AND Δfailing_count ≤ 0 → STOP
+- systemic fix: count ≥ max(2, 30% del totale) AND categoria `systemic_eligible` → fix config-level UNA VOLTA
+- per-file fix: Edit scoped (solo blocco failing), NO rigenerazione full-file
+- Cat 6 (transient) valutata PRIMA di Cat 1-5 — 1 retry automatico
+
+Output: `.code-coverage/failures.json` per ogni iter (audit trail).
 
 ---
 

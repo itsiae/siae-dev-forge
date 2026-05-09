@@ -1,0 +1,3 @@
+FAIL src/services/auth.test.ts
+AssertionError: expected mock function to have been called once but was called 0 times
+  at src/services/auth.test.ts:12:5

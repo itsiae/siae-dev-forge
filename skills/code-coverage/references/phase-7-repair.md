@@ -1,186 +1,113 @@
 # Phase 7 — Repair Loop
 
-## Purpose
-For each failing test or module below coverage threshold, apply a deterministic
-diagnostic + fix cycle. Iterate until coverage ≥70% or the loop limit is reached.
+**Goal**: dopo Phase 6, riparare moduli/test sotto threshold tramite categorizzazione deterministica + grouping per `error_signature` + fix scoped + progress guard.
 
----
+**Pre-requisito**: `.code-coverage/coverage-report.json` (output di parse_coverage.py) + esecuzione test runner che ha prodotto stderr per ogni file failing.
 
-## Failure Categories
+## Algoritmo
 
-Every test failure maps to exactly one category. Categorize BEFORE applying any fix.
+```python
+import json
+import subprocess
+from collections import defaultdict
+from pathlib import Path
 
-### Category 1: Dependency Issue
-**Symptoms:**
-- `Cannot find module 'X'`
-- `ModuleNotFoundError: No module named 'X'`
-- `Package or classfile 'X' not found`
-- `error[E0433]: failed to resolve`
-- Missing peer dependency warnings at test startup
+report = json.loads(Path(".code-coverage/coverage-report.json").read_text())
+failing_tests = []  # popolato dal framework runner: list of (test_file, stderr_blob)
 
-**Fix Strategy — decision tree (evaluate in order, stop at first match):**
-
-1. Does the error message contain `"Dynamic require of"`?
-   **YES →** Cause: CJS-only package in ESM context.
-   Fix: add the package to `test.deps.inline: ['package-name']` in `vitest.config.ts`. Document in `.code-coverage/constraints.json`.
-
-2. Does the import path start with `@/`, `~/`, or a custom alias (not starting with `./`, `../`, or a bare package name)?
-   **YES →** Cause: unresolved path alias.
-   Fix: read `tsconfig.json` → `compilerOptions.paths` → add matching `resolve.alias` entries to `vitest.config.ts`.
-
-3. Check `package.json` / `requirements.txt` / `pom.xml` for the missing dependency.
-   - If missing: add to the install commands list and present to user for approval.
-   - If the import path is wrong: run `grep -r "export.*FunctionName" src/` to find the correct path.
-   - If the dependency is an AWS SDK mock: add `aws-sdk-client-mock` to dev dependencies.
-
-4. Re-run tests after applying the fix.
-
-### Category 2: Import Issue
-**Symptoms:**
-- `SyntaxError: The requested module 'X' does not provide an export named 'Y'`
-- `ImportError: cannot import name 'Y' from 'X'`
-- `error TS2305: Module 'X' has no exported member 'Y'`
-- Named import resolves to `undefined`
-
-**Fix Strategy:**
-1. Read the source file being imported to find the correct export name.
-2. Check for: named vs default export mismatch, barrel file re-exports, `index.ts` indirection.
-3. Update the import statement in the test file.
-4. For TypeScript: check `tsconfig.json` `paths` aliases — may require Vitest `resolve.alias` config.
-
-### Category 3: Runtime Issue
-**Symptoms:**
-- Test times out (async test never resolves)
-- `TypeError: X is not a function`
-- `ReferenceError: X is not defined`
-- Unexpected exception not caught by the test
-- Environment-specific code (browser API in Node environment)
-
-**Fix Strategy:**
-1. Check for unresolved promises: add `await` to the Act step, or use `resolves/rejects` matchers.
-2. Check environment: Vitest defaults to `node` — if DOM APIs needed, set `environment: 'jsdom'` in vitest.config.ts.
-3. For `X is not a function`: verify the mock returns the right type (object vs function).
-4. For environment-specific globals (`window`, `document`, `localStorage`): add `globals: true` to vitest config or mock them explicitly.
-
-### Category 4: Mock Issue
-**Symptoms:**
-- `Mock not called` / `Expected to have been called`
-- Mock returns `undefined` when a value was expected
-- `Cannot spy on a non-function value`
-- Original function called instead of mock (mock not hoisted)
-- `vi.mock` / `jest.mock` factory not taking effect
-
-**Fix Strategy:**
-1. **Hoisting**: `vi.mock(...)` calls must be at the top of the test file (Vitest auto-hoists, but factory must be a callback, not a variable reference).
-2. **Return value**: ensure mock returns the correct shape. Use `mockResolvedValue` for async, `mockReturnValue` for sync.
-3. **Spy cleanup**: add `vi.clearAllMocks()` in `beforeEach` to prevent test pollution.
-4. **Deep mocks**: for chained calls like `client.method().submethod()`, use `vi.fn().mockReturnThis()` for chain or mock each level separately.
-5. **Module factory**: for default exports, use `{ default: vi.fn().mockReturnValue(...) }`.
-
-### Category 5: Assertion Issue
-**Symptoms:**
-- `Expected X to equal Y` (value mismatch)
-- Snapshot mismatch
-- Type mismatch (`object` vs `string`)
-- Off-by-one on numeric assertions
-- Async assertion not awaited (`expect(...).resolves.toBe` not awaited)
-
-**Fix Strategy:**
-1. Log the actual output in the Act step and compare to expected.
-2. For object assertions: use `toMatchObject` instead of `toEqual` when partial matching is acceptable.
-3. For async assertions: ensure `await expect(promise).resolves.toBe(...)` is awaited.
-4. If the assertion is wrong (not the code): fix the test's expected value to match the actual correct behavior.
-5. For snapshot mismatches after intentional change: applica `vitest --update-snapshots` autonomamente SOLO se: (a) iter > 1, AND (b) failure category == "snapshot mismatch", AND (c) intentional change documentato in `.code-coverage/decisions.log`.
-
----
-
-## Repair Loop Algorithm
-
-```
-max_iterations = 3
-coverage_target = 70
 iteration = 0
-stall_tracker = {}  # map of (file, error_signature) → last_seen_iteration
+max_iter = 3
+prev_global_pct = 0.0
+prev_failing_count = len(failing_tests)
+loop_max_remaining = max_iter
 
-WHILE (per_priority_targets_not_met AND iteration < max_iterations):
-  // per_priority_targets_not_met = any P1 < 80% OR any P2 < 70% OR any P3 < 60% OR global < 70%
-  iteration++
-  
-  FOR each failing test:
-    1. Read the error output
-    2. Categorize → Category 1..5
-    3. Compute error_signature = normalize(error_message)  // strip line numbers, timestamps, file paths
-    4. key = (file, error_signature)
-       IF stall_tracker[key] == iteration - 1:  // same error in consecutive iteration
-         MARK file as "stalled" — skip from further repair iterations
-         CONTINUE to next failing test
-       stall_tracker[key] = iteration
-    5. Apply fix strategy for that category
-    6. Re-run only the affected test file
-  
-  FOR each module below its per-priority threshold (P1: 80%, P2: 70%, P3: 60%):
-    1. Identify uncovered lines (from coverage report)
-    2. Determine why they are uncovered (branch condition? error path?)
-    3. Add targeted test case for uncovered branch
-    4. Re-run coverage for that module
+while iteration < loop_max_remaining and (
+    report["global_pct"] < 70
+    or any(m["status"] == "FAIL" for m in report["modules"] if m.get("priority"))
+):
+    iteration += 1
 
-  Run full coverage report
-  Update coverage table
+    # 1) Categorize tutti i failure (scoped, no full-file regen)
+    failures = []
+    for test_file, stderr in failing_tests:
+        cat_result = subprocess.run(
+            ["python3", "skills/code-coverage/scripts/categorize_failure.py"],
+            input=stderr, capture_output=True, text=True, check=True,
+        ).stdout
+        failures.append({"test_file": test_file, **json.loads(cat_result)})
 
-  // Autonomous early-abort policy — deterministico, zero prompt utente
-  IF iteration == 1 AND global_coverage < 30% AND any_p1_coverage < 40%:
-    SET loop_max_remaining = 1   // 1 sola iter aggiuntiva
-    LOG "WARN: critical low coverage, single retry attempted" → .code-coverage/decisions.log
-  IF iteration == 2 AND global_coverage < 50%:
-    EMIT best-effort report immediately and STOP
+    # Persisti per audit (TTL per-iter)
+    Path(".code-coverage/failures.json").write_text(json.dumps({
+        "iteration": iteration, "failures": failures
+    }, indent=2))
 
-IF per_priority_targets_met:
-  EMIT "Coverage targets achieved — P1: <N>% (≥80%), P2: <N>% (≥70%), P3: <N>% (≥60%), Global: <N>% (≥70%)"
-ELSE:
-  EMIT best-effort report (see below)
+    # 2) GROUPING per error_signature
+    grouped = defaultdict(list)
+    for f in failures:
+        grouped[f["signature"]].append(f)
+
+    # 3) SYSTEMIC FIX detection: count >= max(2, 30% del totale) E categoria systemic_eligible
+    total_failing = max(len(failing_tests), 1)
+    systemic_threshold = max(2, int(total_failing * 0.30))
+
+    for signature, group in grouped.items():
+        first = group[0]
+        if first["systemic_eligible"] and len(group) >= systemic_threshold:
+            apply_systemic_fix(first)  # config-level UNA volta
+            continue
+        for f in group:
+            apply_scoped_fix(f)  # Edit del solo blocco failing
+
+    # 4) Re-run SOLO test file modificati (no --coverage qui)
+    rerun_modified_tests(failing_tests)
+
+    # 5) Run full coverage UNA VOLTA per iterazione (Phase 6 redirect + parse_coverage.py)
+    run_full_coverage()
+    report = json.loads(Path(".code-coverage/coverage-report.json").read_text())
+    new_failing_count = sum(1 for m in report["modules"] if m["status"] == "FAIL")
+
+    # 6) PROGRESS GUARD
+    delta_global = report["global_pct"] - prev_global_pct
+    delta_failing = prev_failing_count - new_failing_count
+    if delta_global < 0.5 and delta_failing <= 0:
+        log("STOP: progress guard triggered (Δglobal<0.5pp AND no failure reduction)")
+        break
+
+    # 7) AUTONOMOUS EARLY-ABORT iter 1 (deterministico, zero prompt utente)
+    if iteration == 1 and report["global_pct"] < 30:
+        p1_modules = [m for m in report["modules"] if m.get("priority") == "P1"]
+        if any(m["lines_pct"] < 40 for m in p1_modules):
+            loop_max_remaining = iteration + 1  # 1 sola iter aggiuntiva
+            log("WARN: critical low coverage, single retry attempted")
+
+    prev_global_pct = report["global_pct"]
+    prev_failing_count = new_failing_count
+
+# OUTPUT — Block 8 con remaining failing + stalled files
+emit_block_8_with_remaining_failing()
 ```
 
----
+## Categorie failure (vedi `assets/repair-strategies.json`)
 
-## Best-Effort Report (Loop Limit Reached)
+| Cat | Name       | Pattern signal                                       | Systemic eligible |
+|-----|------------|------------------------------------------------------|-------------------|
+| 1   | dependency | `Cannot find module`, `ModuleNotFoundError`         | YES (count≥2)     |
+| 2   | import     | `does not provide an export`, `cannot import name`  | NO                |
+| 3   | runtime    | `ReferenceError`, `is not defined`, timeout         | YES (count≥2)     |
+| 4   | mock       | `expected mock to have been called`, factory error  | NO                |
+| 5   | assertion  | `AssertionError`, expect mismatch                   | NO                |
+| 6   | transient  | `ECONNRESET`, `OOM`, `EBUSY` (eval prima di Cat 1-5) | NO                |
 
-When `max_iterations` is exhausted without reaching 70%:
+L'ordine di valutazione è hardcoded in `categorize_failure.py`: Cat 6 (transient) PRIMA di Cat 1-5 per evitare false positive.
 
-```
-BEST-EFFORT COVERAGE REPORT
-============================
-Iterations completed: 3 / 3
-Final coverage: <N>% (target: 70%)
+## Best-Effort Report (max_iter raggiunto / progress guard / early-abort)
 
-Modules still below threshold:
-| Module | Cover% | Threshold | Blocker |
-|--------|--------|-----------|---------|
-| src/handlers/auth.ts | 54% | 80% P1 | Lines 89-112: AWS Cognito integration — requires live mock unavailable in env |
-
-Stalled files (same error in two consecutive iterations — excluded from repair):
-| File | Error Signature | Suggested Action |
-|------|----------------|------------------|
-| src/legacy/payment.ts | TypeError: Cannot read property 'X' of undefined | Requires refactoring — no injectable seam |
-
-Suggested next steps:
-1. Add integration test for AWS Cognito using LocalStack
-2. Extract Cognito client to injectable interface for unit testability
-3. Add contract test in a separate test suite
-```
-
----
-
-## Iteration Log
-
-Maintain a running iteration log visible to the user:
+In OUTPUT Block 8 aggiungi sotto-tabella **Stalled Files**:
 
 ```
-[Repair] Iteration 1/3
-  ✗ payment.service.test.ts: Category 4 (Mock Issue) — mock returns undefined
-    Fix: added mockResolvedValue({ id: '1' }) to DynamoDB GetCommand mock
-  ✗ order.handler.test.ts: Category 2 (Import Issue) — named export mismatch
-    Fix: changed import { handler } to import { orderHandler }
-  Coverage after iteration 1: 62% → 71% ✓ Target reached
-
-[Repair] Done — coverage 71% ≥ 70% target
+| File | Iter | Last category | Last signature                       | Suggested action  |
+|------|------|---------------|--------------------------------------|-------------------|
+| ...  | 3    | mock          | ·expected mock·to have been called·  | Manual review     |
 ```
+
+`signature` è output di `normalize()` da `categorize_failure.py` (path/timestamp/hex/ANSI stripped, max 200 char).
