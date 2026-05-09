@@ -21,7 +21,7 @@
 | 0 | Benchmark Baseline | `task-00-benchmark-baseline.md` | 0.5 | (prerequisito) | [DONE-PARTIAL] script+smoke; metriche [BLOCKED:USER-MANUAL] |
 | 1 | Quick Wins | `task-01-quick-wins.md` | 1 | P1, P2, P6, P12 + QW1-QW10 | [DONE] |
 | 2 | Persistence Layer | `task-02-persistence-layer.md` | 1.5 | P3 + ST7 | [DONE] |
-| 3 | Coverage Parser | `task-03-coverage-parser.md` | 1.5 | P4 + ST1 | [PENDING] |
+| 3 | Coverage Parser | `task-03-coverage-parser.md` | 1.5 | P4 + ST1 | [DONE] |
 | 4 | Repair Loop Refactor | `task-04-repair-loop-refactor.md` | 2 | P5 + ST2 + ST6 | [PENDING] |
 | 5 | Stack Detection Extension | `task-05-stack-detection-extension.md` | 2 | P10 + ST4 | [PENDING] |
 | 6 | Conditional Ordering | `task-06-conditional-ordering.md` | 0.5 | (D1 risolto) | [PENDING] |

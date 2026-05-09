@@ -35,3 +35,7 @@ __pycache__/
 
 # Pytest-hypothesis cache
 .hypothesis/
+
+# Coverage.py artifacts (locali a sviluppo skill code-coverage)
+.coverage
+htmlcov/
