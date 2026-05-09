@@ -1,0 +1,48 @@
+{
+  "vitest": {
+    "command": "npm install --save-dev vitest @vitest/coverage-v8",
+    "alt_yarn": "yarn add --dev vitest @vitest/coverage-v8",
+    "alt_pnpm": "pnpm add -D vitest @vitest/coverage-v8",
+    "alt_bun": "bun add -d vitest @vitest/coverage-v8",
+    "manual_manifest_edit": null
+  },
+  "jest": {
+    "command": "npm install --save-dev jest @types/jest ts-jest",
+    "alt_yarn": "yarn add --dev jest @types/jest ts-jest",
+    "alt_pnpm": "pnpm add -D jest @types/jest ts-jest",
+    "manual_manifest_edit": null
+  },
+  "pytest": {
+    "command": "pip install pytest pytest-cov pytest-asyncio pytest-mock",
+    "alt_poetry": "poetry add --group=dev pytest pytest-cov pytest-asyncio pytest-mock",
+    "manual_manifest_edit": null
+  },
+  "junit5": {
+    "command": null,
+    "manual_manifest_edit": "Aggiungi a pom.xml dependencies:\n  <dependency>\n    <groupId>org.junit.jupiter</groupId>\n    <artifactId>junit-jupiter</artifactId>\n    <version>5.10.0</version>\n    <scope>test</scope>\n  </dependency>\n  <dependency>\n    <groupId>org.mockito</groupId>\n    <artifactId>mockito-core</artifactId>\n    <version>5.5.0</version>\n    <scope>test</scope>\n  </dependency>"
+  },
+  "junit5-gradle": {
+    "command": null,
+    "manual_manifest_edit": "Aggiungi a build.gradle dependencies:\n  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'\n  testImplementation 'org.mockito:mockito-core:5.5.0'\nE in test block: useJUnitPlatform()"
+  },
+  "mockk": {
+    "command": null,
+    "manual_manifest_edit": "Aggiungi a build.gradle.kts:\n  testImplementation(\"io.mockk:mockk:1.13.8\")"
+  },
+  "cargo-test": {
+    "command": null,
+    "manual_manifest_edit": "Aggiungi a Cargo.toml [dev-dependencies]:\n  mockall = \"0.12\""
+  },
+  "go-test": {
+    "command": "go get -t github.com/stretchr/testify",
+    "manual_manifest_edit": null
+  },
+  "flutter_test": {
+    "command": null,
+    "manual_manifest_edit": "Aggiungi a pubspec.yaml dev_dependencies:\n  flutter_test:\n    sdk: flutter\n  mocktail: ^1.0.0"
+  },
+  "xunit": {
+    "command": "dotnet add package xunit && dotnet add package xunit.runner.visualstudio && dotnet add package coverlet.collector",
+    "manual_manifest_edit": null
+  }
+}

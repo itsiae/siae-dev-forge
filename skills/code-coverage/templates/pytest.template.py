@@ -1,4 +1,12 @@
 """
+PYTEST TEMPLATE — Mock pattern rationale
+====================================================================
+mocker.patch('module.path.symbol') sostituisce il simbolo nel namespace
+del CALLER (NON dove definito). Per metodi su classi: patch.object(cls, 'method').
+Per async: usa AsyncMock dal modulo unittest.mock (mocker.patch ritorna MagicMock di default).
+Verify export shape FIRST: python -c "import module; print(dir(module))"
+====================================================================
+
 Use this template for: FastAPI, Flask, Django, Celery, boto3, generic Python services.
 Requires: pytest, pytest-cov, pytest-asyncio, pytest-mock.
 

@@ -1,4 +1,14 @@
 /**
+ * VITEST TEMPLATE — Mock pattern rationale
+ * ====================================================================
+ * vi.mock(path, factory) sostituisce il modulo per TUTTI i test del file.
+ *   - Named exports:   ({ funcName: vi.fn() })
+ *   - Default exports: ({ default: vi.fn() })  // chiave 'default' è critica
+ *   - Misti:           ({ default: vi.fn(), helper: vi.fn() })
+ * Verify export shape FIRST via grep:
+ *   grep -nE "^export (default|const|function|class)" <dep-source-file>
+ * ====================================================================
+ *
  * Use this template for: React, Next.js, Vue, Nuxt, Angular, Svelte, Remix, Astro,
  * Node.js (Express/NestJS/Fastify/Koa/Hapi).
  * For Serverless/Lambda stacks use vitest-lambda.template.ts instead.

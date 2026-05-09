@@ -1,4 +1,13 @@
 /**
+ * JUNIT5 + MOCKITO TEMPLATE — Mock pattern rationale
+ * ====================================================================
+ * @Mock crea un mock vuoto (default behavior: null/0/false).
+ * @InjectMocks costruisce il SUT iniettando i @Mock nel constructor (preferito) o setter.
+ * when(mock.method(...)).thenReturn(...) configura il behavior.
+ * verify(mock).method(...) asserisce l'invocazione.
+ * Per static methods: usa Mockito.mockStatic() in try-with-resources.
+ * ====================================================================
+ *
  * Use this template for: Spring Boot, Quarkus, Micronaut, or plain Java 17+.
  * Requires: JUnit 5 (junit-jupiter), Mockito 5+, AssertJ, JaCoCo.
  * Replace all {{PLACEHOLDER}} tokens before use.

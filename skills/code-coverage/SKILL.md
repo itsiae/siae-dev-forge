@@ -3,243 +3,139 @@ name: code-coverage
 description: >
   Enterprise test generation agent invoked via /code-coverage. Analyzes a repository,
   infers the tech stack, defines the optimal unit testing strategy, and generates
-  deterministic tests targeting >=70% coverage.
+  deterministic tests targeting >=70% coverage. Zero user runtime interactions.
 ---
 
 # Enterprise Test Generation Agent
 
-**This skill activates ONLY when the user explicitly types `/code-coverage`.
-Do not self-activate on any semantic trigger.**
+**This skill activates ONLY when the user explicitly types `/code-coverage`. Do not self-activate.**
 
 ---
 
-## INPUT MODE — Identify Target Repository
+## INPUT MODE — Deterministic, autonomous
 
-Politica deterministica autonoma:
-- Se invocata con argomento valido (path locale assoluto OR URL GitHub): usa quello.
-- Se invocata senza argomenti: usa `$(pwd)` come local path target.
-- Se URL GitHub senza branch/subdirectory: branch=`main`, subdirectory=root.
-- Se URL malformato o path inesistente: emit single error message and STOP.
+- No args → use `$(pwd)`.
+- Local path absolute → use it.
+- GitHub URL → auto-clone in `mktemp -d`. Default branch=`main` if omitted. Cleanup at session end.
+- Malformed URL OR missing path → emit single error message and STOP.
 
-Mai chiedere conferma o input. La skill è progettata per esecuzione completamente autonoma.
-
----
-
-## GLOBAL EXECUTION PRINCIPLES
-
-These six rules govern every decision made during this skill's execution. They are non-negotiable.
-
-1. **Autonomous Execution Policy.** Invocazione di `/code-coverage` costituisce blanket approval per tutte le operazioni di lettura/scrittura/install nel target repo per la durata della sessione. Mutazioni ammesse: (a) directory `.code-coverage/` come workdir, (b) file di test in directory test convenzionali (`__tests__`, `tests/`, `*.test.*`, `*.spec.*`), (c) `vitest.config.ts` o `jest.config.ts` SOLO se assenti, (d) install di `devDependencies` esclusivamente. Mai modificare codice di produzione. Tutte le decisioni sono loggate in `.code-coverage/decisions.log`. ZERO prompt utente runtime.
-
-2. **Context-safety over completeness.** Never saturate the context window. For MEDIUM repos, load files in batches of 30. For LARGE/VERY_LARGE repos, persist the batch plan to `.code-coverage/batch-plan.json` inside the target repo (with prior user approval) and process across multiple sessions.
-
-3. **Determinism over creativity.** `skills/code-coverage/assets/stack-matrix.json` is the single source of truth for framework selection. Identical stack input always produces identical framework selection and test skeleton output. Do not improvise.
-
-4. **Vitest-first for all JS/TS.** Vitest is the unconditional default for Frontend, Node.js, and Serverless stacks. Deviate to Jest only when ONE OR MORE of these conditions are true (evaluated in this exact order):
-   (a) `jest.config.{ts,js,mjs,cjs}` file is present in the repo root or workspace root.
-   (b) `package.json` `scripts.test` contains `"jest"` AND `vitest` does NOT appear in `devDependencies` (existing Jest runner, no migration started).
-   (c) Vitest is incompatible due to CJS-only dependencies — must be documented in `.code-coverage/constraints.json`.
-   (d) Explicit legacy constraint is documented in `.code-coverage/constraints.json`.
-   **This rule is authoritative and supersedes any conflicting statement in reference files or assets.**
-
-5. **Coverage targets are per-priority; global floor is 70%.** Targets defined in `assets/priority-rules.json`:
-   - P1 modules (critical business logic): ≥80%
-   - P2 modules (utilities): ≥70%
-   - P3 modules (infrastructure): ≥60%
-   - Global minimum: ≥70% across all targeted modules
-
-   Phase 7 repair loop must treat a P1 module at 75% as **FAIL** (below P1 threshold), even if the global total exceeds 70%. If the loop exhausts without reaching per-priority targets, declare best-effort and report per-module gaps.
-
-   **Repair loop limit: 3 iterations maximum.** After 3 iterations without reaching all per-priority targets, emit the Best-Effort Report and stop. Do not iterate beyond this limit regardless of remaining uncovered modules.
-
-6. **Progressive disclosure — load references on demand.** SKILL.md is the entry point only. Load each `skills/code-coverage/references/phase-N-*.md` file at the start of the corresponding phase. Never preload all reference files upfront.
-
-7. **State persistence + cache.** Tutti gli output strutturati delle fasi sono persisti in `.code-coverage/`. File `stack.json`, `size.json`, `env.json` sono cache-friendly: ri-letti da fasi successive solo se mtime > `package.json`/`pom.xml`/`Cargo.toml`/`pyproject.toml`. Template files (`templates/*.template.*`) caricati ONCE per (framework, session) — successivi batch rifiutano re-load. Schema completo: `skills/code-coverage/lib/state-schema.json`.
+NEVER ask user. Skill is fully autonomous.
 
 ---
 
-## WORKFLOW — 7 Phases
+## GLOBAL EXECUTION PRINCIPLES (7)
 
-### Phase 0 — Init (before Phase 1)
-Source `skills/code-coverage/lib/cache-helper.sh` and run `init_workdir <target_repo>`. This creates `.code-coverage/`, ensures `.gitignore` is updated (idempotent), initializes `decisions.log`.
+1. **Autonomous Execution Policy.** Invocation = blanket approval for read/write/install in: (a) `.code-coverage/` workdir, (b) test directories, (c) `vitest.config.ts`/`jest.config.ts` if absent, (d) `devDependencies` install. Never modify production source. Decisions logged to `.code-coverage/decisions.log`. ZERO user prompts.
+2. **Context-safety over completeness.** Load files in batches sized per tier (T1=3, T2=2, T3=1, T4=1 — see `assets/priority-rules.json` `ordering_constants`). For LARGE/VERY_LARGE, persist `batch-plan.json` and process across sessions.
+3. **Determinism over creativity.** `assets/stack-matrix.json` = single source of truth for framework selection. Identical input → identical output.
+4. **Vitest-first for all JS/TS.** Vitest is unconditional default. Deviate to Jest only when (in this order): (a) `jest.config.{ts,js,mjs,cjs}` exists, (b) `package.json scripts.test` contains `"jest"` AND `vitest` not in devDeps, (c) Vitest CJS-incompatibility documented in `.code-coverage/constraints.json`, (d) explicit legacy constraint in `.code-coverage/constraints.json`. **This rule is authoritative.**
+5. **Coverage targets per-priority; global floor 70%.** `assets/priority-rules.json` `min_coverage_pct`: P1≥80%, P2≥70%, P3≥60%, global≥70%. P1 at 75% = FAIL even if global > 70%. Repair loop max 3 iter; emit best-effort if exhausted.
+6. **Progressive disclosure.** Load `references/phase-N.md` only when entering phase N. Phase-1/2/6/7 are inlined here. Phase-3/4/5 are separate refs.
+7. **State persistence + cache.** All structured outputs in `.code-coverage/`. Files `stack.json`, `size.json`, `env.json` cached vs `package.json`/`pom.xml`/etc. mtime. Templates loaded ONCE per (framework, session). Schema: `lib/state-schema.json`.
 
-### Phase 1 — Discovery
-**Load `skills/code-coverage/references/phase-1-discovery.md` before starting this phase.**
+---
 
-Run, in parallelo, redirect output a `.code-coverage/`:
-- `python3 skills/code-coverage/scripts/detect_stack.py <repo_path> > <repo_path>/.code-coverage/stack.json`
-- `python3 skills/code-coverage/scripts/estimate_size.py <repo_path> --file-list > <repo_path>/.code-coverage/size.json`
-- `python3 skills/code-coverage/scripts/validate_env.py <repo_path> > <repo_path>/.code-coverage/env.json`
+## WORKFLOW
 
-Cache check (skip esecuzione se valida): per ogni file, `is_cache_valid <cache-file> <pinnacle>` (sourcing cache-helper.sh). Se exit 0 → leggi cache esistente, NON eseguire script. Pinnacle file: `package.json` (JS/TS), `pyproject.toml` (Python), `pom.xml` (Maven), `build.gradle` (Gradle), `Cargo.toml` (Rust), `pubspec.yaml` (Flutter), `go.mod` (Go).
+### Phase 0 (init)
 
-If the repo is remote, auto-clone in `mktemp -d` senza prompt (cleanup automatico, path loggato in `.code-coverage/decisions.log`).
-Output `stack.json`: `{languages, frameworks, package_managers, build_systems, monorepo, ci_cd, architecture_style, existing_test_frameworks}`.
-
-**Runtime pre-check (after Phase 1, before Phase 2):** immediately after Phase 1 completes, run steps 1 and 2 of `phase-4-environment.md` (Runtime Availability + Package Manager Availability) for the languages detected. If any check returns `blocking: true`, stop immediately using the Blocking Check Handler template — do not proceed to Phase 2. This early check avoids wasting Phase 2–3 work when the runtime is unavailable.
-
-### Phase 2 — Strategy
-**Load `skills/code-coverage/references/phase-2-strategy.md` before starting this phase.**
-
-Map the detected stack to the optimal test framework using `assets/stack-matrix.json`.
-Apply Vitest-first rule for JS/TS. Document any deviation from the default with rationale.
-Output: framework selection per module group + rationale table.
-
-### Phase 3 — Sizing
-**Load `skills/code-coverage/references/phase-3-sizing.md` before starting this phase.**
-
-Run `python3 skills/code-coverage/scripts/estimate_size.py <repo_path>` to classify the repo as SMALL / MEDIUM / LARGE / VERY_LARGE using thresholds from `skills/code-coverage/assets/priority-rules.json`.
-
-**If class is LARGE or VERY_LARGE, emit this exact string before continuing:**
-
-```
-Repository exceeds safe single-session capacity. Switching to phased enterprise mode.
+```bash
+source skills/code-coverage/lib/cache-helper.sh
+init_workdir <repo_path>  # crea .code-coverage/, ensure_gitignore, init decisions.log
 ```
 
-Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio informativo: `Switching to phased enterprise mode. Batch plan saved to .code-coverage/batch-plan.json`.
+### Phase 1 — Discovery (INLINE)
 
-### Phase 4 — Environment
-**Load `skills/code-coverage/references/phase-4-environment.md` before starting this phase.**
+Run in parallel (skip if cache valid via `is_cache_valid`):
+```bash
+python3 skills/code-coverage/scripts/detect_stack.py <repo> > <repo>/.code-coverage/stack.json &
+python3 skills/code-coverage/scripts/estimate_size.py <repo> --file-list --with-coverage <repo>/.code-coverage/coverage-report.json > <repo>/.code-coverage/size.json &
+python3 skills/code-coverage/scripts/validate_env.py <repo> > <repo>/.code-coverage/env.json &
+wait
+```
 
-Run `python3 skills/code-coverage/scripts/validate_env.py <repo_path>` to check runtime availability.
-Esegui install autonomamente in base a policy P1 (Autonomous Execution Policy). Snapshot lockfile pre-install in `.code-coverage/lockfile.bak`. Tutte le install loggate in `.code-coverage/install-log.txt`.
+If `stack.json.pre_existing_coverage_pct >= 70` → emit Block 8 with current value + END.
 
-**Pre-existing coverage skip**: Phase 1 ha già letto eventuali `coverage/lcov.info`, `target/site/jacoco/index.html`, `coverage.json` (mtime < 7 giorni). Se `pre_existing_coverage_pct ≥ 70%`, emit Block 8 con valore corrente e END. Altrimenti procedi.
+If `env.json.required_framework == "unknown"` → emit "Language not supported" Block 4 + END.
 
-### Phase 5 — Generation
-**Load `skills/code-coverage/references/phase-5-generation.md` before starting this phase.**
+### Phase 2 — Strategy (INLINE)
 
-Apply `skills/code-coverage/assets/priority-rules.json` P1/P2/P3 classification and skip patterns.
+Read `stack.json` + `assets/stack-matrix.json`. Apply Principle 4 Vitest-first decision tree. Output: framework + rationale logged to `decisions.log`.
 
-**Processing order is conditional (D1 resolved):**
+### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
 
+If `size.json.class IN ("LARGE", "VERY_LARGE")`:
+- emit `Repository exceeds safe single-session capacity. Switching to phased enterprise mode.`
+- Run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`
+- Load `references/phase-3-sizing.md` for batch resume protocol.
+
+### Phase 4 — Environment (REF)
+
+Load `references/phase-4-environment.md`. Auto-install via `validate_env.py install_commands` + `assets/install-snippets.json`. Snapshot lockfile pre-install (`.code-coverage/lockfile.bak`); rollback if exit-code ≠ 0.
+
+### Phase 5 — Generation (REF)
+
+Load `references/phase-5-generation.md`. Pre-write hard gate: `bash lib/placeholder-check.sh <file>` before EVERY write.
+
+**Ordering rule (D1 conditional):**
 ```python
 import json
 stack = json.loads(open(".code-coverage/stack.json").read())
 has_module_coverage = bool(stack.get("module_coverage"))
-
 if has_module_coverage:
-    # TIER-FIRST (T1 → T2 → T3 → T4) — priority_score reale,
-    # ROI coverage-per-token massimo iniziando da T1 (pure logic).
-    sort_key = lambda f: (TIER_ORDER[f["tier"]], -f["priority_score"])
+    sort_key = lambda f: (TIER_ORDER[f["tier"]], -f["priority_score"])  # TIER-FIRST
 else:
-    # P-TIER FALLBACK (P1 → P2 → P3) — senza segnale di coverage,
-    # tier-first rischia di lasciare P1 sotto soglia.
-    sort_key = lambda f: (PRIORITY_ORDER[f["priority"]], -f["loc"])
-
-batch_plan = sorted(file_list, key=sort_key)
+    sort_key = lambda f: (PRIORITY_ORDER[f["priority"]], -f["loc"])  # P-TIER FALLBACK
 ```
+Constants in `assets/priority-rules.json.ordering_constants`. Implementazione concreta in `scripts/plan_batches.py`.
 
-Within either ordering: process the entire current group before moving to the next. Hard floor: `min(P1 modules lines_pct) ≥ 80%` finale. Constants in `assets/priority-rules.json.ordering_constants`. Implementazione concreta in `scripts/plan_batches.py`.
+**P1 floor enforcement**: post each iter, if `min(P1 modules lines_pct) < 80%` → force-include sub-threshold P1 files in next batch above any tier/priority order.
 
-**Selective source reading:** for files with LOC > 150, use targeted grep before full read — see `phase-5-generation.md` Pre-Generation Checklist, point 3 (selective read rule).
+**Lazy-load assets** in Phase 5:
+- Primo batch della session → carica `assets/few-shot-e2e.md` ONCE.
+- Fail rate ≥ 1 nella session → carica `assets/anti-patterns.md` ONCE.
 
-For each target module, generate tests using the appropriate template from `skills/code-coverage/templates/`.
-Follow the AAA pattern (Arrange / Act / Assert). Cover: 1 happy path + ≥2 edge cases + 1 negative path per public method.
-Hard gate placeholder check pre-write (P6) via `bash skills/code-coverage/lib/placeholder-check.sh <file>`: ogni file da scrivere viene validato; se exit-code ≠ 0 → fail loudly, NON scrivere il file, log in `.code-coverage/decisions.log`. Persisti la lista files in `.code-coverage/generation-plan.txt`, poi procedi con write autonomamente.
+### Phase 6 — Coverage (INLINE)
 
-### Phase 6 — Coverage
-**Load `skills/code-coverage/references/phase-6-coverage.md` before starting this phase.**
-
-Execute the coverage command for the selected framework.
-**Context-safety rule:** redirect the full coverage tool output to `.code-coverage/coverage-output.txt`, then read only the last 100 lines (summary) into context:
 ```bash
-<coverage_command> > .code-coverage/coverage-output.txt 2>&1
-tail -n 100 .code-coverage/coverage-output.txt
+FW=$(jq -r '.required_framework' .code-coverage/env.json)
+COV_CMD=$(jq -r --arg fw "$FW" '.stacks[$fw].coverage_command // .stacks[].coverage_command' skills/code-coverage/assets/stack-matrix.json)
+REPORT_PATH=$(jq -r --arg fw "$FW" '.stacks[$fw].coverage_report_path // .stacks[].coverage_report_path' skills/code-coverage/assets/stack-matrix.json)
+cd <repo> && eval "$COV_CMD" 2>&1 | tee .code-coverage/coverage-stdout.log
+FORMAT=$(jq -r --arg fw "$FW" '.stacks[$fw].coverage_report_format // .stacks[].coverage_report_format' skills/code-coverage/assets/stack-matrix.json)
+python3 skills/code-coverage/scripts/parse_coverage.py "$FORMAT" "<repo>/$REPORT_PATH" > <repo>/.code-coverage/coverage-report.json
 ```
-Parse the coverage summary and produce a per-module coverage table.
-Flag any module below the threshold defined in `skills/code-coverage/assets/priority-rules.json`.
 
-### Phase 6 → Phase 7 Gate
+Read `coverage-report.json`. If all P1≥80%, P2≥70%, P3≥60%, global≥70% → SKIP Phase 7 → OUTPUT.
 
-Before loading Phase 7, check the coverage results from Phase 6. Enter Phase 7 **ONLY** if at least one of the following conditions is true:
-- Any P1 module has coverage < 80%
-- Any P2 module has coverage < 70%
-- Any P3 module has coverage < 60%
-- Global coverage < 70%
+### Phase 7 — Repair (INLINE algorithm)
 
-If all conditions are false (every module meets its per-priority threshold AND global ≥ 70%), **skip Phase 7** and proceed directly to OUTPUT.
+Budget: max 3 iter, max 1 full coverage run/iter. Categorize via `python3 scripts/categorize_failure.py < <stderr>`. Group by `error_signature`; if `count >= max(2, 30% failures)` AND categoria `systemic_eligible` → fix config-level UNA volta. Otherwise per-file scoped Edit (NO full-file regen). Re-run modified tests WITHOUT `--coverage`; full coverage UNA volta a fine iter.
 
-### Phase 7 — Repair
-**Load `skills/code-coverage/references/phase-7-repair.md` per il pseudocodice completo.**
+Progress guard: if `Δglobal_coverage < 0.5pp AND Δfailing_count <= 0` → STOP best-effort.
 
-Categorize via `python3 skills/code-coverage/scripts/categorize_failure.py` (deterministic, 6 categorie + normalize() signature).
+Autonomous early-abort: if iter==1 AND `global_coverage < 30%` AND any `P1.lines_pct < 40%` → set `loop_max_remaining = 2` (1 retry only).
 
-Budget rules (deterministic, zero prompt utente):
-- max iterazioni: 3 (autonomous early-abort iter 1 può ridurre a 2)
-- max 1 full coverage run per iterazione
-- progress guard: Δglobal_coverage < 0.5pp AND Δfailing_count ≤ 0 → STOP
-- systemic fix: count ≥ max(2, 30% del totale) AND categoria `systemic_eligible` → fix config-level UNA VOLTA
-- per-file fix: Edit scoped (solo blocco failing), NO rigenerazione full-file
-- Cat 6 (transient) valutata PRIMA di Cat 1-5 — 1 retry automatico
-
-Output: `.code-coverage/failures.json` per ogni iter (audit trail).
+Best-effort report con tabella **Stalled Files** in OUTPUT Block 8 se max iter raggiunto.
 
 ---
 
-## OUTPUT — 9 Required Blocks
+## OUTPUT — Conditional Blocks
 
-At skill completion, emit blocks in order. Block 1, 5, 8 sono SEMPRE presenti. Block 4, 6, 9 sono CONDIZIONALI:
-- Block 4 (`unsupported_groups`): emit ONLY se array non vuoto.
-- Block 6 (`Dependency Install Commands`): emit ONLY se `validate_env.py install_commands` non vuoto.
-- Block 9 (`Next Actions`): emit ONLY se ci sono moduli sotto threshold OPPURE follow-up batch attivo OPPURE manual tests suggested.
+Always emit Block 1, 5, 8. Conditional (programmatic check, MAI prompt utente):
+- Block 4 (`unsupported_groups`): only if non-empty array.
+- Block 6 (`Dependency Install Commands`): only if `validate_env.py.install_commands` non-empty.
+- Block 9 (`Next Actions`): only if any module sub-threshold OR follow-up batch active OR manual tests suggested.
 
-Condizionalità valutata da check programmatico (file presence, JSON field empty), MAI prompt utente.
+### Block 1 — Repository Summary
+- source path/URL, languages (from `stack.json`), size class (`size.json.class`), monorepo (`stack.json.monorepo`)
 
-### 1. Repository Summary
-- Source: URL or local path
-- Detected languages (from Phase 1)
-- Size class: SMALL / MEDIUM / LARGE / VERY_LARGE
-- Monorepo: yes/no + workspace count
+### Block 5 — Generated Test Files
+| Path | Module under test | Tier | Priority | Estimated coverage gain |
 
-### 2. Stack Detection Report
-- Frameworks detected
-- Package managers
-- Build systems
-- CI/CD
-- Existing test frameworks found
-
-### 3. Test Strategy
-- Selected framework per module group
-- Deviation from default (if any) with rationale
-- Estimated achievable coverage %
-
-### 4. Module Priority Map
-- P1 modules (list)
-- P2 modules (list)
-- P3 modules (list)
-- Skipped modules with reason
-- `unsupported_groups`: language groups skipped because no supported test framework exists for them (emitted by Phase 2 DEFAULT branch)
-
-### 5. Generated Test Files
-- Full list of created test files with relative path
-- Module under test for each file
-- Estimated coverage contribution
-
-### 6. Dependency Install Commands
-```bash
-# Run these commands in the target repository root (requires approval):
-<commands>
-```
-
-### 7. Coverage Run Commands
-```bash
-# Execute after dependencies are installed:
-<command>
-```
-
-### 8. Coverage Report Summary
+### Block 8 — Coverage Report Summary
 | Module | Lines% | Branch% | Threshold | Status |
-|--------|--------|---------|-----------|--------|
-| ...    | ...    | ...     | ...       | PASS/FAIL |
-
-If Phase 7 repair ran, append a **Stalled Files** sub-section listing any file excluded due to stall detection (same error in two consecutive iterations), with error signature and suggested action. See `phase-7-repair.md` Best-Effort Report for the template.
-
-### 9. Next Actions
-- Modules still below threshold with gap analysis
-- Suggested manual tests for logic unreachable by automation
-- Follow-up batch (if phased mode active)
-- Recommended CI integration step
++ Stalled Files sub-section if Phase 7 ran without convergence
 
 ---
 
@@ -247,18 +143,22 @@ If Phase 7 repair ran, append a **Stalled Files** sub-section listing any file e
 
 | Path | Purpose |
 |------|---------|
-| `skills/code-coverage/references/phase-1-discovery.md` | File patterns for stack detection |
-| `skills/code-coverage/references/phase-2-strategy.md` | Stack → framework decision matrix |
-| `skills/code-coverage/references/phase-3-sizing.md` | SMALL/MEDIUM/LARGE/VERY_LARGE thresholds |
-| `skills/code-coverage/references/phase-4-environment.md` | Package manager install commands |
-| `skills/code-coverage/references/phase-5-generation.md` | AAA pattern, edge cases, mocking patterns |
-| `skills/code-coverage/references/phase-6-coverage.md` | Coverage commands per framework |
-| `skills/code-coverage/references/phase-7-repair.md` | Failure categorization and fix strategies |
-| `skills/code-coverage/assets/stack-matrix.json` | **Single source of truth**: stack → framework |
-| `skills/code-coverage/assets/priority-rules.json` | P1/P2/P3 rules, skip patterns, size thresholds |
-| `skills/code-coverage/scripts/detect_stack.py` | Outputs stack JSON |
-| `skills/code-coverage/scripts/estimate_size.py` | Outputs size classification JSON |
-| `skills/code-coverage/scripts/validate_env.py` | Outputs environment check JSON |
-| `skills/code-coverage/templates/vitest.template.ts` | Vitest skeleton for non-Lambda JS/TS |
-| `skills/code-coverage/templates/vitest-lambda.template.ts` | Vitest skeleton for Lambda/SST/SAM stacks |
-| `skills/code-coverage/templates/*.template.*` | Other test skeletons per framework |
+| `references/phase-3-sizing.md` | Batch plan resume protocol (LARGE/VERY_LARGE) |
+| `references/phase-4-environment.md` | Auto-install policy + Blocking Check Handler |
+| `references/phase-5-generation.md` | Ordering tree, AAA pattern, batch ceilings, few-shot trigger |
+| `assets/stack-matrix.json` | **Single source**: stack → framework + coverage_command + report_format |
+| `assets/priority-rules.json` | P1/P2/P3 + ordering_constants + skip patterns |
+| `assets/install-snippets.json` | **Single source**: install commands per framework |
+| `assets/repair-strategies.json` | **Single source**: error patterns → category + fix steps |
+| `assets/few-shot-e2e.md` | Lazy-load: T1 example with grep + AAA test (Phase 5 first batch) |
+| `assets/anti-patterns.md` | Lazy-load: 3 BAD/GOOD pairs (Phase 5/7 fail ≥1) |
+| `scripts/detect_stack.py` | Stack detection JSON (+ test_infrastructure, module_coverage, coverage_exclude) |
+| `scripts/estimate_size.py` | Size + file_list + priority_score JSON |
+| `scripts/validate_env.py` | Env + framework_check + install_commands JSON |
+| `scripts/parse_coverage.py` | Coverage report parsing per 8 framework |
+| `scripts/categorize_failure.py` | Failure categorization Cat 1-6 + normalize() |
+| `scripts/plan_batches.py` | Batch plan ordering (tier-first conditional) |
+| `lib/cache-helper.sh` | Bash utils: cache mtime check, ensure_gitignore, init_workdir, log_decision |
+| `lib/placeholder-check.sh` | Hard gate `{{X}}` placeholder pre-write |
+| `lib/state-schema.json` | Schema documenting all `.code-coverage/*` files |
+| `templates/*.template.*` | Test skeletons per framework (with rationale paragraph) |
