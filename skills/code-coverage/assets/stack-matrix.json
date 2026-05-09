@@ -45,8 +45,10 @@
       "coverage_report_path": "coverage/coverage-summary.json",
       "install_dev_deps": ["vitest", "@vitest/coverage-v8", "@aws-sdk/client-dynamodb", "@aws-sdk/client-s3"],
       "config_file": "vitest.config.ts",
-      "template": "vitest-lambda.template.ts",
+      "template": "vitest-lambda-handler.template.ts",
       "lambda_event_mocks": ["APIGateway", "SQS", "SNS", "EventBridge", "DynamoDB", "S3"],
+      "template_handler_path": "templates/vitest-lambda-handler.template.ts",
+      "template_module_path": "templates/vitest-lambda-module.template.ts",
       "min_node_version": "18"
     },
     "javascript_jest_fallback": {

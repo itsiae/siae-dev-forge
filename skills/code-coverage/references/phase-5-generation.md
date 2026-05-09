@@ -103,11 +103,26 @@ Before writing any test file:
    grep -n "^export\|^class\|^function\|throw new" <file>
    ```
    to extract public API and error patterns. Read the full file only if grep reveals complex patterns (multiple classes, private state affecting public behavior, non-trivial control flow). For files ≤ 150 LOC, read in full.
-3b. For each dependency to mock, verify its export type before writing the mock:
-    - **Named export** → `import { Dep } from 'path'` + `vi.mock('path', () => ({ Dep: vi.fn() }))`
-    - **Default export** → `import Dep from 'path'` + `vi.mock('path', () => ({ default: vi.fn() }))`
-    - **Object/class with methods** → include ALL methods actually called by the SUT in the factory: `vi.mock('path', () => ({ methodA: vi.fn(), methodB: vi.fn() }))`
-    Never cast a default export as a named-export cast — it produces `ReferenceError` at runtime.
+3b. **For each dependency: run grep deterministico** (P8):
+
+    ```bash
+    grep -nE "^export (default|const|function|class|interface|type)|module\.exports" <dep_path>
+    ```
+
+    Output → determina `mock_shape`:
+    - `export default` only → `vi.mock(path, () => ({ default: vi.fn() }))`
+    - `export const/function/class` only → `vi.mock(path, () => ({ funcName: vi.fn() }))`
+    - both → `vi.mock(path, () => ({ default: vi.fn(), funcName: vi.fn() }))`
+    - `module.exports = ...` (CJS) → `vi.mock(path, () => ({ default: vi.fn() }))`
+
+    Cache result per `(dep_path, session)` per evitare re-grep su batch successivi.
+
+3c. Apply template variant from `templates/<framework>.template.*` based on dep count:
+    - 0 deps (T1 pure logic) → use `VARIANT_NO_DEPS`, delete other variants
+    - 1 dep → use `VARIANT_SINGLE_DEP`
+    - 2 deps → use `VARIANT_TWO_DEPS`
+    - 3+ deps → use `VARIANT_MULTI_DEPS`
+    Never cast a default export as a named-export cast — produces `ReferenceError` at runtime.
 4. Persisti la lista files in `.code-coverage/generation-plan.txt` per traceability.
 5. **Hard gate placeholder check** (P6): per ogni file da scrivere, esegui `bash skills/code-coverage/lib/placeholder-check.sh <file>`. Se exit-code ≠ 0 → fail loudly, NON scrivere il file, log in `.code-coverage/decisions.log`.
 6. Procedi con write autonomamente. Mai prompt utente runtime.
@@ -151,7 +166,7 @@ Mocking patterns sono nei template files (`skills/code-coverage/templates/<frame
 
 Default mock cleanup: `vi.clearAllMocks()` in `beforeEach`. Aggiungi `vi.restoreAllMocks()` in `afterEach` SOLO se il test usa `vi.spyOn()`.
 
-Per Lambda/AWS SDK: usa `aws-sdk-client-mock` (vedi `templates/vitest-lambda.template.ts` per event mocks APIGateway/SQS/SNS/EventBridge/DynamoDB/S3).
+Per Lambda/AWS SDK: usa `aws-sdk-client-mock`. Template separati: `templates/vitest-lambda-handler.template.ts` per i Lambda handler, `templates/vitest-lambda-module.template.ts` per i moduli interni (services/utils).
 
 ---
 

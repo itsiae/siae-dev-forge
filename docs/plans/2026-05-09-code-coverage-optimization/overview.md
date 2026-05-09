@@ -26,7 +26,7 @@
 | 5 | Stack Detection Extension | `task-05-stack-detection-extension.md` | 2 | P10 + ST4 | [DONE] |
 | 6 | Conditional Ordering | `task-06-conditional-ordering.md` | 0.5 | (D1 risolto) | [DONE] |
 | 7 | SKILL.md Refactor | `task-07-skill-md-refactor.md` | 1.5 | P7 + P9 + P11 + ST5 | [DONE] |
-| 8 | Plan Batches + Template Fixes | `task-08-plan-batches.md` | 1 | P8 + ST3 + ST8 | [PENDING] |
+| 8 | Plan Batches + Template Fixes | `task-08-plan-batches.md` | 1 | P8 + ST3 + ST8 | [DONE] |
 
 ## Dipendenze
 

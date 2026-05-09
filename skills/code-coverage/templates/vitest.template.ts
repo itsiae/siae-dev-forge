@@ -11,7 +11,8 @@
  *
  * Use this template for: React, Next.js, Vue, Nuxt, Angular, Svelte, Remix, Astro,
  * Node.js (Express/NestJS/Fastify/Koa/Hapi).
- * For Serverless/Lambda stacks use vitest-lambda.template.ts instead.
+ * For Serverless/Lambda handlers use vitest-lambda-handler.template.ts;
+ * for Lambda internal modules use vitest-lambda-module.template.ts.
  * Vitest is the default for ALL non-Lambda JS/TS stacks. Prefer over jest.template.ts unless
  * a pre-existing Jest config is detected in Phase 2.
  *
@@ -131,3 +132,37 @@ describe('{{ExportedClass}}', () => {
     })
   })
 })
+
+// ====================================================================
+// VITEST TEMPLATE — Variants (P8 deterministic mock shape)
+// ====================================================================
+// Selezionare UNA variante in base al numero di dependencies del SUT.
+// Cancellare le altre prima di scrivere il test file finale.
+// ====================================================================
+
+// --- VARIANT_NO_DEPS ------------------------------------------------
+// T1 Pure Logic: 0 imports esterni, 0 mock necessari.
+// import { describe, it, expect, beforeEach, vi } from 'vitest'
+// import { {{SUT_FUNCTIONS}} } from '{{SUT_PATH}}'
+// beforeEach(() => { vi.clearAllMocks() })
+// describe('{{SUT_NAME}}', () => { /* tests */ })
+
+// --- VARIANT_SINGLE_DEP ---------------------------------------------
+// 1 dependency, named export (mock factory single shape).
+// import { describe, it, expect, beforeEach, vi } from 'vitest'
+// import { {{SUT_FUNCTIONS}} } from '{{SUT_PATH}}'
+// import { {{DEP_NAMED_EXPORT}} } from '{{DEP_IMPORT_PATH}}'
+// vi.mock('{{DEP_IMPORT_PATH}}', () => ({ {{DEP_NAMED_EXPORT}}: vi.fn() }))
+// beforeEach(() => { vi.clearAllMocks() })
+
+// --- VARIANT_TWO_DEPS -----------------------------------------------
+// 2 dependencies (mixed default/named exports).
+// vi.mock('{{DEP1_IMPORT_PATH}}', () => ({ default: vi.fn() }))
+// vi.mock('{{DEP2_IMPORT_PATH}}', () => ({ {{DEP2_NAMED}}: vi.fn() }))
+
+// --- VARIANT_MULTI_DEPS ---------------------------------------------
+// 3+ dependencies (T3/T4 service heavy). Auto-generated per dep:
+// vi.mock('{{DEP1_IMPORT_PATH}}', () => ({ {{DEP1_EXPORTS}} }))
+// vi.mock('{{DEP2_IMPORT_PATH}}', () => ({ {{DEP2_EXPORTS}} }))
+// vi.mock('{{DEP3_IMPORT_PATH}}', () => ({ {{DEP3_EXPORTS}} }))
+// Per >5 deps considera fixture/factory helper esterno.
