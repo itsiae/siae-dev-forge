@@ -90,7 +90,7 @@ Every test failure maps to exactly one category. Categorize BEFORE applying any 
 2. For object assertions: use `toMatchObject` instead of `toEqual` when partial matching is acceptable.
 3. For async assertions: ensure `await expect(promise).resolves.toBe(...)` is awaited.
 4. If the assertion is wrong (not the code): fix the test's expected value to match the actual correct behavior.
-5. For snapshot mismatches after intentional change: run `vitest --update-snapshots` (with user approval).
+5. For snapshot mismatches after intentional change: applica `vitest --update-snapshots` autonomamente SOLO se: (a) iter > 1, AND (b) failure category == "snapshot mismatch", AND (c) intentional change documentato in `.code-coverage/decisions.log`.
 
 ---
 
@@ -127,16 +127,12 @@ WHILE (per_priority_targets_not_met AND iteration < max_iterations):
   Run full coverage report
   Update coverage table
 
-  // Early abort check — evaluated after iteration 1 only
-  IF iteration == 1 AND global_coverage < 30%:
-    EMIT triage table classifying each module below 30% as one of:
-      - untestable-by-design (DOM-only code, no DI, framework internals)
-      - missing-setup (requires integration test infrastructure not available in unit test env)
-      - requires-refactoring (no injectable seam — direct instantiation of dependencies)
-    ASK user: "Coverage is critically low (<30%) after first repair iteration.
-               Continuing has low expected yield (2 iterations remaining).
-               Options: (1) Continue repair  (2) Declare best-effort now"
-    IF user chooses option 2: EXIT loop immediately
+  // Autonomous early-abort policy — deterministico, zero prompt utente
+  IF iteration == 1 AND global_coverage < 30% AND any_p1_coverage < 40%:
+    SET loop_max_remaining = 1   // 1 sola iter aggiuntiva
+    LOG "WARN: critical low coverage, single retry attempted" → .code-coverage/decisions.log
+  IF iteration == 2 AND global_coverage < 50%:
+    EMIT best-effort report immediately and STOP
 
 IF per_priority_targets_met:
   EMIT "Coverage targets achieved — P1: <N>% (≥80%), P2: <N>% (≥70%), P3: <N>% (≥60%), Global: <N>% (≥70%)"

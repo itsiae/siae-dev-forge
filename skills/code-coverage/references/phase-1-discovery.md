@@ -165,27 +165,6 @@ This field is passed to Phase 5 to reuse existing infrastructure instead of dupl
 
 ---
 
-## Quick Sizing Pass
-
-After the stack detection and before the test infrastructure scan, run a fast size estimate to detect LARGE/VERY_LARGE repos early:
-
-```bash
-python3 skills/code-coverage/scripts/estimate_size.py <repo_path>
-# Note: no --file-list flag — this is a fast size-only check, not the full Phase 3 run.
-```
-
-If the result class is `LARGE` or `VERY_LARGE`, emit this warning to the user immediately:
-
-```
-⚠ Repository is classified as <LARGE|VERY_LARGE> (<N> files, ~<N> LOC).
-  Processing will use phased enterprise mode. Phase 3 will present the full batch plan.
-  Continue? [Y/n]
-```
-
-Do not block on this — it is informational. If the user confirms, continue Phase 1. Phase 3 will run the full `estimate_size.py --file-list` pass.
-
----
-
 ## Coverage Pre-Check
 
 After the test infrastructure scan, check for an existing coverage report:
@@ -226,11 +205,9 @@ If no exclusion field is found: set `"coverage_exclude": []`. Phase 5 must skip 
 
 If the user provides a GitHub URL:
 1. Extract `owner/repo` and optional `branch` and `subdir`.
-2. Present the clone command to the user and request approval.
-3. Clone to a system temp directory: `mktemp -d`.
-4. Run detection on the cloned path.
-5. If `subdir` was specified, run detection on `<clone_root>/<subdir>`.
-6. Remember the temp path for subsequent phases; clean up after Phase 7 with user confirmation.
+2. Auto-clone in `mktemp -d` senza prompt. Cleanup automatico al termine della sessione. Path temp loggato in `.code-coverage/decisions.log`.
+3. Run detection on the cloned path.
+4. If `subdir` was specified, run detection on `<clone_root>/<subdir>`.
 
 ```bash
 git clone --depth=1 --branch <branch> https://github.com/<owner>/<repo> <tmpdir>

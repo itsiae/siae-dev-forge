@@ -20,9 +20,12 @@ vi.mock('{{DEP_IMPORT_PATH}}', () => ({
 
 const mock{{DepMethod}} = {{DepMethod}} as MockedFunction<typeof {{DepMethod}}>
 
+// Mock cleanup strategy:
+// - DEFAULT: vi.clearAllMocks() in beforeEach (resetta calls/instances)
+// - Aggiungi afterEach(vi.restoreAllMocks()) SOLO se il file usa vi.spyOn()
+//   (non necessario se usi solo vi.mock()/vi.fn())
 describe('{{ExportedFunction}}', () => {
   beforeEach(() => { vi.clearAllMocks() })
-  afterEach(() => { vi.restoreAllMocks() })
 
   it('should {{HAPPY_PATH_DESCRIPTION}}', async () => {
     // Arrange

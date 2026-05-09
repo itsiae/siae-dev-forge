@@ -45,31 +45,11 @@ are available before attempting test generation or execution.
 Checks whether the test framework declared in Phase 2 is already installed
 in the target repo (e.g., `node_modules/vitest` exists, `pytest` importable, etc.).
 
-### 4. Pre-Existing Coverage Pass (Automatic)
-
-If `existing_test_frameworks` (from Phase 1) is non-empty AND `pre_existing_coverage_pct == 0`, automatically run a coverage measurement on the existing tests using the appropriate framework's coverage command:
-
-```bash
-# Example for Vitest:
-npx vitest run --coverage > .code-coverage/pre-existing-coverage.txt 2>&1 && tail -n 100 .code-coverage/pre-existing-coverage.txt
-# For other frameworks, apply the same redirect pattern.
-```
-
-Parse the result to extract the global coverage percentage.
-
-If the measured coverage ≥ 70%:
-- **Skip Phase 5 entirely.** Proceed directly to Block 8 reporting.
-- Set Block 8 `Status` = `TARGET_ALREADY_MET` for all modules.
-- Populate Block 9 with suggestions for specific uncovered modules identified in the report.
-
-If the measured coverage < 70%:
-- Record the measured value as `pre_existing_coverage_pct` and continue to Phase 5 as planned.
-
 ---
 
 ## Install Commands by Package Manager
 
-Present these to the user and **wait for approval** before executing.
+Esegui install autonomamente nel target repo. Snapshot lockfile pre-install: `cp package-lock.json .code-coverage/lockfile.bak` (o equivalente per altro PM). Se exit-code ≠ 0, ripristina lockfile e log error in `.code-coverage/decisions.log`. Tutte le install loggate in `.code-coverage/install-log.txt`.
 
 ### Vitest (JS/TS)
 ```bash
@@ -218,7 +198,7 @@ Do not continue to Phase 5 or any subsequent phase until the user confirms the b
 
 ## Vitest Config Generation
 
-If Vitest is selected and no `vitest.config.ts` exists, run these pre-config checks first, then generate and propose the config (do not write without approval):
+If Vitest is selected and no `vitest.config.ts` exists, run these pre-config checks first, then generate and write `vitest.config.ts` autonomamente SOLO se assente. Mai sovrascrivere config esistenti. Decisione loggata in `.code-coverage/decisions.log`.
 
 ### Pre-Config Checks (run before generating vitest.config.ts)
 

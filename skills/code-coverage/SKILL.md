@@ -15,18 +15,13 @@ Do not self-activate on any semantic trigger.**
 
 ## INPUT MODE — Identify Target Repository
 
-Before executing any phase, ask the user exactly one of:
+Politica deterministica autonoma:
+- Se invocata con argomento valido (path locale assoluto OR URL GitHub): usa quello.
+- Se invocata senza argomenti: usa `$(pwd)` come local path target.
+- Se URL GitHub senza branch/subdirectory: branch=`main`, subdirectory=root.
+- Se URL malformato o path inesistente: emit single error message and STOP.
 
-```
-Choose input mode:
-  1) GitHub  — provide URL; branch defaults to `main` if omitted (no confirmation needed); subdirectory is optional
-  2) Local   — provide absolute path on disk
-
-Which mode? (1 or 2)
-```
-
-Block the workflow until the target is unambiguously identified. Do not proceed to Phase 1 with an empty or ambiguous target.
-If the user provides a GitHub URL without branch or subdirectory, use `main` as branch and proceed without asking. Ask for clarification only if the URL is malformed or not a recognizable GitHub URL.
+Mai chiedere conferma o input. La skill è progettata per esecuzione completamente autonoma.
 
 ---
 
@@ -34,7 +29,7 @@ If the user provides a GitHub URL without branch or subdirectory, use `main` as 
 
 These six rules govern every decision made during this skill's execution. They are non-negotiable.
 
-1. **Never mutate the target repository without explicit user approval.** Every `npm install`, file write, config change, or directory creation in the target repo requires a user confirmation step before execution.
+1. **Autonomous Execution Policy.** Invocazione di `/code-coverage` costituisce blanket approval per tutte le operazioni di lettura/scrittura/install nel target repo per la durata della sessione. Mutazioni ammesse: (a) directory `.code-coverage/` come workdir, (b) file di test in directory test convenzionali (`__tests__`, `tests/`, `*.test.*`, `*.spec.*`), (c) `vitest.config.ts` o `jest.config.ts` SOLO se assenti, (d) install di `devDependencies` esclusivamente. Mai modificare codice di produzione. Tutte le decisioni sono loggate in `.code-coverage/decisions.log`. ZERO prompt utente runtime.
 
 2. **Context-safety over completeness.** Never saturate the context window. For MEDIUM repos, load files in batches of 30. For LARGE/VERY_LARGE repos, persist the batch plan to `.code-coverage/batch-plan.json` inside the target repo (with prior user approval) and process across multiple sessions.
 
@@ -67,7 +62,7 @@ These six rules govern every decision made during this skill's execution. They a
 **Load `skills/code-coverage/references/phase-1-discovery.md` before starting this phase.**
 
 Run `python3 skills/code-coverage/scripts/detect_stack.py <repo_path>` to produce the stack detection JSON.
-If the repo is remote, clone to a temp directory first (with user approval).
+If the repo is remote, auto-clone in `mktemp -d` senza prompt (cleanup automatico, path loggato in `.code-coverage/decisions.log`).
 Output: `{languages, frameworks, package_managers, build_systems, monorepo, ci_cd, architecture_style, existing_test_frameworks}`.
 
 **Runtime pre-check (after Phase 1, before Phase 2):** immediately after Phase 1 completes, run steps 1 and 2 of `phase-4-environment.md` (Runtime Availability + Package Manager Availability) for the languages detected. If any check returns `blocking: true`, stop immediately using the Blocking Check Handler template — do not proceed to Phase 2. This early check avoids wasting Phase 2–3 work when the runtime is unavailable.
@@ -90,13 +85,15 @@ Run `python3 skills/code-coverage/scripts/estimate_size.py <repo_path>` to class
 Repository exceeds safe single-session capacity. Switching to phased enterprise mode.
 ```
 
-Then present the phased batch plan to the user and request approval before proceeding.
+Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio informativo: `Switching to phased enterprise mode. Batch plan saved to .code-coverage/batch-plan.json`.
 
 ### Phase 4 — Environment
 **Load `skills/code-coverage/references/phase-4-environment.md` before starting this phase.**
 
 Run `python3 skills/code-coverage/scripts/validate_env.py <repo_path>` to check runtime availability.
-Present install commands to the user. **Do not execute any install command without explicit approval.**
+Esegui install autonomamente in base a policy P1 (Autonomous Execution Policy). Snapshot lockfile pre-install in `.code-coverage/lockfile.bak`. Tutte le install loggate in `.code-coverage/install-log.txt`.
+
+**Pre-existing coverage skip**: Phase 1 ha già letto eventuali `coverage/lcov.info`, `target/site/jacoco/index.html`, `coverage.json` (mtime < 7 giorni). Se `pre_existing_coverage_pct ≥ 70%`, emit Block 8 con valore corrente e END. Altrimenti procedi.
 
 ### Phase 5 — Generation
 **Load `skills/code-coverage/references/phase-5-generation.md` before starting this phase.**
@@ -109,21 +106,7 @@ Apply `skills/code-coverage/assets/priority-rules.json` P1/P2/P3 classification 
 
 For each target module, generate tests using the appropriate template from `skills/code-coverage/templates/`.
 Follow the AAA pattern (Arrange / Act / Assert). Cover: 1 happy path + ≥2 edge cases + 1 negative path per public method.
-Present the list of files to be created and request user approval before writing.
-
-**Coverage Gate (MEDIUM/LARGE/VERY_LARGE repos only):** after generating all P1 test files and before starting P2, run a partial coverage check using the appropriate framework's coverage command with redirect:
-
-```bash
-# Vitest
-npx vitest run --coverage > .code-coverage/coverage-gate-p1.txt 2>&1 && tail -n 100 .code-coverage/coverage-gate-p1.txt
-# For non-Vitest frameworks, apply the same redirect pattern:
-# <coverage_command> > .code-coverage/coverage-gate-p1.txt 2>&1 && tail -n 100 .code-coverage/coverage-gate-p1.txt
-```
-
-Parse the tail output:
-- **Early Stop:** STOP if Global coverage ≥ 70% AND every P1 module has coverage ≥ 80% AND P2/P3 modules have not yet been generated. Declare "target reached, P2/P3 deferred". List deferred files in Block 9. **If P2 or P3 modules have NOT yet been generated, this gate behaves as a partial check — Phase 6 will still run the full validation.** This gate does NOT exclude failure on P2/P3 during Phase 6 — it only short-circuits redundant generation when P1 alone has already cleared the bar.
-- If global coverage is between 55% and 70%: generate P2 only (skip P3).
-- If global coverage < 55%: continue with P2 + P3 as planned.
+Hard gate placeholder check pre-write (P6) via `bash skills/code-coverage/lib/placeholder-check.sh <file>`: ogni file da scrivere viene validato; se exit-code ≠ 0 → fail loudly, NON scrivere il file, log in `.code-coverage/decisions.log`. Persisti la lista files in `.code-coverage/generation-plan.txt`, poi procedi con write autonomamente.
 
 ### Phase 6 — Coverage
 **Load `skills/code-coverage/references/phase-6-coverage.md` before starting this phase.**
@@ -158,7 +141,12 @@ Apply the fix strategy for each category. Iterate until per-priority coverage ta
 
 ## OUTPUT — 9 Required Blocks
 
-At skill completion, emit all 9 blocks in order. Do not skip any block.
+At skill completion, emit blocks in order. Block 1, 5, 8 sono SEMPRE presenti. Block 4, 6, 9 sono CONDIZIONALI:
+- Block 4 (`unsupported_groups`): emit ONLY se array non vuoto.
+- Block 6 (`Dependency Install Commands`): emit ONLY se `validate_env.py install_commands` non vuoto.
+- Block 9 (`Next Actions`): emit ONLY se ci sono moduli sotto threshold OPPURE follow-up batch attivo OPPURE manual tests suggested.
+
+Condizionalità valutata da check programmatico (file presence, JSON field empty), MAI prompt utente.
 
 ### 1. Repository Summary
 - Source: URL or local path
@@ -214,31 +202,6 @@ If Phase 7 repair ran, append a **Stalled Files** sub-section listing any file e
 - Suggested manual tests for logic unreachable by automation
 - Follow-up batch (if phased mode active)
 - Recommended CI integration step
-
----
-
-## APPROVAL REQUEST TEMPLATES
-
-Use these fixed templates whenever a phase requires user approval. Reference them from each phase that triggers an approval gate.
-
-### A — Framework Choice Approval
-```
-Framework selected for <module group>: <framework>
-Reason: <condition matched, e.g. "Vitest-first default" or "jest.config.ts found">
-Proceed with <framework>? [Y/n]
-```
-
-### B — Generation Plan Approval
-```
-Test generation plan for <repo / priority tier>:
-  Files to create: <N>
-  Estimated coverage gain: +<X>%
-  Batch strategy: T1=<N> files/call, T2=<N> files/call
-
-Review the file list above. Proceed with generation? [Y/n]
-```
-
-
 
 ---
 

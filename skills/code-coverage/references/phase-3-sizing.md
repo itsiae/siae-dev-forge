@@ -86,10 +86,9 @@ Batch 3: P2 modules (utilities) — <N> files
 ...
 
 Batch plan will be saved to: <repo_root>/.code-coverage/batch-plan.json
-Do you approve saving the batch plan? (Required to continue phased mode)
 ```
 
-**Do not proceed without user approval on the batch plan save location.**
+Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio informativo: `Switching to phased enterprise mode. Batch plan saved to .code-coverage/batch-plan.json`.
 
 ---
 

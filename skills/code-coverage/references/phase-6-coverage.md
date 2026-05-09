@@ -169,7 +169,7 @@ Modules with `✗ FAIL` are passed to Phase 7 for repair.
 
 ## CI Integration Snippet
 
-After coverage passes, suggest adding to the CI configuration (with user approval):
+After coverage passes, emit suggested CI snippet in OUTPUT Block 9 come "Recommended CI integration step". Mai modificare file CI esistenti.
 
 ### GitHub Actions
 ```yaml

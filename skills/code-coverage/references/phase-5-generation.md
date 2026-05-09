@@ -39,18 +39,6 @@ Batch ceilings by tier:
 
 ---
 
-## P2 Early-Exit Checkpoint
-
-After every 10 files generated **within the P2 tier**, run the Coverage Gate (same redirect pattern as Phase 5 Coverage Gate):
-
-```bash
-<coverage_command> > .code-coverage/coverage-gate-p2-checkpoint.txt 2>&1 && tail -n 100 .code-coverage/coverage-gate-p2-checkpoint.txt
-```
-
-If Global coverage ≥ 70% AND every P1 module has coverage ≥ 80%: **stop P2 generation** immediately and proceed to Block 8 reporting. List remaining P2 and P3 files as "deferred — target met during P2" in Block 9.
-
----
-
 ## Pre-Generation Checklist
 
 Before writing any test file:
@@ -68,8 +56,9 @@ Before writing any test file:
     - **Default export** → `import Dep from 'path'` + `vi.mock('path', () => ({ default: vi.fn() }))`
     - **Object/class with methods** → include ALL methods actually called by the SUT in the factory: `vi.mock('path', () => ({ methodA: vi.fn(), methodB: vi.fn() }))`
     Never cast a default export as a named-export cast — it produces `ReferenceError` at runtime.
-4. Present the full list of files to be created to the user.
-5. **Request approval before writing any file to disk.**
+4. Persisti la lista files in `.code-coverage/generation-plan.txt` per traceability.
+5. **Hard gate placeholder check** (P6): per ogni file da scrivere, esegui `bash skills/code-coverage/lib/placeholder-check.sh <file>`. Se exit-code ≠ 0 → fail loudly, NON scrivere il file, log in `.code-coverage/decisions.log`.
+6. Procedi con write autonomamente. Mai prompt utente runtime.
 
 ---
 
