@@ -65,6 +65,21 @@ Prima di scrivere qualsiasi codice, rispondi a queste domande:
    le istruzioni generiche in questo prompt.
    Usa il tool Read per leggere il file CLAUDE.md nella root del progetto. Se esiste, le sue regole hanno priorita' massima.
 
+0.bis. **MCP tools — Step 0 obbligatorio se devi usare MCP.** Se il tuo task richiede di
+   chiamare tool MCP (es. `mcp__sport-kg__*`, `mcp__elasticsearch__*`, `mcp__atlassian__*`,
+   `mcp__siae-sport-oracle__*`, qualsiasi tool con prefisso `mcp__`), DEVI prima invocare:
+
+   ```
+   ToolSearch(query="select:<tool1>,<tool2>,...")
+   ```
+
+   per caricare gli schemi degli specifici tool MCP che userai. Senza questo step, i tool MCP
+   appaiono come "deferred" e qualsiasi chiamata fallisce con `InputValidationError`.
+
+   **Sintomo di non aver fatto questo step:** ti ritrovi a fare fallback con `grep`, `git clone`
+   o ricerche manuali su domande che il tool MCP risolverebbe in 1 chiamata. Se succede,
+   **fermati**, fai `ToolSearch select:` e riprova — non procedere col fallback.
+
 1. **Capisco completamente il task?** Se no, chiedi chiarimenti all'orchestratore.
 2. **So quali file devo creare/modificare?** Lista esplicita.
 3. **So quale pattern architetturale seguire?** (microservizi Java, serverless TS, pipeline Python, IaC Terragrunt)

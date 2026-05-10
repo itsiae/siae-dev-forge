@@ -1,8 +1,8 @@
 ---
 name: siae-receiving-review
 description: >
-  Gestisce la ricezione di feedback di code review. Ogni commento richiede
-  reazione esplicita.
+  Use when receiving code review feedback on a PR (CHANGES REQUESTED, comments,
+  fix requested by reviewer). Forces explicit reaction to every comment.
   Trigger: ho ricevuto feedback su una PR, il reviewer ha lasciato commenti,
   CHANGES REQUESTED, commenti su PR, review ricevuta, fix richiesti dal reviewer,
   rispondi ai commenti, il reviewer ha chiesto modifiche.

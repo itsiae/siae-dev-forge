@@ -1,7 +1,9 @@
 ---
 name: siae-onboarding
 description: >
-  Stabilisce il contesto progetto all'inizio di una sessione SIAE.
+  Use when starting a new SIAE session, opening a new project, or switching
+  context — establishes factory, tech stack, and project rules for downstream
+  skills. Stabilisce il contesto progetto.
   Trigger: inizio sessione, apertura nuovo progetto, cambio contesto.
 user-invocable: false
 ---
