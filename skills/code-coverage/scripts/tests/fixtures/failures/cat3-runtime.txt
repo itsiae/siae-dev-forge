@@ -1,0 +1,3 @@
+FAIL src/components/Button.test.tsx
+ReferenceError: document is not defined
+  at Object.<anonymous> (src/components/Button.test.tsx:5:3)

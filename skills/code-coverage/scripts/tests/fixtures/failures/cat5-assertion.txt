@@ -1,0 +1,5 @@
+FAIL src/utils/validate.test.ts
+AssertionError [ERR_ASSERTION]: Values are not equal:
+  Expected: "VALID"
+  Received: "INVALID"
+  at src/utils/validate.test.ts:8:3

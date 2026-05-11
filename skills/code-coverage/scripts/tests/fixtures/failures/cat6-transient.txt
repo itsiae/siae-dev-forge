@@ -1,0 +1,3 @@
+FAIL src/network/fetch.test.ts
+Error: ECONNRESET — connection reset by peer
+  at src/network/fetch.test.ts:25:3

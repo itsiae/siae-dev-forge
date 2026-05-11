@@ -1,0 +1,12 @@
+{
+  "size_class": "MEDIUM",
+  "file_count": 5,
+  "loc_total": 500,
+  "file_list": [
+    {"path": "src/services/payment.ts", "loc": 200, "tier": "T2", "priority": "P1"},
+    {"path": "src/utils/format.ts", "loc": 50, "tier": "T1", "priority": "P2"},
+    {"path": "src/utils/parse.ts", "loc": 80, "tier": "T1", "priority": "P2"},
+    {"path": "src/handlers/api.ts", "loc": 120, "tier": "T4", "priority": "P1"},
+    {"path": "src/store/state.ts", "loc": 50, "tier": "T3", "priority": "P3"}
+  ]
+}

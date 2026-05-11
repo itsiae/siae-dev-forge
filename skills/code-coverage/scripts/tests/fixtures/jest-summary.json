@@ -1,0 +1,12 @@
+{
+  "total": {
+    "lines": {"total": 200, "covered": 150, "pct": 75.0},
+    "branches": {"total": 50, "covered": 40, "pct": 80.0},
+    "functions": {"total": 30, "covered": 25, "pct": 83.33},
+    "statements": {"total": 220, "covered": 170, "pct": 77.27}
+  },
+  "src/auth/index.ts": {
+    "lines": {"total": 80, "covered": 70, "pct": 87.5},
+    "branches": {"total": 20, "covered": 18, "pct": 90.0}
+  }
+}

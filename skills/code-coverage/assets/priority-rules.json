@@ -1,0 +1,158 @@
+{
+  "version": "1.0.0",
+  "priority_levels": {
+    "P1": {
+      "label": "Critical Business Logic",
+      "description": "Core logic that directly implements business rules. Highest ROI for testing.",
+      "path_patterns": [
+        "**/service/**",
+        "**/services/**",
+        "**/domain/**",
+        "**/core/**",
+        "**/business/**",
+        "**/usecase/**",
+        "**/use-case/**",
+        "**/use_case/**",
+        "**/handler/**",
+        "**/handlers/**",
+        "**/controller/**",
+        "**/controllers/**",
+        "**/repository/**",
+        "**/repositories/**",
+        "**/store/**",
+        "**/stores/**",
+        "**/reducer/**",
+        "**/reducers/**"
+      ],
+      "min_coverage_pct": 80,
+      "batch_priority": 1
+    },
+    "P2": {
+      "label": "Supporting Utilities",
+      "description": "Helpers, utilities, shared logic. Secondary priority after P1.",
+      "path_patterns": [
+        "**/utils/**",
+        "**/util/**",
+        "**/helpers/**",
+        "**/helper/**",
+        "**/lib/**",
+        "**/shared/**",
+        "**/common/**",
+        "**/middleware/**",
+        "**/interceptor/**",
+        "**/interceptors/**",
+        "**/guard/**",
+        "**/guards/**",
+        "**/pipe/**",
+        "**/pipes/**",
+        "**/validator/**",
+        "**/validators/**"
+      ],
+      "min_coverage_pct": 70,
+      "batch_priority": 2
+    },
+    "P3": {
+      "label": "Infrastructure and Glue",
+      "description": "Config, wiring, adapters. Test only if non-trivial logic present.",
+      "path_patterns": [
+        "**/config/**",
+        "**/configuration/**",
+        "**/infra/**",
+        "**/infrastructure/**",
+        "**/adapter/**",
+        "**/adapters/**",
+        "**/gateway/**",
+        "**/gateways/**",
+        "**/mapper/**",
+        "**/mappers/**",
+        "**/dto/**",
+        "**/dtos/**"
+      ],
+      "min_coverage_pct": 60,
+      "batch_priority": 3
+    }
+  },
+  "skip_patterns": [
+    "**/*.d.ts",
+    "**/*.config.ts",
+    "**/*.config.js",
+    "**/*.config.mjs",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/out/**",
+    "**/target/**",
+    "**/__mocks__/**",
+    "**/mocks/**",
+    "**/fixtures/**",
+    "**/seed/**",
+    "**/seeds/**",
+    "**/migration/**",
+    "**/migrations/**",
+    "**/vendor/**",
+    "**/.git/**",
+    "**/coverage/**",
+    "**/*.min.js",
+    "**/index.ts",
+    "**/index.js",
+    "**/index.tsx",
+    "**/main.ts",
+    "**/main.js",
+    "**/main.tsx",
+    "**/app.module.ts",
+    "**/app.ts",
+    "**/server.ts",
+    "**/bootstrap.ts",
+    "**/__tests__/**",
+    "**/*.spec.ts",
+    "**/*.spec.js",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/*.e2e-spec.ts",
+    "**/*.e2e.spec.ts",
+    "**/test/**",
+    "**/tests/**",
+    "**/.terraform/**",
+    "**/*.tf",
+    "**/*.tfvars"
+  ],
+  "module_classification": {
+    "SMALL": {
+      "max_source_files": 50,
+      "max_loc": 5000,
+      "single_session": true,
+      "max_files_per_batch": 50,
+      "estimated_generation_time_min": 5
+    },
+    "MEDIUM": {
+      "max_source_files": 200,
+      "max_loc": 20000,
+      "single_session": true,
+      "max_files_per_batch": 30,
+      "estimated_generation_time_min": 20
+    },
+    "LARGE": {
+      "max_source_files": 500,
+      "max_loc": 50000,
+      "single_session": false,
+      "max_files_per_batch": 15,
+      "estimated_generation_time_min": 60,
+      "batch_plan_required": true,
+      "phased_mode_message": "Repository exceeds safe single-session capacity. Switching to phased enterprise mode."
+    },
+    "VERY_LARGE": {
+      "max_source_files": 99999,
+      "max_loc": 99999999,
+      "single_session": false,
+      "max_files_per_batch": 10,
+      "estimated_generation_time_min": 240,
+      "batch_plan_required": true,
+      "phased_mode_message": "Repository exceeds safe single-session capacity. Switching to phased enterprise mode."
+    }
+  },
+  "ordering_constants": {
+    "tier_order": {"T1": 0, "T2": 1, "T3": 2, "T4": 3},
+    "priority_order": {"P1": 0, "P2": 1, "P3": 2},
+    "batch_ceiling_per_tier": {"T1": 3, "T2": 2, "T3": 1, "T4": 1}
+  }
+}
