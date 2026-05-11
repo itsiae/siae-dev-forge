@@ -301,6 +301,9 @@ Ogni riga della matrice corrisponde esattamente a **1 TC da generare**:
 | **Obbligatorio (mandatory)** | POS(valido) + NEG(assente/null) | DURATION mancante → errore |
 | **Opzionale (optional)** | POS(valido) + EDGE(null accettato) | ORDER null → ok |
 | **Formato (data/regex/ISO)** | POS(corretto) + NEG(formato errato) + EDGE(null se optional) | RELEASED ISO8601 |
+| **Strict-bound numerico** (`>`, `<`, `> X AND < Y`) | POS(valore tipico) + NEG(violazione) + EDGE(frontiera bassa type-aware) | `importo > 0` decimal → `0.01` EDGE; `quantita > 0` integer → `1` EDGE |
+| **Non-strict-bound numerico** (`>=`, `<=`, BETWEEN inclusivo) | POS(valore tipico) + NEG(violazione). **NO EDGE auto** (frontiera già in POS) | `DURATION >= 0` mandatory → 2 righe (POS valido + NEG assente) |
+| **String con vincolo length/encoding** (opt-in) | POS + NEG(>max length) + EDGE(trim/NFC) **solo se** spec menziona `trim`, `whitespace`, `NFC`, `max length`, `255 char` | `TITLE max 255 char` → POS + NEG(>255). Senza menzione esplicita: solo POS |
 | **Valore fisso business** | POS(= costante) + NEG(≠ costante) | UNIQUEREF2 = "074" |
 | **Regola composita** (N campi interdipendenti) | Prodotto cartesiano filtrato per esiti distinti + pairwise IPOG se > 16 | account × IPI → 4 combinazioni; 5 boolean → 32 combinazioni → 16 selezionate via pairwise IPOG |
 | **Cross-sezione** (chiave condivisa tra CSV/entità) | NEG per ogni sezione dipendente (chiave assente) | UNIQUEREF1 assente in TITLES |
