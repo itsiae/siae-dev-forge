@@ -29,7 +29,7 @@ SCHEMA_FILES = {
 
 JIRA_KEY_RE = re.compile(r"^[A-Z]+-[0-9]+$")
 TITLE_PREFIX_RE = re.compile(r"^\[(POS|NEG|EDGE|ROLE)\] .+")
-MATRIX_ROW_ID_RE = re.compile(r"^(?:[A-Z]-[0-9]{3}|J5-gap-G[0-9]{2}|developer-[0-9]{3})$")
+MATRIX_ROW_ID_RE = re.compile(r"^(?:[A-Z]-[0-9]{3}(?:-[a-z]+)?|J5-gap-G[0-9]{2}|developer-[0-9]{3})$")
 
 
 def load_schema(name: str) -> dict[str, Any]:
@@ -247,6 +247,89 @@ def check_neg_numeric_has_edge_low(m_final: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def check_temporal_composite_has_sequence(m_final: dict) -> list[str]:
+    """ADR-008: se la spec menziona pattern temporal/cross-event,
+    verifica che M_FINAL contenga almeno 1 row source_ref='temporal_composite'
+    OR 1 EDGE con condition contenente 'replay'/'duplicate'/'out-of-order'."""
+    warnings: list[str] = []
+    if not m_final or "rows" not in m_final:
+        return warnings
+    rows = m_final["rows"]
+    has_temporal_marker = any(
+        r.get("source_ref", "").startswith("temporal_composite")
+        for r in rows
+    )
+    has_temporal_condition = any(
+        any(kw in r.get("condition", "").lower() for kw in ["replay", "duplicate", "out-of-order", "out of order", "idempotency"])
+        for r in rows
+    )
+    if not has_temporal_marker and not has_temporal_condition:
+        warnings.append(
+            "Nessun marker temporal_composite ne' condition temporale "
+            "(replay/duplicate/out-of-order/idempotency). "
+            "Se la spec descrive idempotency o event sequence, considerare ADR-008 trigger."
+        )
+    return warnings
+
+
+def check_etl_stateful_has_merge_clause(m_final: dict) -> list[str]:
+    """ADR-009: se la spec e' ETL/Data Pipeline (rilevato da entity names tipo
+    Bronze/Silver/Gold/Pipeline/ETL), verifica che M_FINAL abbia almeno 1 row
+    con condition contenente 'MERGE'/'UPSERT'/'idempotent rerun'."""
+    warnings: list[str] = []
+    if not m_final or "rows" not in m_final:
+        return warnings
+    rows = m_final["rows"]
+    entities_lower = " ".join(r.get("entity", "").lower() for r in rows)
+    is_etl = any(kw in entities_lower for kw in ["bronze", "silver", "gold", "pipeline", "etl", "glue", "pyspark"])
+    if not is_etl:
+        return warnings  # non e' ETL, skip
+    has_merge = any(
+        any(kw in r.get("condition", "").lower() for kw in ["merge", "upsert", "idempotent rerun"])
+        for r in rows
+    )
+    if not has_merge:
+        warnings.append(
+            "Spec sembra ETL/Data Pipeline (entity Bronze/Silver/Gold rilevate) "
+            "ma nessuna row con condition MERGE/UPSERT/idempotent rerun. "
+            "Considerare ADR-009 stateful pipeline idempotency."
+        )
+    return warnings
+
+
+def check_multi_session_has_session_tags(tc_draft: dict) -> list[str]:
+    """ADR-010: se un TC ha step con condition concurrent/lock-free/CONCURRENTLY/parallel,
+    verifica che i suoi step contengano tag '[SESSION A]'/'[SESSION B]'."""
+    warnings: list[str] = []
+    if not tc_draft or "test_cases" not in tc_draft:
+        return warnings
+    for tc in tc_draft["test_cases"]:
+        title_low = tc.get("title", "").lower()
+        steps = tc.get("steps", [])
+        steps_text = " ".join(
+            (s.get("action", "") + " " + s.get("expected_result", ""))
+            for s in steps
+        ).lower()
+        needs_session = any(
+            kw in title_low or kw in steps_text
+            for kw in ["concurrently", "lock-free", "concurrent", "pg_locks", "parallel session", "session a", "session b"]
+        )
+        if not needs_session:
+            continue
+        has_session_tags = any(
+            "[session a]" in (s.get("action", "") + " " + s.get("expected_result", "")).lower()
+            or "[session b]" in (s.get("action", "") + " " + s.get("expected_result", "")).lower()
+            for s in steps
+        )
+        if not has_session_tags:
+            warnings.append(
+                f"TC {tc.get('id', '?')}: usa keyword multi-session "
+                f"(CONCURRENTLY/lock-free/pg_locks) ma manca tag esplicito "
+                f"[SESSION A]/[SESSION B] negli step. Considerare ADR-010 pattern."
+            )
+    return warnings
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entrypoint: parse args, validate inputs, run cross-checks, return exit code."""
     parser = argparse.ArgumentParser(description="Validate siae-qa workflow outputs")
@@ -299,6 +382,21 @@ def main(argv: list[str] | None = None) -> int:
             check_neg_numeric_has_edge_low(m_final_obj),
             severity="WARN",
         )
+
+    # ADR-008 cross-temporal check (WARN)
+    if args.m_final and m_final_obj:
+        warnings_t = check_temporal_composite_has_sequence(m_final_obj)
+        _report("CHECK: temporal/cross-event composite (ADR-008)", warnings_t, severity="WARN")
+
+    # ADR-009 ETL stateful check (WARN)
+    if args.m_final and m_final_obj:
+        warnings_e = check_etl_stateful_has_merge_clause(m_final_obj)
+        _report("CHECK: ETL stateful pipeline (ADR-009)", warnings_e, severity="WARN")
+
+    # ADR-010 multi-session tags check (WARN)
+    if args.tc_draft and tc_draft_obj:
+        warnings_m = check_multi_session_has_session_tags(tc_draft_obj)
+        _report("CHECK: multi-session tags (ADR-010)", warnings_m, severity="WARN")
 
     return 0 if ok else 1
 
