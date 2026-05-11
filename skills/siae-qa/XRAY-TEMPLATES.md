@@ -9,6 +9,7 @@
 - [Regola Multi-Step](#regola-multi-step)
 - [Riepilogo Copertura](#riepilogo-copertura)
 - [Template M_FINAL (output Phase 1.5)](#template-m_final-output-phase-15)
+- [Convenzione naming entity (ADR-004)](#convenzione-naming-entity-adr-004)
 - [Domande di Elicitazione](#domande-di-elicitazione)
 - [Mappatura ID Sequenziali e Chiavi Jira Xray](#mappatura-id-sequenziali-e-chiavi-jira-xray)
 - [Tier 3 CSV Export](#tier-3-csv-export)
@@ -146,6 +147,38 @@ Schema esatto (colonne fisse, nomi case-sensitive):
 **Persistenza:** `docs/qa/{STORY_ID}/MFINAL.md` (markdown table) + schema JSON in `reference/schemas/m_final.schema.json`.
 
 **Regole di esplosione**: vedi `SKILL.md` Phase 1.5 sezione "Regole di esplosione (da campo a righe di matrice)".
+
+### Convenzione naming `entity` (ADR-004)
+
+Il campo `entity` segue una gerarchia di scelta deterministica:
+
+1. **Se la spec ha tabelle DB o CSV section name** (es. `GENERAL_DATA`, `TITLES`, `CONTRIBUTORS`, `RIPARTIZIONI_RAW`): usa il nome **as-is** in SCREAMING_SNAKE_CASE. Mantenere il nome originale della spec.
+
+2. **Altrimenti** (REST resource, business entity senza section name): usa il **nome logico singolare in PascalCase**. Esempi validi: `Opera`, `Ripartizione`, `Utente`, `Contratto`.
+
+3. **Mai usare** come `entity`:
+   - Nome endpoint: `POST /opere`, `POST_/opere`
+   - Nome metodo: `createOpera`, `deleteOpera`
+   - Plurale di resource: `opere`, `utenti`, `contratti`
+   - Lowercase: `opera`, `ripartizione`
+
+**Eccezioni esplicite (non sono violazioni):**
+- `GENERAL_DATA` (CSV section): caso 1, mantenuto in SCREAMING_SNAKE_CASE.
+- `EVERGREEN+EXPIRY` (composite field name): non e' un valore di `entity`, e' un valore della colonna `field`. La regola entity non si applica.
+
+**Test sintattico:**
+
+```python
+# entity valida:
+re.match(r'^[A-Z][A-Z0-9_]*[A-Z0-9]$', entity)  # SCREAMING_SNAKE_CASE
+# OPPURE
+re.match(r'^[A-Z][a-zA-Z0-9]*$', entity)  # PascalCase
+
+# entity INVALIDA:
+entity.startswith(('POST', 'GET', 'PUT', 'DELETE'))  # nome endpoint
+entity.endswith(('s', 'i'))  # plurale (heuristic; vedi eccezioni esplicite)
+entity == entity.lower()  # tutto lowercase
+```
 
 ---
 
