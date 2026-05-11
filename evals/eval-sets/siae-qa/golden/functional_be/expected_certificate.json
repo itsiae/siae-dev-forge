@@ -1,0 +1,29 @@
+{
+  "stato": "FULL_PASS",
+  "story_id": "RIP-205",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "m_final_rows": 8,
+  "j5_gap_rows": 0,
+  "tc_generated": 8,
+  "tc_added_post_j5": 0,
+  "coverage_score": 100,
+  "gate_1": {
+    "status": "PASS",
+    "j1_matrix": { "percentage": 100, "status": "PASS", "gap": [] },
+    "j2_matrix": { "duplicates": 0 }
+  },
+  "gate_2": {
+    "status": "PASS",
+    "rerun_post_j5": false,
+    "j3": { "status": "PASS", "orphan_rows": [], "orphan_tc": [] },
+    "j4": { "percentage": 100, "status": "PASS", "generic_tc": [] }
+  },
+  "j5_gaps": {
+    "high_resolved": 0,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0,
+    "accepted_gaps": []
+  },
+  "developer_overrides": []
+}

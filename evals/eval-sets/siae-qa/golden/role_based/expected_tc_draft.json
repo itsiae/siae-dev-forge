@@ -1,0 +1,105 @@
+{
+  "story_id": "AUTH-330",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "test_cases": [
+    {
+      "id": 1, "matrix_row_id": "C-001", "title": "[ROLE] admin POST /opere -> 201 created",
+      "entity": "Opera", "field": "CREATE (POST /opere)", "test_type": "ROLE",
+      "description": "matrix_row_id: C-001 | entity: Opera | field: CREATE | ruolo=admin azione=create permesso",
+      "preconditions": "JWT con role=admin valido; tabella opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "POST /opere con Authorization: Bearer <jwt-admin> e body opera valido", "expected_result": "Lo status code della response e' 201 Created"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Response contiene id dell'opera valorizzato"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 2, "matrix_row_id": "C-002", "title": "[ROLE] admin GET /opere/{id} -> 200 ok",
+      "entity": "Opera", "field": "READ (GET /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-002 | entity: Opera | field: READ | ruolo=admin azione=read permesso",
+      "preconditions": "JWT con role=admin valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "GET /opere/o1 con Authorization: Bearer <jwt-admin>", "expected_result": "Lo status code della response e' 200 OK"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Response contiene la rappresentazione dell'opera o1"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 3, "matrix_row_id": "C-003", "title": "[ROLE] admin DELETE /opere/{id} -> 204 no content",
+      "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-003 | entity: Opera | field: DELETE | ruolo=admin azione=delete permesso",
+      "preconditions": "JWT con role=admin valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "DELETE /opere/o1 con Authorization: Bearer <jwt-admin>", "expected_result": "Lo status code della response e' 204 No Content"},
+        {"step_number": 2, "action": "GET /opere/o1", "expected_result": "Lo status code della GET e' 404 (opera eliminata)"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 4, "matrix_row_id": "C-004", "title": "[ROLE] editor POST /opere -> 201 created",
+      "entity": "Opera", "field": "CREATE (POST /opere)", "test_type": "ROLE",
+      "description": "matrix_row_id: C-004 | entity: Opera | field: CREATE | ruolo=editor azione=create permesso",
+      "preconditions": "JWT con role=editor valido",
+      "steps": [
+        {"step_number": 1, "action": "POST /opere con Authorization: Bearer <jwt-editor> e body opera valido", "expected_result": "Lo status code della response e' 201 Created"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Response contiene id dell'opera valorizzato"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 5, "matrix_row_id": "C-005", "title": "[ROLE] editor GET /opere/{id} -> 200 ok",
+      "entity": "Opera", "field": "READ (GET /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-005 | entity: Opera | field: READ | ruolo=editor azione=read permesso",
+      "preconditions": "JWT con role=editor valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "GET /opere/o1 con Authorization: Bearer <jwt-editor>", "expected_result": "Lo status code della response e' 200 OK"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 6, "matrix_row_id": "C-006", "title": "[ROLE] editor DELETE /opere/{id} -> 403 forbidden",
+      "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-006 | entity: Opera | field: DELETE | ruolo=editor azione=delete negato",
+      "preconditions": "JWT con role=editor valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "DELETE /opere/o1 con Authorization: Bearer <jwt-editor>", "expected_result": "Lo status code della response e' 403 Forbidden"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Body uguale a {\"error\":\"FORBIDDEN\",\"role\":\"editor\",\"action\":\"delete\"}"},
+        {"step_number": 3, "action": "GET /opere/o1 come admin", "expected_result": "Lo status code della GET e' 200 (opera NON eliminata)"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 7, "matrix_row_id": "C-007", "title": "[ROLE] viewer POST /opere -> 403 forbidden",
+      "entity": "Opera", "field": "CREATE (POST /opere)", "test_type": "ROLE",
+      "description": "matrix_row_id: C-007 | entity: Opera | field: CREATE | ruolo=viewer azione=create negato",
+      "preconditions": "JWT con role=viewer valido",
+      "steps": [
+        {"step_number": 1, "action": "POST /opere con Authorization: Bearer <jwt-viewer> e body opera valido", "expected_result": "Lo status code della response e' 403 Forbidden"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Body uguale a {\"error\":\"FORBIDDEN\",\"role\":\"viewer\",\"action\":\"create\"}"},
+        {"step_number": 3, "action": "Query SELECT COUNT(*) FROM opere", "expected_result": "Il count non e' cambiato rispetto al pre-test"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 8, "matrix_row_id": "C-008", "title": "[ROLE] viewer GET /opere/{id} -> 200 ok",
+      "entity": "Opera", "field": "READ (GET /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-008 | entity: Opera | field: READ | ruolo=viewer azione=read permesso",
+      "preconditions": "JWT con role=viewer valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "GET /opere/o1 con Authorization: Bearer <jwt-viewer>", "expected_result": "Lo status code della response e' 200 OK"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 9, "matrix_row_id": "C-009", "title": "[ROLE] viewer DELETE /opere/{id} -> 403 forbidden",
+      "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "test_type": "ROLE",
+      "description": "matrix_row_id: C-009 | entity: Opera | field: DELETE | ruolo=viewer azione=delete negato",
+      "preconditions": "JWT con role=viewer valido; opera o1 esistente",
+      "steps": [
+        {"step_number": 1, "action": "DELETE /opere/o1 con Authorization: Bearer <jwt-viewer>", "expected_result": "Lo status code della response e' 403 Forbidden"},
+        {"step_number": 2, "action": "Leggi body response", "expected_result": "Body uguale a {\"error\":\"FORBIDDEN\",\"role\":\"viewer\",\"action\":\"delete\"}"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    }
+  ]
+}

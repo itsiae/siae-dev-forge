@@ -1,0 +1,15 @@
+{
+  "story_id": "AUTH-330",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "rows": [
+    { "matrix_row_id": "C-001", "entity": "Opera", "field": "CREATE (POST /opere)", "condition": "ruolo=admin -> POST consentito (201)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC admin/create" },
+    { "matrix_row_id": "C-002", "entity": "Opera", "field": "READ (GET /opere/{id})", "condition": "ruolo=admin -> GET consentito (200)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC admin/read" },
+    { "matrix_row_id": "C-003", "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "condition": "ruolo=admin -> DELETE consentito (204)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC admin/delete" },
+    { "matrix_row_id": "C-004", "entity": "Opera", "field": "CREATE (POST /opere)", "condition": "ruolo=editor -> POST consentito (201)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC editor/create" },
+    { "matrix_row_id": "C-005", "entity": "Opera", "field": "READ (GET /opere/{id})", "condition": "ruolo=editor -> GET consentito (200)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC editor/read" },
+    { "matrix_row_id": "C-006", "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "condition": "ruolo=editor -> DELETE negato (403)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC editor/delete" },
+    { "matrix_row_id": "C-007", "entity": "Opera", "field": "CREATE (POST /opere)", "condition": "ruolo=viewer -> POST negato (403)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC viewer/create" },
+    { "matrix_row_id": "C-008", "entity": "Opera", "field": "READ (GET /opere/{id})", "condition": "ruolo=viewer -> GET consentito (200)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC viewer/read" },
+    { "matrix_row_id": "C-009", "entity": "Opera", "field": "DELETE (DELETE /opere/{id})", "condition": "ruolo=viewer -> DELETE negato (403)", "test_type": "ROLE", "source_ref": "input.md:AC-RBAC viewer/delete" }
+  ]
+}

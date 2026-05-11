@@ -1,0 +1,31 @@
+{
+  "story_id": "MIG-101",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "rows": [
+    { "matrix_row_id": "A-001", "entity": "GENERAL_DATA", "field": "CATEGORY", "condition": "CATEGORY = 'F'", "test_type": "POS", "source_ref": "input.md:14" },
+    { "matrix_row_id": "A-002", "entity": "GENERAL_DATA", "field": "CATEGORY", "condition": "CATEGORY = 'S'", "test_type": "POS", "source_ref": "input.md:14" },
+    { "matrix_row_id": "A-003", "entity": "GENERAL_DATA", "field": "CATEGORY", "condition": "CATEGORY = null", "test_type": "POS", "source_ref": "input.md:14" },
+    { "matrix_row_id": "A-004", "entity": "GENERAL_DATA", "field": "CATEGORY", "condition": "CATEGORY = 'X' (fuori lookup)", "test_type": "NEG", "source_ref": "input.md:33" },
+    { "matrix_row_id": "A-005", "entity": "GENERAL_DATA", "field": "EVERGREEN", "condition": "EVERGREEN = true", "test_type": "POS", "source_ref": "input.md:15" },
+    { "matrix_row_id": "A-006", "entity": "GENERAL_DATA", "field": "EVERGREEN", "condition": "EVERGREEN = false", "test_type": "POS", "source_ref": "input.md:15" },
+    { "matrix_row_id": "A-007", "entity": "GENERAL_DATA", "field": "EVERGREEN", "condition": "EVERGREEN = 'maybe' (fuori boolean)", "test_type": "NEG", "source_ref": "input.md:15" },
+    { "matrix_row_id": "A-008", "entity": "GENERAL_DATA", "field": "DURATION", "condition": "DURATION = 180 (intero >=0)", "test_type": "POS", "source_ref": "input.md:16" },
+    { "matrix_row_id": "A-009", "entity": "GENERAL_DATA", "field": "DURATION", "condition": "DURATION = -1 (negativo)", "test_type": "NEG", "source_ref": "input.md:16" },
+    { "matrix_row_id": "A-010", "entity": "GENERAL_DATA", "field": "DURATION", "condition": "DURATION mancante (mandatory missing)", "test_type": "NEG", "source_ref": "input.md:32" },
+    { "matrix_row_id": "A-011", "entity": "GENERAL_DATA", "field": "ORDER", "condition": "ORDER = 5 (intero >=1)", "test_type": "POS", "source_ref": "input.md:17" },
+    { "matrix_row_id": "A-012", "entity": "GENERAL_DATA", "field": "ORDER", "condition": "ORDER = null (optional)", "test_type": "EDGE", "source_ref": "input.md:17" },
+    { "matrix_row_id": "A-013", "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "condition": "RELEASE_DATE = '2024-09-12' (ISO8601 valido)", "test_type": "POS", "source_ref": "input.md:18" },
+    { "matrix_row_id": "A-014", "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "condition": "RELEASE_DATE = '12-09-2024' (formato non ISO)", "test_type": "NEG", "source_ref": "input.md:18" },
+    { "matrix_row_id": "A-015", "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "condition": "RELEASE_DATE = '1899-12-31' (boundary prima del 1900)", "test_type": "EDGE", "source_ref": "input.md:18" },
+    { "matrix_row_id": "A-016", "entity": "GENERAL_DATA", "field": "UNIQUEREF2", "condition": "UNIQUEREF2 = '074' (valore fisso atteso)", "test_type": "POS", "source_ref": "input.md:19" },
+    { "matrix_row_id": "A-017", "entity": "GENERAL_DATA", "field": "UNIQUEREF2", "condition": "UNIQUEREF2 = '999' (diverso da 074)", "test_type": "NEG", "source_ref": "input.md:34" },
+    { "matrix_row_id": "A-018", "entity": "GENERAL_DATA", "field": "TITLE", "condition": "TITLE = 'Bohemian Rhapsody' (1..255 char)", "test_type": "POS", "source_ref": "input.md:20" },
+    { "matrix_row_id": "A-019", "entity": "GENERAL_DATA", "field": "TITLE", "condition": "TITLE = '' (stringa vuota)", "test_type": "NEG", "source_ref": "input.md:20" },
+    { "matrix_row_id": "A-020", "entity": "GENERAL_DATA", "field": "GENRE", "condition": "GENRE = 'ROCK'", "test_type": "POS", "source_ref": "input.md:21" },
+    { "matrix_row_id": "A-021", "entity": "GENERAL_DATA", "field": "GENRE", "condition": "GENRE = null (optional)", "test_type": "EDGE", "source_ref": "input.md:21" },
+    { "matrix_row_id": "A-022", "entity": "GENERAL_DATA", "field": "GENRE", "condition": "GENRE = 'METAL' (fuori lookup)", "test_type": "NEG", "source_ref": "input.md:21" },
+    { "matrix_row_id": "A-023", "entity": "GENERAL_DATA", "field": "LANGUAGE", "condition": "LANGUAGE = 'it' (ISO 639-1 valido)", "test_type": "POS", "source_ref": "input.md:22" },
+    { "matrix_row_id": "A-024", "entity": "GENERAL_DATA", "field": "LANGUAGE", "condition": "LANGUAGE = 'xx' (codice non ISO 639-1)", "test_type": "NEG", "source_ref": "input.md:22" },
+    { "matrix_row_id": "A-025", "entity": "GENERAL_DATA", "field": "ISWC", "condition": "ISWC = 'T-123456789-1' (pattern valido)", "test_type": "POS", "source_ref": "input.md:23" }
+  ]
+}
