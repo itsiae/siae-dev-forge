@@ -545,6 +545,34 @@ Per ogni riga di M_FINAL genera **esattamente 1 TC** step-based.
 - ❌ "Fornire una data non valida"
 - ✅ "Impostare RELEASED = `'01/01/2024'` (formato DD/MM/YYYY, non ISO 8601)"
 
+**Multi-step per azioni mutating (ADR-005, obbligatorio):**
+
+Identifica TC che testano azioni mutating: HTTP `POST`/`PUT`/`PATCH`/`DELETE`, SQL `INSERT`/`UPDATE`/`DELETE`, CSV write su target.
+
+Per TC mutating con status atteso 2xx:
+- **Minimo 2 step:** (1) Action mutating con dati concreti; (2) **Side-effect verification** = read-back (`GET /resource/{id}`, `SELECT WHERE id = ...`) OR count (`SELECT COUNT(*) FROM table WHERE ... → incremento atteso`) OR audit log query.
+- Response code 2xx **NON e' sufficiente** da solo come step 2, salvo che il body 2xx includa esplicitamente i campi creati (allora step 2 = "assert body fields == expected values").
+
+Per TC mutating con status atteso 4xx/5xx (error mutating):
+- **Minimo 3 step:** (1) Action mutating; (2) Verify error response (status code + error message specifico); (3) **Side-effect NOT occurred** = `SELECT COUNT(*) → invariato`, `GET /resource/{id} → 404`, o audit log assente.
+
+Per TC read-only (HTTP `GET`, SQL `SELECT`):
+- Minimo 1 step (azione + assertion sullo stesso step).
+
+**Esempi:**
+
+```
+[POS] POST /ripartizioni happy path (3 step):
+  Step 1: POST /ripartizioni body {importo=100.50, autore_id=UUID} → 201
+  Step 2: GET /ripartizioni/{id_returned} → body contiene importo=100.50
+  Step 3: SELECT stato FROM ripartizioni WHERE id={id_returned} → "PENDING"
+
+[NEG] POST /ripartizioni importo=0 (3 step):
+  Step 1: POST /ripartizioni body {importo=0, autore_id=UUID} → 400 con error.code="IMPORTO_NON_VALIDO"
+  Step 2: Verify body contiene error.code="IMPORTO_NON_VALIDO" AND error.message contiene "importo deve essere > 0"
+  Step 3: SELECT COUNT(*) FROM ripartizioni WHERE autore_id=UUID → invariato (record NON inserito)
+```
+
 **Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description` (non nel titolo).
 
 Esempio di struttura TC corretta:

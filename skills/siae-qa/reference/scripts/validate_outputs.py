@@ -29,7 +29,7 @@ SCHEMA_FILES = {
 
 JIRA_KEY_RE = re.compile(r"^[A-Z]+-[0-9]+$")
 TITLE_PREFIX_RE = re.compile(r"^\[(POS|NEG|EDGE|ROLE)\] .+")
-MATRIX_ROW_ID_RE = re.compile(r"^(?:[ABC]-[0-9]{3}|J5-gap-G[0-9]{2}|developer-[0-9]{3})$")
+MATRIX_ROW_ID_RE = re.compile(r"^(?:[A-Z]-[0-9]{3}|J5-gap-G[0-9]{2}|developer-[0-9]{3})$")
 
 
 def load_schema(name: str) -> dict[str, Any]:
