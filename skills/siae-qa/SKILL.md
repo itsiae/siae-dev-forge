@@ -1,12 +1,21 @@
 ---
 name: siae-qa
-version: 2.0.0
+version: 2.1.0
 last_modified: 2026-05-11
 description: >
   Genera documentazione test formale per Xray a completamento implementazione.
   Trigger: completamento brainstorming (Phase 2), completamento ciclo TDD (Phase 5),
   /forge-qa.
 changelog: |
+  2.1.0 (2026-05-11): Residual fixes post-simulazione end-to-end.
+    - ADR-001: type-aware "frontiera bassa" in Matrix A (decimal/integer/date).
+    - ADR-002: strict-bound (>, <) genera EDGE auto; non-strict (>=, <=) no EDGE.
+    - ADR-003: string trim/NFC/max-length opt-in (keyword trigger esplicito).
+    - ADR-004: entity naming gerarchia (SCREAMING_SNAKE_CASE per tabelle/section; PascalCase singolare altrove).
+    - ADR-005: Phase 4b multi-step mutating obbligatorio (no response-code-only per 2xx).
+    - ADR-006: validator WARN channel (exit 0 con [WARN] su stderr).
+    - ADR-007: POS lookup unification + NEG per-field collapse + B-001/B-002 condizionale.
+    - Vincoli #15 e #16 aggiunti.
   2.0.0 (2026-05-11): Refactor Coverage Matrix M_FINAL come single source of truth.
     - Phase 1.5 introduce M_FINAL (Matrix A/B/C + Gate #1).
     - Phase 4 riorganizzata in 4a (verifica) / 4b (genera) / 4c (Gate #2) / 4d (J5).
@@ -849,6 +858,8 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "Ho appena aggiunto i TC per J5, Gate #2 è superfluo" | I TC aggiunti per J5 non sono stati verificati da J3 (bijection) né da J4 (specificità). Gate #2 va rilanciato. Un TC aggiunto senza matrix_row_id o con passi generici passa la generazione ma fallisce il gate. |
 | "Esporto subito dopo J5, poi se serve riciclo" | Non si esporta con TC non verificati. Gate #2 post-J5 costa secondi. Riciclare dopo l'export significa aggiornare il file CSV già distribuito al team — costo molto più alto. |
 | "coverage_certificate.json e' un nice-to-have, esporto e basta" | Senza certificate il collaudo non puo' validare la chiusura del ciclo QA e siae-automation non ha l'input previsto. L'export non parte senza certificate (FULL_PASS o CONDITIONAL_PASS). |
+| "Lo step 2 'verify response code' basta per i POST" | No. Per mutating 2xx serve read-back (GET/SELECT) o assert body fields. Response code da solo conferma che la chiamata e' arrivata, non che il record esista nello stato atteso. |
+| "I lookup li espando tutti, e' piu' rigoroso" | Esplosione completa solo per spec con mapping esplicito campo→valore→esito. Per lookup senza esiti distinti documentati, una POS rappresentativa basta — risparmia 2-5 righe per campo senza perdere copertura semantica. |
 
 ---
 
@@ -876,6 +887,8 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 12. **J5 Final Audit è obbligatorio prima dell'export** — il coverage_certificate è il documento di chiusura del ciclo QA
 13. **coverage_certificate.json deve esistere prima di Phase 5** — l'export non parte senza certificate (FULL_PASS o CONDITIONAL_PASS).
 14. **Tutti i TC hanno prefisso esplicito** — `[POS]/[NEG]/[EDGE]/[ROLE]`. Nessun TC senza prefisso (fallirebbe J3/J4).
+15. **Mutating TC con status 2xx ha minimo 2 step** — action + read-back/SELECT/audit. Response code da solo NON e' side-effect verification. Mutating 4xx/5xx ha minimo 3 step (terzo step = side-effect NOT occurred).
+16. **B-001/B-002 composite generate SOLO se spec ha regole composite cross-field** — se la spec ha solo vincoli single-field, M_B non contiene composite_happy/composite_worst. Generare B-001/B-002 senza regole reali = falsi TC che non testano nulla.
 
 ---
 
