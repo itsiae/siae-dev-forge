@@ -227,6 +227,78 @@ Salva la mappatura come file persistente: `docs/qa/{STORY_ID}/xray_id_mapping.js
 
 ---
 
+## Pattern DLQ (Dead Letter Queue) per Pipeline ETL (ADR-009)
+
+Per spec ETL/Data Pipeline con quarantine/error handling, ogni TC NEG che produce drop+DLQ deve verificare:
+
+### DLQ schema standard (consigliato)
+
+| Campo | Tipo | Obbligatorio | Note |
+|-------|------|:------------:|------|
+| `run_id` | UUID | si | FK to job_log.id — correlazione con job execution |
+| `source_record_id` | string | si | ID univoco del record dropato (se presente nella sorgente) |
+| `reason` | enum | si | `NULL_KEY`, `INVALID_LOOKUP`, `FK_MISS`, `FORMAT_ERROR`, `QUARANTINE_THRESHOLD`, `SCHEMA_VIOLATION` |
+| `source_payload` | JSON | si | Original record completo (preservato per debugging/replay manuale) |
+| `quarantine_timestamp` | TIMESTAMPTZ | si | Quando il record e' stato dropato — timezone-aware |
+| `pipeline_stage` | enum | no | `INGESTION`, `VALIDATION`, `TRANSFORMATION`, `LOAD` |
+
+### Esempio TC NEG con verifica DLQ
+
+```
+[NEG] tipo_diritto valore fuori lookup → drop + DLQ verification
+
+Step 1 (action): Esegui Glue job con record bronze contenente `tipo_diritto='UNKNOWN_TYPE'`
+Step 2 (DLQ verification): Verifica S3 `s3://siae-bronze/_quarantine/run-{run_id}/`:
+  - Esiste file con `source_record_id` = ID del record sorgente
+  - Campo `reason` = `INVALID_LOOKUP`
+  - Campo `source_payload` contiene il record originale completo
+  - `quarantine_timestamp` ha timezone UTC esplicita (ISO 8601 con `Z` suffix)
+Step 3 (silver verification): SELECT COUNT(*) FROM silver.ripartizioni WHERE id_ripartizione = '{source_record_id}' → 0 (record NON in silver)
+```
+
+---
+
+## Multi-Session TC Pattern (ADR-010)
+
+Per TC che richiedono osservazione concorrente (lock-free verification, async side-effect propagation), usa tag esplicito `[SESSION A] / [SESSION B]` nei step.
+
+### Esempio: CREATE INDEX CONCURRENTLY lock-free verification
+
+```
+[POS] CREATE INDEX CONCURRENTLY su autori — verifica lock-free durante esecuzione
+
+Step 1 [SESSION A] action: psql -h $DB_HOST -c "CREATE INDEX CONCURRENTLY idx_email_secondaria ON autori(email_secondaria) WHERE email_secondaria IS NOT NULL"
+  Expected: comando avviato (non termina subito, ~30 min su 12M righe)
+
+Step 2 [SESSION B] observe (in parallelo entro 500ms dall'avvio di Session A):
+  psql -h $DB_HOST -c "SELECT mode, granted FROM pg_locks WHERE relation='autori'::regclass AND mode='AccessExclusiveLock' AND granted=true"
+  Expected: 0 rows (no AccessExclusiveLock granted su autori)
+
+Step 3 [SESSION B] observe (campiona ogni 60s per durata Session A):
+  Stessa query Step 2 → sempre 0 rows
+  Expected: AccessExclusiveLock NON presente per piu' di 1 secondo cumulativo
+
+Step 4 [SESSION A] await: aspettare completamento CREATE INDEX (timeout 60 min)
+  Expected: indice creato, exit 0
+
+Step 5 [SESSION A] verify: SELECT indexname FROM pg_indexes WHERE indexname='idx_email_secondaria' → 1 row
+```
+
+### Esempio: CloudWatch alarm propagation async
+
+```
+[POS] drop_ratio > 30% triggers alarm RIPARTIZIONI_QUALITY_DEGRADED
+
+Step 1 [SESSION A] action: esegui Glue job ETL con bronze input contenente 35% record invalidi
+Step 2 [SESSION A] verify exit: job completa con exit code 0 (job non fallisce, ma genera alarm)
+Step 3 [SESSION B] poll (entro 5 min dall'exit Session A):
+  aws cloudwatch describe-alarms --alarm-names RIPARTIZIONI_QUALITY_DEGRADED
+  Expected: StateValue = "ALARM", StateReason contiene "drop_ratio: 0.35 > 0.30"
+Step 4 [SESSION B] cleanup: reset alarm state per non interferire con job successivi
+```
+
+---
+
 ## Checklist di Verifica
 
 Prima di dichiarare la skill completata, tutte le caselle devono essere spuntate.
