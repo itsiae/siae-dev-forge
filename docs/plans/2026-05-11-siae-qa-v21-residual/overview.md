@@ -20,17 +20,17 @@
 
 | # | Task | File | SP | Stato |
 |---|------|------|---:|-------|
-| 1 | Estendere tabella regole di esplosione con strict/non-strict numerico + string length opt-in (ADR-001/002/003) | `task-01-skill-explosion-table.md` | 2 | [PENDING] |
-| 2 | Aggiornare prompt Matrix A/B con POS unification + NEG collapse + B-rows conditional (ADR-007) | `task-02-skill-adr007-matrix-prompts.md` | 2 | [PENDING] |
-| 3 | Prescrivere multi-step per azioni mutating in Phase 4b (ADR-005) | `task-03-skill-adr005-phase4b-multistep.md` | 1 | [PENDING] |
-| 4 | Aggiornare Anti-Razionalizzazione + Vincoli Non Negoziabili + version 2.1.0 + changelog | `task-04-skill-vincoli-version.md` | 1 | [PENDING] |
-| 5 | Aggiungere gerarchia entity naming a XRAY-TEMPLATES.md (ADR-004) | `task-05-xray-entity-naming.md` | 0.5 | [PENDING] |
-| 6 | Aggiungere domanda strict vs non-strict al question-tree Backend | `task-06-question-trees-update.md` | 0.5 | [PENDING] |
-| 7 | Estendere validator con WARN channel + check_neg_numeric_has_edge_low (ADR-006) | `task-07-validator-warn-channel.md` | 1.5 | [PENDING] |
-| 8 | Verifica entity `Opera` su 3 file golden role_based (ADR-004 compliance gate) | `task-08-golden-role-entity.md` | 0.5 | [PENDING] |
-| 9 | Aggiungere step "side-effect not occurred" ai 4 TC error mutating | `task-09-golden-mutating-step.md` | 0.5 | [PENDING] |
-| 10 | Re-run simulazione 3 fixture + verifica Criterio #7 (diff strutturale) | `task-10-rerun-sim-verify.md` | 1 | [PENDING] |
-| 11 | **BUG FIX G-DB-5** — regex `matrix_row_id` schema accetta solo `[ABC]-\d{3}` → estendi a `[A-Z]-\d{3}` per spec con 4+ entità | `task-11-schema-regex-bugfix.md` | 0.5 | [PENDING] |
+| 1 | Estendere tabella regole di esplosione con strict/non-strict numerico + string length opt-in (ADR-001/002/003) | `task-01-skill-explosion-table.md` | 2 | [DONE] |
+| 2 | Aggiornare prompt Matrix A/B con POS unification + NEG collapse + B-rows conditional (ADR-007) | `task-02-skill-adr007-matrix-prompts.md` | 2 | [DONE] |
+| 3 | Prescrivere multi-step per azioni mutating in Phase 4b (ADR-005) | `task-03-skill-adr005-phase4b-multistep.md` | 1 | [DONE] |
+| 4 | Aggiornare Anti-Razionalizzazione + Vincoli Non Negoziabili + version 2.1.0 + changelog | `task-04-skill-vincoli-version.md` | 1 | [DONE] |
+| 5 | Aggiungere gerarchia entity naming a XRAY-TEMPLATES.md (ADR-004) | `task-05-xray-entity-naming.md` | 0.5 | [DONE] |
+| 6 | Aggiungere domanda strict vs non-strict al question-tree Backend | `task-06-question-trees-update.md` | 0.5 | [DONE] |
+| 7 | Estendere validator con WARN channel + check_neg_numeric_has_edge_low (ADR-006) | `task-07-validator-warn-channel.md` | 1.5 | [DONE] |
+| 8 | Verifica entity `Opera` su 3 file golden role_based (ADR-004 compliance gate) | `task-08-golden-role-entity.md` | 0.5 | [DONE] |
+| 9 | Aggiungere step "side-effect not occurred" ai 4 TC error mutating | `task-09-golden-mutating-step.md` | 0.5 | [DONE] |
+| 10 | Re-run simulazione 3 fixture + verifica Criterio #7 (diff strutturale) | `task-10-rerun-sim-verify.md` | 1 | [DONE] |
+| 11 | **BUG FIX G-DB-5** — regex `matrix_row_id` schema accetta solo `[ABC]-\d{3}` → estendi a `[A-Z]-\d{3}` per spec con 4+ entità | `task-11-schema-regex-bugfix.md` | 0.5 | [DONE] |
 
 ## Dipendenze
 
