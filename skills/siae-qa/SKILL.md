@@ -360,10 +360,19 @@ Non lanciare Matrix A/B/C senza risposta esplicita conforme alla "Definizione di
 Sei un QA Matrix Agent specializzato in decomposizione campo-valore.
 Input: {ENTITÀ E CAMPI serializzati} + {LOOKUP TABLES serializzate}
 Per ogni campo di ogni entità, applica le regole di esplosione:
-  - Lookup enumerato → 1 riga POS per ogni valore + 1 riga NEG "fuori lookup"
-  - Mandatory → POS(valido) + NEG(assente/null)
+  - Lookup enumerato (test sintattico per esplosione completa):
+    * SE la spec contiene mapping esplicito campo→valore→esito (tabella con header `| Campo | Lookup | Mapping |` o sezione "Mapping CSV → Target"):
+      → 1 POS per ogni valore + 1 NEG "fuori lookup" (esplosione completa, default migration)
+    * ALTRIMENTI (lookup senza esiti distinti documentati):
+      → 1 POS rappresentativa (primo valore in ordine sintattico) `source_ref="lookup_repr"` + 1 POS per ogni valore con comportamento downstream distinto documentato + 1 NEG "fuori lookup"
+  - Mandatory non-numerico → POS(valido) + NEG(assente/null)
+    * NEG per-field collapse: se piu' campi mandatory dello stesso entity hanno errore simmetrico (stesso status_code + stesso pattern errore lessicale modulo nome campo), genera 1 NEG rappresentativa `source_ref="mandatory_collapsed"` con `condition="<primo campo mandatory>=null"`. Se errori asimmetrici (es. `autore_id → 404`, `opera_id → 400`), 1 NEG per classe-errore distinta.
   - Optional → POS(valido) + EDGE(null = accettato)
   - Formato data/regex → POS(corretto) + NEG(errato) + EDGE(null se optional)
+  - Strict-bound numerico (`>`, `<`) — EDGE type-aware:
+    * Inferire tipo dalla serializzazione Phase 1.5 (`ENTITA E CAMPI ... dominio: decimal/integer/date`)
+    * `> 0` decimal → EDGE `0.01`; `> 0` integer → EDGE `1`; `> '2020-01-01'` date → EDGE `2020-01-02`
+    * Se tipo non specificato in spec: default `integer`, segnala WARNING `source_ref="type_inferred_default_integer"`
   - Valore fisso business → POS(= costante) + NEG(≠ costante)
 Produci: tabella M_A con colonne matrix_row_id, entity, field, condition, test_type, source_ref
 ```
@@ -374,8 +383,9 @@ Sei un QA Matrix Agent specializzato in regole di business composte e vincoli re
 Input: {REGOLE DI BUSINESS COMPOSTE serializzate} + {VINCOLI REFERENZIALI} + {LOOKUP TABLES serializzate}
 Per ogni regola composita: costruisci prodotto cartesiano ridotto
   - Esito DISTINTO = differenza nello status_code di ritorno OR classe del messaggio di errore (validation_error vs authorization_error vs business_rule_violation). Stesso status + stessa classe = stesso esito → tieni 1 combinazione rappresentativa.
-  - Aggiungi 1 happy path (tutti i campi nominali validi) come riga POS marcata `source_ref="composite_happy"`
-  - Aggiungi 1 worst case (tutti i campi edge contemporaneamente) come riga EDGE marcata `source_ref="composite_worst"`
+  - B-001 (composite_happy) e B-002 (composite_worst) SOLO se la spec contiene almeno 1 regola composita cross-field (vincolo che lega 2+ campi con AND/OR di condizioni interdipendenti).
+    * SE spec ha composite rules → genera B-001 (POS, tutti campi nominali validi, `source_ref="composite_happy"`) + B-002 (EDGE, tutti campi edge contemporaneamente, `source_ref="composite_worst"`).
+    * SE spec NO composite rules → NON generare B-001/B-002 (M_B può essere vuoto).
   - Limite: max 16 combinazioni per regola. Se lo spazio delle combinazioni eccede 16: applica **pairwise covering (IPOG)** — selezione che copre ogni coppia di valori almeno una volta. Marca le righe con `source_ref="pairwise_ipog"`. Ordine deterministico: ordina i fattori per nome campo asc, poi seleziona le combinazioni nell'ordine prodotto da IPOG canonico.
 Per ogni vincolo referenziale: 1 riga NEG per ogni sezione dipendente (chiave assente)
 Produci: tabella M_B con colonne matrix_row_id, entity, field, condition, test_type, source_ref
