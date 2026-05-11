@@ -1,12 +1,19 @@
 ---
 name: siae-qa
-version: 2.1.0
+version: 2.2.0
 last_modified: 2026-05-11
 description: >
   Genera documentazione test formale per Xray a completamento implementazione.
   Trigger: completamento brainstorming (Phase 2), completamento ciclo TDD (Phase 5),
   /forge-qa.
 changelog: |
+  2.2.0 (2026-05-11): Full closure 25 gap residui post 5-case simulation.
+    - ADR-008: cross-temporal/cross-event composite (Matrix B temporal sequences).
+    - ADR-009: ETL stateful pipeline rules (idempotency MERGE, threshold composito, async side-effect, pipeline ordering, DLQ schema, timezone).
+    - ADR-010: multi-session TC pattern ([SESSION A]/[SESSION B] observer steps).
+    - ADR-011: conflict resolution + 9 categorie aggiuntive (UI state, REST pagination empty, security boundary, type duration, performance NFR, cache header, doc artifact, policy-dependent, measurement-bound).
+    - ADR-012: schema matrix_row_id regex extended con suffix tematico opzionale.
+    - Scorecard 48→50/50 (Gold tier consolidato).
   2.1.0 (2026-05-11): Residual fixes post-simulazione end-to-end.
     - ADR-001: type-aware "frontiera bassa" in Matrix A (decimal/integer/date).
     - ADR-002: strict-bound (>, <) genera EDGE auto; non-strict (>=, <=) no EDGE.
@@ -316,6 +323,29 @@ Ogni riga della matrice corrisponde esattamente a **1 TC da generare**:
 | **Valore fisso business** | POS(= costante) + NEG(≠ costante) | UNIQUEREF2 = "074" |
 | **Regola composita** (N campi interdipendenti) | Prodotto cartesiano filtrato per esiti distinti + pairwise IPOG se > 16 | account × IPI → 4 combinazioni; 5 boolean → 32 combinazioni → 16 selezionate via pairwise IPOG |
 | **Cross-sezione** (chiave condivisa tra CSV/entità) | NEG per ogni sezione dipendente (chiave assente) | UNIQUEREF1 assente in TITLES |
+| **Cross-temporal / cross-event composite** | POS(first execution canonica) + EDGE(race/replay stesso input) + EDGE(out-of-order eventi B prima di A) + NEG(stato finale inconsistente) | idempotency `event.id`: POS first + EDGE duplicate + EDGE OOO |
+
+#### Priorità Regole su Conflitto (ADR-011)
+
+Quando due categorie di esplosione si applicano allo stesso campo, applica priorità deterministica:
+
+1. **Boolean + valore fisso business** → priorità valore fisso. Esplosione: POS(true) + NEG(false) + NEG(non-parseable). **NON duplicare** POS(false) come da regola booleano standard.
+2. **String length/encoding + valore fisso** → priorità valore fisso (length/encoding implicito nel valore). POS(=valore) + NEG(≠valore) + NEG(>max length).
+3. **Strict-bound numerico + valore fisso** → priorità valore fisso. POS(=valore) + NEG(≠valore).
+
+#### Categorie aggiuntive di esplosione (v2.2.0)
+
+| Categoria | Esplosione | Esempio |
+|-----------|------------|---------|
+| **UI state** (loading/empty/error/disabled) | 1 POS per stato osservabile + 1 NEG per transizione errata | form button: enabled(valid)+disabled(invalid)+loading(submit)+error(API 5xx) |
+| **REST pagination/empty-set** | 200 con `content: []` (NON 404). POS empty + POS first-page + POS last-page + EDGE page-overflow | GET /api/opere?titolo=NOMATCH → 200 + empty content |
+| **Security boundary** (SQL inj, XSS, path traversal) | 1 NEG per vettore noto, status 400 o sanitized 200 | `'; DROP TABLE`, `<script>`, `../etc/passwd` |
+| **Type duration/interval** (ADR-001 extension) | EDGE `valore + granularità minima` (es. `> 5min` decimal → EDGE `5min 1s`) | signature timestamp validity |
+| **Performance NFR** (latency, throughput, P95) | source_ref=`nfr_perf` — annotazione per test suite separata (k6/JMeter), NO TC funzionale | P95 < 500ms |
+| **Cache header** (Cache-Control, ETag) | POS header presente + NEG header mancante quando expected | max-age=60 con filtri assenti |
+| **Documentation artifact** (runbook, ADR, README) | source_ref=`doc_artifact` + TC step "verifica presenza file X" | recovery runbook esiste |
+| **Policy-dependent constraint** | source_ref=`policy_dependent` + nota "verify policy in place" — non NEG ambiguo | DROP COLUMN dopo write |
+| **Measurement-bound** (tempo, RAM misurati) | EDGE con tolerance range invece di valore fisso | duration < 35 min ± 10% |
 
 #### Serializzazione input per gli agenti (OBBLIGATORIA prima del lancio)
 
@@ -399,6 +429,15 @@ Per ogni regola composita: costruisci prodotto cartesiano ridotto
 Per ogni vincolo referenziale: 1 riga NEG per ogni sezione dipendente (chiave assente)
 Produci: tabella M_B con colonne matrix_row_id, entity, field, condition, test_type, source_ref
   (colonne aggiuntive: combo_fields[], combo_values[] per regole composite)
+
+**Temporal/cross-event composite (ADR-008):**
+Trigger sintattici: `ANTE/POST`, `prima/dopo`, `out-of-order`, `replay`, `event.id`, `processed_at`, `last_*_at`, `idempotency-key`, `version A→version B`, `rollback dopo write`, `MERGE INTO`.
+Per ogni sequenza identificata:
+  - 1 POS per outcome canonico (first execution successful)
+  - 1 EDGE per race/replay (stesso input 2 volte → outcome idempotente)
+  - 1 EDGE per out-of-order (eventi B applicato prima di A nella catena)
+  - 1 NEG per stato finale inconsistente (es. rollback dopo write con dati persistenti)
+Marca le righe con `source_ref="temporal_composite"`.
 ```
 
 **Matrix Agent C — Role/Permission Mapper:**
@@ -581,6 +620,19 @@ Per TC read-only (HTTP `GET`, SQL `SELECT`):
   Step 2: Verify body contiene error.code="IMPORTO_NON_VALIDO" AND error.message contiene "importo deve essere > 0"
   Step 3: SELECT COUNT(*) FROM ripartizioni WHERE autore_id=UUID → invariato (record NON inserito)
 ```
+
+**Multi-session TC pattern (ADR-010, opzionale per lock-free / async verification):**
+
+Per TC che richiedono osservazione concorrente (lock-free verification, async side-effect propagation, race detection):
+
+- Step naming convention: `[SESSION A] action` / `[SESSION B] observe`
+- Session B = monitor passivo, NON deve influenzare Session A (read-only queries, no write)
+- Timing window esplicita: "entro X secondi dall'azione" / "dopo X secondi di stabilizzazione"
+- Cleanup esplicito: ogni sessione chiude connessioni/timer alla fine del TC
+
+Trigger: `pg_locks`, `sessione parallela`, `concurrent`, `lock-free`, `CONCURRENTLY`, `CloudWatch alarm propagation`, `monitor durante`, `osservazione asincrona`.
+
+Marca i TC multi-session con `source_ref="multi_session"`.
 
 **Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description` (non nel titolo).
 
@@ -889,6 +941,9 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 14. **Tutti i TC hanno prefisso esplicito** — `[POS]/[NEG]/[EDGE]/[ROLE]`. Nessun TC senza prefisso (fallirebbe J3/J4).
 15. **Mutating TC con status 2xx ha minimo 2 step** — action + read-back/SELECT/audit. Response code da solo NON e' side-effect verification. Mutating 4xx/5xx ha minimo 3 step (terzo step = side-effect NOT occurred).
 16. **B-001/B-002 composite generate SOLO se spec ha regole composite cross-field** — se la spec ha solo vincoli single-field, M_B non contiene composite_happy/composite_worst. Generare B-001/B-002 senza regole reali = falsi TC che non testano nulla.
+17. **Cross-temporal/cross-event rules generano almeno 1 EDGE per replay E 1 EDGE per out-of-order** — se la spec menziona idempotency/sequenza, Matrix B deve esplodere su entrambi (no shortcut "tanto è idempotente").
+18. **Multi-session TC usano tag espliciti `[SESSION A]/[SESSION B]`** — un TC concurrent senza tag e' un TC sequenziale travestito.
+19. **Priorita' regole su conflitto e' deterministica** — boolean+valore_fisso → priorità valore_fisso, no doppio TC su POS(false)/NEG(false).
 
 ---
 
