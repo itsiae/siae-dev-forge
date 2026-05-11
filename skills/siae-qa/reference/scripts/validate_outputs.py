@@ -191,15 +191,60 @@ def cross_check_certificate(cert: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _report(label: str, errors: list[str]) -> bool:
-    """Print PASS/FAIL block for a single artifact and return success boolean."""
+def _report(label: str, errors: list[str], severity: str = "FAIL") -> bool:
+    """Print PASS/FAIL/WARN block for a single artifact and return success boolean.
+
+    severity = "FAIL": eventuali errori sono bloccanti; print [FAIL] su stdout; return False.
+    severity = "WARN": eventuali errori sono soft; print [WARN] su stderr; return True (non-bloccante).
+    """
     if not errors:
         print(f"[PASS] {label}")
+        return True
+    if severity == "WARN":
+        tag = "[WARN]"
+        out = sys.stderr
+        print(f"{tag} {label} ({len(errors)} warnings)", file=out)
+        for e in errors:
+            print(f"   - {e}", file=out)
         return True
     print(f"[FAIL] {label} ({len(errors)} errors)")
     for e in errors:
         print(f"   - {e}")
     return False
+
+
+def check_neg_numeric_has_edge_low(m_final: dict[str, Any]) -> list[str]:
+    """ADR-006: ogni NEG con condition numerica strict (> X / < X) deve avere
+    una row EDGE corrispondente alla frontiera bassa sullo stesso (entity, field).
+
+    Ritorna lista di warnings (vuota se tutto OK).
+    """
+    warnings: list[str] = []
+    if not m_final or "rows" not in m_final:
+        return warnings
+
+    rows = m_final["rows"]
+    strict_neg_pattern = re.compile(r"[<>]\s*[\-+]?\d+(?:\.\d+)?")
+    neg_strict: list[tuple[str, str, str]] = []
+    for r in rows:
+        if r.get("test_type") == "NEG" and strict_neg_pattern.search(r.get("condition", "")):
+            neg_strict.append((r.get("entity", ""), r.get("field", ""), r.get("condition", "")))
+
+    edge_keys = {
+        (r.get("entity", ""), r.get("field", ""))
+        for r in rows
+        if r.get("test_type") == "EDGE"
+    }
+
+    for entity, field, condition in neg_strict:
+        if (entity, field) not in edge_keys:
+            warnings.append(
+                f"NEG strict numerica su {entity}.{field} (condition: {condition}) "
+                f"NON ha row EDGE corrispondente alla frontiera bassa. "
+                f"Suggerimento ADR-001/002: aggiungere row EDGE type-aware."
+            )
+
+    return warnings
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -246,6 +291,14 @@ def main(argv: list[str] | None = None) -> int:
                       cross_check_mfinal_tcdraft(m_final_obj, tc_draft_obj))
     if certificate_obj is not None:
         ok &= _report("CROSS: certificate consistency", cross_check_certificate(certificate_obj))
+
+    # ADR-006: NEG numeric strict has EDGE low — WARN level (non-bloccante)
+    if m_final_obj is not None:
+        _report(
+            "CHECK: NEG numeric strict has EDGE low (ADR-006)",
+            check_neg_numeric_has_edge_low(m_final_obj),
+            severity="WARN",
+        )
 
     return 0 if ok else 1
 
