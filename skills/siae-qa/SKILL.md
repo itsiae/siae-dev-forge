@@ -324,6 +324,10 @@ Ogni riga della matrice corrisponde esattamente a **1 TC da generare**:
 | **Regola composita** (N campi interdipendenti) | Prodotto cartesiano filtrato per esiti distinti + pairwise IPOG se > 16 | account × IPI → 4 combinazioni; 5 boolean → 32 combinazioni → 16 selezionate via pairwise IPOG |
 | **Cross-sezione** (chiave condivisa tra CSV/entità) | NEG per ogni sezione dipendente (chiave assente) | UNIQUEREF1 assente in TITLES |
 | **Cross-temporal / cross-event composite** | POS(first execution canonica) + EDGE(race/replay stesso input) + EDGE(out-of-order eventi B prima di A) + NEG(stato finale inconsistente) | idempotency `event.id`: POS first + EDGE duplicate + EDGE OOO |
+| **Stateful pipeline idempotency** (MERGE/UPSERT per chiave) | POS(first run produce expected count) + EDGE(rerun same key → no-op, count invariato) + NEG(rerun different value → conflict resolved/upsert update) | MERGE INTO silver.ripartizioni USING bronze... ON id_ripartizione |
+| **Volume threshold composito** (count + ratio + drift) | 1 POS within + 1 NEG per ogni threshold superato (count, ratio, drift) + 1 EDGE per boundary value di ogni threshold | drop_ratio > 30% triggers alarm |
+| **Async side-effect** (CloudWatch alarm, SNS, audit log entry) | POS(side-effect fired entro window) + NEG(side-effect NOT fired when expected) + EDGE(side-effect duplicato/idempotency) | RIPARTIZIONI_QUALITY_DEGRADED alarm |
+| **Pipeline ordering cross-AC** (filter → dedup → null → lookup → FK) | POS(canonical order respected) + NEG(stage skipped) + NEG(stage reordered modifica esito) | bronze→silver con stage order |
 
 #### Priorità Regole su Conflitto (ADR-011)
 
