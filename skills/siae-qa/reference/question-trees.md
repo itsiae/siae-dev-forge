@@ -45,6 +45,11 @@ Claude fa UNA domanda alla volta.
    per il caso di successo e per ogni caso di errore previsto?"
 2. "Quali campi del payload sono obbligatori?
    Ci sono vincoli di formato o range (es. importo > 0, ISRC pattern)?"
+3. "Per i vincoli numerici di range, sono **strict** (es. `importo > 0`,
+   esclusivo) o **non-strict** (es. `quantita >= 0`, inclusivo)?
+   E qual e' il **tipo** del campo (decimal/integer/date/timestamp)?
+   La risposta determina se Matrix A genera un EDGE auto alla frontiera bassa
+   (`0.01` per decimal vs `1` per integer vs data successiva)."
 
 ### L2 — Edge case specifici BE
 3. "L'operazione è idempotente? Cosa succede se viene chiamata due volte
