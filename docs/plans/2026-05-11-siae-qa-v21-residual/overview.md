@@ -8,7 +8,7 @@
 
 **Stack:** Markdown skill spec + JSON Schema + Python 3.10+ validator + golden fixture JSON.
 
-**SP:** 10.5 Umano / 4.5 Augmented (rivisto post plan-review iter 1-2: Task 08 scalato da 1→0.5 Umano perché ridotto a verification gate — golden role_based già conformi; totale Augmented = somma per task = 4.5)
+**SP:** 11 Umano / 4.5 Augmented (rivisto post 5-case simulation: aggiunto Task 11 bug fix G-DB-5 schema regex 1-line, +0.5 SP)
 
 **Design doc:** `docs/plans/2026-05-11-siae-qa-v21-residual-design.md` (iter 4, PASS spec-review)
 
@@ -30,6 +30,7 @@
 | 8 | Verifica entity `Opera` su 3 file golden role_based (ADR-004 compliance gate) | `task-08-golden-role-entity.md` | 0.5 | [PENDING] |
 | 9 | Aggiungere step "side-effect not occurred" ai 4 TC error mutating | `task-09-golden-mutating-step.md` | 0.5 | [PENDING] |
 | 10 | Re-run simulazione 3 fixture + verifica Criterio #7 (diff strutturale) | `task-10-rerun-sim-verify.md` | 1 | [PENDING] |
+| 11 | **BUG FIX G-DB-5** — regex `matrix_row_id` schema accetta solo `[ABC]-\d{3}` → estendi a `[A-Z]-\d{3}` per spec con 4+ entità | `task-11-schema-regex-bugfix.md` | 0.5 | [PENDING] |
 
 ## Dipendenze
 
