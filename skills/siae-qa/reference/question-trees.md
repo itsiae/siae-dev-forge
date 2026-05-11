@@ -75,18 +75,33 @@ Claude fa UNA domanda alla volta.
    Da quale layer (bronze/silver/gold) parte e quale layer produce?"
 2. "Qual è la chiave di deduplicazione dei record?
    Come vengono gestiti i duplicati (drop, keep-first, keep-last, merge)?"
+3. "La pipeline è idempotente? Se sì, qual è la chiave di MERGE/UPSERT
+   (es. id_ripartizione, business key composta, hash payload)?
+   Cosa succede se viene rieseguita con lo stesso input
+   (no-op idempotente vs upsert con update)?"
 
 ### L2 — Edge case specifici ETL
-3. "Cosa succede con record nulli o malformati nella sorgente?
+4. "Cosa succede con record nulli o malformati nella sorgente?
    Vengono scartati (drop), messi in quarantena (dead-letter) o il job fallisce?"
-4. "Il job è idempotente? Se viene rieseguito sullo stesso intervallo temporale,
+5. "Il job è idempotente? Se viene rieseguito sullo stesso intervallo temporale,
    sovrascrive i dati o li duplica?"
-5. "C'è un volume soglia (es. 0 record letti, > N record anomali)
+6. "C'è un volume soglia (es. 0 record letti, > N record anomali)
    oltre il quale il job deve fallire o generare un alert?"
+7. "Quali soglie scatenano alert? (count assoluto es. 0 record letti,
+   ratio es. drop_ratio > 30%, drift es. count(silver) deviates from
+   count(bronze) - count(dropped) > 5)? Ogni soglia ha severity diversa?"
+8. "I timestamp hanno timezone esplicita (TIMESTAMPTZ in Postgres,
+   timezone-aware datetime in Python/PySpark) o naive (TIMESTAMP)?
+   Quale timezone canonica (UTC, Europe/Rome, source-specific)?
+   Come si gestisce DST transitions e timezone mismatch tra sorgenti?"
 
 ### L3 — Integrazioni / dipendenze
-6. "Il job dipende da job o layer upstream? Come si comporta se upstream
+9. "Il job dipende da job o layer upstream? Come si comporta se upstream
    non ha prodotto dati per questa finestra temporale?"
+10. "Esistono side-effect asincroni della pipeline?
+    (CloudWatch alarm su quality degradation, SNS notification, audit log entry,
+    downstream trigger su altro Glue job). Per ognuno: window di propagation,
+    come verificare che il side-effect e' avvenuto/non avvenuto."
 
 ---
 
