@@ -36,9 +36,8 @@
       }
     },
     "sport-kg": {
-      "type": "stdio",
-      "command": "docker",
-      "args": ["exec", "-i", "-e", "MCP_TRANSPORT=stdio", "sport-kg-mcp", "python", "server.py"]
+      "type": "sse",
+      "url": "http://localhost:3456/sse"
     },
     "browserstack": {
       "type": "stdio",

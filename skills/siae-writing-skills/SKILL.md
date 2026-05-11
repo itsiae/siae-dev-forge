@@ -1,7 +1,8 @@
 ---
 name: siae-writing-skills
 description: >
-  Guida la creazione e il miglioramento di skill DevForge.
+  Use when creating or improving DevForge skills (SKILL.md, behaviour change,
+  template skill).
   Trigger: nuova skill DevForge, migliora skill, scrivi skill, behaviour change,
   template skill, progetta skill.
 ---

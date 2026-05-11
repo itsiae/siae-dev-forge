@@ -1,0 +1,5 @@
+# Output run-time (eccetto baseline)
+report-*.md
+!report-template.md
+.cache/
+*.tmp

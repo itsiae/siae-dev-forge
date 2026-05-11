@@ -1,0 +1,6 @@
+{
+  "languages": ["typescript"],
+  "frameworks": ["vitest"],
+  "module_coverage": [],
+  "pre_existing_coverage_pct": 0.0
+}

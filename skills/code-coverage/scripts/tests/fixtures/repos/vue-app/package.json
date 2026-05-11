@@ -1,0 +1,8 @@
+{
+  "name": "vue-fixture",
+  "version": "0.1.0",
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  }
+}

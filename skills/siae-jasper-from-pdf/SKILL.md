@@ -2,9 +2,10 @@
 name: siae-jasper-from-pdf
 sdlc_phase: "4. Implementation"
 description: >
-  Ricostruisce template JasperReports (JRXML) identici a un PDF di riferimento.
-  Iterazione automatica: estrae font, bbox, layout dal PDF, genera JRXML,
-  renderizza, confronta pixel-per-pixel, corregge fino a soglia <2% diff.
+  Use when reverse-engineering a PDF into a JasperReports JRXML template
+  pixel-perfect. Iterazione automatica: estrae font, bbox, layout dal PDF,
+  genera JRXML, renderizza, confronta pixel-per-pixel, corregge fino a
+  soglia <2% diff.
   Trigger: "jrxml da pdf", "ricostruisci jasper", "pdf to jrxml", "genera template jasper",
   "replica pdf in jasper", "/forge-jasper", "jasper from pdf", "crea jrxml dal pdf",
   "reverse engineering pdf jasper", "JasperReports da pdf".

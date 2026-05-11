@@ -1,12 +1,14 @@
 ---
 name: siae-brainstorming
 description: >
-  Guida il processo di design da idea a design doc approvato, prima di QUALSIASI
-  implementazione. Nessuna eccezione. Anche refactoring, bug fix, config change.
-  Trigger: feature nuova, design, come procediamo, come progettiamo, quale approccio,
-  valutare opzioni, trade-off, prima dell'implementazione, aggiungi feature,
-  costruisci, crea componente, nuovo servizio, refactoring architetturale, migrazione,
-  bug fix, refactoring, ottimizzazione, modifica codice, qualsiasi task implementativo.
+  Use when designing any implementation task before writing code (feature, bug
+  fix, refactor, config change). Forces 7-step process: intake → scope → options →
+  design → review → approval → handoff to siae-writing-plans. Mandatory before any
+  code change. Trigger: feature nuova, design, come procediamo, come progettiamo,
+  quale approccio, valutare opzioni, trade-off, prima dell'implementazione,
+  aggiungi feature, costruisci, crea componente, nuovo servizio, refactoring
+  architetturale, migrazione, bug fix, refactoring, ottimizzazione, modifica
+  codice, qualsiasi task implementativo, config change.
 validates_via:
   predicate: design_doc_produced
   evidence_type: file_pattern
@@ -62,33 +64,21 @@ NON saltare step. NON abbreviare. NON decidere autonomamente che un task e' "tro
 
 ---
 
-## Checklist — 7 Punti Obbligatori
+## Checklist — 7 Punti Obbligatori (summary)
 
-### 1. Smart Intake — Inferisci il contesto dal codebase
+Dettaglio operativo completo: [reference/brainstorming-checklist.md](reference/brainstorming-checklist.md).
 
-**NON chiedere cio' che il codice sa gia'.** Leggi prima, chiedi dopo. Verifica prima se l'informazione e' gia' nella conversazione corrente.
+1. **Smart Intake** — Inferisci contesto da CLAUDE.md, manifest, struttura, git log, docs/plans, auto-memory, JIRA. Confidence HIGH/MEDIUM/LOW + citation `file:riga`. NON chiedere cio' che il codice sa gia'.
+2. **Scope Assessment** — Dominio coeso o piu' sottosistemi? Se 3+ domini / repo separati / stack diversi → presenta decomposizione numerata, gli altri restano nel backlog.
+3. **Inferenze + domande mirate** — Tabella `Campo | Valore | Confidence | file:riga`. Domande SOLO per LOW / non inferiti / scopo. Una alla volta, scelta multipla.
+4. **2-3 approcci con trade-off** — Per ogni approccio: descrizione, pro, contro, complessita'. Raccomandazione + motivazione. Stima SP doppia scala (vedi [reference/brainstorming-jira.md](reference/brainstorming-jira.md)).
+5. **Design per sezioni, approvazione incrementale** — Architettura, componenti, flusso dati, errori, testing. Scala alla complessita'.
+6. **Salva design doc** — `docs/plans/YYYY-MM-DD-<topic>-design.md`. Contesto, decisioni, trade-off, SP, criteri accettazione. Commit 🟡 MEDIO.
+7. **REQUIRED SUB-SKILL: siae-writing-plans** — handoff a piano implementativo. NON scrivere il piano qui.
 
-**Fonti (in ordine):** (1) `CLAUDE.md` progetto (stack, regole); (2) manifest `pom.xml`/`package.json`/`requirements.txt`/`terragrunt.hcl` (dipendenze); (3) struttura directory via Glob (pattern architetturale); (4) `git log --oneline -10` (lavoro recente); (5) `docs/plans/` (design precedenti); (6) auto-memory `~/.claude/projects/<project>/memory/MEMORY.md` (lezioni cross-sessione); (6b) memoria episodica `project_session_*.md` (branch, PR, stato sessione precedente); (7) JIRA via MCP Atlassian (ticket correlati).
+---
 
-**Ogni inferenza:** Confidence HIGH (≥90%) / MEDIUM (60-89%) / LOW (<60%) + citation `file:riga`.
-
-### 2. Scope Assessment — Valuta se decomporre
-
-**Test:** dominio coeso o piu' sottosistemi indipendenti?
-
-**Segnali scope troppo ampio:** 3+ domini, componenti potenzialmente repo separati, stack diversi, piu' team/factory.
-
-**Se troppo ampio:** presenta decomposizione numerata, chiedi quale affrontare per primo, gli altri restano nel backlog.
-
-**Se scope ok:** procedi a Step 3.
-
-### 3. Presenta inferenze + domande mirate
-
-Presenta le inferenze in tabella compatta `Campo | Valore | [Confidence] | file:riga` per conferma rapida.
-
-**Regole:** conferma in blocco o correzioni puntuali. Domande SOLO per confidence LOW, campi non inferiti, scopo. Una alla volta. Scelta multipla preferita. Se tutto HIGH e confermato, procedi direttamente a Step 4.
-
-### 3b. Option Zero Gate
+## Step 3b — Option Zero Gate (INLINE, critico)
 
 Prima di proporre codice, verifica se il problema si risolve con configurazione, infrastruttura o processo.
 
@@ -98,31 +88,23 @@ Prima di proporre codice, verifica se il problema si risolve con configurazione,
 
 **Se non applicabile:** documenta brevemente perche' ("non esiste parameter store per X") e procedi a Step 4.
 
-### 4. Proponi 2-3 approcci con trade-off e raccomandazione
+---
 
-- Ogni approccio: descrizione, pro, contro, complessita'
-- Raccomandazione tua + motivazione
-- Stima SP doppia scala (SP-Umano / SP-Augmented) — vedi tabella "Integrazione JIRA"
+## Step 3c — Placeholder Scan (INLINE, critico)
 
-### 5. Presenta design per sezioni, approvazione dopo ciascuna
+Prima di scrivere il design doc, scansiona inferenze e bozze per placeholder TBD/TODO/`<...>`/"da definire". Ogni placeholder deve diventare valore concreto o domanda esplicita all'utente. Nessun design viene salvato con TBD residui.
 
-- Scala la sezione alla complessita' (poche frasi → 200-300 parole)
-- Approvazione incrementale dopo ciascuna sezione
-- Copri: architettura, componenti, flusso dati, gestione errori, testing
+---
 
-### 6. Scrivi design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
-
-Salva il design validato. Includi contesto, decisioni, trade-off scelti, stima SP, criteri di accettazione. Committa con card 🟡 MEDIO (vedi `lib/risk-taxonomy.md`) — senza commit il design resta invisibile in git history.
-
-### 6b. Spec Review Gate (con reviewer automatico)
+## Step 6b — Spec Review Gate (INLINE, critico)
 
 Prima del gate utente, lancia subagent spec-reviewer con prompt in [design-reviewer-prompt.md](design-reviewer-prompt.md) passando `{design_doc_path}` e `{user_goal}`.
 
 **Processo:**
-1. Lancia reviewer, leggi report
-2. Se BLOCK: fixa, ri-lancia (max 5 iterazioni); dopo 5 → escalation utente
-3. Se solo WARN: presenta al gate utente
-4. Se zero issue: gate standard
+1. Lancia reviewer, leggi report.
+2. Se BLOCK: fixa, ri-lancia (max 5 iterazioni); dopo 5 → escalation utente.
+3. Se solo WARN: presenta al gate utente.
+4. Se zero issue: gate standard.
 
 Emetti checkpoint `[BRAINSTORM:SPEC-REVIEW]`.
 
@@ -138,16 +120,6 @@ Conferma:
 ```
 
 NON invocare siae-writing-plans senza conferma esplicita a questo gate.
-
-### 7. REQUIRED: Transizione al piano implementativo
-
-Design approvato, committato, Spec Review Gate confermato?
-
-```
-REQUIRED SUB-SKILL: siae-writing-plans
-```
-
-`siae-writing-plans` gestisce decomposizione task, template TDD, execution handoff (subagent o sessione separata). NON scrivere il piano in questa skill.
 
 ---
 
@@ -166,33 +138,6 @@ Formato generale: vedi `lib/checkpoint-schema.md`. Per OGNI step emetti il check
 
 ---
 
-## Integrazione SIAE / JIRA
-
-Se MCP Atlassian disponibile, cerca ticket correlati all'inizio (JQL: `project = <KEY> AND summary ~ "<keyword>" ORDER BY updated DESC`).
-
-### Stima Story Points — Doppia Scala
-
-| SP | SP-Umano (senza AI) | SP-Augmented (dev + Claude) |
-|----|---------------------|------------------------------|
-| 1  | Triviale, zero rischio | Config, typo, rename |
-| 2  | Semplice, <1 giorno | CRUD endpoint, test unitario, IaC isolato |
-| 3  | Moderato, 1-2 gg | Feature con 2-3 componenti |
-| 5  | Significativo, 2-4 gg | Feature cross-module, pipeline ETL |
-| 8  | Complesso, ~1 settimana | Nuovo microservizio, refactoring architetturale |
-| 13 | Molto complesso, >1 settimana | Migrazione sistema, nuovo dominio |
-
-**Accelerazione AI per tipo:** boilerplate/CRUD ~5-10x · test+refactor meccanico ~3-5x · feature con spec chiare ~2-3x · integrazione API ~1.5-2x · logica di dominio ambigua ~1-1.5x · debug prod ~1-1.5x.
-
-**Come stimare:** identifica tipo dominante, applica moltiplicatore, arrotonda al Fibonacci piu' vicino. Presenta SEMPRE entrambi: `Story Points: 5 SP-Umano / 3 SP-Augmented`.
-
-### Output JIRA ticket
-
-A fine design produci blocco `JIRA TICKET OUTPUT` con campi: Tipo (Story/Task/Bug), Sommario, Descrizione (da design doc), Story Points (doppia scala), Labels, Acceptance Criteria (lista).
-
-Creazione ticket = 🔴 ALTO (vedi `lib/risk-taxonomy.md`; extra: JIRA ticket = ALTO). Mostra pre-flight card, attendi conferma esplicita (silenzio ≠ consenso), poi `createJiraIssue`.
-
----
-
 ## Stato Terminale
 
 Output brainstorming: (1) design doc approvato in `docs/plans/`, (2) piano con header `REQUIRED SUB-SKILL`, (3) scelta esecuzione offerta (subagent o sessione separata).
@@ -201,14 +146,8 @@ NON invocare siae-tdd o skill implementative senza offrire la scelta di esecuzio
 
 ---
 
-## Limiti Operativi
+## Limiti, Rischio, Permission
 
-Vedi `lib/operational-limits.md`. Override: step totali del brainstorming = 7 (se ne servono di piu', il task e' troppo grande → decomponi).
-
-## Classificazione Rischio Operazioni
-
-Vedi `lib/risk-taxonomy.md`. Extra: creazione ticket JIRA = 🔴 ALTO.
-
-## Permission Denied Handling
-
-Vedi `lib/permission-denied-handling.md`. Extra: Step 1-4 completabili senza permessi (conversazione). Step 5-6 degradano a output testuale se Write/Bash negati.
+- **Limiti operativi:** vedi `lib/operational-limits.md`. Override: step totali = 7 (se ne servono di piu', task troppo grande → decomponi).
+- **Classificazione rischio:** vedi `lib/risk-taxonomy.md`. Extra: creazione ticket JIRA = 🔴 ALTO (dettagli in [reference/brainstorming-jira.md](reference/brainstorming-jira.md)).
+- **Permission denied:** vedi `lib/permission-denied-handling.md`. Step 1-4 completabili senza permessi. Step 5-6 degradano a output testuale se Write/Bash negati.

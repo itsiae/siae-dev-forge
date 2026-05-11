@@ -1,8 +1,8 @@
 ---
 name: siae-subagent-development
 description: >
-  Dispatcha task implementativi a subagent paralleli da un piano validato nella
-  sessione corrente.
+  Use when dispatching parallel implementer subagents from a validated plan in
+  the current session (vs siae-executing-plans for separate session).
   Trigger: /forge-implement, implementa il piano, dispatcha task, lancia implementer,
   subagent, controller-subagent, orchestrazione implementazione.
 ---

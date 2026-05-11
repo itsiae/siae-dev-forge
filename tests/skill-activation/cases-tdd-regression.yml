@@ -1,0 +1,46 @@
+# 10 prompt che usavano vecchie keyword tdd (rimosse in PR-6 task 01).
+# Validazione migration path: 6/10 attivano ancora siae-tdd (TDD-specific keyword preservati),
+# 4/10 deviano a siae-brainstorming (canonico per design first).
+# Riferimento: CHANGELOG.md sezione [Unreleased] Migration path siae-tdd.
+
+# === KEEP (6) — TDD-specific keyword preservati ===
+- id: tdd-keep-1
+  prompt: "TDD per nuova feature pagamento"
+  expected_primary: siae-tdd
+
+- id: tdd-keep-2
+  prompt: "ciclo Red-Green-Refactor sulla funzione X"
+  expected_primary: siae-tdd
+
+- id: tdd-keep-3
+  prompt: "scrivo test prima del codice per validateISRC"
+  expected_primary: siae-tdd
+
+- id: tdd-keep-4
+  prompt: "test-driven development sul modulo auth"
+  expected_primary: siae-tdd
+
+- id: tdd-keep-5
+  prompt: "scrittura test prima del codice per il nuovo handler"
+  expected_primary: siae-tdd
+
+- id: tdd-keep-6
+  prompt: "ciclo TDD per il refactoring del validator"
+  expected_primary: siae-tdd
+
+# === DEVIATE (4) — keyword generiche rimosse, ora canonico brainstorming ===
+- id: tdd-deviate-1
+  prompt: "implementa la funzione validateISRC"
+  expected_primary: siae-brainstorming
+
+- id: tdd-deviate-2
+  prompt: "scrivo nuovo metodo per il calcolo ripartizione"
+  expected_primary: siae-brainstorming
+
+- id: tdd-deviate-3
+  prompt: "modifico la logica di calcolo ripartizione"
+  expected_primary: siae-brainstorming
+
+- id: tdd-deviate-4
+  prompt: "creo classe MyService per gestire le notifiche"
+  expected_primary: siae-brainstorming

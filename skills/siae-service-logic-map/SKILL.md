@@ -1,14 +1,19 @@
 ---
 name: siae-service-logic-map
 description: >
-  Profila microservizi: dominio, entita', workflow, regole business, cluster.
-  Modalita' A (build-catalog): build catalogo L1+L2+L3 multi-cluster.
-  Modalita' B (impact-analysis): pre-flight MCP single-task con output standardizzato.
-  Trigger: "cosa fa {servizio}", "lanciamo su {pattern}", "analizziamo {sistema}",
-  "mappa la logica", "build catalogo L1/L2/L3", "regole business di", "Drools in",
-  "quali servizi gestiscono X", impact analysis, pre-flight MCP, demand impact,
-  blast radius, "modifica su sport-*/pop-*/pae-*",
-  /forge-logic-build, /forge-logic-search, /forge-mcp-preflight.
+  Use when profiling microservices for documentation OR for impact analysis.
+  Two modes:
+  - **Mode A (build-catalog)**: build L1+L2+L3 catalog (domain profile + workflow
+    map + business rules) for a cluster of microservices. Trigger: "build catalogo
+    L1/L2/L3", "lanciamo su <pattern>", "analizziamo <sistema>", "regole business
+    di X", "Drools in Y", "cosa fa {servizio}", "mappa la logica", "quali servizi
+    gestiscono X", /forge-logic-build, /forge-logic-search.
+  - **Mode B (impact-analysis)**: pre-flight MCP single-task con output
+    standardizzato (rischio + 3 vincoli + volumi). Trigger: "modifica su servizio
+    business-critical", "impact analysis", "blast radius", "demand impact",
+    "pre-flight MCP", /forge-mcp-preflight.
+  Examples: "cosa fa servizio X", "impact di modifica DTO Y", "build catalogo
+  cluster Z".
 ---
 
 # SIAE Service Logic Map — Domain Profile e Workflow Map
@@ -35,7 +40,7 @@ La skill opera in 2 modalita' distinte. Riconosci la modalita' dal contesto del 
 
 ### A. Build-catalog (default) — vedi Step 0..6
 
-Trigger: `/forge-logic-build`, "build catalogo", "lanciamo su {pattern}", "mappa la logica".
+Trigger: "build catalogo", "lanciamo su {pattern}", "mappa la logica".
 
 Output: catalogo L1+L2+L3 multi-cluster in `docs/logic-catalog/`.
 
@@ -50,6 +55,29 @@ come Stage 0 prima di brainstorming/debugging, oppure dispatchata all'agent `mcp
 
 Output: blocco markdown standardizzato `## MCP Pre-flight: <service> — <feature>`
 copiabile in cima al design doc.
+
+---
+
+## Quale modalità scegliere — Flowchart 3 domande
+
+```text
+1. Stai facendo IMPLEMENTAZIONE di una modifica specifica?
+   ├── SI → Mode B (impact-analysis): /forge-mcp-preflight
+   └── NO → Step 2
+
+2. Stai facendo DOCUMENTAZIONE / onboarding di un sistema?
+   ├── SI → Mode A (build-catalog): /forge-logic-build
+   └── NO → Step 3
+
+3. Stai facendo INVESTIGAZIONE Q&A su come funziona X?
+   ├── SI → NEITHER. Usa siae-debugging o qa-investigator subagent
+   └── NO → Stop e chiedi all'utente cosa intende
+```
+
+| Modalità | Output | Subagent | When |
+|---|---|---|---|
+| A. build-catalog | docs/catalog/L1+L2+L3 markdown | siae-service-logic-map.md (forge-logic-build) | Documentation, onboarding nuovo cluster |
+| B. impact-analysis | Pre-flight card (rischio + 3 vincoli + volumi) | mcp-impact-analyst | Pre-design di task implementativo |
 
 ---
 
@@ -179,7 +207,7 @@ Cerca SYSTEM_MAP.md in questo ordine:
 **Sempre:**
 - Onboarding su servizio sconosciuto: "cosa fa sport-X?"
 - Impact analysis cross-repo: "quali servizi gestiscono Y?"
-- Build catalogo logic per cluster: `/forge-logic-build`
+- Build catalogo logic per cluster: dispatch skill `siae-service-logic-map` direttamente (modalità A)
 - Ricerca concetti/workflow: `/forge-logic-search`
 
 **Output:** un documento per cluster (non per singolo servizio) che descrive

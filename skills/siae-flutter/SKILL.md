@@ -1,8 +1,9 @@
 ---
 name: siae-flutter
 description: >
-  Guida lo sviluppo di app Flutter SIAE: architettura MVVM con Riverpod, persistenza
-  ObjectBox, auth Amplify/Cognito, Firebase, networking Dio, code generation.
+  Use when developing Flutter mobile apps with MVVM + Riverpod, ObjectBox
+  persistence, Amplify/Cognito auth, Firebase, Dio networking, or code
+  generation. Guida lo sviluppo di app Flutter SIAE.
   Trigger: Flutter, Dart, Riverpod, ObjectBox, Get_it, Amplify, Cognito, app mobile,
   widget, build_runner, Dio, Crashlytics, deep link, geolocation.
 ---

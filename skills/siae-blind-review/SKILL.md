@@ -1,9 +1,12 @@
 ---
 name: siae-blind-review
 description: >
-  Review cieca: riceve SOLO la spec, trova il codice autonomamente, valuta come auditor ostile.
-  Trigger: "blind review", "review cieca", "audit spec", "verifica spec vs codice",
-  "review senza diff", /forge-blind-review, REQUIRED SUB-SKILL da siae-finishing-branch.
+  Use when performing a blind code review: receive ONLY the spec, locate the
+  code autonomously, evaluate as a hostile auditor. Review cieca: riceve SOLO
+  la spec, trova il codice autonomamente, valuta come auditor ostile. Trigger:
+  "blind review", "review cieca", "audit spec", "verifica spec vs codice",
+  "review senza diff", /forge-blind-review, REQUIRED SUB-SKILL da
+  siae-finishing-branch.
 validates_via:
   predicate: blind_review_completed
   evidence_type: log_event

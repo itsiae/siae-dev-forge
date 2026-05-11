@@ -1,12 +1,13 @@
 ---
 name: siae-data-engineering
 description: >
+  Use when building, migrating, or debugging AWS data pipelines and ETL jobs.
   Guida la costruzione, migrazione e debug di data pipeline ed ETL job su AWS.
-  NON per Terraform (usa siae-iac), REST endpoint o frontend.
-  Trigger: Glue job, PySpark, ETL, pipeline di ingestion, trasformazione dati,
-  Step Functions, data lake, Medallion architecture, bronze-to-silver,
-  silver-to-gold, data quality, crawler, batch notturno, Iceberg, CDC,
-  delta window, migrare dati da legacy, costruire pipeline, orchestrazione batch,
+  NON per Terraform (usa siae-iac), REST endpoint o frontend. Trigger: Glue
+  job, PySpark, ETL, pipeline di ingestion, trasformazione dati, Step
+  Functions, data lake, Medallion architecture, bronze-to-silver,
+  silver-to-gold, data quality, crawler, batch notturno, Iceberg, CDC, delta
+  window, migrare dati da legacy, costruire pipeline, orchestrazione batch,
   implementa Medallion, ingestion file CSV.
 ---
 

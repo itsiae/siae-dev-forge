@@ -1,8 +1,9 @@
 ---
 name: siae-retrospective
 description: >
-  Estrae lezioni apprese e memoria episodica a fine sessione, persiste in auto-memory.
-  Salva sia lezioni astratte (feedback) che narrativa sessione (cosa fatto, decisioni, stato).
+  Use when closing a session, opening a PR, or extracting lessons learned to
+  persist in auto-memory. Saves both abstract lessons (feedback) and session
+  narrative (what was done, decisions, state).
   Trigger: fine sessione, lezioni apprese, cosa ho imparato, retrospettiva,
   salva per la prossima volta, /forge-retro, apertura PR, REQUIRED da post-commit-review
   hook su gh pr create.

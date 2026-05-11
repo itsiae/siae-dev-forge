@@ -1,0 +1,130 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "dependency",
+      "patterns": [
+        "Cannot find module ['\"]([^'\"]+)['\"]",
+        "ModuleNotFoundError: No module named ['\"]([^'\"]+)['\"]",
+        "error\\[E0432\\]: unresolved import ['\"]([^'\"]+)['\"]",
+        "package ([\\w./]+) is not in (?:GOROOT|std|GOPATH)",
+        "could not resolve dependency ([\\w./@-]+)"
+      ],
+      "fix_steps": [
+        "Estrai nome dipendenza da capture group 1",
+        "Verifica se è in stack-matrix.json install_dev_deps per il framework",
+        "Aggiungi a install commands list",
+        "Auto-install via validate_env.py install_commands"
+      ],
+      "systemic_eligible": true,
+      "systemic_threshold_count": 2,
+      "systemic_fix_template": "Esegui {install_command} una sola volta a livello di repo"
+    },
+    {
+      "id": 2,
+      "name": "import",
+      "patterns": [
+        "does not provide an export named ['\"]([^'\"]+)['\"]",
+        "Module .* has no exported member ['\"]([^'\"]+)['\"]",
+        "ImportError: cannot import name ['\"]([^'\"]+)['\"]",
+        "SyntaxError: The requested module ['\"]([^'\"]+)['\"] does not provide"
+      ],
+      "fix_steps": [
+        "Identifica file source che non esporta il simbolo",
+        "Run grep deterministico: grep -nE '^export (default|const|function|class)' <source-file>",
+        "Riformula import nel test (default vs named vs namespace)",
+        "Edit del solo blocco import nel test file (no rigenerazione full-file)"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    },
+    {
+      "id": 3,
+      "name": "runtime",
+      "patterns": [
+        "ReferenceError: ([\\w$]+) is not defined",
+        "TypeError: ([\\w$.]+) is not a function",
+        "document is not defined",
+        "window is not defined",
+        "AttributeError: ['\"]?([\\w]+)['\"]? object has no attribute ['\"]([\\w]+)['\"]",
+        "(test|spec) timed out (?:in )?(\\d+ms)"
+      ],
+      "fix_steps": [
+        "Distingui timeout (transient) vs runtime error (persistent)",
+        "Se 'document' o 'window' undefined → set environment 'jsdom' nel config",
+        "Se timeout: re-run UNA volta senza modifiche (transient retry)",
+        "Se attribute error: verifica versione lib in package.json"
+      ],
+      "systemic_eligible": true,
+      "systemic_threshold_count": 2,
+      "systemic_fix_template": "Modifica {config_file} per aggiungere {env_setting}"
+    },
+    {
+      "id": 4,
+      "name": "mock",
+      "patterns": [
+        "expected (?:mock )?(?:function )?to (?:have been |be )?called",
+        "Expected mock function to (?:have been called|return)",
+        "AssertionError: Expected '([\\w$]+)' to (?:have been |be )?called",
+        "vi\\.mock\\(\\) factory must (?:return|provide)",
+        "jest\\.mock\\(\\) factory must (?:return|provide)"
+      ],
+      "fix_steps": [
+        "Re-leggi mock factory nel test file",
+        "Verifica export shape della dependency mockata via grep",
+        "Edit factory: usa default export vs named in base al grep result",
+        "Se mock non chiamato: aggiungi expect(mock).toHaveBeenCalled() o rivedi flow test"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    },
+    {
+      "id": 5,
+      "name": "assertion",
+      "patterns": [
+        "AssertionError",
+        "Expected: ([^\\n]+).*?Received: ([^\\n]+)",
+        "expect\\([^)]+\\)\\.to\\w+",
+        "assert ([^=]+) == ([^,]+) failed",
+        "assertion `(.+)` failed"
+      ],
+      "fix_steps": [
+        "Identifica expected vs actual nel diff",
+        "Verifica logica del SUT (potrebbe essere il test sbagliato)",
+        "Aggiusta assertion solo se contratto pubblico è chiaro",
+        "Se ambiguo: log come stalled e move on"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    },
+    {
+      "id": 6,
+      "name": "transient",
+      "patterns": [
+        "ECONNRESET",
+        "EAI_AGAIN",
+        "EBUSY",
+        "EADDRINUSE",
+        "Killed: 9",
+        "JavaScript heap out of memory",
+        "OOM",
+        "registry returned 5\\d\\d"
+      ],
+      "fix_steps": [
+        "Re-run il test file UNA volta senza modifiche",
+        "Se errore persiste in re-run: escalate a Cat 1 (dependency) o Cat 3 (runtime)",
+        "Se errore scompare: log come transient + procedi"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    }
+  ],
+  "normalize_regex": [
+    {"pattern": "/[\\w./-]+", "replace": "·"},
+    {"pattern": "\\d{4}-\\d{2}-\\d{2}T?\\d{0,2}:?\\d{0,2}:?\\d{0,2}", "replace": "·"},
+    {"pattern": "0x[0-9a-fA-F]+", "replace": "·"},
+    {"pattern": ":\\d+:\\d+", "replace": ":·:·"},
+    {"pattern": "\\u001b\\[[0-9;]*m", "replace": ""}
+  ],
+  "max_signature_length": 200
+}

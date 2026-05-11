@@ -1,65 +1,39 @@
 ---
 name: siae-writing-plans
 description: >
-  Trasforma un design approvato in un piano implementativo step-by-step concreto
-  e bite-sized.
-  Trigger: scrivi piano implementativo, trasforma design in task, decomposizione
-  step, piano bite-sized, aggiorna piano, task implementativi, docs/plans/.
+  Use when transforming an approved design doc into a step-by-step implementation
+  plan with bite-sized tasks. Produces docs/plans/<topic>/ directory with overview
+  + task-NN files. Examples: "scrivi piano implementativo", "decomponi design in
+  task", "trasforma design in piano", "piano bite-sized", "aggiorna piano",
+  "task implementativi", "docs/plans/".
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║    ███████╗██╗ █████╗ ███████╗    ██████╗ ███████╗██╗   ██╗      ║
-║    ██╔════╝██║██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║      ║
-║    ███████╗██║███████║█████╗      ██║  ██║█████╗  ██║   ██║      ║
-║    ╚════██║██║██╔══██║██╔══╝      ██║  ██║██╔══╝  ╚██╗ ██╔╝      ║
-║    ███████║██║██║  ██║███████╗    ██████╔╝███████╗ ╚████╔╝       ║
-║    ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═════╝ ╚══════╝  ╚═══╝        ║
-║              🔨 DevForge · WRITING PLANS                         ║
-║         "Il codice si forgia. Il developer cresce."              ║
-╚══════════════════════════════════════════════════════════════════╝
-```
-
 > **Tipo:** Rigid | **Fase SDLC:** 2. Design (output)
-
----
-
-> 📊 **Dai repo itsiae:** Piani con step > 13 task hanno 3x piu' probabilita' di essere abbandonati a meta'. Decomposizione bite-sized e' critica.
-> Fonte: analisi su 816 repository GitHub itsiae (60 Java, 44 HCL, 23 Python, 22 TypeScript).
+>
+> 📊 **Dai repo itsiae:** piani con > 13 task hanno 3x piu' probabilita' di essere
+> abbandonati a meta'. Decomposizione bite-sized e' critica.
+> Fonte: analisi su 816 repository GitHub itsiae.
 
 ## HARD-GATE
 
 <EXTREMELY-IMPORTANT>
 NON scrivere il piano senza un design approvato. Se non esiste un design doc
-validato dall'utente, torna a `siae-brainstorming` prima.
+validato dall'utente in `docs/plans/`, torna a `siae-brainstorming` prima.
 
-Stai per scrivere task implementativi, step-by-step, o istruzioni per subagent?
-Esiste un design doc approvato in docs/plans/?
-- NO → FERMATI. Torna a siae-brainstorming. Nessun piano senza design.
-- SI → Procedi con la decomposizione in task.
+- Esiste un design doc approvato? NO → FERMATI. Torna a `siae-brainstorming`.
+- SI → procedi con la decomposizione in task.
 
-Un piano senza design validato = assunzioni non esaminate = lavoro da rifare.
+Un piano senza design = assunzioni non esaminate = lavoro da rifare.
 Un piano con step vaghi ("aggiungi la validazione") = un piano che fallira'.
 </EXTREMELY-IMPORTANT>
 
 ---
 
-## LA LEGGE DI FERRO
+## Quando si applica
 
-```
-OGNI STEP DEL PIANO E' UNA SINGOLA AZIONE DA 2-5 MINUTI,
-CON PATH ESATTI, CODICE COMPLETO E COMANDO ATTESO
-```
-
-"Aggiungi la validazione" non e' uno step. Non e' un piano. E' un'aspirazione.
-
----
-
-## Quando si Applica
-
-**Invocata da siae-brainstorming** dopo l'approvazione del design (Step 6).
+**Invocata da `siae-brainstorming`** dopo l'approvazione del design (Step 6).
 
 **Invocata direttamente quando:**
 - Hai un design doc gia' approvato e devi produrre il piano
@@ -74,93 +48,26 @@ CON PATH ESATTI, CODICE COMPLETO E COMANDO ATTESO
 
 ## Processo
 
-### Step 1 — Leggi il Design Doc
-
-Leggi il design doc approvato in `docs/plans/YYYY-MM-DD-*-design.md`.
-
-Identifica:
-- Goal e scope
-- Componenti/moduli da creare o modificare
-- Stack e framework
-- Criteri di accettazione
-- Dipendenze tra task
-
-### Step 2 — Decomposizione in Task
-
-Suddividi il lavoro in task indipendenti (o con dipendenze esplicite).
-
-**Ogni task:**
-- Copre un componente/modulo/feature atomica
-- Segue il ciclo TDD: test fallente → implementazione → refactor → commit
-- E' completabile da un subagent con contesto fresco
-- Ha un output verificabile
-
-**Regola di dimensione:** se un task richiede piu' di 30 minuti, spezzalo.
-
-### Step 3 — Scrivi il Piano Bite-Sized
-
-**Stato task:** Ogni task nasce con `[PENDING]`. Lo stato viene aggiornato
-durante l'esecuzione da `siae-executing-plans` o `siae-subagent-development`.
-NON scrivere task senza marker — un task senza marker e' un bug nel piano.
-
-**Formato stato task:** usa `[PENDING]`/`[DONE]`/`[BLOCKED]` come formato primario.
-Se il piano contiene checkbox markdown (`- [ ]`), mantienili sincronizzati.
-
-Tre stati possibili:
-- `[PENDING]` — non ancora iniziato (default)
-- `[DONE]` — completato e verificato
-- `[BLOCKED]` — non completabile (con motivo obbligatorio)
-
-**Regola:** un piano e' "completo" se e solo se **tutti** i task sono `[DONE]`.
-
-**Il piano viene scritto come directory:**
-
-```
-docs/plans/<topic>/
-  overview.md          # header + indice task con stato
-  task-01-<nome>.md    # task completo
-  task-02-<nome>.md
-  ...
-  task-NN-<nome>.md
-```
-
-**`overview.md` — template:**
-
-```markdown
-# [Nome Feature] — Piano Implementativo
-
-> **Per Claude:** REQUIRED SUB-SKILL: Usa `siae-subagent-development`
-> per implementare questo piano task per task.
-
-**Goal:** [Una frase]
-**Architettura:** [2-3 frasi]
-**Stack:** [Tecnologie]
-**SP:** [Stima]
-**Design doc:** [path al design doc]
+1. **Leggi design doc** approvato in `docs/plans/YYYY-MM-DD-*-design.md` —
+   identifica goal, scope, componenti, stack, criteri di accettazione, dipendenze.
+2. **Decomponi in task** atomici 2-5 minuti — ogni task atomico, TDD, verificabile,
+   eseguibile da subagent con contesto fresco. Template completo (overview.md +
+   task-NN format + regole di qualita' + anti-pattern):
+   `reference/writing-plans-task-template.md`.
+3. **Scrivi il piano** come directory `docs/plans/<topic>/` con `overview.md`
+   (header + indice task con stato `[PENDING]`) + un file `task-NN-<nome>.md`
+   per task. Vedi template per il formato esatto.
+4. **Step 3b — Placeholder scan** (gate inline, sotto)
+5. **Step 3c — Plan review** (gate inline, sotto)
+6. **Salva + commit** + execution handoff — vedi
+   `reference/writing-plans-execution-handoff.md`.
 
 ---
 
-## Indice Task
+### Step 3b — Placeholder Scan (Gate Obbligatorio, INLINE)
 
-| # | Task | File | Stato |
-|---|------|------|-------|
-| 1 | [Nome task 1] | `task-01-<nome>.md` | [PENDING] |
-| 2 | [Nome task 2] | `task-02-<nome>.md` | [PENDING] |
-| N | [Nome task N] | `task-NN-<nome>.md` | [PENDING] |
-
-## Dipendenze
-
-- Task 2 dipende da Task 1
-- Task 3-4 sono indipendenti
-```
-
-**Ogni `task-NN-<nome>.md`** contiene il task completo con il template TDD
-(file coinvolti, step 1-5: test fallente, run, implementazione, run, commit).
-
-### Step 3b — Placeholder Scan (Gate Obbligatorio)
-
-Prima di salvare il piano, esegui un scan completo per placeholder e
-riferimenti vaghi. Un piano con placeholder e' un piano che fallira'.
+Prima di salvare il piano, scan completo per placeholder e riferimenti vaghi.
+Un piano con placeholder e' un piano che fallira'.
 
 **Pattern vietati — il piano NON e' pronto se contiene:**
 
@@ -177,11 +84,11 @@ riferimenti vaghi. Un piano con placeholder e' un piano che fallira'.
 | Riferimenti circolari | "Vedi Task N" senza contenuto inline |
 
 **Procedura:**
-1. Scansiona ogni `task-NN-*.md` per i pattern sopra
-2. Se trovi match → lista i match con file e riga
-3. Risolvi OGNI placeholder con contenuto concreto (path, codice, comando)
-4. Ri-scansiona fino a zero match
-5. Solo allora procedi a Step 4
+1. Scansiona ogni `task-NN-*.md` per i pattern sopra.
+2. Se trovi match → lista i match con file e riga.
+3. Risolvi OGNI placeholder con contenuto concreto (path, codice, comando).
+4. Ri-scansiona fino a zero match.
+5. Solo allora procedi a Step 3c.
 6. Emetti checkpoint:
 
 ```
@@ -193,7 +100,9 @@ riferimenti vaghi. Un piano con placeholder e' un piano che fallira'.
 
 Un piano che passa questo gate ha zero ambiguita' per il subagent.
 
-### Step 3c — Plan Review (Gate Obbligatorio)
+---
+
+### Step 3c — Plan Review (Gate Obbligatorio, INLINE)
 
 Dopo il placeholder scan (pattern testuali), lancia un subagent plan-reviewer
 che verifica la qualita' semantica del piano.
@@ -205,16 +114,15 @@ che verifica la qualita' semantica del piano.
 **Processo:**
 
 1. Lancia subagent con il prompt in [plan-reviewer-prompt.md](plan-reviewer-prompt.md)
-   passando `{plan_directory}` e `{design_doc_path}`
-2. Il reviewer analizza ogni task-NN-*.md singolarmente (chunk-by-chunk)
-3. Leggi il report del reviewer
+   passando `{plan_directory}` e `{design_doc_path}`.
+2. Il reviewer analizza ogni `task-NN-*.md` singolarmente (chunk-by-chunk).
+3. Leggi il report del reviewer.
 4. Se ci sono issue BLOCK:
-   a. Fixa le issue nei task file
-   b. Ri-lancia il reviewer (loop max 5 iterazioni)
-   c. Se dopo 5 iterazioni ci sono ancora BLOCK → escalation all'utente
-5. Se ci sono solo WARN (zero BLOCK):
-   a. Presenta i WARN all'utente
-6. Se zero issue: procedi a Step 4
+   a. Fixa le issue nei task file.
+   b. Ri-lancia il reviewer (loop max 5 iterazioni).
+   c. Se dopo 5 iterazioni ci sono ancora BLOCK → escalation all'utente.
+5. Se ci sono solo WARN (zero BLOCK): presenta i WARN all'utente.
+6. Se zero issue: procedi a Step 4 (salva + commit).
 
 **Checkpoint:**
 
@@ -226,197 +134,64 @@ che verifica la qualita' semantica del piano.
   DECISIONE: {APPROVED / REVISE}
 ```
 
-### Step 4 — Salva il Piano
+---
 
-Salva la directory in `docs/plans/<topic>/` con `overview.md` e i file `task-NN-<nome>.md`.
+## Salva e committa il piano
 
-Se il design doc gia' include una sezione piano, aggiungila li' come sezione separata.
-
-Committa il file piano:
-
-🟡 MEDIO — Mostra pre-flight card prima del commit
+🟡 MEDIO — Mostra pre-flight card prima del commit.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-writing-plans |
 |:---|
-| 📋 Piano: `<filename>.md` · 🔢 Task: `<N> task definiti` |
+| 📋 Piano: `docs/plans/<topic>/` · 🔢 Task: `<N> task definiti` |
 | **▼ Azione** |
-| 1. 📌 Azione: Commit piano implementativo → `docs/plans/<filename>.md` |
-| 💡 Perche': Piano validato, pronto per commit |
-| 🚫 Se NO: Il piano resta non committato |
+| 1. 📌 Commit piano implementativo → `docs/plans/<topic>/` |
+| 💡 Perche': piano validato (Step 3b + 3c), pronto per commit |
+| 🚫 Se NO: il piano resta non committato |
 
 ```bash
 git add docs/plans/<topic>/
-git commit -m "docs(plans): aggiungi piano implementativo per [feature]"
+git commit -m "docs(plans): aggiungi piano implementativo per <feature>"
 ```
 
-### Retrocompatibilita'
-
-I piani esistenti in formato file unico (`docs/plans/*-plan.md`) restano validi.
-Le skill di esecuzione (`siae-subagent-development`, `siae-executing-plans`)
-detectano automaticamente il formato:
-
-- **Directory** (`docs/plans/<topic>/overview.md` esiste) → formato split
-- **File** (`docs/plans/*-plan.md`) → formato legacy monolitico
-
-Nessun piano esistente richiede migrazione.
-
-### Step 5 — Execution Handoff
-
-Dopo aver salvato e committato il piano, offri la scelta di esecuzione:
-
-```
-Piano salvato in docs/plans/<filename>.md. Come vuoi procedere?
-
-1. Subagent (questa sessione) — dispatcho subagent freschi per ogni task,
-   review spec + quality tra i task, iterazione rapida
-
-2. Sessione separata — apri una nuova sessione con il file piano,
-   esecuzione a batch con checkpoint umani
-
-Quale preferisci?
-```
-
-**Se Subagent (opzione 1):**
-
-```
-REQUIRED SUB-SKILL: siae-subagent-development
-```
-
-Rimani nella sessione corrente. siae-subagent-development gestisce l'orchestrazione.
-
-**Se Sessione separata (opzione 2):**
-
-```
-REQUIRED SUB-SKILL: siae-executing-plans
-```
-
-1. Guida l'utente ad aprire una nuova sessione Claude Code nella directory del progetto
-2. Istruisci: "Carica il piano con: `cat docs/plans/<filename>.md` e inizia l'implementazione seguendo la skill siae-executing-plans"
-3. Il piano ha l'header `REQUIRED SUB-SKILL` embedded — il nuovo Claude lo trovera' automaticamente
-
-**NON invocare siae-subagent-development senza la scelta esplicita dell'utente.**
+Per execution handoff (Subagent stessa sessione vs Sessione separata) vedi
+`reference/writing-plans-execution-handoff.md`.
 
 ---
 
-## Regole di Qualita' del Piano
-
-### Path esatti — sempre
-
-```
-# SBAGLIATO
-Modifica il service di autenticazione
-
-# GIUSTO
-Modifica: `src/main/java/it/siae/auth/AuthService.java` (righe 112-134)
-```
-
-### Codice completo — sempre
-
-```
-# SBAGLIATO
-Aggiungi la validazione dell'ISRC
-
-# GIUSTO
-if (!isrc.matches("^[A-Z]{2}-[A-Z0-9]{3}-[0-9]{2}-[0-9]{5}$")) {
-    throw new ValidationException("ISRC non valido: " + isrc);
-}
-```
-
-### Comandi con output atteso — sempre
-
-```
-# SBAGLIATO
-Esegui i test
-
-# GIUSTO
-Run: `pytest tests/test_isrc_validator.py::test_invalid_format -v`
-Output atteso: FAILED — ValidationException: ISRC non valido
-```
-
-### Step atomici — un'azione per step
-
-```
-# SBAGLIATO (troppo grande)
-Implementa il validator ISRC con test e aggiornamento config
-
-# GIUSTO (atomico)
-Step 1: Scrivi il test per formato ISRC non valido
-Step 2: Esegui e verifica che fallisce
-Step 3: Implementa il regex di validazione
-Step 4: Esegui e verifica che passa
-Step 5: Commit
-```
-
----
-
-## Limiti Operativi
-
-| Vincolo | Limite | Se superato |
-|---------|--------|-------------|
-| Tentativi fix per errore | 2 | Fermati. Diagnosi diversa necessaria. |
-| File modificati per singolo step | 5 | Se devi toccare piu' file, decomponi in sub-task. |
-| Output max per raccomandazione | 200 righe | Prioritizza. Top 5 issue, non lista esaustiva. |
-
----
+## REQUIRED SUB-SKILL
 
 ```
 REQUIRED SUB-SKILL: siae-verification
 ```
-Invoca `siae-verification` per verificare che il piano sia coerente col design doc.
+Verifica che il piano sia coerente col design doc prima di committare.
 
-## Tabella Anti-Razionalizzazione
+```
+REQUIRED SUB-SKILL: siae-subagent-development
+```
+Per execution dei task nella stessa sessione (handoff opzione 1).
 
-| Pensiero | Realta' |
-|----------|---------|
-| "Il piano e' nella mia testa, basta implementare" | I piani non scritti sono assunzioni. Scrivili. |
-| "I task sono ovvi, non serve dettagliare" | Ovvio per te. Opaco per un subagent con contesto fresco. |
-| "Il codice nel piano puo' essere uno sketch" | Il codice incompleto nel piano diventa codice incompleto nell'implementazione. |
-| "I path li ricorda il subagent" | Il subagent ha contesto fresco. Zero. Dai i path esatti. |
-| "Questo task e' troppo grande ma lo scrivo uguale" | Spezzalo. Un task grande e' un task che fallira' a meta'. |
-| "Aggiungo i comandi di test dopo" | Senza comandi nel piano, il subagent li inventa. Spesso sbagliati. |
-| "E' solo un aggiornamento di config, non serve piano" | Le config rotte vanno in produzione. Testa e pianifica. |
+```
+REQUIRED SUB-SKILL: siae-executing-plans
+```
+Per execution dei task in sessione separata (handoff opzione 2).
 
 ---
 
-## Classificazione Rischio Operazioni
+## Classificazione rischio operazioni
 
 | Operazione | Livello | Card |
 |-----------|---------|------|
 | Lettura design doc | 🟢 Sicuro | No |
 | Scrittura piano su file | 🟢 Sicuro | No |
 | Git commit piano | 🟡 Medio | Si |
-| Execution handoff → subagent | 🟡 Medio | Si (in siae-subagent-development) |
+| Execution handoff → subagent | 🟡 Medio | Si (in `siae-subagent-development`) |
 
 ---
 
-## Permission Denied Handling
+## Reference
 
-**Se Write viene negato (salvataggio piano):**
-1. Presenta il piano completo come output testuale formattato in chat
-2. Indica il path suggerito: `docs/plans/YYYY-MM-DD-<topic>-plan.md`
-3. L'utente puo' copiare il contenuto manualmente
-4. Procedi a Step 5 (execution handoff) normalmente
-
-**Se Bash (git commit) viene negato:**
-1. Il file e' stato scritto ma non committato
-2. Informa: `git add docs/plans/<file> && git commit -m "docs(plans): aggiungi piano per <feature>"`
-3. Procedi a Step 5 normalmente
-
----
-
-## Integrazione SDLC
-
-```
-siae-brainstorming (Step 6: design approvato)
-    └── REQUIRED SUB-SKILL: siae-writing-plans
-        └── piano bite-sized salvato in docs/plans/
-            └── execution handoff:
-                ├── subagent → REQUIRED SUB-SKILL: siae-subagent-development
-                └── sessione separata → REQUIRED SUB-SKILL: siae-executing-plans
-```
-
-**Skill correlate:**
-- `siae-brainstorming` — produce il design doc che questa skill consuma
-- `siae-subagent-development` — esegue il piano nella stessa sessione
-- `siae-executing-plans` — esegue il piano in sessione separata
-- `siae-tdd` — ogni subagent implementer usa TDD per ogni task del piano
+- `reference/writing-plans-task-template.md` — overview.md + task-NN template,
+  regole di qualita', anti-pattern, retrocompatibilita' file unico
+- `reference/writing-plans-execution-handoff.md` — opzione 1 (subagent) vs
+  opzione 2 (sessione separata), criteri di scelta, permission denied handling
+- `plan-reviewer-prompt.md` — prompt subagent plan-reviewer per Step 3c

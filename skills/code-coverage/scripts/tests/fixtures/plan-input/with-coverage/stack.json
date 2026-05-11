@@ -1,0 +1,9 @@
+{
+  "languages": ["typescript"],
+  "frameworks": ["vitest"],
+  "module_coverage": [
+    {"path": "src/services/payment.ts", "lines_pct": 0.0},
+    {"path": "src/utils/format.ts", "lines_pct": 50.0}
+  ],
+  "pre_existing_coverage_pct": 14.0
+}

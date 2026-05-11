@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Skill Advisory Hook — PostToolUse event
+# Suggerisce skill prerequisita SE mancante nello state file.
+# NEVER blocca: exit 0 sempre, output via additionalContext stdout.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/skill-advisory-helpers.sh
+source "$SCRIPT_DIR/lib/skill-advisory-helpers.sh"
+
+# Hook receives JSON via stdin (Claude Code hook protocol)
+# Extract tool_name and tool_input.skill_name (if applicable)
+INPUT="$(cat)"
+
+SKILL_NAME=$(echo "$INPUT" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    skill = data.get('tool_input', {}).get('skill', '') or data.get('tool_input', {}).get('skill_name', '')
+    # Strip plugin namespace prefix
+    if ':' in skill:
+        skill = skill.split(':', 1)[1]
+    print(skill)
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+
+[ -z "$SKILL_NAME" ] && exit 0  # Not a skill invocation, silent pass
+
+SUGGESTION=$(suggestion_for "$SKILL_NAME")
+
+if [ -n "$SUGGESTION" ]; then
+    # M1 fix code-review: truncate to ~1900 char per stay under additionalContext 2KB cap
+    # (Claude Code hook protocol limite). Suffix "..." se troncato.
+    if [ "${#SUGGESTION}" -gt 1900 ]; then
+        SUGGESTION="${SUGGESTION:0:1897}..."
+    fi
+    # JSON-safe escape via python (handles quotes, backslash, newline, unicode).
+    PAYLOAD=$(python3 -c '
+import json, sys
+print(json.dumps({"additionalContext": "[skill-advisory] " + sys.argv[1]}))
+' "$SUGGESTION" 2>/dev/null)
+    [ -n "$PAYLOAD" ] && echo "$PAYLOAD"
+fi
+
+exit 0  # Always 0 — non-blocking

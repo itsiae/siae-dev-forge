@@ -1,7 +1,9 @@
 ---
 name: siae-security
 description: >
-  Applica policy di sicurezza SIAE (OWASP Top 10, AWS security, PII copyright).
+  Use when handling security-sensitive code: credentials, IAM policy, encryption,
+  PII (autori/artisti), copyright codes (ISWC/ISRC). Applies OWASP Top 10 + AWS
+  security policy SIAE.
   Trigger: codice security-sensitive, gestione credenziali, IAM policy, encryption,
   dati personali autori/artisti, codici ISWC/ISRC.
 ---
