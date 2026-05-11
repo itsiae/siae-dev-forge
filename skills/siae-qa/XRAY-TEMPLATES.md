@@ -5,11 +5,12 @@
 - [Tabella Segnali Req Typing](#tabella-segnali-req-typing)
 - [Template Req Profile Card](#template-req-profile-card)
 - [Formato Test Case Step-Based](#formato-test-case-step-based)
-- [Prefissi di Categoria](#prefissi-di-categoria)
+- [Prefissi di Categoria (obbligatori)](#prefissi-di-categoria-obbligatori)
 - [Regola Multi-Step](#regola-multi-step)
 - [Riepilogo Copertura](#riepilogo-copertura)
-- [Template Matrice Scenari](#template-matrice-scenari)
-- [Domande Elicitazione per Categoria](#domande-elicitazione-per-categoria)
+- [Template M_FINAL (output Phase 1.5)](#template-m_final-output-phase-15)
+- [Convenzione naming entity (ADR-004)](#convenzione-naming-entity-adr-004)
+- [Domande di Elicitazione](#domande-di-elicitazione)
 - [Mappatura ID Sequenziali e Chiavi Jira Xray](#mappatura-id-sequenziali-e-chiavi-jira-xray)
 - [Tier 3 CSV Export](#tier-3-csv-export)
 - [Checklist di Verifica](#checklist-di-verifica)
@@ -27,10 +28,20 @@
 | **Auth / Security** | "login", "logout", "ruolo", "permesso", "token", "autenticazione", "RBAC", "JWT" |
 | **Integration / External** | "webhook", "chiamata esterna", "API terza parte", "evento", "Kafka", "SQS", "notifica" |
 
-**Confidence:**
-- **HIGH (>= 90%):** 2+ segnali forti convergenti
-- **MEDIUM (60-89%):** 1 segnale forte o 2+ deboli
-- **LOW (< 60%):** segnali ambigui o assenti
+**Confidence (formula deterministica):**
+
+```
+confidence = min(100, 30 * signal_count_strong + 15 * signal_count_weak)
+```
+
+- Un segnale e' "strong" se appare nel summary o nello stack del progetto (alta visibilita').
+- Un segnale e' "weak" se appare solo in description/commenti/AC.
+
+| Band | Range | Esempio |
+|------|-------|---------|
+| **HIGH** | confidence >= 90 | 3+ strong, o 2 strong + 2 weak |
+| **MEDIUM** | 60 <= confidence < 90 | 2 strong, o 1 strong + 2 weak |
+| **LOW** | confidence < 60 | 0 strong, 1-2 weak, o ambiguo |
 
 ---
 
@@ -67,7 +78,7 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 | Team Competenza | `QA` |
 | ID JIRA Story | `{PROJ-XXX}` — **obbligatorio** |
 | User Story Description | Summary della Story Jira |
-| Scenario (descrizione) | Titolo del Test Case — includi la categoria: es. `[EDGE] ...`, `[NEG] ...`, `[PROFILO] ...` |
+| Scenario (descrizione) | Titolo del Test Case — prefisso obbligatorio: `[POS]`, `[NEG]`, `[EDGE]`, `[ROLE]` — derivato dal `test_type` della riga M_FINAL |
 | Step scenario | Numero step (1, 2, 3...) |
 | Action | Cosa fa l'utente/sistema in questo step |
 | Expected Result | Risultato atteso per questo step — **nel CSV il nome colonna e' `Expceted Result`** (typo storico del template importatore Xray SIAE) |
@@ -77,12 +88,16 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 
 ---
 
-## Prefissi di Categoria
+## Prefissi di Categoria (obbligatori)
 
-- Nessun prefisso = scenario positivo (happy path)
-- `[EDGE]` = edge case (limite, vuoto, volume estremo)
-- `[NEG]` = scenario negativo / alternativo (errore, input non valido, dipendenza assente)
-- `[PROFILO]` = scenario specifico di ruolo / profilazione
+Ogni TC ha prefisso esplicito derivato da `test_type` della riga M_FINAL:
+
+- `[POS]` = scenario positivo (happy path, dato valido, valore in lookup)
+- `[NEG]` = scenario negativo (input non valido, dipendenza assente, dato fuori lookup)
+- `[EDGE]` = edge case (limite di range, vuoto, null accettato, formato boundary)
+- `[ROLE]` = scenario di ruolo/permesso (utente con visibilita' o azione distinta)
+
+**Non sono ammessi TC senza prefisso.** Un TC senza prefisso fallisce J3/J4.
 
 ---
 
@@ -94,60 +109,86 @@ Stesso ID = stesso Test Case con step multipli. I metadati (tipo, team, Jira, de
 
 ## Riepilogo Copertura
 
-**Riepilogo prima dell'export:** mostra la tabella completa al developer con la distribuzione per categoria. Il developer puo' modificare i valori di `Automazione` e `NRT` prima di procedere all'export.
+**Mostrato in Phase 4a (input M_FINAL) e replicato pre-export (Phase 5).**
 
 ```
-Riepilogo copertura:
-  Positivi:    N TC
-  Edge case:   N TC
-  Negativi:    N TC
-  Profilazioni: N TC
-  TOTALE:      N TC
+Riepilogo copertura (da M_FINAL):
+  POS:        N TC
+  NEG:        N TC
+  EDGE:       N TC
+  ROLE:       N TC
+  TOTALE:     N TC
+
+Entita' coperte: [lista entita' presenti in M_FINAL]
+Lookup tables coperte: [lista lookup con # valori]
+```
+
+I valori N sono `count` dei `matrix_row_id` di M_FINAL con `test_type` corrispondente.
+Il developer puo' modificare i campi `Automazione` e `NRT` dei singoli TC (default: `Automazione=N`, `NRT=Y`) — mai modificare la distribuzione M_FINAL pre-export senza ripassare Gate #1.
+
+---
+
+## Template M_FINAL (output Phase 1.5)
+
+**M_FINAL e' la Coverage Matrix consolidata da Phase 1.5 (Matrix A+B+C dopo Gate #1).**
+Ogni riga = 1 TC atteso in Phase 4b.
+
+Schema esatto (colonne fisse, nomi case-sensitive):
+
+| Colonna | Tipo | Esempio | Note |
+|---------|------|---------|------|
+| `matrix_row_id` | string univoco | `A-001`, `B-014`, `C-003`, `J5-gap-G01` | Prefisso: A=Matrix A, B=Matrix B, C=Matrix C, J5-gap=aggiunto post-J5 |
+| `entity` | string | `GENERAL_DATA` | Entita' della spec (CSV section, classe, tabella) |
+| `field` | string | `CATEGORY` | Campo o regola composita (`field_a + field_b` per regole) |
+| `condition` | string | `"F" → feature` | Condizione concreta con valore (no placeholder) |
+| `test_type` | enum | `POS` \| `NEG` \| `EDGE` \| `ROLE` | Determina il prefisso titolo del TC |
+| `source_ref` | string | `AC-03`, `developer input`, `J5-gap`, `pairwise_ipog` | Tracciabilita' all'origine della riga |
+
+**Persistenza:** `docs/qa/{STORY_ID}/MFINAL.md` (markdown table) + schema JSON in `reference/schemas/m_final.schema.json`.
+
+**Regole di esplosione**: vedi `SKILL.md` Phase 1.5 sezione "Regole di esplosione (da campo a righe di matrice)".
+
+### Convenzione naming `entity` (ADR-004)
+
+Il campo `entity` segue una gerarchia di scelta deterministica:
+
+1. **Se la spec ha tabelle DB o CSV section name** (es. `GENERAL_DATA`, `TITLES`, `CONTRIBUTORS`, `RIPARTIZIONI_RAW`): usa il nome **as-is** in SCREAMING_SNAKE_CASE. Mantenere il nome originale della spec.
+
+2. **Altrimenti** (REST resource, business entity senza section name): usa il **nome logico singolare in PascalCase**. Esempi validi: `Opera`, `Ripartizione`, `Utente`, `Contratto`.
+
+3. **Mai usare** come `entity`:
+   - Nome endpoint: `POST /opere`, `POST_/opere`
+   - Nome metodo: `createOpera`, `deleteOpera`
+   - Plurale di resource: `opere`, `utenti`, `contratti`
+   - Lowercase: `opera`, `ripartizione`
+
+**Eccezioni esplicite (non sono violazioni):**
+- `GENERAL_DATA` (CSV section): caso 1, mantenuto in SCREAMING_SNAKE_CASE.
+- `EVERGREEN+EXPIRY` (composite field name): non e' un valore di `entity`, e' un valore della colonna `field`. La regola entity non si applica.
+
+**Test sintattico:**
+
+```python
+# entity valida:
+re.match(r'^[A-Z][A-Z0-9_]*[A-Z0-9]$', entity)  # SCREAMING_SNAKE_CASE
+# OPPURE
+re.match(r'^[A-Z][a-zA-Z0-9]*$', entity)  # PascalCase
+
+# entity INVALIDA:
+entity.startswith(('POST', 'GET', 'PUT', 'DELETE'))  # nome endpoint
+entity.endswith(('s', 'i'))  # plurale (heuristic; vedi eccezioni esplicite)
+entity == entity.lower()  # tutto lowercase
 ```
 
 ---
 
-## Template Matrice Scenari
+## Domande di Elicitazione
 
-Output atteso della fase 4a — matrice scenari compilata prima della generazione:
+Le domande di elicitazione sono gestite esclusivamente da `reference/question-trees.md` durante Phase 0c (Smart Req Typing).
+**Non duplicare alberi di domande in questo file.**
 
-```
-Categoria              | Scenari identificati
------------------------|-----------------------------------------------
-Positivi (happy path)  | [lista da AC + eventuali varianti]
-Edge case              | [lista da domande o da AC]
-Alternativi/negativi   | [lista da domande o da AC]
-Profilazioni/ruoli     | [lista da domande, o "N/A - nessun controllo ruolo"]
-```
-
-Se per una categoria il developer conferma che non ci sono scenari aggiuntivi, registra "N/A — confermato dal developer" e procedi.
-**Non puoi procedere alla generazione con categorie non valutate.**
-
----
-
-## Domande Elicitazione per Categoria
-
-**Categoria 1 — Scenari positivi (happy path)**
-Hai gia' questo dagli AC. Verifica solo che siano completi.
-Domanda tipo: "L'AC descrive il caso principale. C'e' qualche variante del flusso positivo che vuoi coprire esplicitamente?"
-
-**Categoria 2 — Edge case**
-Valori limite, stati vuoti, volumi estremi, timing. Se non emergono dagli AC, chiedi:
-- "Cosa succede con input al limite del range valido? (es. importo = 0, lista vuota, data = oggi)"
-- "Ci sono condizioni di gara o sequenze di eventi inattesi da coprire?"
-- "Il sistema e' idempotente? Cosa succede se l'operazione viene eseguita due volte?"
-
-**Categoria 3 — Scenari alternativi / negativi**
-Flussi di errore, input non validi, permessi mancanti. Se non emergono dagli AC, chiedi:
-- "Quali input non validi deve rifiutare il sistema? Con quale messaggio/comportamento?"
-- "Cosa succede se una dipendenza esterna e' assente o risponde con errore?"
-- "Ci sono stati del sistema che impediscono l'operazione? (es. record gia' esistente, stato non compatibile)"
-
-**Categoria 4 — Profilazioni / ruoli**
-Utenti diversi con permessi o dati diversi. Se la Story tocca autorizzazioni o ruoli, chiedi:
-- "Quale tipo di utente esegue questa operazione? Ci sono altri ruoli che possono o non possono farlo?"
-- "Il comportamento cambia in base al profilo? (es. autore vs editore, admin vs operatore)"
-- "Ci sono dati sensibili che solo alcuni ruoli possono vedere?"
+Eccezione: in Phase 4a, l'unica domanda permessa al developer e':
+> "La matrice M_FINAL ha {N} righe, stimati {N} TC. Ci sono scenari specifici dal dominio (business knowledge) non derivabili dalla struttura del documento?"
 
 ---
 
@@ -164,7 +205,7 @@ Se prevedi di usare `siae-automation` per generare test Cypress o Appium, **devi
 Mappatura TC — {STORY_ID}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ID CSV  →  Chiave Xray   Scenario
-  1       →  PROJ-456      Verifica login credenziali valide
+  1       →  PROJ-456      [POS] Verifica login credenziali valide
   2       →  PROJ-457      [EDGE] Login con campo vuoto
   3       →  PROJ-458      [NEG] Login con password errata
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -173,7 +214,7 @@ Mappatura TC — {STORY_ID}
 **Tier 1 (MCP):** la chiave viene restituita dalla risposta del tool di creazione — raccoglila automaticamente.
 **Tier 3 (CSV):** chiedi al developer di aprire Xray dopo l'import e comunicare le chiavi assegnate. Non procedere con siae-automation finche' non hai questa mappatura.
 
-Salva la mappatura come output della skill: sara' l'input di Fase 1 di siae-automation.
+Salva la mappatura come file persistente: `docs/qa/{STORY_ID}/xray_id_mapping.json` (schema in `reference/schemas/xray_id_mapping.schema.json`). Senza questo file, siae-automation non puo' procedere.
 
 ---
 
@@ -186,28 +227,121 @@ Salva la mappatura come output della skill: sara' l'input di Fase 1 di siae-auto
 
 ---
 
+## Pattern DLQ (Dead Letter Queue) per Pipeline ETL (ADR-009)
+
+Per spec ETL/Data Pipeline con quarantine/error handling, ogni TC NEG che produce drop+DLQ deve verificare:
+
+### DLQ schema standard (consigliato)
+
+| Campo | Tipo | Obbligatorio | Note |
+|-------|------|:------------:|------|
+| `run_id` | UUID | si | FK to job_log.id — correlazione con job execution |
+| `source_record_id` | string | si | ID univoco del record dropato (se presente nella sorgente) |
+| `reason` | enum | si | `NULL_KEY`, `INVALID_LOOKUP`, `FK_MISS`, `FORMAT_ERROR`, `QUARANTINE_THRESHOLD`, `SCHEMA_VIOLATION` |
+| `source_payload` | JSON | si | Original record completo (preservato per debugging/replay manuale) |
+| `quarantine_timestamp` | TIMESTAMPTZ | si | Quando il record e' stato dropato — timezone-aware |
+| `pipeline_stage` | enum | no | `INGESTION`, `VALIDATION`, `TRANSFORMATION`, `LOAD` |
+
+### Esempio TC NEG con verifica DLQ
+
+```
+[NEG] tipo_diritto valore fuori lookup → drop + DLQ verification
+
+Step 1 (action): Esegui Glue job con record bronze contenente `tipo_diritto='UNKNOWN_TYPE'`
+Step 2 (DLQ verification): Verifica S3 `s3://siae-bronze/_quarantine/run-{run_id}/`:
+  - Esiste file con `source_record_id` = ID del record sorgente
+  - Campo `reason` = `INVALID_LOOKUP`
+  - Campo `source_payload` contiene il record originale completo
+  - `quarantine_timestamp` ha timezone UTC esplicita (ISO 8601 con `Z` suffix)
+Step 3 (silver verification): SELECT COUNT(*) FROM silver.ripartizioni WHERE id_ripartizione = '{source_record_id}' → 0 (record NON in silver)
+```
+
+---
+
+## Multi-Session TC Pattern (ADR-010)
+
+Per TC che richiedono osservazione concorrente (lock-free verification, async side-effect propagation), usa tag esplicito `[SESSION A] / [SESSION B]` nei step.
+
+### Esempio: CREATE INDEX CONCURRENTLY lock-free verification
+
+```
+[POS] CREATE INDEX CONCURRENTLY su autori — verifica lock-free durante esecuzione
+
+Step 1 [SESSION A] action: psql -h $DB_HOST -c "CREATE INDEX CONCURRENTLY idx_email_secondaria ON autori(email_secondaria) WHERE email_secondaria IS NOT NULL"
+  Expected: comando avviato (non termina subito, ~30 min su 12M righe)
+
+Step 2 [SESSION B] observe (in parallelo entro 500ms dall'avvio di Session A):
+  psql -h $DB_HOST -c "SELECT mode, granted FROM pg_locks WHERE relation='autori'::regclass AND mode='AccessExclusiveLock' AND granted=true"
+  Expected: 0 rows (no AccessExclusiveLock granted su autori)
+
+Step 3 [SESSION B] observe (campiona ogni 60s per durata Session A):
+  Stessa query Step 2 → sempre 0 rows
+  Expected: AccessExclusiveLock NON presente per piu' di 1 secondo cumulativo
+
+Step 4 [SESSION A] await: aspettare completamento CREATE INDEX (timeout 60 min)
+  Expected: indice creato, exit 0
+
+Step 5 [SESSION A] verify: SELECT indexname FROM pg_indexes WHERE indexname='idx_email_secondaria' → 1 row
+```
+
+### Esempio: CloudWatch alarm propagation async
+
+```
+[POS] drop_ratio > 30% triggers alarm RIPARTIZIONI_QUALITY_DEGRADED
+
+Step 1 [SESSION A] action: esegui Glue job ETL con bronze input contenente 35% record invalidi
+Step 2 [SESSION A] verify exit: job completa con exit code 0 (job non fallisce, ma genera alarm)
+Step 3 [SESSION B] poll (entro 5 min dall'exit Session A):
+  aws cloudwatch describe-alarms --alarm-names RIPARTIZIONI_QUALITY_DEGRADED
+  Expected: StateValue = "ALARM", StateReason contiene "drop_ratio: 0.35 > 0.30"
+Step 4 [SESSION B] cleanup: reset alarm state per non interferire con job successivi
+```
+
+---
+
 ## Checklist di Verifica
 
-Prima di dichiarare la skill completata:
+Prima di dichiarare la skill completata, tutte le caselle devono essere spuntate.
 
-- [ ] Phase 0 eseguita: tipo requisito inferito e Req Profile Card mostrata
-- [ ] Confidence HIGH → tree lanciato senza conferma tipo | MEDIUM/LOW → conferma ricevuta
-- [ ] Domande del tree skippate se risposta gia' presente in AC/description
-- [ ] Req Profile Card aggiornata con scenari L1/L2/L3 prima di procedere a Phase 4a
-- [ ] AC letti da Jira (o forniti esplicitamente dal developer)
-- [ ] Test Strategy Confluence cercata (trovata o WARNING registrato)
-- [ ] Test Plan generato/creato con campi obbligatori
-- [ ] Matrice scenari compilata (4 categorie valutate: positivi, edge, negativi, profilazioni)
-- [ ] Ogni categoria ha scenari identificati o "N/A — confermato dal developer"
-- [ ] Ogni AC ha almeno 1 Test Case step-based
-- [ ] Presenti TC per scenari positivi, edge case, negativi e profilazioni (se applicabili)
-- [ ] I titoli Scenario usano i prefissi `[EDGE]`, `[NEG]`, `[PROFILO]` dove appropriato
-- [ ] Ogni step ha sia `Action` che `Expected Result` (nel CSV usa la colonna `Expceted Result` — typo template)
-- [ ] Il campo `ID JIRA Story` e' presente in tutti i Test Case
-- [ ] Riepilogo copertura per categoria mostrato al developer prima dell'export
-- [ ] Campi `Automazione` e `NRT` verificati con il developer
-- [ ] Export effettuato (MCP / CSV) o spiegato come farlo
-- [ ] Mappatura ID sequenziali → chiavi Jira Xray raccolta (se si prevede di usare siae-automation)
-- [ ] Tier usato annunciato nella pre-flight card di apertura
+### Phase 0 — Smart Req Typing
+- [ ] Tipo requisito inferito con formula confidence (`min(100, 30*strong + 15*weak)`)
+- [ ] Req Profile Card mostrata; band HIGH/MEDIUM/LOW dichiarata
+- [ ] Confidence HIGH → tree lanciato senza conferma; MEDIUM/LOW → conferma esplicita ricevuta
+- [ ] Domande del tree (`reference/question-trees.md`) lanciate UNA alla volta; skippate quelle gia' rispondibili dagli AC
 
-**Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla fase bloccata.**
+### Phase 1 — Lettura AC [HARD-GATE]
+- [ ] Tier dichiarato esplicitamente nella pre-flight card (T1 Jira / T2 doc / T3 chat)
+- [ ] AC letti da Jira (Tier 1) o validati esplicitamente dall'utente (Tier 2) o raccolti via Q&A (Tier 3)
+- [ ] Story ID e titolo presenti
+
+### Phase 1.5 — Coverage Matrix [HARD-GATE]
+- [ ] Blocco serializzazione (ENTITA/LOOKUP/REGOLE/VINCOLI) mostrato e confermato
+- [ ] Matrix A/B/C lanciati in parallelo con Agent tool (3 tool_use visibili)
+- [ ] J1_MATRIX eseguito con Agent tool (1 tool_use visibile), risultato PASS (100% entita' coperte)
+- [ ] J2_MATRIX eseguito con Agent tool (1 tool_use visibile); duplicati rimossi
+- [ ] `docs/qa/{STORY_ID}/MFINAL.md` scritto su filesystem (Write tool)
+- [ ] M_FINAL conforme allo schema JSON `reference/schemas/m_final.schema.json`
+
+### Phase 2 — Test Strategy
+- [ ] Confluence cercata (Tier 1) o WARNING registrato (Tier 2/3)
+
+### Phase 3 — Test Plan
+- [ ] Struttura Test Plan creata (MCP Tier 1) o presentata testualmente (Tier 2/3)
+
+### Phase 4 — Test Case
+- [ ] Phase 4a: M_FINAL mostrata; distribuzione `N POS / N NEG / N EDGE / N ROLE`
+- [ ] Phase 4b: 1 TC step-based per ogni riga M_FINAL; prefisso titolo `[POS]/[NEG]/[EDGE]/[ROLE]`
+- [ ] Phase 4b: `matrix_row_id` presente nel campo `Description` di ogni TC
+- [ ] `docs/qa/{STORY_ID}/TC_DRAFT.md` scritto su filesystem (Write tool)
+- [ ] Phase 4c Gate #2: J3 bijection PASS (100% bijection); J4 specificity PASS (>= 75%)
+- [ ] Phase 4d J5 eseguito (run-once); coverage_score calcolato
+- [ ] Se TC aggiunti post-J5: Gate #2 RILANCIATO sui TC aggiornati
+
+### Phase 5 — Export
+- [ ] `docs/qa/{STORY_ID}/coverage_certificate.json` scritto (schema `reference/schemas/coverage_certificate.schema.json`)
+- [ ] Stato Certificate dichiarato: `FULL_PASS` / `CONDITIONAL_PASS` / `FAIL`
+- [ ] Export effettuato: MCP Xray (Tier 1) OR CSV semicolon (Tier 2/3, header esatto da `reference/xray-csv-template.md`)
+- [ ] `docs/qa/{STORY_ID}/xray_id_mapping.json` scritto (input per siae-automation)
+- [ ] Campi `Automazione` (default `N`) e `NRT` (default `Y`) verificati con il developer; eventuali override registrati nel certificate
+
+**Non riesci a spuntare tutte le caselle? Il workflow non e' completo. Ricomincia dalla phase bloccata.**

@@ -1,0 +1,35 @@
+[
+  {
+    "query": "Prepara i test case per la story MIG-101 di migrazione CSV. La spec e' in input.md (GENERAL_DATA, 10 campi con lookup, mandatory, ISO8601, valore fisso 074).",
+    "setup": {"cwd": "fixtures/qa-enumerative_spec", "files": ["input.md"]},
+    "criteria": [
+      {"name": "mfinal_generated", "weight": 3, "check": "Ha scritto un file MFINAL.md (o JSON equivalente) con bijection 1:1 verso lo schema m_final.schema.json?"},
+      {"name": "tc_with_prefix", "weight": 3, "check": "Ogni TC ha prefisso [POS|NEG|EDGE|ROLE] nel titolo?"},
+      {"name": "concrete_values", "weight": 2, "check": "I TC menzionano i valori concreti della colonna condition (es. 'F', '074', '1899-12-31') senza formulazioni generiche?"},
+      {"name": "certificate_persisted", "weight": 2, "check": "Ha scritto coverage_certificate.json con campo stato valorizzato (FULL_PASS / CONDITIONAL_PASS / FAIL)?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Prepara i test case per la story RIP-205 (POST /ripartizioni). 4 AC: happy path, validazione importo>0, idempotenza Idempotency-Key, 404 su autore inesistente. Spec in input.md.",
+    "setup": {"cwd": "fixtures/qa-functional_be", "files": ["input.md"]},
+    "criteria": [
+      {"name": "mfinal_generated", "weight": 3, "check": "Ha scritto un file MFINAL.md (o JSON equivalente) con bijection 1:1 verso lo schema m_final.schema.json?"},
+      {"name": "tc_with_prefix", "weight": 3, "check": "Ogni TC ha prefisso [POS|NEG|EDGE|ROLE] nel titolo?"},
+      {"name": "concrete_values", "weight": 2, "check": "I TC menzionano valori concreti (status code 201/200/400/404, error_code, Idempotency-Key reale) senza generic 'l'operazione riesce'?"},
+      {"name": "certificate_persisted", "weight": 2, "check": "Ha scritto coverage_certificate.json con campo stato valorizzato?"}
+    ],
+    "pass_threshold": 0.70
+  },
+  {
+    "query": "Prepara i test case per la story AUTH-330 (controllo accessi opere per ruolo). 3 ruoli (admin/editor/viewer) x 3 azioni (create/read/delete). Spec in input.md.",
+    "setup": {"cwd": "fixtures/qa-role_based", "files": ["input.md"]},
+    "criteria": [
+      {"name": "mfinal_generated", "weight": 3, "check": "Ha scritto un file MFINAL.md (o JSON equivalente) con bijection 1:1 verso lo schema m_final.schema.json e tutti i TC con test_type=ROLE?"},
+      {"name": "tc_with_prefix", "weight": 3, "check": "Ogni TC ha prefisso [ROLE] nel titolo?"},
+      {"name": "concrete_values", "weight": 2, "check": "I TC menzionano status code concreti (200/201/204/403) e ruolo+azione esplicito per ogni combinazione?"},
+      {"name": "certificate_persisted", "weight": 2, "check": "Ha scritto coverage_certificate.json con campo stato valorizzato?"}
+    ],
+    "pass_threshold": 0.70
+  }
+]

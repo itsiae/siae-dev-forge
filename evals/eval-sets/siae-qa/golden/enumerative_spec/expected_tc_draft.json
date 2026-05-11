@@ -1,0 +1,281 @@
+{
+  "story_id": "MIG-101",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "test_cases": [
+    {
+      "id": 1, "matrix_row_id": "A-001", "title": "[POS] CATEGORY = 'F' migrato come feature long-form",
+      "entity": "GENERAL_DATA", "field": "CATEGORY", "test_type": "POS",
+      "description": "matrix_row_id: A-001 | entity: GENERAL_DATA | field: CATEGORY | verifica POS lookup F",
+      "preconditions": "Tabella Opere vuota; batch GENERAL_DATA pronto",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce riga CSV con CATEGORY='F' e tutti gli altri mandatory validi", "expected_result": "Il batch consuma la riga senza scrivere in DLQ"},
+        {"step_number": 2, "action": "Lancia il job di migrazione", "expected_result": "Item DynamoDB creato con attributo CATEGORY='F'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 2, "matrix_row_id": "A-002", "title": "[POS] CATEGORY = 'S' migrato come single short-form",
+      "entity": "GENERAL_DATA", "field": "CATEGORY", "test_type": "POS",
+      "description": "matrix_row_id: A-002 | entity: GENERAL_DATA | field: CATEGORY | verifica POS lookup S",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con CATEGORY='S'", "expected_result": "Riga consumata senza errori"},
+        {"step_number": 2, "action": "Lancia il job", "expected_result": "Item creato con CATEGORY='S'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 3, "matrix_row_id": "A-003", "title": "[POS] CATEGORY = null accettato (non classificato)",
+      "entity": "GENERAL_DATA", "field": "CATEGORY", "test_type": "POS",
+      "description": "matrix_row_id: A-003 | entity: GENERAL_DATA | field: CATEGORY | verifica POS lookup null",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con CATEGORY vuoto (null)", "expected_result": "Riga consumata senza errori"},
+        {"step_number": 2, "action": "Verifica item DynamoDB", "expected_result": "Attributo CATEGORY assente o null"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 4, "matrix_row_id": "A-004", "title": "[NEG] CATEGORY = 'X' fuori lookup -> DLQ",
+      "entity": "GENERAL_DATA", "field": "CATEGORY", "test_type": "NEG",
+      "description": "matrix_row_id: A-004 | entity: GENERAL_DATA | field: CATEGORY | verifica NEG lookup violato X",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con CATEGORY='X'", "expected_result": "La riga viene scartata"},
+        {"step_number": 2, "action": "Lancia il job", "expected_result": "1 messaggio in DLQ con motivo 'lookup violato CATEGORY'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 5, "matrix_row_id": "A-005", "title": "[POS] EVERGREEN = true esclude expiry check",
+      "entity": "GENERAL_DATA", "field": "EVERGREEN", "test_type": "POS",
+      "description": "matrix_row_id: A-005 | entity: GENERAL_DATA | field: EVERGREEN | verifica POS true",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con EVERGREEN=true", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "Attributo EVERGREEN=true e flag expiry_skipped=true"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 6, "matrix_row_id": "A-006", "title": "[POS] EVERGREEN = false applica expiry check",
+      "entity": "GENERAL_DATA", "field": "EVERGREEN", "test_type": "POS",
+      "description": "matrix_row_id: A-006 | entity: GENERAL_DATA | field: EVERGREEN | verifica POS false",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con EVERGREEN=false", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "Attributo EVERGREEN=false; expiry_skipped=false"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 7, "matrix_row_id": "A-007", "title": "[NEG] EVERGREEN = 'maybe' fuori boolean -> DLQ",
+      "entity": "GENERAL_DATA", "field": "EVERGREEN", "test_type": "NEG",
+      "description": "matrix_row_id: A-007 | entity: GENERAL_DATA | field: EVERGREEN | verifica NEG non-boolean",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con EVERGREEN='maybe'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'EVERGREEN non booleano'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 8, "matrix_row_id": "A-008", "title": "[POS] DURATION = 180 accettato",
+      "entity": "GENERAL_DATA", "field": "DURATION", "test_type": "POS",
+      "description": "matrix_row_id: A-008 | entity: GENERAL_DATA | field: DURATION | verifica POS intero >=0",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con DURATION=180", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "DURATION=180 nell'item DynamoDB"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 9, "matrix_row_id": "A-009", "title": "[NEG] DURATION = -1 negativo -> DLQ",
+      "entity": "GENERAL_DATA", "field": "DURATION", "test_type": "NEG",
+      "description": "matrix_row_id: A-009 | entity: GENERAL_DATA | field: DURATION | verifica NEG valore negativo",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con DURATION=-1", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'DURATION negativa'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 10, "matrix_row_id": "A-010", "title": "[NEG] DURATION mancante (mandatory missing) -> DLQ",
+      "entity": "GENERAL_DATA", "field": "DURATION", "test_type": "NEG",
+      "description": "matrix_row_id: A-010 | entity: GENERAL_DATA | field: DURATION | verifica NEG missing mandatory",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV senza colonna DURATION o vuota", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'DURATION mandatory missing'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 11, "matrix_row_id": "A-011", "title": "[POS] ORDER = 5 accettato",
+      "entity": "GENERAL_DATA", "field": "ORDER", "test_type": "POS",
+      "description": "matrix_row_id: A-011 | entity: GENERAL_DATA | field: ORDER | verifica POS intero >=1",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con ORDER=5", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "Attributo ORDER=5"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 12, "matrix_row_id": "A-012", "title": "[EDGE] ORDER = null (optional) accettato",
+      "entity": "GENERAL_DATA", "field": "ORDER", "test_type": "EDGE",
+      "description": "matrix_row_id: A-012 | entity: GENERAL_DATA | field: ORDER | verifica EDGE optional null",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con ORDER vuoto", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "Attributo ORDER assente o null"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 13, "matrix_row_id": "A-013", "title": "[POS] RELEASE_DATE = '2024-09-12' ISO8601 valido",
+      "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "test_type": "POS",
+      "description": "matrix_row_id: A-013 | entity: GENERAL_DATA | field: RELEASE_DATE | verifica POS ISO8601",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con RELEASE_DATE='2024-09-12'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "RELEASE_DATE='2024-09-12' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 14, "matrix_row_id": "A-014", "title": "[NEG] RELEASE_DATE = '12-09-2024' formato non ISO -> DLQ",
+      "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "test_type": "NEG",
+      "description": "matrix_row_id: A-014 | entity: GENERAL_DATA | field: RELEASE_DATE | verifica NEG formato non ISO",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con RELEASE_DATE='12-09-2024'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'RELEASE_DATE formato non ISO8601'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 15, "matrix_row_id": "A-015", "title": "[EDGE] RELEASE_DATE = '1899-12-31' boundary pre-1900 -> DLQ",
+      "entity": "GENERAL_DATA", "field": "RELEASE_DATE", "test_type": "EDGE",
+      "description": "matrix_row_id: A-015 | entity: GENERAL_DATA | field: RELEASE_DATE | verifica EDGE boundary 1900-01-01",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con RELEASE_DATE='1899-12-31'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'RELEASE_DATE precedente al 1900-01-01'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 16, "matrix_row_id": "A-016", "title": "[POS] UNIQUEREF2 = '074' accettato",
+      "entity": "GENERAL_DATA", "field": "UNIQUEREF2", "test_type": "POS",
+      "description": "matrix_row_id: A-016 | entity: GENERAL_DATA | field: UNIQUEREF2 | verifica POS valore fisso 074",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con UNIQUEREF2='074'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "UNIQUEREF2='074' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 17, "matrix_row_id": "A-017", "title": "[NEG] UNIQUEREF2 = '999' diverso da 074 -> DLQ",
+      "entity": "GENERAL_DATA", "field": "UNIQUEREF2", "test_type": "NEG",
+      "description": "matrix_row_id: A-017 | entity: GENERAL_DATA | field: UNIQUEREF2 | verifica NEG valore !=074",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con UNIQUEREF2='999'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'UNIQUEREF2 deve essere 074'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 18, "matrix_row_id": "A-018", "title": "[POS] TITLE = 'Bohemian Rhapsody' accettato",
+      "entity": "GENERAL_DATA", "field": "TITLE", "test_type": "POS",
+      "description": "matrix_row_id: A-018 | entity: GENERAL_DATA | field: TITLE | verifica POS stringa valida",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con TITLE='Bohemian Rhapsody'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "TITLE='Bohemian Rhapsody' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 19, "matrix_row_id": "A-019", "title": "[NEG] TITLE = '' stringa vuota -> DLQ",
+      "entity": "GENERAL_DATA", "field": "TITLE", "test_type": "NEG",
+      "description": "matrix_row_id: A-019 | entity: GENERAL_DATA | field: TITLE | verifica NEG stringa vuota",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con TITLE=''", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'TITLE mandatory missing'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 20, "matrix_row_id": "A-020", "title": "[POS] GENRE = 'ROCK' accettato",
+      "entity": "GENERAL_DATA", "field": "GENRE", "test_type": "POS",
+      "description": "matrix_row_id: A-020 | entity: GENERAL_DATA | field: GENRE | verifica POS lookup ROCK",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con GENRE='ROCK'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "GENRE='ROCK' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 21, "matrix_row_id": "A-021", "title": "[EDGE] GENRE = null (optional) accettato",
+      "entity": "GENERAL_DATA", "field": "GENRE", "test_type": "EDGE",
+      "description": "matrix_row_id: A-021 | entity: GENERAL_DATA | field: GENRE | verifica EDGE optional null",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con GENRE vuoto", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "Attributo GENRE assente o null"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 22, "matrix_row_id": "A-022", "title": "[NEG] GENRE = 'METAL' fuori lookup -> DLQ",
+      "entity": "GENERAL_DATA", "field": "GENRE", "test_type": "NEG",
+      "description": "matrix_row_id: A-022 | entity: GENERAL_DATA | field: GENRE | verifica NEG lookup violato METAL",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con GENRE='METAL'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'lookup violato GENRE'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 23, "matrix_row_id": "A-023", "title": "[POS] LANGUAGE = 'it' accettato",
+      "entity": "GENERAL_DATA", "field": "LANGUAGE", "test_type": "POS",
+      "description": "matrix_row_id: A-023 | entity: GENERAL_DATA | field: LANGUAGE | verifica POS ISO 639-1 it",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con LANGUAGE='it'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "LANGUAGE='it' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 24, "matrix_row_id": "A-024", "title": "[NEG] LANGUAGE = 'xx' codice non ISO -> DLQ",
+      "entity": "GENERAL_DATA", "field": "LANGUAGE", "test_type": "NEG",
+      "description": "matrix_row_id: A-024 | entity: GENERAL_DATA | field: LANGUAGE | verifica NEG codice non ISO 639-1",
+      "preconditions": "DLQ vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con LANGUAGE='xx'", "expected_result": "Riga scartata"},
+        {"step_number": 2, "action": "Verifica DLQ", "expected_result": "1 messaggio con motivo 'LANGUAGE non ISO 639-1'"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    },
+    {
+      "id": 25, "matrix_row_id": "A-025", "title": "[POS] ISWC = 'T-123456789-1' pattern valido",
+      "entity": "GENERAL_DATA", "field": "ISWC", "test_type": "POS",
+      "description": "matrix_row_id: A-025 | entity: GENERAL_DATA | field: ISWC | verifica POS pattern T-NNNNNNNNN-N",
+      "preconditions": "Tabella Opere vuota",
+      "steps": [
+        {"step_number": 1, "action": "Inserisce CSV con ISWC='T-123456789-1'", "expected_result": "Riga consumata"},
+        {"step_number": 2, "action": "Verifica item", "expected_result": "ISWC='T-123456789-1' nell'item"}
+      ],
+      "automazione": "Y", "nrt": "Y"
+    }
+  ]
+}

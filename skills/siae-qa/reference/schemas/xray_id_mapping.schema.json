@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siae.it/devforge/schemas/xray_id_mapping.schema.json",
+  "title": "XrayIdMapping",
+  "description": "Mappatura CSV id sequenziale -> chiave Xray Jira prodotta dalla Phase 5 post-export. Handoff a siae-automation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["story_id", "tier", "mappings", "complete"],
+  "properties": {
+    "story_id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["tier_1_mcp", "tier_2_doc", "tier_3_csv"]
+    },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["csv_id", "xray_key", "scenario_title"],
+        "properties": {
+          "csv_id": { "type": "integer", "minimum": 1 },
+          "xray_key": {
+            "type": "string",
+            "pattern": "^[A-Z]+-[0-9]+$"
+          },
+          "scenario_title": {
+            "type": "string",
+            "pattern": "^\\[(POS|NEG|EDGE|ROLE)\\] .+"
+          }
+        }
+      }
+    },
+    "complete": {
+      "type": "boolean",
+      "description": "true se tutte le chiavi Jira sono state raccolte; false se Tier 3 in attesa di input developer."
+    }
+  }
+}

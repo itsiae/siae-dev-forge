@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siae.it/devforge/schemas/coverage_certificate.schema.json",
+  "title": "CoverageCertificate",
+  "description": "Coverage Certificate emesso dalla Phase 4d/5 della skill siae-qa. Persistito in docs/qa/{STORY_ID}/coverage_certificate.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stato",
+    "story_id",
+    "timestamp",
+    "m_final_rows",
+    "j5_gap_rows",
+    "tc_generated",
+    "tc_added_post_j5",
+    "coverage_score",
+    "gate_1",
+    "gate_2",
+    "j5_gaps",
+    "developer_overrides"
+  ],
+  "properties": {
+    "stato": {
+      "type": "string",
+      "enum": ["FULL_PASS", "CONDITIONAL_PASS", "FAIL"]
+    },
+    "story_id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "m_final_rows": { "type": "integer", "minimum": 0 },
+    "j5_gap_rows": { "type": "integer", "minimum": 0 },
+    "tc_generated": { "type": "integer", "minimum": 0 },
+    "tc_added_post_j5": { "type": "integer", "minimum": 0 },
+    "coverage_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "gate_1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "j1_matrix", "j2_matrix"],
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "j1_matrix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["percentage", "status", "gap"],
+          "properties": {
+            "percentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+            "gap": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "j2_matrix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duplicates"],
+          "properties": {
+            "duplicates": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "gate_2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "rerun_post_j5", "j3", "j4"],
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "rerun_post_j5": { "type": "boolean" },
+        "j3": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "orphan_rows", "orphan_tc"],
+          "properties": {
+            "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+            "orphan_rows": { "type": "array", "items": { "type": "string" } },
+            "orphan_tc": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "j4": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["percentage", "status", "generic_tc"],
+          "properties": {
+            "percentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+            "generic_tc": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "j5_gaps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["high_resolved", "high_open", "medium_open", "low_open", "accepted_gaps"],
+      "properties": {
+        "high_resolved": { "type": "integer", "minimum": 0 },
+        "high_open": { "type": "integer", "minimum": 0 },
+        "medium_open": { "type": "integer", "minimum": 0 },
+        "low_open": { "type": "integer", "minimum": 0 },
+        "accepted_gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["priority", "description"],
+            "properties": {
+              "priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+              "description": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "developer_overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tc_id", "field", "old_value", "new_value"],
+        "properties": {
+          "tc_id": { "type": "integer", "minimum": 1 },
+          "field": { "type": "string", "enum": ["automazione", "nrt"] },
+          "old_value": { "type": "string" },
+          "new_value": { "type": "string" }
+        }
+      }
+    }
+  }
+}

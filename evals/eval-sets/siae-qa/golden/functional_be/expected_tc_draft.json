@@ -1,0 +1,233 @@
+{
+  "story_id": "RIP-205",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "test_cases": [
+    {
+      "id": 1,
+      "matrix_row_id": "A-001",
+      "title": "[POS] POST /ripartizioni happy path crea risorsa",
+      "entity": "Ripartizione",
+      "field": "POST happy path",
+      "test_type": "POS",
+      "description": "matrix_row_id: A-001 | entity: Ripartizione | field: POST happy path | AC1",
+      "preconditions": "Autore con id=a1 esiste; Opera con id=o1 esiste; DB tabella ripartizioni vuota",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con header Content-Type: application/json e body {autore_id:'a1', opera_id:'o1', importo:100.50, stato_iniziale:'APPROVED'}",
+          "expected_result": "Lo status code della response e' 201 Created"
+        },
+        {
+          "step_number": 2,
+          "action": "Leggi il body della response",
+          "expected_result": "La response contiene il campo 'id' valorizzato come UUID"
+        },
+        {
+          "step_number": 3,
+          "action": "Leggi header Location",
+          "expected_result": "Header Location = '/ripartizioni/<id>' coerente con id del body"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 2,
+      "matrix_row_id": "A-002",
+      "title": "[NEG] POST /ripartizioni con importo=0 -> 400",
+      "entity": "Ripartizione",
+      "field": "importo",
+      "test_type": "NEG",
+      "description": "matrix_row_id: A-002 | entity: Ripartizione | field: importo | AC2",
+      "preconditions": "DB ripartizioni con N righe pre-test",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body {autore_id:'a1', opera_id:'o1', importo:0, stato_iniziale:'PENDING'}",
+          "expected_result": "Lo status code della response e' 400 Bad Request"
+        },
+        {
+          "step_number": 2,
+          "action": "Leggi il body della response",
+          "expected_result": "Il campo error_code della response = 'IMPORTO_NON_VALIDO'"
+        },
+        {
+          "step_number": 3,
+          "action": "Query SELECT COUNT(*) FROM ripartizioni",
+          "expected_result": "Il count e' uguale a N (nessuna nuova riga scritta)"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 3,
+      "matrix_row_id": "A-003",
+      "title": "[EDGE] POST /ripartizioni con importo=0.01 boundary accettato",
+      "entity": "Ripartizione",
+      "field": "importo",
+      "test_type": "EDGE",
+      "description": "matrix_row_id: A-003 | entity: Ripartizione | field: importo | boundary AC2",
+      "preconditions": "Autore a1 e opera o1 esistono",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body {autore_id:'a1', opera_id:'o1', importo:0.01, stato_iniziale:'PENDING'}",
+          "expected_result": "Lo status code della response e' 201 Created"
+        },
+        {
+          "step_number": 2,
+          "action": "Query SELECT importo FROM ripartizioni WHERE id=<id_response>",
+          "expected_result": "Il valore importo restituito e' 0.01"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 4,
+      "matrix_row_id": "A-004",
+      "title": "[POS] Idempotency-Key duplicata restituisce 200 con stesso id",
+      "entity": "Ripartizione",
+      "field": "Idempotency-Key",
+      "test_type": "POS",
+      "description": "matrix_row_id: A-004 | entity: Ripartizione | field: Idempotency-Key | AC3",
+      "preconditions": "Autore a1 e opera o1 esistono",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con header Idempotency-Key='k-001' e body valido",
+          "expected_result": "Status 201 e response contiene id=<id1>"
+        },
+        {
+          "step_number": 2,
+          "action": "POST /ripartizioni con stessa Idempotency-Key='k-001' e stesso body",
+          "expected_result": "Status 200 OK (non 201)"
+        },
+        {
+          "step_number": 3,
+          "action": "Leggi il body della seconda response",
+          "expected_result": "Il campo id della seconda response e' uguale a <id1>"
+        },
+        {
+          "step_number": 4,
+          "action": "Query SELECT COUNT(*) FROM ripartizioni WHERE idempotency_key='k-001'",
+          "expected_result": "Il count e' uguale a 1"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 5,
+      "matrix_row_id": "A-005",
+      "title": "[NEG] POST con autore_id inesistente -> 404",
+      "entity": "Ripartizione",
+      "field": "autore_id",
+      "test_type": "NEG",
+      "description": "matrix_row_id: A-005 | entity: Ripartizione | field: autore_id | AC4",
+      "preconditions": "Autore con id='a-ghost' NON esiste in tabella autori",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body {autore_id:'a-ghost', opera_id:'o1', importo:50, stato_iniziale:'PENDING'}",
+          "expected_result": "Lo status code della response e' 404 Not Found"
+        },
+        {
+          "step_number": 2,
+          "action": "Leggi il body della response",
+          "expected_result": "Il campo error_code della response = 'AUTORE_NOT_FOUND'"
+        },
+        {
+          "step_number": 3,
+          "action": "Verifica che nessun nuovo record sia stato inserito in ripartizioni per il payload tentato",
+          "expected_result": "SELECT COUNT(*) FROM ripartizioni WHERE autore_id='UUID-AUTORE-NON-ESISTENTE' restituisce 0; nessun side-effect (404 prima dell'inserimento)"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 6,
+      "matrix_row_id": "A-006",
+      "title": "[POS] POST con stato_iniziale='PENDING' accettato",
+      "entity": "Ripartizione",
+      "field": "stato_iniziale",
+      "test_type": "POS",
+      "description": "matrix_row_id: A-006 | entity: Ripartizione | field: stato_iniziale | AC1",
+      "preconditions": "Autore a1 e opera o1 esistono",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body {autore_id:'a1', opera_id:'o1', importo:75, stato_iniziale:'PENDING'}",
+          "expected_result": "Lo status code della response e' 201 Created"
+        },
+        {
+          "step_number": 2,
+          "action": "Query SELECT stato FROM ripartizioni WHERE id=<id_response>",
+          "expected_result": "Lo stato letto e' 'PENDING'"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 7,
+      "matrix_row_id": "A-007",
+      "title": "[NEG] POST con opera_id mancante -> 400",
+      "entity": "Ripartizione",
+      "field": "opera_id",
+      "test_type": "NEG",
+      "description": "matrix_row_id: A-007 | entity: Ripartizione | field: opera_id | AC2 missing field",
+      "preconditions": "Autore a1 esiste",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body {autore_id:'a1', importo:50, stato_iniziale:'PENDING'} (opera_id assente)",
+          "expected_result": "Lo status code della response e' 400 Bad Request"
+        },
+        {
+          "step_number": 2,
+          "action": "Leggi il body della response",
+          "expected_result": "Il body indica 'opera_id is required' come errore di validazione"
+        },
+        {
+          "step_number": 3,
+          "action": "Verifica che nessun nuovo record sia stato inserito in ripartizioni",
+          "expected_result": "SELECT COUNT(*) FROM ripartizioni WHERE created_at > NOW() - INTERVAL '1 second' restituisce 0; validazione 'opera_id is required' respinge il payload pre-inserimento"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    },
+    {
+      "id": 8,
+      "matrix_row_id": "A-008",
+      "title": "[NEG] POST con body malformato JSON -> 400",
+      "entity": "Ripartizione",
+      "field": "body",
+      "test_type": "NEG",
+      "description": "matrix_row_id: A-008 | entity: Ripartizione | field: body | AC2 JSON parse",
+      "preconditions": "Endpoint up",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "POST /ripartizioni con body '{autore_id:' (JSON incompleto)",
+          "expected_result": "Lo status code della response e' 400 Bad Request"
+        },
+        {
+          "step_number": 2,
+          "action": "Leggi il body della response",
+          "expected_result": "Il body contiene un messaggio di errore di parsing JSON"
+        },
+        {
+          "step_number": 3,
+          "action": "Verifica che nessun nuovo record sia stato inserito in ripartizioni",
+          "expected_result": "SELECT COUNT(*) FROM ripartizioni WHERE created_at > NOW() - INTERVAL '1 second' restituisce 0; body invalido respinto da parsing JSON pre-controller"
+        }
+      ],
+      "automazione": "Y",
+      "nrt": "Y"
+    }
+  ]
+}

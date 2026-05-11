@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siae.it/devforge/schemas/m_final.schema.json",
+  "title": "M_FINAL",
+  "description": "Coverage Matrix finale prodotta dalla Phase 1.5 della skill siae-qa. Bijection 1:1 con i TC di TC_DRAFT.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["story_id", "timestamp", "rows"],
+  "properties": {
+    "story_id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$",
+      "description": "Jira story key (es. MIG-101)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 UTC timestamp di emissione."
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/matrixRow" }
+    }
+  },
+  "$defs": {
+    "matrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matrix_row_id", "entity", "field", "condition", "test_type", "source_ref"],
+      "properties": {
+        "matrix_row_id": {
+          "type": "string",
+          "pattern": "^(?:[A-Z]-[0-9]{3}(?:-[a-z]+)?|J5-gap-G[0-9]{2}|developer-[0-9]{3})$",
+          "description": "Identificatore della riga: [A-Z]-NNN(-suffix)? (entity-namespace, es. A-NNN/B-NNN/.../Z-NNN per spec con >3 entita' logiche, suffix tematico opzionale lowercase es. A-001-nfr, B-005-temporal per source_ref strutturato ADR-012), J5-gap-GNN (gap aggiunto da Phase 4d), developer-NNN (override developer)."
+        },
+        "entity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Condizione concreta da verificare (valore o vincolo)."
+        },
+        "test_type": {
+          "type": "string",
+          "enum": ["POS", "NEG", "EDGE", "ROLE"]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Riferimento alla specifica sorgente (sezione, riga, paragrafo)."
+        },
+        "combo_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Campi coinvolti in una regola composita (opzionale)."
+        },
+        "combo_values": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Valori associati ai combo_fields (opzionale, stesso ordine)."
+        }
+      }
+    }
+  }
+}

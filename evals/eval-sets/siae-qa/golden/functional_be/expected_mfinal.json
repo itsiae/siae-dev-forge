@@ -1,0 +1,14 @@
+{
+  "story_id": "RIP-205",
+  "timestamp": "2026-05-11T10:00:00Z",
+  "rows": [
+    { "matrix_row_id": "A-001", "entity": "Ripartizione", "field": "POST happy path", "condition": "POST /ripartizioni con payload valido e importo=100.50", "test_type": "POS", "source_ref": "input.md:AC1" },
+    { "matrix_row_id": "A-002", "entity": "Ripartizione", "field": "importo", "condition": "importo = 0 -> 400 IMPORTO_NON_VALIDO", "test_type": "NEG", "source_ref": "input.md:AC2" },
+    { "matrix_row_id": "A-003", "entity": "Ripartizione", "field": "importo", "condition": "importo = 0.01 (boundary minimo positivo)", "test_type": "EDGE", "source_ref": "input.md:AC2" },
+    { "matrix_row_id": "A-004", "entity": "Ripartizione", "field": "Idempotency-Key", "condition": "Stessa Idempotency-Key inviata 2 volte -> 200 con stesso id", "test_type": "POS", "source_ref": "input.md:AC3" },
+    { "matrix_row_id": "A-005", "entity": "Ripartizione", "field": "autore_id", "condition": "autore_id inesistente -> 404 AUTORE_NOT_FOUND", "test_type": "NEG", "source_ref": "input.md:AC4" },
+    { "matrix_row_id": "A-006", "entity": "Ripartizione", "field": "stato_iniziale", "condition": "stato_iniziale = 'PENDING' accettato (default workflow)", "test_type": "POS", "source_ref": "input.md:AC1" },
+    { "matrix_row_id": "A-007", "entity": "Ripartizione", "field": "opera_id", "condition": "opera_id mancante nel body -> 400 missing field", "test_type": "NEG", "source_ref": "input.md:AC2" },
+    { "matrix_row_id": "A-008", "entity": "Ripartizione", "field": "body", "condition": "Body malformato (JSON parse error) -> 400", "test_type": "NEG", "source_ref": "input.md:AC2" }
+  ]
+}

@@ -63,13 +63,25 @@ Due Test Case, 3 step ciascuno.
 
 ```csv
 ID;Test  Type;Team Competenza;ID JIRA Story;User Story Description;Scenario (descrizione);Step scenario;Action;Expceted Result;Data;Automazione;NRT
-1;Manual;QA;PROJ-123;Come utente voglio accedere al portale con credenziali valide;Verifica login con credenziali valide;1;Aprire il portale SIAE all'URL di collaudo;La pagina di login viene visualizzata con i campi username e password;;N;Y
+1;Manual;QA;PROJ-123;Come utente voglio accedere al portale con credenziali valide;[POS] Verifica login con credenziali valide;1;Aprire il portale SIAE all'URL di collaudo;La pagina di login viene visualizzata con i campi username e password;;N;Y
 1;;;;;;2;Inserire username e password validi nei rispettivi campi;I campi accettano l'input senza errori di validazione;;N;Y
 1;;;;;;3;Premere il pulsante "Accedi";L'utente viene reindirizzato alla home page con il proprio nome visualizzato nell'header;;N;Y
-2;Manual;QA;PROJ-123;Come utente voglio accedere al portale con credenziali valide;Verifica login con credenziali errate;1;Aprire il portale SIAE all'URL di collaudo;La pagina di login viene visualizzata;;N;Y
+2;Manual;QA;PROJ-123;Come utente voglio accedere al portale con credenziali valide;[NEG] Verifica login con credenziali errate;1;Aprire il portale SIAE all'URL di collaudo;La pagina di login viene visualizzata;;N;Y
 2;;;;;;2;Inserire username corretto e password errata;I campi accettano l'input;;N;Y
 2;;;;;;3;Premere il pulsante "Accedi";Viene visualizzato il messaggio di errore "Credenziali non valide". L'utente rimane sulla pagina di login.;;N;Y
 ```
+
+---
+
+## Prefissi Obbligatori nel Campo `Scenario (descrizione)`
+
+Ogni TC esportato in CSV deve avere prefisso esplicito nel campo `Scenario (descrizione)`:
+- `[POS]` = positivo
+- `[NEG]` = negativo
+- `[EDGE]` = edge case
+- `[ROLE]` = scenario di ruolo
+
+Vedi `XRAY-TEMPLATES.md` sezione "Prefissi di Categoria" per la regola completa.
 
 ---
 
