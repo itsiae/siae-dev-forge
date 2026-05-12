@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# review-evidence — pre-compute deterministic quality signals for code review.
+# ─────────────────────────────────────────────────────────────────
+# Hook:     review-evidence
+# Eventi:   PreToolUse (Bash gh pr create|edit) — sync, can BLOCK
+#           PostToolUse (Bash, commit detected)  — async, warms cache
+#           Skill   (/forge-evidence)            — on-demand, sync, human-readable
+# Output:   additional_context (standard DevForge), decision:block only on
+#           PreToolUse + verdict.block=true AND no bypass.
+# Bypass:   state file ~/.claude/.devforge-skip-evidence (primary)
+#           env var DEVFORGE_SKIP_EVIDENCE=1 (fallback)
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="review-evidence"
+
+HOOK_INPUT=$(cat)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# shellcheck disable=SC1091
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
+# ── Bypass: state file primario, env var fallback ──────────────
+SKIP_STATE_FILE="${HOME}/.claude/.devforge-skip-evidence"
+if [ -f "$SKIP_STATE_FILE" ] || [ "${DEVFORGE_SKIP_EVIDENCE:-0}" = "1" ]; then
+    if [ -f "$SKIP_STATE_FILE" ]; then
+        BYPASS_SRC="state_file"
+    else
+        BYPASS_SRC="env_var"
+    fi
+    devforge_log "evidence_bypass_used" "info" \
+        "{\"source\":\"${BYPASS_SRC}\"}" 2>/dev/null || true
+    echo '{}'
+    exit 0
+fi
+
+# ── Extract envelope fields ────────────────────────────────────
+TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+HOOK_EVENT_NAME=$(echo "$HOOK_INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
+ENVELOPE_CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+
+# Honor envelope `cwd` (Claude Code passes this for hooks); fall back to $PWD.
+# This lets the hook resolve git HEAD + evidence dir for the project the user
+# is actually editing rather than wherever the bash process happened to start.
+if [ -n "$ENVELOPE_CWD" ] && [ -d "$ENVELOPE_CWD" ]; then
+    cd "$ENVELOPE_CWD"
+fi
+
+TRIGGER="other"
+IS_BLOCKING=0
+case "$HOOK_EVENT_NAME" in
+    PreToolUse)
+        if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+(create|edit) ]]; then
+            TRIGGER="pre_pr"
+            IS_BLOCKING=1
+        fi
+        ;;
+    PostToolUse)
+        # Chained after post-commit-review; trigger only on real commit/push.
+        if [[ "$TOOL_COMMAND" =~ git[[:space:]]+(commit|push) ]]; then
+            TRIGGER="post_commit"
+        fi
+        ;;
+    *)
+        # Skill or manual invocation (no hook_event_name set).
+        TRIGGER="skill_or_manual"
+        ;;
+esac
+
+if [ "$TRIGGER" = "other" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# ── Compute SHA + dirty flag ───────────────────────────────────
+SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
+if [ -z "$SHA" ]; then
+    echo '{}'
+    exit 0
+fi
+DIRTY=0
+# Ignore .claude/ when assessing dirty tree: it is plugin/hook output,
+# never user source. Without this, every cache miss would race itself
+# (write evidence → tree becomes dirty → next call recomputes). Also git
+# collapses untracked subtrees ("?? .claude/") so we exclude the whole
+# .claude/ prefix rather than just .claude/review-evidence/.
+DIRTY_LINES=$(git status --porcelain 2>/dev/null | grep -Ev '^.. \.claude/?$|^.. \.claude/' || true)
+if [ -n "$DIRTY_LINES" ]; then
+    DIRTY=1
+fi
+
+EVIDENCE_DIR=".claude/review-evidence"
+EVIDENCE_FILE="${EVIDENCE_DIR}/${SHA}.json"
+mkdir -p "$EVIDENCE_DIR" 2>/dev/null || true
+
+# ── Cache lookup ───────────────────────────────────────────────
+NEEDS_COMPUTE=1
+if [ "$DIRTY" = "0" ] && [ -f "$EVIDENCE_FILE" ]; then
+    NEEDS_COMPUTE=0
+fi
+
+if [ "$NEEDS_COMPUTE" = "1" ]; then
+    BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+    if [ -z "$BASE_BRANCH" ]; then
+        BASE_BRANCH="main"
+    fi
+    if [ "$TRIGGER" = "post_commit" ]; then
+        # Async: detach so we never block the commit hook chain.
+        nohup python3 "${PLUGIN_ROOT}/lib/review_evidence/collector.py" \
+            --sha "$SHA" --base "$BASE_BRANCH" --dirty "$DIRTY" \
+            --out "$EVIDENCE_FILE" >/dev/null 2>&1 &
+        echo '{"additional_context":"review-evidence: async compute scheduled for '"${SHA:0:8}"'"}'
+        exit 0
+    fi
+    # Sync (pre_pr or skill_or_manual)
+    if ! python3 "${PLUGIN_ROOT}/lib/review_evidence/collector.py" \
+            --sha "$SHA" --base "$BASE_BRANCH" --dirty "$DIRTY" \
+            --out "$EVIDENCE_FILE" 2>/dev/null; then
+        echo '{"additional_context":"review-evidence: compute failed (see logs)"}'
+        exit 0
+    fi
+fi
+
+# ── Read verdict + enforce hard-block (only on PreToolUse) ─────
+if [ ! -f "$EVIDENCE_FILE" ]; then
+    echo '{}'
+    exit 0
+fi
+
+BLOCK=$(jq -r '.verdict.block // false' "$EVIDENCE_FILE" 2>/dev/null || echo "false")
+REASONS=$(jq -r '.verdict.block_reasons | join(", ")' "$EVIDENCE_FILE" 2>/dev/null || echo "")
+
+if [ "$IS_BLOCKING" = "1" ] && [ "$BLOCK" = "true" ]; then
+    SAFE_REASONS=$(echo "$REASONS" | sed 's/"/\\"/g')
+    devforge_log "evidence_block" "warn" \
+        "{\"sha\":\"${SHA}\",\"reasons\":\"${SAFE_REASONS}\"}" 2>/dev/null || true
+    cat <<JSON
+{
+  "decision": "block",
+  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: touch ~/.claude/.devforge-skip-evidence"
+}
+JSON
+    exit 0
+fi
+
+# ── Advisory (always) ──────────────────────────────────────────
+COV=$(jq -r '.metrics.coverage.overall_pct // "n/a"' "$EVIDENCE_FILE" 2>/dev/null || echo "n/a")
+LINT=$(jq -r '.metrics.lint.errors // 0' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+CTX="review-evidence ${SHA:0:8}: coverage=${COV}%, lint_errors=${LINT}, block=${BLOCK}. File: ${EVIDENCE_FILE}"
+cat <<JSON
+{"additional_context": "${CTX}"}
+JSON
