@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="10.0.0">
+  <file name="/repo/src/main/java/PaymentService.java">
+    <error line="12" severity="error" message="Line too long (130 chars)" source="LineLength"/>
+    <error line="45" severity="warning" message="Magic number" source="MagicNumber"/>
+  </file>
+  <file name="/repo/src/main/java/CatalogService.java">
+    <error line="3" severity="error" message="Missing javadoc" source="MissingJavadoc"/>
+  </file>
+</checkstyle>

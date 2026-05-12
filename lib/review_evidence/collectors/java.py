@@ -1,10 +1,12 @@
-"""Java stack collector: jacoco (this task) + checkstyle/pmd (Task 08)."""
+"""Java stack collector: jacoco coverage + checkstyle/pmd static analysis."""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
+from lib.review_evidence.collectors._checkstyle import parse_checkstyle_xml
 from lib.review_evidence.collectors._jacoco import parse_jacoco_xml
+from lib.review_evidence.collectors._pmd import parse_pmd_xml
 from lib.review_evidence.registry import register
 
 
@@ -15,6 +17,8 @@ GRADLE_JACOCO_PATHS = [
     Path("build/reports/jacoco/test/jacocoTestReport.xml"),
     Path("build/reports/jacoco/jacocoTestReport.xml"),
 ]
+CHECKSTYLE_PATHS = [Path("target/checkstyle-result.xml")]
+PMD_PATHS = [Path("target/pmd.xml")]
 
 
 class JavaCollector:
@@ -32,7 +36,7 @@ class JavaCollector:
         result: dict[str, Any] = {
             "stack": "java",
             "coverage": cov if cov else None,
-            "lint": None,        # populated by Task 08
+            "lint": self._static_analysis(repo_root),
             "complexity": None,  # not in MVP for Java (covered by Sonar via ci_fetch)
         }
         return result
@@ -55,6 +59,51 @@ class JavaCollector:
                 except Exception:
                     return None, source
         return None, source
+
+    def _static_analysis(self, repo_root: Path) -> dict | None:
+        cs = None
+        for rel in CHECKSTYLE_PATHS:
+            full = repo_root / rel
+            if full.exists():
+                try:
+                    cs = parse_checkstyle_xml(full.read_text())
+                except Exception:
+                    cs = None
+                break
+
+        pmd = None
+        for rel in PMD_PATHS:
+            full = repo_root / rel
+            if full.exists():
+                try:
+                    pmd = parse_pmd_xml(full.read_text())
+                except Exception:
+                    pmd = None
+                break
+
+        if cs is None and pmd is None:
+            return None
+
+        sources = []
+        errors = 0
+        warnings = 0
+        findings: list[dict] = []
+        if cs:
+            sources.append("checkstyle")
+            errors += cs["errors"]
+            warnings += cs["warnings"]
+            findings.extend(cs["findings"])
+        if pmd:
+            sources.append("pmd")
+            errors += pmd["errors"]
+            warnings += pmd["warnings"]
+            findings.extend(pmd["findings"])
+        return {
+            "errors": errors,
+            "warnings": warnings,
+            "findings": findings,
+            "source": "local:" + "+".join(sources),
+        }
 
 
 register(JavaCollector())

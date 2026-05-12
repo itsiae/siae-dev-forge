@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pmd version="6.55.0">
+  <file name="/repo/src/main/java/PaymentService.java">
+    <violation beginline="22" rule="UnusedPrivateField" priority="3" ruleset="bestpractices"
+               class="PaymentService" method="">Unused field</violation>
+    <violation beginline="80" rule="CyclomaticComplexity" priority="2" ruleset="design"
+               class="PaymentService" method="process">Method too complex</violation>
+  </file>
+</pmd>
