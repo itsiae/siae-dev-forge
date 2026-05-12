@@ -21,6 +21,29 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 | `DEVFORGE_SKIP_BLIND_REVIEW` | `0` | pr-blind-review-gate | 5 / day | **v1.47 NEW.** Allows `gh pr create` / `gh pr edit` without siae-blind-review validation. |
 | `DEVFORGE_FORCE_STOP` | `0` | stop-gate (verification) | **3 / day** | **v1.47 NEW.** Explicit replacement for the old 2-block auto-escape (ADR-006). Lower threshold because Stop is high-impact. |
 
+## Review Evidence (v1.54+)
+
+| Env var | Default | Significato |
+|---|---|---|
+| `DEVFORGE_EVIDENCE_MIN_COVERAGE` | `60` | Coverage % sotto cui block |
+| `DEVFORGE_EVIDENCE_MAX_COVERAGE_DELTA` | `-5` | Delta vs base sotto cui block (pp) |
+| `DEVFORGE_EVIDENCE_MAX_LINT_ERRORS` | `0` | Lint errors sopra cui block |
+| `DEVFORGE_EVIDENCE_MAX_COMPLEXITY` | `15` | Max cyclomatic per funzione |
+| `DEVFORGE_EVIDENCE_CI_SARIF_BLOCK_LEVEL` | `critical` | `critical` / `high` / `off` per findings SARIF CI |
+| `DEVFORGE_EVIDENCE_SPEC_DRIFT_BLOCK` | `1` | Block se `drift_severity == high` |
+| `DEVFORGE_EVIDENCE_DESIGN_DOC` | (auto) | Override path design doc (default: file piu' recente in `docs/plans/`) |
+| `DEVFORGE_SKIP_EVIDENCE` | `0` | Bypass fallback. Preferito: `touch ~/.claude/.devforge-skip-evidence` (state file piu' affidabile in subprocess hook). Tracked, abuse log a 5/day. |
+| `DEVFORGE_EVIDENCE_ICLOUD_WARN` | `1` | Emit warning se repo in iCloudDocs (atomic rename fragile) |
+
+**State file bypass primario:** `~/.claude/.devforge-skip-evidence` — l'hook
+controlla l'esistenza del file PRIMA di compute. Il file puo' contenere
+`N=<count>` per auto-decremento. Pattern raccomandato vs env var perche' le
+env var possono non propagare a subprocess hook Claude Code (vedi memory
+`feedback_env_var_not_propagated_to_hooks`).
+
+**Pattern operativo CI:** vedi `commands/forge-evidence.md` per il flow
+`gh pr create` -> CI completes -> `gh pr edit` per pickup SARIF.
+
 ## Scope / feature flags
 
 | Env var | Default | Gate | Description |
