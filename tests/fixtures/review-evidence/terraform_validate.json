@@ -1,0 +1,10 @@
+{
+  "valid": false,
+  "error_count": 1,
+  "warning_count": 0,
+  "diagnostics": [
+    {"severity": "error", "summary": "Reference to undeclared resource",
+     "detail": "A managed resource \"aws_s3_bucket\" \"foo\" has not been declared.",
+     "range": {"filename": "main.tf", "start": {"line": 10, "column": 5}}}
+  ]
+}
