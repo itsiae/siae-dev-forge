@@ -43,6 +43,27 @@ PATH_RE = re.compile(
     r"\b(src|lib|hooks|agents|commands|tests|skills|docs|scripts|tools)/[A-Za-z0-9_./-]+\.[a-z]+\b"
 )
 
+# Extensionless paths under dirs known to host scripts (bash hooks, CLI tools).
+# Anchored to a small whitelist of "executable host dirs" to keep precision.
+# Restricted to lowercase + digits + `_`/`-` filenames so we don't accidentally
+# greedy-match prose like "in hooks/review or somewhere".
+EXTENSIONLESS_PATH_RE = re.compile(
+    r"\b(hooks|scripts|bin)/[a-z][a-z0-9_-]+(?=[\s`)\].,;:]|$)"
+)
+
+# Common root-level config / docs files that have no leading directory but are
+# legitimate part of any repo manifest. Explicit whitelist (no wildcards) to
+# avoid matching arbitrary words inside paragraphs.
+ROOT_FILES = (
+    ".gitignore", "README.md", "CHANGELOG.md", "LICENSE", "Makefile",
+    "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt",
+    "requirements-test.txt", "package.json", "tsconfig.json", ".mcp.json",
+    ".shellcheckrc", "install.sh",
+)
+ROOT_FILE_RE = re.compile(
+    r"(?<![\w/])(" + "|".join(re.escape(f) for f in ROOT_FILES) + r")(?![\w/.-])"
+)
+
 
 def _strip_code_fences(text: str) -> str:
     # Triple backtick or tilde fences
@@ -82,13 +103,22 @@ def extract_files_from_design(content: str) -> list[str]:
     """Extract file paths from design doc, restricted to allowlist sections,
     with code-fence and blockquote stripping.
 
+    Three regex families are combined:
+      1. PATH_RE — dir/file.ext under known root dirs
+      2. EXTENSIONLESS_PATH_RE — dir/file under hooks/scripts/bin (bash scripts)
+      3. ROOT_FILE_RE — known root-level files (.gitignore, README.md, etc.)
+
     Note: PATH_RE has a capture group (root dir whitelist), so we must use
     finditer + match.group(0) to get the full path, not just the group.
     """
     stripped = _strip_code_fences(content)
     stripped = _strip_blockquotes(stripped)
     section_content = _allowlisted_sections(stripped)
-    return sorted({m.group(0) for m in PATH_RE.finditer(section_content)})
+    paths: set[str] = set()
+    paths.update(m.group(0) for m in PATH_RE.finditer(section_content))
+    paths.update(m.group(0) for m in EXTENSIONLESS_PATH_RE.finditer(section_content))
+    paths.update(m.group(0) for m in ROOT_FILE_RE.finditer(section_content))
+    return sorted(paths)
 
 
 def _top_part(p: Path) -> str:

@@ -482,7 +482,13 @@ def test_E38_spec_drift_matches_italian_headers():
     assert "src/foo.py" in files, f"missing src/foo.py: {files}"
     assert "lib/bar.py" in files, f"missing lib/bar.py: {files}"
     assert "tests/test_foo.py" in files, f"missing tests/test_foo.py: {files}"
-    assert "hooks/session-start" not in files  # no extension → not a path match
+    # Post live-drift self-test fix: extensionless paths under hooks/ are now
+    # legitimate matches (bash scripts are real implementation artifacts). The
+    # previous assertion expected them DROPPED, but that produced false-positive
+    # drift on the review-evidence branch itself (it adds hooks/review-evidence
+    # and hooks/session-start, both extensionless). EXTENSIONLESS_PATH_RE
+    # captures them now.
+    assert "hooks/session-start" in files  # extensionless bash script — captured
     assert "lib/new_module.py" in files
     # Negative: src/legacy/old.py is under "Contesto" — must NOT be extracted.
     assert "src/legacy/old.py" not in files
