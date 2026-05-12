@@ -4,13 +4,13 @@
 
 ## Goal
 
-Creare `lib/review-evidence/schema.py` con dataclass Python che rappresentano lo schema JSON v1 dell'evidence file, più funzioni di serializzazione/deserializzazione e validazione contro lo schema versioned.
+Creare `lib/review_evidence/schema.py` con dataclass Python che rappresentano lo schema JSON v1 dell'evidence file, più funzioni di serializzazione/deserializzazione e validazione contro lo schema versioned.
 
 ## File coinvolti
 
 **Creare:**
-- `lib/review-evidence/__init__.py` (file vuoto, `# Review evidence framework`)
-- `lib/review-evidence/schema.py`
+- `lib/review_evidence/__init__.py` (file vuoto, `# Review evidence framework`)
+- `lib/review_evidence/schema.py`
 - `tests/test_review_evidence_schema.py`
 - `tests/fixtures/review-evidence/evidence_clean.json`
 - `tests/fixtures/review-evidence/evidence_full_block.json`
@@ -22,7 +22,7 @@ Creare `lib/review-evidence/schema.py` con dataclass Python che rappresentano lo
 Crea `tests/test_review_evidence_schema.py`:
 
 ```python
-"""Tests for lib/review-evidence/schema.py — JSON schema v1."""
+"""Tests for lib/review_evidence/schema.py — JSON schema v1."""
 import json
 from pathlib import Path
 
@@ -135,9 +135,9 @@ pytest tests/test_review_evidence_schema.py -v
 
 ### Step 3 — Implementa il codice minimo
 
-Crea `lib/review-evidence/__init__.py` (vuoto, una sola riga commento).
+Crea `lib/review_evidence/__init__.py` (vuoto, una sola riga commento).
 
-Crea `lib/review-evidence/schema.py`:
+Crea `lib/review_evidence/schema.py`:
 
 ```python
 """JSON schema v1 for review-evidence framework.
@@ -267,7 +267,7 @@ def evidence_to_json(ev: Evidence) -> str:
     return json.dumps(out, indent=2, sort_keys=False)
 ```
 
-Nota: il nome modulo è `lib/review-evidence/` (con dash) ma Python import vuole `review_evidence` (underscore). Risolvi creando un alias in `conftest.py` o spostando i sorgenti sotto `lib/review_evidence/`. Scelta: **usa underscore** per il modulo Python (`lib/review_evidence/`), mantieni docs/path coerenti. Aggiorna tutti i riferimenti in tasks successivi.
+Nota: il nome modulo è `lib/review_evidence/` (con dash) ma Python import vuole `review_evidence` (underscore). Risolvi creando un alias in `conftest.py` o spostando i sorgenti sotto `lib/review_evidence/`. Scelta: **usa underscore** per il modulo Python (`lib/review_evidence/`), mantieni docs/path coerenti. Aggiorna tutti i riferimenti in tasks successivi.
 
 **File reali creati:**
 - `lib/review_evidence/__init__.py`

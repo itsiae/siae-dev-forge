@@ -26,9 +26,14 @@ def load_thresholds() -> Thresholds:
     )
 
 
-def compute_verdict(metrics: dict, spec_drift: dict | None, t: Thresholds) -> dict:
+def compute_verdict(
+    metrics: dict,
+    spec_drift: dict | None,
+    t: Thresholds,
+    extra_warnings: list[str] | None = None,
+) -> dict:
     reasons: list[str] = []
-    warnings: list[str] = []
+    warnings: list[str] = list(extra_warnings) if extra_warnings else []
 
     cov = metrics.get("coverage", {})
     if isinstance(cov, dict) and cov.get("overall_pct") is not None:

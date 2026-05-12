@@ -31,6 +31,10 @@ class LintMetric:
     warnings: int
     findings: list[dict[str, Any]] = field(default_factory=list)
     source: str = "local:unknown"
+    # MAJOR-3: surface tool availability + reason so consumers can tell
+    # "0 findings" apart from "tool missing / config error" (E25, E27).
+    available: bool = True
+    reason: Optional[str] = None
 
 
 @dataclass

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -82,12 +83,20 @@ def _merge_metrics(stack_results: list[dict[str, Any]]) -> dict[str, Any]:
 
     lint_records = [r["lint"] for r in stack_results if r.get("lint")]
     if lint_records:
-        metrics["lint"] = {
+        # MAJOR-3: propagate available/reason from per-stack records so
+        # downstream consumers (renderer, verdict) can tell "no lint
+        # findings" apart from "tool unavailable / config error".
+        first_reason = next((l.get("reason") for l in lint_records if l.get("reason")), None)
+        merged_lint: dict[str, Any] = {
             "errors": sum(l.get("errors", 0) for l in lint_records),
             "warnings": sum(l.get("warnings", 0) for l in lint_records),
             "findings": [f for l in lint_records for f in l.get("findings", [])],
             "source": ",".join(sorted({l.get("source", "local:unknown") for l in lint_records})),
+            "available": all(l.get("available", True) for l in lint_records),
         }
+        if first_reason is not None:
+            merged_lint["reason"] = first_reason
+        metrics["lint"] = merged_lint
 
     cx_records = [r["complexity"] for r in stack_results if r.get("complexity")]
     if cx_records:
@@ -142,7 +151,16 @@ def orchestrate(sha: str, base: str, dirty: bool, out_path: Path, repo_root: Pat
         pass
 
     t = load_thresholds()
-    verdict = compute_verdict(metrics, spec_drift=spec_drift, t=t)
+    # MAJOR-2: hook detects iCloud cwd and forwards a human-readable warning
+    # via env var so it surfaces in verdict.warnings without changing the
+    # cli signature. Empty/unset means "no warning".
+    extra_warnings: list[str] = []
+    icloud_warn = os.environ.get("DEVFORGE_EVIDENCE_ICLOUD_WARNING", "").strip()
+    if icloud_warn:
+        extra_warnings.append(icloud_warn)
+    verdict = compute_verdict(
+        metrics, spec_drift=spec_drift, t=t, extra_warnings=extra_warnings
+    )
 
     evidence = {
         "schema_version": SCHEMA_VERSION,

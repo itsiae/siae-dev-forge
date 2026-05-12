@@ -53,7 +53,7 @@ Skill /forge-evidence                 ─┘
                                   • emit additional_context
                                             │
                                             ▼ subprocess python3
-                                lib/review-evidence/collector.py
+                                lib/review_evidence/collector.py
                                   (orchestrator: stack detect,
                                    dispatch, merge, atomic_write)
                                             │
@@ -65,14 +65,14 @@ Skill /forge-evidence                 ─┘
         pmd)                complexity-report)
                                             │
                                             ▼
-                                lib/review-evidence/ci_fetch.py
+                                lib/review_evidence/ci_fetch.py
                                   • gh run list --commit <sha>
                                   • gh run download → Qodana SARIF
                                   • parse → schema common
                                   • async, timeout 30s
                                             │
                                             ▼
-                                lib/review-evidence/spec_drift.py
+                                lib/review_evidence/spec_drift.py
                                   • cerca design doc
                                   • diff vs files_in_plan
                                   • drift_severity
@@ -94,7 +94,7 @@ Entry point. Sceneggiatura:
 1. Detect trigger via `DEVFORGE_CURRENT_HOOK` o argomento parser (PreToolUse, PostToolUse, Skill).
 2. Compute `SHA=$(git rev-parse HEAD)`, `DIRTY=$(git status --porcelain)`.
 3. Cache lookup: se `.claude/review-evidence/<sha>.json` esiste e tree clean → emit cached + exit.
-4. Cache miss → `python3 lib/review-evidence/collector.py --sha "$SHA" --base "$BASE"`.
+4. Cache miss → `python3 lib/review_evidence/collector.py --sha "$SHA" --base "$BASE"`.
 5. Solo su PreToolUse `gh pr create/edit`:
    - Carica `verdict.block` dall'evidence
    - Se `true` e nessun bypass: ritorna JSON con `decision: "block"` e `reason` umano-leggibile
@@ -103,7 +103,7 @@ Entry point. Sceneggiatura:
 
 Pattern coerente con `hooks/pr-gate` (riuso `devforge_sanitize_json_str`, `MERGE_BASE`, escape).
 
-### `lib/review-evidence/collector.py` (Python, orchestrator)
+### `lib/review_evidence/collector.py` (Python, orchestrator)
 
 - Detect stack via `lib/file-taxonomy.sh` (subprocess) + extension fallback.
 - Per ogni stack rilevato, dispatch al collector corrispondente con timeout per-collector (default 10s).
@@ -113,7 +113,7 @@ Pattern coerente con `hooks/pr-gate` (riuso `devforge_sanitize_json_str`, `MERGE
 - Atomic write via `lib/atomic_write.py` (già presente).
 - Calcola `verdict` confrontando metriche con soglie env.
 
-### `lib/review-evidence/schema.py` (Python, JSON schema v1)
+### `lib/review_evidence/schema.py` (Python, JSON schema v1)
 
 Definisce dataclass + serializzazione. Versionato (`schema_version: "1.0"`). Validazione opzionale via jsonschema se installato, altrimenti dataclass-only.
 
@@ -170,7 +170,7 @@ Schema completo (cfr. sezione 5.2 del brainstorming, replicato qui):
 }
 ```
 
-### `lib/review-evidence/collectors/`
+### `lib/review_evidence/collectors/`
 
 Un file per stack. Interfaccia minimale:
 
@@ -188,7 +188,7 @@ class Collector:
 
 Ogni collector ritorna `{"available": bool, "reason": str?, ...metriche}` — mai eccezione non gestita.
 
-### `lib/review-evidence/ci_fetch.py`
+### `lib/review_evidence/ci_fetch.py`
 
 Generico — non assume tool specifico. Pipeline:
 
@@ -215,7 +215,7 @@ Il vincolo realistico è che i CI quality reports girano **dopo** il push. Conse
 
 **Pattern operativo per l'utente:** primo `gh pr create` apre PR su soli segnali locali; dopo che la CI finisce (~3-10 min), `gh pr edit --add-label ready-for-review` ri-attiva l'hook che fetcha gli artefatti SARIF e aggiorna l'evidence. Documentato in `commands/forge-evidence.md`.
 
-### `lib/review-evidence/spec_drift.py`
+### `lib/review_evidence/spec_drift.py`
 
 1. Risolve design doc:
    - Se `DEVFORGE_EVIDENCE_DESIGN_DOC` env set → usa quello
@@ -353,7 +353,7 @@ Fixture: `tests/fixtures/review-evidence/{jacoco.xml, ruff.json, eslint.json, lc
 5. Spec-drift detector legge design doc da `docs/plans/` (auto + env override) + robusto contro code-fence/quote
 6. Hard-block configurabile via env var con bypass primario via state file (`~/.claude/.devforge-skip-evidence`)
 7. `code-reviewer.md` e `spec-reviewer.md` aggiornati con Step 0.5 evidence-loading
-8. Test coverage ≥80% su `lib/review-evidence/`
+8. Test coverage ≥80% su `lib/review_evidence/`
 9. `hooks/ENV_VARS.md` aggiornato con tutte le nuove env var
 10. `CHANGELOG.md` entry sotto versione corrente
 11. `commands/forge-evidence.md` registrato (skill on-demand)
@@ -397,7 +397,7 @@ Stime aggiornate post W6 (Java multi-tool sottostimato, CI-fetch SARIF multi-too
 
 ## ADR riassuntivi
 
-- **ADR-1** Hook bash thin wrapper, collector framework Python in `lib/review-evidence/`
+- **ADR-1** Hook bash thin wrapper, collector framework Python in `lib/review_evidence/`
 - **ADR-2** Schema evidence v1 versioned, retro-compat policy
 - **ADR-3** Trigger triplice: PreToolUse `gh pr` (block), PostToolUse Bash (async warm), Skill (on-demand)
 - **ADR-4** Dual signal local + CI-fetch async, `source` field per claim

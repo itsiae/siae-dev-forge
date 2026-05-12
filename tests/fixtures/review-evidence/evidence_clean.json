@@ -8,7 +8,7 @@
   "stack_detected": ["python"],
   "metrics": {
     "coverage": {"overall_pct": 85.0, "delta_vs_base": 0.5, "per_file": [], "source": "local:coverage.py"},
-    "lint": {"errors": 0, "warnings": 2, "findings": [], "source": "local:ruff"},
+    "lint": {"errors": 0, "warnings": 2, "findings": [], "source": "local:ruff", "available": true, "reason": null},
     "complexity": {"max_cyclomatic": 8, "files_over_threshold": [], "source": "local:radon"},
     "ci_quality": {"available": false, "ci_run_id": null, "problems_critical": 0, "problems_high": 0, "findings": [], "source": null}
   },

@@ -10,7 +10,7 @@ dalla CI, scrivendo un JSON cacheable per SHA che gli agent review consumano
 come renderer (zero ricalcolo soggettivo).
 
 **Architettura:** Hook bash thin wrapper `hooks/review-evidence` →
-orchestrator Python `lib/review-evidence/collector.py` → per-stack collectors
+orchestrator Python `lib/review_evidence/collector.py` → per-stack collectors
 (Java/TS/Python/HCL) + CI-fetch SARIF + spec-drift detector → atomic write
 in `.claude/review-evidence/<sha>.json` → renderer in `code-reviewer.md` /
 `spec-reviewer.md` (Step 0.5 evidence-loading).
@@ -110,7 +110,7 @@ Ogni AC del design doc è mappato a uno o più task:
 | AC #5 (spec-drift auto+env+code-fence) | Task 11 | Test fixture code-fence noise |
 | AC #6 (hard-block + bypass state file) | Task 03 + Task 04 | Test threshold matrix + bypass |
 | AC #7 (renderer Step 0.5) | Task 12 | Diff su agent .md |
-| AC #8 (coverage ≥80% lib/review-evidence) | Task 14 | pytest --cov report |
+| AC #8 (coverage ≥80% lib/review_evidence) | Task 14 | pytest --cov report |
 | AC #9 (ENV_VARS updated) | Task 15 | Doc-sync test |
 | AC #10 (CHANGELOG entry) | Task 15 | Grep entry |
 | AC #11 (commands/forge-evidence.md) | Task 13 | File esiste + skill loadable |

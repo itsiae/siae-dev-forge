@@ -1,4 +1,4 @@
-"""Tests for lib/review-evidence/schema.py — JSON schema v1."""
+"""Tests for lib/review_evidence/schema.py — JSON schema v1."""
 import json
 from pathlib import Path
 

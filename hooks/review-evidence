@@ -100,6 +100,22 @@ if [ -n "$SAFE_ENVELOPE_CWD" ]; then
     cd "$SAFE_ENVELOPE_CWD"
 fi
 
+# ── MAJOR-2: iCloud detection + advisory warning ───────────────
+# When the repo lives under iCloud Drive, atomic rename is fragile and
+# .icloud placeholder offload can intermittently corrupt evidence files.
+# Detect cwd (post envelope-cwd resolution) and surface a non-blocking
+# warning that the python collector embeds in verdict.warnings. Disable
+# via DEVFORGE_EVIDENCE_ICLOUD_WARN=0.
+ICLOUD_WARNING=""
+if [ "${DEVFORGE_EVIDENCE_ICLOUD_WARN:-1}" != "0" ]; then
+    case "$PWD" in
+        *"Mobile Documents/com~apple~CloudDocs"*|*"iCloud Drive"*)
+            ICLOUD_WARNING="repo in iCloudDocs — atomic rename fragile, potential .icloud placeholder issues"
+            ;;
+    esac
+fi
+export DEVFORGE_EVIDENCE_ICLOUD_WARNING="${ICLOUD_WARNING}"
+
 TRIGGER="other"
 IS_BLOCKING=0
 case "$HOOK_EVENT_NAME" in
