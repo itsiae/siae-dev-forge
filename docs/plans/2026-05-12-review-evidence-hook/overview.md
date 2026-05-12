@@ -28,7 +28,7 @@ docs + skill command), JSON Schema v1.
 
 | # | Task | File | SP | Stato |
 |---|------|------|----|-------|
-| 0 | Test infrastructure bootstrap (root conftest + sys.path) | `task-00-test-infra.md` | 0.5 | [PENDING] |
+| 0 | Test infrastructure bootstrap (root conftest + sys.path) | `task-00-test-infra.md` | 0.5 | [DONE] |
 | 1 | Schema JSON v1 + dataclass + serialization | `task-01-schema.md` | 1.5 | [PENDING] |
 | 2 | Atomic write con iCloud retry + fallback | `task-02-atomic-write-icloud.md` | 1.0 | [PENDING] |
 | 3 | Hook bash entry point + hooks.json + bypass state file | `task-03-hook-bash-entry.md` | 1.5 | [PENDING] |
