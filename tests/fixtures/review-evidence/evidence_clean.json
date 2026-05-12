@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "sha": "abc123",
+  "branch": "feature/x",
+  "computed_at": "2026-05-12T16:00:00Z",
+  "dirty_tree": false,
+  "base_branch": "main",
+  "stack_detected": ["python"],
+  "metrics": {
+    "coverage": {"overall_pct": 85.0, "delta_vs_base": 0.5, "per_file": [], "source": "local:coverage.py"},
+    "lint": {"errors": 0, "warnings": 2, "findings": [], "source": "local:ruff"},
+    "complexity": {"max_cyclomatic": 8, "files_over_threshold": [], "source": "local:radon"},
+    "ci_quality": {"available": false, "ci_run_id": null, "problems_critical": 0, "problems_high": 0, "findings": [], "source": null}
+  },
+  "spec_drift": null,
+  "verdict": {"block": false, "block_reasons": [], "warnings": []}
+}
