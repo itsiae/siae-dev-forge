@@ -57,3 +57,29 @@ to reset counters.
 | `~/.claude/.devforge-git-gate-bypass-count` | pre-commit | Daily bypass counter |
 | `~/.claude/.devforge-blind-review-bypass-count` | pr-blind-review-gate | Daily bypass counter |
 | `~/.claude/.devforge-force-stop-count` | stop-gate | Daily force-stop counter |
+
+## Plugin root resolution
+
+| Env var | Source | Description |
+|---|---|---|
+| `CLAUDE_PLUGIN_ROOT` | Iniettata da Claude Code nell'env del processo hook | Path assoluto della directory installata del plugin (es. `~/.claude/plugins/cache/siae-devforge/siae-devforge/<version>`). Da NON valorizzare nel plugin: e' responsabilita' dell'harness. |
+
+### Convenzione quoting in `hooks.json`
+
+Il pattern canonico per riferire `${CLAUDE_PLUGIN_ROOT}` in `hooks.json` usa double-quotes JSON-escaped:
+
+**JSON source** (sorgente con escape):
+
+```json
+"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start"
+```
+
+**Stringa ricevuta da bash dopo parse JSON dall'harness**:
+
+```
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start
+```
+
+Le double-quote (escaped come `\"` nel JSON source) sono **necessarie** per consentire a bash di espandere `${CLAUDE_PLUGIN_ROOT}` iniettata dall'harness. Single quotes bloccherebbero l'espansione e l'hook fallisce con `bash: ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd: No such file or directory`.
+
+Regola enforced da `tests/hooks/hooks-json-var-expansion.test.sh`.
