@@ -1139,6 +1139,15 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+# Test hooks.json var expansion (fix: CLAUDE_PLUGIN_ROOT single-quote bug)
+if bash "${PLUGIN_ROOT}/tests/hooks/hooks-json-var-expansion.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  hooks.json: \${CLAUDE_PLUGIN_ROOT} expansion (22 commands, runtime smoke)"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  hooks.json: \${CLAUDE_PLUGIN_ROOT} single-quote bug presente o JSON invalido"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""

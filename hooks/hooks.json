@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' session-start",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
             "async": false
           }
         ]
@@ -18,17 +18,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-context",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" devforge-context",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-reset",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" batch-reset",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' sport-task-detect",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" sport-task-detect",
             "timeout": 5
           }
         ]
@@ -40,17 +40,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pre-commit",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" pre-commit",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-blind-review-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" pr-blind-review-gate",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' pr-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" pr-gate",
             "timeout": 15
           }
         ]
@@ -60,12 +60,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" tdd-gate",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' brainstorming-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" brainstorming-gate",
             "timeout": 5
           }
         ]
@@ -75,17 +75,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' plan-gate-write",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" plan-gate-write",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' tdd-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" tdd-gate",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' brainstorming-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" brainstorming-gate",
             "timeout": 5
           }
         ]
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' plan-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" plan-gate",
             "timeout": 5
           }
         ]
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' sub-skill-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" sub-skill-gate",
             "timeout": 5
           }
         ]
@@ -117,7 +117,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' stop-gate",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" stop-gate",
             "timeout": 5
           }
         ]
@@ -129,17 +129,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' post-skill",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" post-skill",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' skill-advisory",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" skill-advisory",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' state-writer",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" state-writer",
             "timeout": 5
           }
         ]
@@ -149,17 +149,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' post-commit-review",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" post-commit-review",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' capture-test-result",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" capture-test-result",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' batch-checkpoint",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" batch-checkpoint",
             "timeout": 5
           }
         ]
@@ -169,7 +169,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd' devforge-flusher",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" devforge-flusher",
             "timeout": 10,
             "async": true
           }
