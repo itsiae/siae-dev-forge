@@ -9,6 +9,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# Self-bootstrap sys.path so this module works both as `pytest tests/` (root
+# conftest injects REPO_ROOT) and as direct script invocation `python3 collector.py`
+# from hooks/review-evidence (no parent process injects sys.path).
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from lib.review_evidence.atomic_io import DiskFullError, write_evidence_atomic
 from lib.review_evidence.registry import applicable, register, registry
 from lib.review_evidence.schema import SCHEMA_VERSION
