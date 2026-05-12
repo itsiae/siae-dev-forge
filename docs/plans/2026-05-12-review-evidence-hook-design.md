@@ -1,15 +1,127 @@
 ---
-status: draft
+status: implemented
 created: 2026-05-12
-revised: 2026-05-12 (iter 1 — spec-review fixes W1, W3-W8; W2 declined)
+revised: 2026-05-12 (iter 2 — implementation manifest added, post live drift detection)
 topic: review-evidence-hook
 owner: lodetomasi
 priority: high
-sp_human: 21.5
-sp_augmented: 8.5
+sp_human: 22.0
+sp_augmented: 8.7
 ---
 
 # Design — Hook deterministico pre-review: `review-evidence`
+
+## Implementation manifest (esaustivo, post-implementation)
+
+Tutti i file prodotti dall'implementazione del piano `docs/plans/2026-05-12-review-evidence-hook/`. Questa sezione è autoritativa per il **spec-drift detector** (cfr. `lib/review_evidence/spec_drift.py`): file in questa lista NON sono unplanned.
+
+### Componenti runtime (hook + lib)
+
+- `hooks/review-evidence`
+- `hooks/session-start`
+- `lib/review_evidence/__init__.py`
+- `lib/review_evidence/_sarif.py`
+- `lib/review_evidence/atomic_io.py`
+- `lib/review_evidence/ci_fetch.py`
+- `lib/review_evidence/collector.py`
+- `lib/review_evidence/collectors/__init__.py`
+- `lib/review_evidence/collectors/_checkstyle.py`
+- `lib/review_evidence/collectors/_jacoco.py`
+- `lib/review_evidence/collectors/_lcov.py`
+- `lib/review_evidence/collectors/_pmd.py`
+- `lib/review_evidence/collectors/hcl.py`
+- `lib/review_evidence/collectors/java.py`
+- `lib/review_evidence/collectors/python.py`
+- `lib/review_evidence/collectors/typescript.py`
+- `lib/review_evidence/paths.py`
+- `lib/review_evidence/registry.py`
+- `lib/review_evidence/schema.py`
+- `lib/review_evidence/spec_drift.py`
+- `lib/review_evidence/thresholds.py`
+
+### Renderer integration (agents)
+
+- `agents/code-reviewer.md`
+- `agents/spec-reviewer.md`
+
+### Skill on-demand
+
+- `commands/forge-evidence.md`
+
+### Test suite
+
+- `tests/conftest.py`
+- `tests/review-evidence/__init__.py`
+- `tests/review-evidence/test_no_regression.py`
+- `tests/test_env_vars_doc_sync.py`
+- `tests/test_forge_evidence_command.py`
+- `tests/test_review_evidence_atomic_io.py`
+- `tests/test_review_evidence_chaos.py`
+- `tests/test_review_evidence_ci_fetch.py`
+- `tests/test_review_evidence_collector_hcl.py`
+- `tests/test_review_evidence_collector_java_coverage.py`
+- `tests/test_review_evidence_collector_java_static.py`
+- `tests/test_review_evidence_collector_python.py`
+- `tests/test_review_evidence_collector_script.py`
+- `tests/test_review_evidence_collector_typescript.py`
+- `tests/test_review_evidence_e2e.py`
+- `tests/test_review_evidence_followup.py`
+- `tests/test_review_evidence_hook.py`
+- `tests/test_review_evidence_orchestrator.py`
+- `tests/test_review_evidence_renderer_contract.py`
+- `tests/test_review_evidence_schema.py`
+- `tests/test_review_evidence_spec_drift.py`
+- `tests/test_review_evidence_thresholds.py`
+- `tests/hooks/hooks-json-var-expansion.test.sh`
+
+### Test fixture
+
+- `tests/fixtures/review-evidence/.gitkeep`
+- `tests/fixtures/review-evidence/checkstyle_result.xml`
+- `tests/fixtures/review-evidence/codeql_sample.sarif`
+- `tests/fixtures/review-evidence/coverage_python.json`
+- `tests/fixtures/review-evidence/design_italian_headers.md`
+- `tests/fixtures/review-evidence/design_with_codefences.md`
+- `tests/fixtures/review-evidence/eslint_output.json`
+- `tests/fixtures/review-evidence/evidence_clean.json`
+- `tests/fixtures/review-evidence/evidence_full_block.json`
+- `tests/fixtures/review-evidence/jacoco_gradle.xml`
+- `tests/fixtures/review-evidence/jacoco_maven.xml`
+- `tests/fixtures/review-evidence/jacoco_multimodule.xml`
+- `tests/fixtures/review-evidence/lcov.info`
+- `tests/fixtures/review-evidence/pmd_report.xml`
+- `tests/fixtures/review-evidence/qodana_sample.sarif`
+- `tests/fixtures/review-evidence/radon_cc.json`
+- `tests/fixtures/review-evidence/ruff_output.json`
+- `tests/fixtures/review-evidence/sonar_sample.sarif`
+- `tests/fixtures/review-evidence/terraform_validate.json`
+- `tests/fixtures/review-evidence/tflint_output.json`
+
+### Planning artifacts (questo file e sotto-piano)
+
+- `docs/plans/2026-05-12-review-evidence-hook-design.md`
+- `docs/plans/2026-05-12-review-evidence-hook/overview.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-00-test-infra.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-01-schema.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-02-atomic-write-icloud.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-03-hook-bash-entry.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-04-orchestrator.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-05-python-collector.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-06-typescript-collector.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-07-java-coverage.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-08-java-static.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-09-hcl-collector.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-10-ci-fetch-sarif.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-11-spec-drift.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-12-renderer-agents.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-13-skill-command.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-14-e2e-test.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-15-docs.md`
+- `docs/plans/2026-05-12-review-evidence-hook/task-16-edge-case-hardening.md`
+
+### Root-level (non matchabili da PATH_RE, accettati implicit)
+
+- `.gitignore`, `CHANGELOG.md`, `README.md`, `hooks/ENV_VARS.md`, `hooks/hooks.json` (modifiche additive, già parte del repo)
 
 ## Contesto
 

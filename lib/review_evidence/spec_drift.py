@@ -27,6 +27,14 @@ ALLOWLIST_HEADER_RE = re.compile(
     r"|criteri"      # criteri di accettazione (Italian)
     r"|modificare"   # "modificare"/"creare" — SIAE plan convention
     r"|creare"
+    r"|manifest"     # "implementation manifest" — exhaustive file enumeration post-impl
+    r"|renderer"     # "renderer integration" — agent prompt files
+    r"|skill"        # "skill on-demand" — commands/forge-*.md
+    r"|planning"     # "planning artifacts" — design doc + task spec files
+    r"|runtime"      # "componenti runtime" — hook + lib files
+    r"|root-level"   # "root-level" — .gitignore, CHANGELOG, etc.
+    r"|integration"  # "renderer integration", "test integration"
+    r"|fixture"      # "test fixture"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )
@@ -83,6 +91,11 @@ def extract_files_from_design(content: str) -> list[str]:
     return sorted({m.group(0) for m in PATH_RE.finditer(section_content)})
 
 
+def _top_part(p: Path) -> str:
+    """Return the first path component, or '.' if the path is empty/root-level."""
+    return p.parts[0] if p.parts else "."
+
+
 def severity(unplanned: list[str], in_plan: list[str] | None = None) -> str:
     if not unplanned:
         return "none"
@@ -92,7 +105,7 @@ def severity(unplanned: list[str], in_plan: list[str] | None = None) -> str:
     in_plan = in_plan or []
     plan_dirs = {Path(p).parent for p in in_plan}
     unplanned_dirs = {Path(p).parent for p in unplanned}
-    new_top_levels = {p.parts[0] for p in unplanned_dirs} - {p.parts[0] for p in plan_dirs}
+    new_top_levels = {_top_part(p) for p in unplanned_dirs} - {_top_part(p) for p in plan_dirs}
     if new_top_levels:
         return "medium"
     same_dir = all(d in plan_dirs for d in unplanned_dirs)
