@@ -1,0 +1,4 @@
+{
+  "src/foo.py": [{"type": "function", "name": "process", "complexity": 22, "rank": "E", "lineno": 10, "endline": 80}],
+  "src/bar.py": [{"type": "function", "name": "helper", "complexity": 4, "rank": "A", "lineno": 5, "endline": 20}]
+}
