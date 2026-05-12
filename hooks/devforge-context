@@ -39,7 +39,7 @@ compute_state_hash() {
             design_mtime=$(stat -f%m "$design_doc" 2>/dev/null || stat -c%Y "$design_doc" 2>/dev/null || echo 0)
         fi
     fi
-    printf '%s|%s|%s|%s|%s' "$skills" "$branch" "$tdd_phase" "$gate_violation" "$design_mtime" | shasum | cut -d' ' -f1
+    printf '%s|%s|%s|%s|%s' "$skills" "$branch" "$tdd_phase" "$gate_violation" "$design_mtime" | _devforge_shasum | cut -d' ' -f1
 }
 
 CURRENT_HASH=$(compute_state_hash)
