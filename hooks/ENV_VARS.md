@@ -34,6 +34,8 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 | `DEVFORGE_EVIDENCE_DESIGN_DOC` | (auto) | Override path design doc (default: file piu' recente in `docs/plans/`) |
 | `DEVFORGE_SKIP_EVIDENCE` | `0` | Bypass fallback. Preferito: `touch ~/.claude/.devforge-skip-evidence` (state file piu' affidabile in subprocess hook). Tracked, abuse log a 5/day. |
 | `DEVFORGE_EVIDENCE_ICLOUD_WARN` | `1` | Emit warning se repo in iCloudDocs (atomic rename fragile) |
+| `DEVFORGE_EVIDENCE_COLLECTOR_PATH` | (auto) | Override path al collector.py (default: `lib/review_evidence/collector.py`). Usato in chaos test E41 per inject fake collector + power-user override. |
+| `DEVFORGE_EVIDENCE_ICLOUD_WARNING` | (auto) | Internal env exported dal hook bash quando cwd matcha pattern iCloudDocs; collector legge questa per emit warning in `verdict.warnings`. Non settare manualmente. |
 
 **State file bypass primario:** `~/.claude/.devforge-skip-evidence` — l'hook
 controlla l'esistenza del file PRIMA di compute. Il file puo' contenere

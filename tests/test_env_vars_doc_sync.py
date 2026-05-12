@@ -18,6 +18,8 @@ EXPECTED_VARS = {
     "DEVFORGE_EVIDENCE_DESIGN_DOC",
     "DEVFORGE_SKIP_EVIDENCE",
     "DEVFORGE_EVIDENCE_ICLOUD_WARN",
+    "DEVFORGE_EVIDENCE_COLLECTOR_PATH",
+    "DEVFORGE_EVIDENCE_ICLOUD_WARNING",
 }
 
 
@@ -43,3 +45,39 @@ def test_gitignore_has_review_evidence_dir():
 def test_readme_has_review_evidence_section():
     readme = (REPO_ROOT / "README.md").read_text()
     assert "review-evidence" in readme.lower() or "Review Evidence" in readme
+
+
+def test_no_undocumented_devforge_evidence_env_var():
+    """Grep code for DEVFORGE_EVIDENCE_* env var; every var must be both
+    in EXPECTED_VARS and in hooks/ENV_VARS.md. Catches drift automatically
+    so new env vars can't sneak in without doc + EXPECTED_VARS update.
+    """
+    import subprocess
+
+    p = subprocess.run(
+        [
+            "grep",
+            "-rhoE",
+            "DEVFORGE_EVIDENCE_[A-Z_]+",
+            "lib/review_evidence/",
+            "hooks/",
+            "tests/",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    found = set(p.stdout.split())
+    real_vars = {v for v in found if v.startswith("DEVFORGE_EVIDENCE_")}
+
+    missing_from_expected = real_vars - EXPECTED_VARS
+    assert not missing_from_expected, (
+        f"Env vars used in code but not in EXPECTED_VARS: {missing_from_expected}\n"
+        "Add to tests/test_env_vars_doc_sync.py::EXPECTED_VARS and hooks/ENV_VARS.md"
+    )
+
+    env_vars_md = (REPO_ROOT / "hooks" / "ENV_VARS.md").read_text()
+    missing_from_doc = {v for v in real_vars if v not in env_vars_md}
+    assert not missing_from_doc, (
+        f"Env vars used in code but not in hooks/ENV_VARS.md: {missing_from_doc}"
+    )

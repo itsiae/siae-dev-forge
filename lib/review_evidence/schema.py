@@ -102,6 +102,18 @@ def _check_version(version: str) -> None:
     raise ValueError(f"unsupported schema_version: {version}")
 
 
+def _safe_kwargs(cls, data: dict) -> dict:
+    """Strip unknown kwargs so dataclass __init__ doesn't raise on
+    forward-compat fields (E12). A reader for 1.0 must keep accepting
+    1.x payloads even if minor bumps introduce new fields — by contract
+    minor bumps are additive only, so unknown fields are safe to ignore.
+    """
+    if not data:
+        return {}
+    known = cls.__dataclass_fields__
+    return {k: v for k, v in data.items() if k in known}
+
+
 def evidence_from_json(raw: dict[str, Any]) -> Evidence:
     version = raw["schema_version"]
     _check_version(version)
@@ -109,17 +121,17 @@ def evidence_from_json(raw: dict[str, Any]) -> Evidence:
     metrics = {}
     raw_metrics = raw.get("metrics", {})
     if "coverage" in raw_metrics:
-        metrics["coverage"] = CoverageMetric(**raw_metrics["coverage"])
+        metrics["coverage"] = CoverageMetric(**_safe_kwargs(CoverageMetric, raw_metrics["coverage"]))
     if "lint" in raw_metrics:
-        metrics["lint"] = LintMetric(**raw_metrics["lint"])
+        metrics["lint"] = LintMetric(**_safe_kwargs(LintMetric, raw_metrics["lint"]))
     if "complexity" in raw_metrics:
-        metrics["complexity"] = ComplexityMetric(**raw_metrics["complexity"])
+        metrics["complexity"] = ComplexityMetric(**_safe_kwargs(ComplexityMetric, raw_metrics["complexity"]))
     if "ci_quality" in raw_metrics:
-        metrics["ci_quality"] = CiQualityMetric(**raw_metrics["ci_quality"])
+        metrics["ci_quality"] = CiQualityMetric(**_safe_kwargs(CiQualityMetric, raw_metrics["ci_quality"]))
 
     spec_drift = None
     if raw.get("spec_drift"):
-        spec_drift = SpecDrift(**raw["spec_drift"])
+        spec_drift = SpecDrift(**_safe_kwargs(SpecDrift, raw["spec_drift"]))
 
     return Evidence(
         schema_version=version,
@@ -131,7 +143,7 @@ def evidence_from_json(raw: dict[str, Any]) -> Evidence:
         stack_detected=raw["stack_detected"],
         metrics=metrics,
         spec_drift=spec_drift,
-        verdict=Verdict(**raw["verdict"]),
+        verdict=Verdict(**_safe_kwargs(Verdict, raw["verdict"])),
     )
 
 
