@@ -42,7 +42,8 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     PR_SECTION=""
     if echo "$GIT_BRANCH" | grep -qE '^(feature|fix|hotfix|bugfix)/' && command -v gh >/dev/null 2>&1; then
         # Cache PR info to avoid hitting API every message
-        PR_CACHE="${STATE_DIR}/.devforge-pr-cache-$(echo "$GIT_BRANCH" | shasum | cut -d' ' -f1)"
+        # Portability (issue #238): inline shim — archive non importa il helper, va modificato in-place.
+        PR_CACHE="${STATE_DIR}/.devforge-pr-cache-$(echo "$GIT_BRANCH" | { command -v shasum >/dev/null 2>&1 && shasum || sha1sum; } | cut -d' ' -f1)"
         PR_CACHE_MAX_AGE=300  # 5 minutes
 
         NEED_REFRESH=1

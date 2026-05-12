@@ -25,6 +25,25 @@ _devforge_epoch_ns() {
     echo "$ts"
 }
 
+# _devforge_shasum — portable SHA-1 wrapper (issue #238).
+# macOS ships `shasum` (Perl); GNU coreutils ships `sha1sum`. Git Bash on
+# Windows excludes /usr/bin/core_perl from the PATH that Claude Code passes
+# to hooks, so `shasum` is unavailable there even though Perl ships it.
+# Both backends emit `<40-hex>  -\n` on stdin, so callers using
+# `cut -d' ' -f1` / `head -c N` work identically.
+# Last-resort: drain stdin (SIGPIPE prevention) then emit zero-hash so
+# pipe consumers see a well-formed line. Unreachable on supported platforms.
+_devforge_shasum() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum
+    elif command -v sha1sum >/dev/null 2>&1; then
+        sha1sum
+    else
+        cat >/dev/null
+        printf '0000000000000000000000000000000000000000  -\n'
+    fi
+}
+
 # Ensure log directory exists
 mkdir -p "$(dirname "$DEVFORGE_LOG_FILE")"
 
@@ -329,7 +348,7 @@ devforge_get_sid() {
 # Generate a new session ID and persist it
 devforge_new_sid() {
     local sid
-    sid=$(_devforge_epoch_ns | shasum | head -c 8)
+    sid=$(_devforge_epoch_ns | _devforge_shasum | head -c 8)
     echo "$sid" > "$DEVFORGE_SID_FILE"
     echo "$sid"
 }

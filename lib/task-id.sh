@@ -14,6 +14,24 @@
 # which the gates treat as "no-op" (early-exit).
 # ─────────────────────────────────────────────────────────────────
 
+# _devforge_taskid_sha256 — portable SHA-256 wrapper (issue #238).
+# DUPLICATED (not imported) from logger.sh because task-id.sh is a
+# source-only library per the header contract above — it does not declare
+# a hard dependency on logger.sh and may be sourced standalone (e.g. by
+# diagnostic scripts or future unit tests). Maintainers: keep this body
+# byte-identical to _devforge_shasum (modulo -a 256) and add b2sum/other
+# backends in BOTH places atomically.
+_devforge_taskid_sha256() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum
+    else
+        cat >/dev/null
+        printf '0000000000000000000000000000000000000000000000000000000000000000  -\n'
+    fi
+}
+
 # devforge_compute_task_id
 # Emits the current 12-char hex task_id on stdout, or an empty string if
 # we are outside an itsiae/* repo (or outside any git repo).
@@ -56,8 +74,8 @@ devforge_compute_task_id() {
     fi
 
     material="${branch}|${design_doc}|${design_mtime}"
-    # shasum is available on macOS + GNU coreutils environments. Cut to 12 hex chars.
-    printf '%s' "$material" | shasum -a 256 | awk '{print $1}' | cut -c1-12
+    # Portable shasum/sha256sum wrapper — see _devforge_taskid_sha256 at top of file.
+    printf '%s' "$material" | _devforge_taskid_sha256 | awk '{print $1}' | cut -c1-12
 }
 
 # devforge_task_id_transition OLD_ID NEW_ID
