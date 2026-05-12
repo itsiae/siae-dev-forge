@@ -1,0 +1,385 @@
+#!/usr/bin/env bash
+# review-evidence — pre-compute deterministic quality signals for code review.
+# ─────────────────────────────────────────────────────────────────
+# Hook:     review-evidence
+# Eventi:   PreToolUse (Bash gh pr create|edit) — sync, can BLOCK
+#           PostToolUse (Bash, commit detected)  — async, warms cache
+#           Skill   (/forge-evidence)            — on-demand, sync, human-readable
+# Output:   additional_context (standard DevForge), decision:block only on
+#           PreToolUse + verdict.block=true AND no bypass.
+# Bypass:   state file ~/.claude/.devforge-skip-evidence (primary)
+#           env var DEVFORGE_SKIP_EVIDENCE=1 (fallback)
+#
+# Hardening (Task 16):
+#   Q03-M1  guard CWD envelope (absolute + inside git worktree)
+#   E01     skip on empty HEAD (just-init repo)
+#   E03     advisory lock to serialize concurrent invocations on same SHA
+#   E05     fail-CLOSED on PreToolUse blocking when jq missing
+#   E17     bounded walk in Python collector (offloaded to lib)
+#   E41     fail-CLOSED on collector failure (likely ENOSPC) on blocking
+#   E42     cache lookup honors fallback path via paths.resolve_evidence_path
+#   E48     detect iCloud .icloud placeholder + invalid JSON → recompute
+# ─────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="review-evidence"
+
+HOOK_INPUT=$(cat)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# shellcheck disable=SC1091
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
+# ── Bypass: state file primario, env var fallback ──────────────
+SKIP_STATE_FILE="${HOME}/.claude/.devforge-skip-evidence"
+if [ -f "$SKIP_STATE_FILE" ] || [ "${DEVFORGE_SKIP_EVIDENCE:-0}" = "1" ]; then
+    if [ -f "$SKIP_STATE_FILE" ]; then
+        BYPASS_SRC="state_file"
+    else
+        BYPASS_SRC="env_var"
+    fi
+    devforge_log "evidence_bypass_used" "info" \
+        "{\"source\":\"${BYPASS_SRC}\"}" 2>/dev/null || true
+    echo '{}'
+    exit 0
+fi
+
+# ── E05: pre-check jq before any envelope parsing ──────────────
+# If jq is missing we cannot read HOOK_EVENT_NAME or TOOL_COMMAND from the
+# stdin envelope. On a blocking trigger we have to assume worst-case and
+# fail-CLOSED rather than degrade silently to a no-op. We peek at the raw
+# JSON for the magic strings that mark a blocking event.
+if ! command -v jq >/dev/null 2>&1; then
+    case "$HOOK_INPUT" in
+        *'"PreToolUse"'*'gh pr create'*|*'"PreToolUse"'*'gh pr edit'*)
+            cat <<'JSON'
+{"decision":"block","reason":"review-evidence: jq is required but not installed on PATH. Install with 'brew install jq' (macOS) or 'apt install jq' (Debian/Ubuntu). Override: touch ~/.claude/.devforge-skip-evidence"}
+JSON
+            exit 0
+            ;;
+        *)
+            echo '{"additional_context":"review-evidence: jq missing — evidence collection skipped (non-blocking trigger)"}'
+            exit 0
+            ;;
+    esac
+fi
+
+# ── Extract envelope fields ────────────────────────────────────
+TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
+TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+HOOK_EVENT_NAME=$(echo "$HOOK_INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
+ENVELOPE_CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+
+# ── Q03-M1: guard ENVELOPE_CWD ─────────────────────────────────
+# The envelope `cwd` field is attacker-controllable in principle (a hostile
+# repo could land a hook that ships a hand-crafted envelope). Honoring it
+# unconditionally and then `mkdir -p .claude/review-evidence` could create
+# state files in arbitrary directories. Two guards:
+#   1. Must be an ABSOLUTE path (case match on /*)
+#   2. Must be inside an actual git work tree (rev-parse --show-toplevel)
+# If either check fails we ignore the envelope and stay in $PWD.
+SAFE_ENVELOPE_CWD=""
+if [ -n "$ENVELOPE_CWD" ]; then
+    case "$ENVELOPE_CWD" in
+        /*)
+            if [ -d "$ENVELOPE_CWD" ]; then
+                if git -C "$ENVELOPE_CWD" rev-parse --show-toplevel >/dev/null 2>&1; then
+                    SAFE_ENVELOPE_CWD="$ENVELOPE_CWD"
+                fi
+            fi
+            ;;
+        *)
+            # Relative or empty — drop it.
+            ;;
+    esac
+fi
+if [ -n "$SAFE_ENVELOPE_CWD" ]; then
+    cd "$SAFE_ENVELOPE_CWD"
+fi
+
+# ── MAJOR-2: iCloud detection + advisory warning ───────────────
+# When the repo lives under iCloud Drive, atomic rename is fragile and
+# .icloud placeholder offload can intermittently corrupt evidence files.
+# Detect cwd (post envelope-cwd resolution) and surface a non-blocking
+# warning that the python collector embeds in verdict.warnings. Disable
+# via DEVFORGE_EVIDENCE_ICLOUD_WARN=0.
+ICLOUD_WARNING=""
+if [ "${DEVFORGE_EVIDENCE_ICLOUD_WARN:-1}" != "0" ]; then
+    case "$PWD" in
+        *"Mobile Documents/com~apple~CloudDocs"*|*"iCloud Drive"*)
+            ICLOUD_WARNING="repo in iCloudDocs — atomic rename fragile, potential .icloud placeholder issues"
+            ;;
+    esac
+fi
+export DEVFORGE_EVIDENCE_ICLOUD_WARNING="${ICLOUD_WARNING}"
+
+TRIGGER="other"
+IS_BLOCKING=0
+case "$HOOK_EVENT_NAME" in
+    PreToolUse)
+        if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+(create|edit) ]]; then
+            TRIGGER="pre_pr"
+            IS_BLOCKING=1
+        fi
+        ;;
+    PostToolUse)
+        # Chained after post-commit-review; trigger only on real commit/push.
+        if [[ "$TOOL_COMMAND" =~ git[[:space:]]+(commit|push) ]]; then
+            TRIGGER="post_commit"
+        fi
+        ;;
+    *)
+        # Skill or manual invocation (no hook_event_name set).
+        TRIGGER="skill_or_manual"
+        ;;
+esac
+
+if [ "$TRIGGER" = "other" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# ── Compute SHA + dirty flag ───────────────────────────────────
+# E01: ``git rev-parse HEAD`` on a just-init repo prints "HEAD" to
+# stdout *and* exits non-zero — without --verify we'd capture the
+# literal string "HEAD" as the SHA. Use --verify which silences output
+# on resolution failure.
+SHA=$(git rev-parse --verify HEAD 2>/dev/null || echo "")
+# Defence-in-depth: a hex SHA is 40 lowercase chars; anything else is junk.
+if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    SHA=""
+fi
+if [ -z "$SHA" ]; then
+    # E01: just-init repo with no HEAD yet. Advisory only — we cannot
+    # compute anything meaningful, but we make the skip explicit so the
+    # agent at least knows why no evidence is attached.
+    devforge_log "evidence_skip_no_head" "info" "{}" 2>/dev/null || true
+    echo '{"additional_context":"review-evidence: no HEAD commit yet, evidence skipped"}'
+    exit 0
+fi
+DIRTY=0
+# Ignore .claude/ when assessing dirty tree: it is plugin/hook output,
+# never user source. Without this, every cache miss would race itself
+# (write evidence → tree becomes dirty → next call recomputes). Also git
+# collapses untracked subtrees ("?? .claude/") so we exclude the whole
+# .claude/ prefix rather than just .claude/review-evidence/.
+DIRTY_LINES=$(git status --porcelain 2>/dev/null | grep -Ev '^.. \.claude/?$|^.. \.claude/' || true)
+if [ -n "$DIRTY_LINES" ]; then
+    DIRTY=1
+fi
+
+EVIDENCE_DIR=".claude/review-evidence"
+EVIDENCE_FILE="${EVIDENCE_DIR}/${SHA}.json"
+
+# Q03-M1 (continuation): only mkdir AFTER we have a non-empty SHA and a
+# safe cwd. This way a hostile envelope that slipped past the guards
+# above can't have us seed .claude directories all over the filesystem.
+mkdir -p "$EVIDENCE_DIR" 2>/dev/null || true
+
+# ── E48: detect iCloud .icloud placeholder + invalid JSON ──────
+# iCloud offloads files by replacing ``foo.json`` with a dot-prefixed
+# zero-byte stub ``.foo.json.icloud``. If we read the stub via jq we
+# get fail-open ("block=false"). Two defences:
+#   1. If .{sha}.json.icloud exists, force recompute.
+#   2. Even if the file is present, validate JSON with `jq empty` before
+#      trusting the verdict.
+ICLOUD_PLACEHOLDER="${EVIDENCE_DIR}/.${SHA}.json.icloud"
+INVALID_JSON=0
+if [ -f "$ICLOUD_PLACEHOLDER" ]; then
+    devforge_log "evidence_icloud_placeholder" "warn" \
+        "{\"sha\":\"${SHA}\"}" 2>/dev/null || true
+    rm -f "$EVIDENCE_FILE" 2>/dev/null || true
+fi
+if [ -f "$EVIDENCE_FILE" ] && ! jq empty "$EVIDENCE_FILE" >/dev/null 2>&1; then
+    INVALID_JSON=1
+    devforge_log "evidence_invalid_json" "warn" \
+        "{\"sha\":\"${SHA}\"}" 2>/dev/null || true
+    rm -f "$EVIDENCE_FILE" 2>/dev/null || true
+fi
+
+# ── E42: cache lookup honors fallback path ─────────────────────
+# atomic_io may have written to ~/.claude/review-evidence-fallback/<hash>/
+# when iCloud was blocking the primary path. Use the helper so the
+# bash hook agrees with the python collector on where to look.
+RESOLVED_EVIDENCE=""
+if command -v python3 >/dev/null 2>&1; then
+    RESOLVED_EVIDENCE=$(python3 - <<PYEOF 2>/dev/null || echo ""
+import sys
+sys.path.insert(0, "${PLUGIN_ROOT}")
+try:
+    from lib.review_evidence.paths import resolve_evidence_path
+    from pathlib import Path
+    p = resolve_evidence_path("${SHA}", Path("."))
+    if p is not None:
+        print(p)
+except Exception:
+    pass
+PYEOF
+)
+fi
+if [ -n "$RESOLVED_EVIDENCE" ] && [ -f "$RESOLVED_EVIDENCE" ]; then
+    EVIDENCE_FILE="$RESOLVED_EVIDENCE"
+fi
+
+# ── Cache lookup ───────────────────────────────────────────────
+NEEDS_COMPUTE=1
+if [ "$DIRTY" = "0" ] && [ -f "$EVIDENCE_FILE" ] && [ "$INVALID_JSON" = "0" ]; then
+    NEEDS_COMPUTE=0
+fi
+
+if [ "$NEEDS_COMPUTE" = "1" ]; then
+    # ── E03: serialize concurrent invocations on the same SHA ──
+    # Two simultaneous PreToolUse+PostToolUse on the same SHA can race
+    # — both compute, both write, atomic_io retries collide on iCloud.
+    # mkdir is the canonical atomic lock primitive. The second caller
+    # waits up to 30s and then either reads the fresh evidence or
+    # gives up gracefully.
+    LOCK_DIR="${EVIDENCE_DIR}/${SHA}.lock"
+    LOCK_ACQUIRED=0
+    for _ in $(seq 1 30); do
+        if mkdir "$LOCK_DIR" 2>/dev/null; then
+            LOCK_ACQUIRED=1
+            # Ensure lock release on any exit path
+            # shellcheck disable=SC2064
+            trap "rm -rf '${LOCK_DIR}' 2>/dev/null || true" EXIT INT TERM
+            break
+        fi
+        sleep 1
+        # If the other writer finished while we waited, short-circuit.
+        if [ -f "$EVIDENCE_FILE" ] && [ "$DIRTY" = "0" ]; then
+            NEEDS_COMPUTE=0
+            break
+        fi
+    done
+    if [ "$LOCK_ACQUIRED" = "0" ] && [ "$NEEDS_COMPUTE" = "1" ]; then
+        # 30s elapsed and still no evidence — the other process is wedged.
+        # On a blocking trigger we MUST fail-CLOSED.
+        if [ "$IS_BLOCKING" = "1" ]; then
+            cat <<JSON
+{"decision":"block","reason":"review-evidence: lock contention on ${SHA:0:8}, cannot verify quality. Retry, or override: touch ~/.claude/.devforge-skip-evidence"}
+JSON
+            exit 0
+        fi
+        echo '{"additional_context":"review-evidence: lock contention (non-blocking)"}'
+        exit 0
+    fi
+fi
+
+if [ "$NEEDS_COMPUTE" = "1" ]; then
+    BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+    if [ -z "$BASE_BRANCH" ]; then
+        BASE_BRANCH="main"
+    fi
+
+    # Allow tests/chaos to substitute the collector script (E41 chaos test).
+    COLLECTOR_PATH="${DEVFORGE_EVIDENCE_COLLECTOR_PATH:-${PLUGIN_ROOT}/lib/review_evidence/collector.py}"
+
+    if [ "$TRIGGER" = "post_commit" ]; then
+        # Async: detach so we never block the commit hook chain.
+        nohup python3 "$COLLECTOR_PATH" \
+            --sha "$SHA" --base "$BASE_BRANCH" --dirty "$DIRTY" \
+            --out "$EVIDENCE_FILE" >/dev/null 2>&1 &
+        echo '{"additional_context":"review-evidence: async compute scheduled for '"${SHA:0:8}"'"}'
+        exit 0
+    fi
+    # Sync (pre_pr or skill_or_manual)
+    set +e
+    python3 "$COLLECTOR_PATH" \
+        --sha "$SHA" --base "$BASE_BRANCH" --dirty "$DIRTY" \
+        --out "$EVIDENCE_FILE" 2>/dev/null
+    COLLECTOR_RC=$?
+    set -e
+    if [ "$COLLECTOR_RC" != "0" ]; then
+        # E41: collector failure (disk full, python crash, etc.).
+        # On a blocking trigger we MUST fail-CLOSED — the agent cannot
+        # be allowed to open a PR when we couldn't verify quality.
+        if [ "$IS_BLOCKING" = "1" ]; then
+            if [ "$COLLECTOR_RC" = "2" ]; then
+                BLOCK_REASON="disk full / quota exceeded — cannot persist evidence"
+            else
+                BLOCK_REASON="collector exited ${COLLECTOR_RC} — cannot verify quality"
+            fi
+            devforge_log "evidence_block_compute_failed" "error" \
+                "{\"sha\":\"${SHA}\",\"rc\":${COLLECTOR_RC}}" 2>/dev/null || true
+            cat <<JSON
+{"decision":"block","reason":"review-evidence: ${BLOCK_REASON}. Override: touch ~/.claude/.devforge-skip-evidence"}
+JSON
+            exit 0
+        fi
+        echo '{"additional_context":"review-evidence: compute failed (non-blocking, rc='${COLLECTOR_RC}')"}'
+        exit 0
+    fi
+
+    # E42 again: after compute the file may live in fallback dir.
+    # Re-resolve so the rest of the hook reads from the right place.
+    if [ ! -f "$EVIDENCE_FILE" ] && command -v python3 >/dev/null 2>&1; then
+        RESOLVED_EVIDENCE=$(python3 - <<PYEOF 2>/dev/null || echo ""
+import sys
+sys.path.insert(0, "${PLUGIN_ROOT}")
+try:
+    from lib.review_evidence.paths import resolve_evidence_path
+    from pathlib import Path
+    p = resolve_evidence_path("${SHA}", Path("."))
+    if p is not None:
+        print(p)
+except Exception:
+    pass
+PYEOF
+)
+        if [ -n "$RESOLVED_EVIDENCE" ] && [ -f "$RESOLVED_EVIDENCE" ]; then
+            EVIDENCE_FILE="$RESOLVED_EVIDENCE"
+        fi
+    fi
+fi
+
+# ── Read verdict + enforce hard-block (only on PreToolUse) ─────
+if [ ! -f "$EVIDENCE_FILE" ]; then
+    # Evidence not found anywhere — on blocking trigger fail-CLOSED.
+    if [ "$IS_BLOCKING" = "1" ]; then
+        cat <<JSON
+{"decision":"block","reason":"review-evidence: no evidence file for ${SHA:0:8} after compute. Cannot verify quality. Override: touch ~/.claude/.devforge-skip-evidence"}
+JSON
+        exit 0
+    fi
+    echo '{}'
+    exit 0
+fi
+
+# Final JSON sanity check before reading verdict.
+if ! jq empty "$EVIDENCE_FILE" >/dev/null 2>&1; then
+    if [ "$IS_BLOCKING" = "1" ]; then
+        cat <<JSON
+{"decision":"block","reason":"review-evidence: evidence file ${EVIDENCE_FILE} is not valid JSON (likely iCloud placeholder). Override: touch ~/.claude/.devforge-skip-evidence"}
+JSON
+        exit 0
+    fi
+    echo '{"additional_context":"review-evidence: evidence file unreadable (non-blocking)"}'
+    exit 0
+fi
+
+BLOCK=$(jq -r '.verdict.block // false' "$EVIDENCE_FILE" 2>/dev/null || echo "false")
+REASONS=$(jq -r '.verdict.block_reasons | join(", ")' "$EVIDENCE_FILE" 2>/dev/null || echo "")
+
+if [ "$IS_BLOCKING" = "1" ] && [ "$BLOCK" = "true" ]; then
+    SAFE_REASONS=$(echo "$REASONS" | sed 's/"/\\"/g')
+    devforge_log "evidence_block" "warn" \
+        "{\"sha\":\"${SHA}\",\"reasons\":\"${SAFE_REASONS}\"}" 2>/dev/null || true
+    cat <<JSON
+{
+  "decision": "block",
+  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: touch ~/.claude/.devforge-skip-evidence"
+}
+JSON
+    exit 0
+fi
+
+# ── Advisory (always) ──────────────────────────────────────────
+COV=$(jq -r '.metrics.coverage.overall_pct // "n/a"' "$EVIDENCE_FILE" 2>/dev/null || echo "n/a")
+LINT=$(jq -r '.metrics.lint.errors // 0' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+CTX="review-evidence ${SHA:0:8}: coverage=${COV}%, lint_errors=${LINT}, block=${BLOCK}. File: ${EVIDENCE_FILE}"
+cat <<JSON
+{"additional_context": "${CTX}"}
+JSON

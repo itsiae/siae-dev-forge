@@ -1,0 +1,11 @@
+{
+  "version": "2.1.0",
+  "runs": [{
+    "tool": {"driver": {"name": "SonarQube"}},
+    "results": [
+      {"ruleId": "java:S1234", "level": "error",
+       "message": {"text": "Critical bug"},
+       "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/X.java"}, "region": {"startLine": 10}}}]}
+    ]
+  }]
+}

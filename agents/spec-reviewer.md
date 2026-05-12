@@ -86,6 +86,34 @@ verificato il contrario con le tue mani.
 
 ## Workflow
 
+### Step 0.5 — Load Pre-Computed Spec-Drift Evidence
+
+Prima di analizzare il design doc, leggi `.claude/review-evidence/<sha>.json`
+per la sezione `spec_drift` calcolata deterministicamente dall'hook
+`review-evidence` (dove `<sha>` è l'output di `git rev-parse HEAD`).
+
+**Se evidence presente con `spec_drift` non-null:**
+
+- `design_doc_path` — path del design doc auto-discovered (o env override)
+- `files_in_plan` — path estratti dalle sezioni allowlist del doc (code-fence/quote ignorati)
+- `files_changed` — output di `git diff --diff-filter=AMR -M <base>...HEAD`
+- `unplanned_files` — set difference (files modificati ma non nel piano)
+- `drift_severity` — `none | low | medium | high`
+
+**Cita i numeri:** "Drift `medium` rilevato: 4 file modificati non presenti nel
+design doc `2026-05-12-foo-design.md`: `src/x.py`, `src/y.py`, ..."
+
+**Se `drift_severity == high`**, parti dal verdetto: il design non copre la
+maggior parte delle modifiche; il design doc deve essere aggiornato prima del
+merge.
+
+**Se evidence assente:**
+
+- Annota "**evidence not pre-computed**" e procedi con analisi manuale del design doc
+- Esegui `git diff --name-only <base>...HEAD` manualmente e confronta con files_in_plan
+- Marca findings come `NON-DETERMINISTIC`
+- Suggerisci all'utente: "Lancia `/forge-evidence` prima di re-runnare la review per `spec_drift` riproducibile"
+
 ### Step 1 — Identifica il design doc / piano
 
 1. Se l'utente fornisce un riferimento esplicito a un design doc, usalo.

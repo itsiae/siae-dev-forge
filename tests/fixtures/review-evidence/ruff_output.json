@@ -1,0 +1,4 @@
+[
+  {"filename": "src/foo.py", "code": "E501", "message": "line too long", "location": {"row": 23, "column": 1}, "fix": null},
+  {"filename": "src/foo.py", "code": "F401", "message": "unused import", "location": {"row": 5, "column": 1}, "fix": null}
+]

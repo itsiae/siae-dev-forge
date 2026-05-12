@@ -819,6 +819,30 @@ Gli hook si attivano automaticamente in risposta a eventi di Claude Code.
 - **Dati registrati:** Timestamp, session ID, nome della skill invocata, fase SDLC
 - **Pattern:** Append-only JSONL — ogni riga e' un evento JSON auto-contenuto
 
+### Review Evidence Hook
+
+`hooks/review-evidence` pre-calcola in modo deterministico i segnali di
+qualita' (coverage, lint, complessita' ciclomatica, CI SARIF, spec-drift)
+per il SHA corrente. Il risultato e' scritto in
+`.claude/review-evidence/<sha>.json` e consumato come ground-truth dagli
+agent di code review (`code-reviewer`, `spec-reviewer`).
+
+**Trigger:**
+- `PreToolUse` Bash su `gh pr create|edit` -> sync compute, hard-block su soglie
+- `PostToolUse` Bash su commit -> async cache warm
+- Skill `/forge-evidence` -> on-demand
+
+**Design:** `docs/plans/2026-05-12-review-evidence-hook-design.md`
+
+**Stack supportati:** Java (jacoco + checkstyle + pmd), TypeScript (lcov +
+eslint + complexity-report), Python (coverage.py + ruff + radon), HCL
+(tflint + terraform validate). CI reports: parser SARIF 2.1.0 generico
+(Qodana, SonarQube, CodeQL, qualsiasi tool che emetta SARIF).
+
+**Soglie e bypass:** vedi [`hooks/ENV_VARS.md`](hooks/ENV_VARS.md) sezione
+"Review Evidence" — 9 env var `DEVFORGE_EVIDENCE_*` + state file bypass
+primario `~/.claude/.devforge-skip-evidence`.
+
 ### Activity Log
 
 Tutti e 3 gli hook scrivono eventi strutturati in `~/.claude/devforge-activity.jsonl` tramite il logger centralizzato `lib/logger.sh`. Il file e' in formato JSONL (una riga JSON per evento) e traccia:

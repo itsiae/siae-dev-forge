@@ -39,3 +39,6 @@ __pycache__/
 # Coverage.py artifacts (locali a sviluppo skill code-coverage)
 .coverage
 htmlcov/
+
+# Review evidence cache (per-SHA, deterministically computed by hooks/review-evidence)
+.claude/review-evidence/

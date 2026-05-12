@@ -1,0 +1,15 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [{
+    "tool": {"driver": {"name": "Qodana", "version": "2024.3"}},
+    "results": [
+      {"ruleId": "JavaNullPointerException", "level": "error",
+       "message": {"text": "Possible NPE"},
+       "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/main/java/Foo.java"}, "region": {"startLine": 42}}}]},
+      {"ruleId": "JavaUnusedImport", "level": "warning",
+       "message": {"text": "Unused import"},
+       "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/main/java/Bar.java"}, "region": {"startLine": 5}}}]}
+    ]
+  }]
+}

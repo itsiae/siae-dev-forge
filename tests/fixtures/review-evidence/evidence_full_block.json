@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "sha": "def456",
+  "branch": "feature/y",
+  "computed_at": "2026-05-12T17:00:00Z",
+  "dirty_tree": false,
+  "base_branch": "main",
+  "stack_detected": ["python"],
+  "metrics": {
+    "coverage": {"overall_pct": 45.0, "delta_vs_base": -8.0, "per_file": [], "source": "local:coverage.py"},
+    "lint": {"errors": 5, "warnings": 12, "findings": [], "source": "local:ruff"},
+    "complexity": {"max_cyclomatic": 22, "files_over_threshold": [], "source": "local:radon"},
+    "ci_quality": {"available": true, "ci_run_id": "9876", "problems_critical": 3, "problems_high": 8, "findings": [], "source": "ci:sarif:qodana"}
+  },
+  "spec_drift": {"design_doc_path": "docs/plans/x-design.md", "files_in_plan": ["src/foo.py"], "files_changed": ["src/foo.py", "src/bar.py"], "unplanned_files": ["src/bar.py"], "drift_severity": "high"},
+  "verdict": {"block": true, "block_reasons": ["coverage_below_threshold:45<60", "lint_errors:5>0", "complexity_max:22>15", "ci_critical:3>0", "drift_severity_high"], "warnings": []}
+}

@@ -395,6 +395,26 @@ for sentinel in .devforge-active-*; do
 done
 shopt -u nullglob
 
+# E40: cleanup stale review-evidence cache (>7 days).
+# The hook writes one JSON per SHA so on busy repos the cache grows
+# unbounded; keep only the last 7 days. Both the primary
+# (.claude/review-evidence/) and the iCloud fallback
+# (~/.claude/review-evidence-fallback/) are pruned.
+shopt -s nullglob
+REVIEW_EVIDENCE_LOCAL="${PWD}/.claude/review-evidence"
+if [ -d "$REVIEW_EVIDENCE_LOCAL" ]; then
+    find "$REVIEW_EVIDENCE_LOCAL" -maxdepth 1 -name '*.json' -mtime +7 -delete 2>/dev/null || true
+    # Also clean orphaned lock dirs (E03) older than 1h
+    find "$REVIEW_EVIDENCE_LOCAL" -maxdepth 1 -type d -name '*.lock' -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+    # Clean iCloud placeholders older than 7d (their primaries are gone too).
+    find "$REVIEW_EVIDENCE_LOCAL" -maxdepth 1 -name '.*.json.icloud' -mtime +7 -delete 2>/dev/null || true
+fi
+REVIEW_EVIDENCE_FALLBACK="${HOME}/.claude/review-evidence-fallback"
+if [ -d "$REVIEW_EVIDENCE_FALLBACK" ]; then
+    find "$REVIEW_EVIDENCE_FALLBACK" -mindepth 2 -maxdepth 2 -name '*.json' -mtime +7 -delete 2>/dev/null || true
+fi
+shopt -u nullglob
+
 # Cleanup session state directories older than 48h (preserve pending outbox)
 if [ -d "${HOME}/.claude/devforge-state" ]; then
     for session_dir in "${HOME}/.claude/devforge-state"/*/; do

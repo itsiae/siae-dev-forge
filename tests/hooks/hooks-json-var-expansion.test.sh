@@ -26,10 +26,11 @@ if [ "$single_count" -ne 0 ]; then
   exit 1
 fi
 
-# Assert 2: 22 occorrenze del byte-pattern escaped-dquote \"${CLAUDE_PLUGIN_ROOT}
+# Assert 2: 24 occorrenze del byte-pattern escaped-dquote \"${CLAUDE_PLUGIN_ROOT}
+# (22 pre-existing + 2 review-evidence: PreToolUse + PostToolUse, Task 03)
 escaped_count=$(grep -cF '\"${CLAUDE_PLUGIN_ROOT}' "$HOOKS_JSON" || true)
-if [ "$escaped_count" -ne 22 ]; then
-  echo "FAIL[2]: attese 22 occorrenze escaped-dquote \\\"\${CLAUDE_PLUGIN_ROOT}, trovate $escaped_count"
+if [ "$escaped_count" -ne 24 ]; then
+  echo "FAIL[2]: attese 24 occorrenze escaped-dquote \\\"\${CLAUDE_PLUGIN_ROOT}, trovate $escaped_count"
   exit 1
 fi
 
@@ -61,9 +62,9 @@ if [ "$failed" -ne 0 ]; then
   echo "FAIL[4]: $failed/$total hooks non si espandono correttamente"
   exit 1
 fi
-if [ "$total" -ne 22 ]; then
-  echo "FAIL[4]: attesi 22 commands totali, trovati $total"
+if [ "$total" -ne 24 ]; then
+  echo "FAIL[4]: attesi 24 commands totali, trovati $total"
   exit 1
 fi
 
-echo "PASS: hooks.json var expansion conforme (22 hooks, JSON valid, runtime expansion OK)"
+echo "PASS: hooks.json var expansion conforme (24 hooks, JSON valid, runtime expansion OK)"

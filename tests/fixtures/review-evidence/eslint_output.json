@@ -1,0 +1,6 @@
+[
+  {"filePath":"/repo/src/app.ts","messages":[
+    {"ruleId":"@typescript-eslint/no-unused-vars","severity":2,"message":"unused","line":12,"column":3},
+    {"ruleId":"prefer-const","severity":1,"message":"const","line":20,"column":5}
+  ],"errorCount":1,"warningCount":1,"fixableErrorCount":0,"fixableWarningCount":0}
+]
