@@ -8,10 +8,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from lib.review_evidence.atomic_io import write_evidence_atomic
+from lib.review_evidence.atomic_io import DiskFullError, write_evidence_atomic
 from lib.review_evidence.registry import applicable, register, registry
 from lib.review_evidence.schema import SCHEMA_VERSION
 from lib.review_evidence.thresholds import compute_verdict, load_thresholds
+
+# Distinct exit codes so the hook can tell "disk full" from generic failure
+# and fail-CLOSED on blocking triggers. E41 mitigation.
+EXIT_OK = 0
+EXIT_GENERIC = 1
+EXIT_DISK_FULL = 2
 
 
 def _git(args: list[str], cwd: Path) -> str:
@@ -152,12 +158,20 @@ def orchestrate(sha: str, base: str, dirty: bool, out_path: Path, repo_root: Pat
     }
     import json as _json
     content = _json.dumps(evidence, indent=2, default=str)
-    success, used_fallback, reason = write_evidence_atomic(out_path, content, sha=sha, repo_root=repo_root)
+    try:
+        success, used_fallback, reason = write_evidence_atomic(
+            out_path, content, sha=sha, repo_root=repo_root
+        )
+    except DiskFullError as e:
+        # E41: explicit, distinct exit code so the bash hook can fail-CLOSED
+        # on blocking triggers.
+        sys.stderr.write(f"review-evidence: ENOSPC writing evidence ({e})\n")
+        return EXIT_DISK_FULL
     if not success:
-        return 1
+        return EXIT_GENERIC
     if used_fallback:
         sys.stderr.write(f"review-evidence: used fallback path ({reason})\n")
-    return 0
+    return EXIT_OK
 
 
 def main() -> int:

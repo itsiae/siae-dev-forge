@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from lib.review_evidence.collectors._lcov import parse_lcov
+from lib.review_evidence.collectors.python import _walk_with_prune
 from lib.review_evidence.registry import register
 
 
@@ -23,7 +24,13 @@ class TypeScriptCollector:
                     return True
             except json.JSONDecodeError:
                 pass
-        return any(repo_root.rglob("*.ts")) or any(repo_root.rglob("*.tsx"))
+        # E17 sibling: bounded walk for .ts/.tsx discovery so a monorepo
+        # with vendored node_modules doesn't stall is_applicable.
+        if next(_walk_with_prune(repo_root, ".ts", first_only=True), None) is not None:
+            return True
+        if next(_walk_with_prune(repo_root, ".tsx", first_only=True), None) is not None:
+            return True
+        return False
 
     def collect(self, repo_root: Path, base_ref: str, head_ref: str) -> dict[str, Any]:
         return {
@@ -49,12 +56,35 @@ class TypeScriptCollector:
             return None
 
     def _eslint(self, repo_root: Path) -> dict[str, Any] | None:
+        """Run eslint and bucket findings.
+
+        E25 mitigation — when eslint exits non-zero AND stdout is empty
+        (typical of a config error: missing parser, invalid plugin,
+        unresolvable extends), the previous code returned ``None`` and
+        the orchestrator silently dropped the entire lint metric. Now we
+        distinguish:
+
+        * exit 0/1 + JSON stdout: normal output (1 means findings found)
+        * exit 2 + empty stdout: config error → return explicit
+          ``{"available": false, "reason": "eslint config error"}``
+        * any error: fall back to ``None`` (tool genuinely unavailable)
+        """
         try:
             p = subprocess.run(
                 ["npx", "--no-install", "eslint", ".", "--format", "json"],
                 cwd=repo_root, capture_output=True, text=True, timeout=15, check=False,
             )
             if not p.stdout.strip():
+                if p.returncode != 0:
+                    # E25: config error or invocation error — explicit signal.
+                    return {
+                        "available": False,
+                        "errors": 0,
+                        "warnings": 0,
+                        "findings": [],
+                        "source": "local:eslint",
+                        "reason": "eslint exited non-zero with no stdout (config error?)",
+                    }
                 return None
             data = json.loads(p.stdout)
             errors = sum(f.get("errorCount", 0) for f in data)

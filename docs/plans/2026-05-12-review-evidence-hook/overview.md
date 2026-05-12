@@ -29,22 +29,22 @@ docs + skill command), JSON Schema v1.
 | # | Task | File | SP | Stato |
 |---|------|------|----|-------|
 | 0 | Test infrastructure bootstrap (root conftest + sys.path) | `task-00-test-infra.md` | 0.5 | [DONE] |
-| 1 | Schema JSON v1 + dataclass + serialization | `task-01-schema.md` | 1.5 | [PENDING] |
-| 2 | Atomic write con iCloud retry + fallback | `task-02-atomic-write-icloud.md` | 1.0 | [PENDING] |
-| 3 | Hook bash entry point + hooks.json + bypass state file | `task-03-hook-bash-entry.md` | 1.5 | [PENDING] |
-| 4 | Collector framework orchestrator (collector.py) | `task-04-orchestrator.md` | 2.0 | [PENDING] |
-| 5 | Python collector (coverage.py + ruff + radon) | `task-05-python-collector.md` | 1.0 | [PENDING] |
-| 6 | TypeScript collector (vitest + eslint + complexity) | `task-06-typescript-collector.md` | 2.0 | [PENDING] |
-| 7 | Java collector — coverage (jacoco Maven+Gradle) | `task-07-java-coverage.md` | 1.5 | [PENDING] |
-| 8 | Java collector — static analysis (checkstyle+pmd) | `task-08-java-static.md` | 2.0 | [PENDING] |
-| 9 | HCL collector (tflint + terraform validate) | `task-09-hcl-collector.md` | 1.0 | [PENDING] |
-| 10 | CI-fetch SARIF parser multi-tool (Qodana/Sonar/CodeQL) | `task-10-ci-fetch-sarif.md` | 3.5 | [PENDING] |
-| 11 | Spec-drift detector + code-fence robustness | `task-11-spec-drift.md` | 1.5 | [PENDING] |
-| 12 | Renderer integration (code-reviewer + spec-reviewer) | `task-12-renderer-agents.md` | 1.0 | [PENDING] |
-| 13 | Skill `/forge-evidence` + command | `task-13-skill-command.md` | 0.5 | [PENDING] |
-| 14 | E2E renderer contract test + hook integration | `task-14-e2e-test.md` | 1.5 | [PENDING] |
-| 15 | Docs: ENV_VARS + CHANGELOG + .gitignore + README | `task-15-docs.md` | 1.0 | [PENDING] |
-| 16 | Edge case hardening + chaos tests (5 CRITICAL + 14 HIGH) | `task-16-edge-case-hardening.md` | 3.0 | [PENDING] |
+| 1 | Schema JSON v1 + dataclass + serialization | `task-01-schema.md` | 1.5 | [DONE] |
+| 2 | Atomic write con iCloud retry + fallback | `task-02-atomic-write-icloud.md` | 1.0 | [DONE] |
+| 3 | Hook bash entry point + hooks.json + bypass state file | `task-03-hook-bash-entry.md` | 1.5 | [DONE] |
+| 4 | Collector framework orchestrator (collector.py) | `task-04-orchestrator.md` | 2.0 | [DONE] |
+| 5 | Python collector (coverage.py + ruff + radon) | `task-05-python-collector.md` | 1.0 | [DONE] |
+| 6 | TypeScript collector (vitest + eslint + complexity) | `task-06-typescript-collector.md` | 2.0 | [DONE] |
+| 7 | Java collector — coverage (jacoco Maven+Gradle) | `task-07-java-coverage.md` | 1.5 | [DONE] |
+| 8 | Java collector — static analysis (checkstyle+pmd) | `task-08-java-static.md` | 2.0 | [DONE] |
+| 9 | HCL collector (tflint + terraform validate) | `task-09-hcl-collector.md` | 1.0 | [DONE] |
+| 10 | CI-fetch SARIF parser multi-tool (Qodana/Sonar/CodeQL) | `task-10-ci-fetch-sarif.md` | 3.5 | [DONE] |
+| 11 | Spec-drift detector + code-fence robustness | `task-11-spec-drift.md` | 1.5 | [DONE] |
+| 12 | Renderer integration (code-reviewer + spec-reviewer) | `task-12-renderer-agents.md` | 1.0 | [DONE] |
+| 13 | Skill `/forge-evidence` + command | `task-13-skill-command.md` | 0.5 | [DONE] |
+| 14 | E2E renderer contract test + hook integration | `task-14-e2e-test.md` | 1.5 | [DONE] |
+| 15 | Docs: ENV_VARS + CHANGELOG + .gitignore + README | `task-15-docs.md` | 1.0 | [DONE] |
+| 16 | Edge case hardening + chaos tests (5 CRITICAL + 14 HIGH) | `task-16-edge-case-hardening.md` | 3.0 | [DONE] |
 
 **Totale:** 25.0 SP (umano) / ~10 SP (augmented)
 

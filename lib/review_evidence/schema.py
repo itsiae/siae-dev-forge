@@ -10,6 +10,11 @@ from typing import Any, Optional
 
 SCHEMA_VERSION = "1.0"
 SUPPORTED_VERSIONS = {"1.0"}
+# Forward-compat: accept any 1.x version on read (minor bumps are additive
+# only by contract). Major version bumps (2.x) must be rejected — they
+# signal a breaking change that an old reader cannot interpret safely.
+# E12 mitigation.
+CURRENT_MAJOR = 1
 
 
 @dataclass
@@ -75,10 +80,27 @@ class Evidence:
     schema_version: str = SCHEMA_VERSION
 
 
+def _check_version(version: str) -> None:
+    """E12: accept any 1.x (minor bumps are additive only by contract),
+    raise on major bumps (2.x and beyond) which signal breaking changes.
+
+    The previous strict-set rejected ``1.1`` even though we contract minor
+    bumps to be backward-readable. A reader written for 1.0 must keep
+    accepting 1.x payloads; only a major version bump warrants rejection.
+    """
+    if version in SUPPORTED_VERSIONS:
+        return
+    parts = version.split(".")
+    if len(parts) >= 1 and parts[0].isdigit():
+        major = int(parts[0])
+        if major == CURRENT_MAJOR:
+            return  # forward-compat minor (e.g. "1.1", "1.42")
+    raise ValueError(f"unsupported schema_version: {version}")
+
+
 def evidence_from_json(raw: dict[str, Any]) -> Evidence:
     version = raw["schema_version"]
-    if version not in SUPPORTED_VERSIONS:
-        raise ValueError(f"unsupported schema_version: {version}")
+    _check_version(version)
 
     metrics = {}
     raw_metrics = raw.get("metrics", {})

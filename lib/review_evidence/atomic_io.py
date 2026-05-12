@@ -14,8 +14,22 @@ BACKOFF_BASE_SEC = 0.1
 FALLBACK_ROOT = Path.home() / ".claude" / "review-evidence-fallback"
 
 
+class DiskFullError(OSError):
+    """Raised when ENOSPC is hit and even the fallback path is full.
+
+    E41 mitigation — the hook catches this and emits decision:block on a
+    blocking trigger (gh pr create/edit). Without an explicit type, the
+    hook saw a generic OSError and treated it as advisory (fail-open).
+    """
+
+
 def _is_busy_error(exc: OSError) -> bool:
     return exc.errno in {errno.EBUSY, errno.ENOTEMPTY, errno.EAGAIN}
+
+
+def _is_disk_full(exc: OSError) -> bool:
+    """ENOSPC = no space left; EDQUOT = quota exceeded (NFS / iCloud)."""
+    return exc.errno in {errno.ENOSPC, getattr(errno, "EDQUOT", -1)}
 
 
 def _repo_hash(repo_root: Path) -> str:
@@ -42,7 +56,9 @@ def write_evidence_atomic(
 
     Retries 3x on EBUSY/ENOTEMPTY (iCloud sync). Falls back to
     ~/.claude/review-evidence-fallback/<repo_hash>/<sha>.json if all retries
-    fail. Non-busy errors propagate as exceptions.
+    fail. On ENOSPC (disk full) raises ``DiskFullError`` so the caller can
+    fail-CLOSED on blocking triggers (E41). Other unexpected OSError
+    propagate.
     """
     target = Path(target)
     last_err: Optional[OSError] = None
@@ -52,6 +68,9 @@ def write_evidence_atomic(
             _atomic_write_once(target, content)
             return True, False, None
         except OSError as e:
+            if _is_disk_full(e):
+                # E41: explicit, don't keep retrying — disk is full.
+                raise DiskFullError(e.errno, f"disk full / quota exceeded writing {target}") from e
             if not _is_busy_error(e):
                 raise
             last_err = e
@@ -61,8 +80,13 @@ def write_evidence_atomic(
     # sync contention is expected on the fallback location)
     repo_root = repo_root or Path.cwd()
     fallback_dir = FALLBACK_ROOT / _repo_hash(repo_root)
-    fallback_dir.mkdir(parents=True, exist_ok=True)
-    fallback_path = fallback_dir / f"{sha or target.stem}.json"
-    fallback_path.write_text(content, encoding="utf-8")
+    try:
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        fallback_path = fallback_dir / f"{sha or target.stem}.json"
+        fallback_path.write_text(content, encoding="utf-8")
+    except OSError as e:
+        if _is_disk_full(e):
+            raise DiskFullError(e.errno, f"disk full writing fallback {fallback_dir}") from e
+        raise
     reason = f"target write failed after {MAX_RETRIES} retries (EBUSY/ENOTEMPTY) — likely iCloud sync"
     return True, True, reason

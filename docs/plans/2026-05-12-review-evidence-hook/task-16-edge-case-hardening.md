@@ -8,6 +8,14 @@ Mitigare i **5 edge case CRITICAL** + **14 HIGH** identificati nell'edge-case hu
 
 ## Edge case coperti
 
+### NEW (post Task 03 quality review)
+
+| ID | Edge case | Mitigation | File toccato |
+|---|---|---|---|
+| Q03-M1 | **CWD envelope senza containment check (security MAJOR da Task 03 review)** — `cd "$ENVELOPE_CWD"` accetta qualsiasi directory; mkdir `.claude/review-evidence` può creare cartelle in repo arbitrari | Guard `case "$ENVELOPE_CWD" in /*) ;; *) ENVELOPE_CWD="";; esac` + `git -C "$ENVELOPE_CWD" rev-parse --show-toplevel` check prima del cd; spostare `mkdir -p` *dopo* check SHA non-vuoto | `hooks/review-evidence` |
+| Q05-M1 | **Ruff severity inflation (MAJOR da Task 05 review)** — mapping E/F→error troppo grezzo, classifica style E1-E7 come errori inflazionando lint_errors → block_threshold falsamente raggiunta | Restringi `error` a `F*` + `E9*` (syntax/pyflakes/bug), `E1-E7` → warning. Fixture aggiornata con regola B008 per coprire ramo warning. Assert stretti su `errors==N, warnings==M`. | `lib/review_evidence/collectors/python.py`, `tests/test_review_evidence_collector_python.py`, `tests/fixtures/review-evidence/ruff_output.json` |
+| Q11-M1 | **Spec-drift design doc glob non SIAE-compliant (MAJOR da Task 11 review)** — glob `*-design.md` non matcha convenzione SIAE `docs/plans/<topic>/design.md` (subdir layout), coverage produzione 0% | `plans_dir.rglob("design.md")` o pattern doppio `glob("*-design.md") + rglob("*/design.md")` con sort mtime. Back-compat con fixture corrente. | `lib/review_evidence/spec_drift.py`, `tests/test_review_evidence_spec_drift.py` |
+
 ### CRITICAL (fail-closed obbligatorio)
 
 | ID | Edge case | Mitigation | File toccato |

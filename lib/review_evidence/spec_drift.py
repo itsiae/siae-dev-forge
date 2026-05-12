@@ -5,10 +5,29 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
+# E38 mitigation — extended Italian header vocabulary. Real SIAE design docs
+# routinely use ``Tabella file`` (file table), ``Allegato`` (attachment),
+# ``Output`` (deliverable list). Without these the allowlist matched zero
+# headers on production docs and `extract_files_from_design` silently
+# returned []. The previous regex stopped at the bare English/Italian
+# minimum; extend it to cover the actual corpus.
 ALLOWLIST_HEADER_RE = re.compile(
-    r"^#+\s*(file|component|output|acceptance|test|deliverable|piano)",
+    r"^#+\s*("
+    r"file"          # English "files"
+    r"|component"
+    r"|piano"        # plan
+    r"|tabella"      # table (Italian)
+    r"|allegato"     # attachment (Italian)
+    r"|output"
+    r"|test"
+    r"|deliverable"
+    r"|acceptance"
+    r"|criteri"      # criteri di accettazione (Italian)
+    r"|modificare"   # "modificare"/"creare" — SIAE plan convention
+    r"|creare"
+    r")",
     re.IGNORECASE | re.MULTILINE,
 )
 HEADER_RE = re.compile(r"^#+\s+", re.MULTILINE)
@@ -84,23 +103,82 @@ def severity(unplanned: list[str], in_plan: list[str] | None = None) -> str:
     return "low"
 
 
-def _find_design_doc(repo_root: Path) -> Path | None:
+def _design_candidates(plans_dir: Path) -> list[Path]:
+    """Q11-M1 mitigation — match both legacy and SIAE-canonical layouts.
+
+    SIAE convention (see ``docs/plans/<topic>/design.md``) places one
+    ``design.md`` inside each topic subdir. The previous glob
+    ``*-design.md`` only matched the *legacy* flat layout
+    (``docs/plans/2026-05-12-foo-design.md``), so on production repos
+    coverage was effectively 0. We now accept BOTH and merge them, sorted
+    by mtime so newer designs win — with a deterministic tiebreaker on the
+    filename prefix (E34: iCloud can rewrite mtime when a file is
+    re-materialised, so a lexicographic prefix ``YYYY-MM-DD-*`` tiebreaker
+    keeps selection stable).
+    """
+    if not plans_dir.exists():
+        return []
+    # Legacy: docs/plans/YYYY-MM-DD-foo-design.md
+    legacy = list(plans_dir.glob("*-design.md"))
+    # SIAE-canonical: docs/plans/<topic>/design.md
+    canonical = list(plans_dir.rglob("design.md"))
+    # Drop any legacy entries that would also show up via rglob (rglob
+    # returns top-level matches too, so dedup by resolved path).
+    seen: set[Path] = set()
+    merged: list[Path] = []
+    for p in legacy + canonical:
+        rp = p.resolve()
+        if rp in seen:
+            continue
+        seen.add(rp)
+        merged.append(p)
+    # Sort: mtime DESC primary, name DESC secondary (lexicographic; for
+    # YYYY-MM-DD-* prefixed dirs this keeps the most recent date wins).
+    merged.sort(key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
+    return merged
+
+
+def _find_design_doc(repo_root: Path) -> Optional[Path]:
     override = os.environ.get("DEVFORGE_EVIDENCE_DESIGN_DOC")
     if override:
         p = Path(override)
         return p if p.exists() else None
     plans_dir = repo_root / "docs" / "plans"
-    if not plans_dir.exists():
-        return None
-    candidates = sorted(plans_dir.glob("*-design.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    candidates = _design_candidates(plans_dir)
     return candidates[0] if candidates else None
 
 
-def detect_drift(repo_root: Path, base: str, head: str) -> dict[str, Any] | None:
+def _safe_read_design(path: Path) -> Optional[str]:
+    """E36: read design doc tolerating binary / non-UTF8 content.
+
+    A renamed PDF (``.pdf`` → ``.md``) would otherwise raise
+    UnicodeDecodeError deep inside ``extract_files_from_design`` and the
+    orchestrator would swallow it silently. Better: explicit ``None``
+    return so the caller can mark ``drift_severity="unknown"``.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return None
+
+
+def detect_drift(repo_root: Path, base: str, head: str) -> Optional[dict[str, Any]]:
     design = _find_design_doc(repo_root)
     if design is None:
         return None
-    files_in_plan = extract_files_from_design(design.read_text())
+    content = _safe_read_design(design)
+    if content is None:
+        # E36: binary / non-UTF8 design doc — drift cannot be computed but
+        # we must not pretend everything is fine. Mark severity unknown.
+        return {
+            "design_doc_path": str(design),
+            "files_in_plan": [],
+            "files_changed": [],
+            "unplanned_files": [],
+            "drift_severity": "unknown",
+            "reason": "design_doc_unreadable_or_binary",
+        }
+    files_in_plan = extract_files_from_design(content)
     try:
         p = subprocess.run(
             ["git", "diff", "--name-only", "--diff-filter=AMR", "-M", f"{base}...{head}"],
