@@ -120,6 +120,46 @@ Mai concludere stato 3 da singolo `Unknown tool`. ToolSearch search PRIMA di cla
 
 ---
 
+## Step 0.5 — Load Pre-Computed Evidence (Deterministic Quality Signals)
+
+Prima di iniziare il 6-punti, leggi `.claude/review-evidence/<sha>.json` dove
+`<sha>` è l'output di `git rev-parse HEAD`. Il file è prodotto dall'hook
+`review-evidence` e contiene coverage, lint, complessità, CI quality reports e
+spec-drift NUMERICI per il SHA corrente.
+
+**Se evidence presente:**
+
+1. Carica il JSON via `Read` (formato: schema_version 1.0, vedi `lib/review_evidence/schema.py`)
+2. **NON ricalcolare** coverage/lint/complessità — usa i valori dell'evidence
+3. Cita il `source` per ogni claim:
+   - `local:coverage.py` / `local:lcov` / `local:jacoco-maven` → metrica locale eseguita
+   - `local:ruff` / `local:eslint` / `local:checkstyle+pmd` / `local:tflint` → linter locali
+   - `local:radon` / `local:complexity-report` → complessità locale
+   - `ci:sarif:Qodana` / `ci:sarif:SonarQube` / `ci:sarif:CodeQL` → da artefatto CI
+4. Se `verdict.block == true`, parti dal verdetto:
+   ```
+   Block triggered. Block reasons (deterministic):
+   - {reason1}
+   - {reason2}
+   ```
+5. Se `dirty_tree == true`, annota: "Evidence calcolata su working tree dirty — valori non riproducibili al 100%"
+6. Se `metrics.ci_quality.available == false` con reason `no completed CI runs`, annota:
+   "CI quality reports non ancora disponibili per questo SHA. Il pattern operativo è:
+   primo `gh pr create` opera su soli segnali locali; dopo che la CI ha girato,
+   `gh pr edit` ri-attiva l'hook che fetcha gli artefatti SARIF."
+
+**Se evidence assente** (file non esiste):
+
+- Annota nel verdetto finale: "**evidence not pre-computed** — falling back to subjective review"
+- Procedi con review classica MA marca esplicitamente ogni finding come `NON-DETERMINISTIC`
+- Suggerisci all'utente: "Lancia `/forge-evidence` prima di re-runnare la review per evidence riproducibile"
+
+**Comportamento atteso:** la review citerà metriche numeriche (es. "coverage 65%
+da `local:coverage.py`, ruff segnala 3 errori da `local:ruff`") invece di
+affermazioni soggettive ("la coverage sembra bassa").
+
+---
+
 ## PRIMA DELLA REVIEW — Raccolta Contesto
 
 Prima di iniziare la review, raccogli queste informazioni:
