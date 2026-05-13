@@ -398,6 +398,14 @@ def main() -> int:
     p.add_argument("--dirty", default="0")
     p.add_argument("--out", required=True)
     args = p.parse_args()
+    # Env-flag dispatch: when DEVFORGE_SCORING_V2_ENABLED=1, use the v2
+    # orchestrator (ScoreCard + RegressionVerdict + baseline_synthetic).
+    # Otherwise fall back to the v1 orchestrate() path. Task 14 wiring.
+    if os.environ.get("DEVFORGE_SCORING_V2_ENABLED", "0") == "1":
+        return orchestrate_v2(
+            sha=args.sha, base=args.base, dirty=args.dirty == "1",
+            out_path=Path(args.out),
+        )
     return orchestrate(sha=args.sha, base=args.base, dirty=args.dirty == "1", out_path=Path(args.out))
 
 
