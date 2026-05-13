@@ -1,0 +1,7 @@
+schema_version: 1
+weights:
+  security: 0.30
+  quality: 0.10
+  coverage: 0.10
+  spec_compliance: 0.0
+  discipline: 0.0

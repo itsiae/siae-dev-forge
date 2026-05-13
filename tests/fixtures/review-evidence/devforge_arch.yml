@@ -1,0 +1,8 @@
+schema_version: 1
+forbidden_paths:
+  - from: "src/api/"
+    to: "src/db/"
+    reason: "api must go through service layer"
+  - from: "src/test/"
+    to: "src/main/"
+    reason: "test cannot bleed into prod"
