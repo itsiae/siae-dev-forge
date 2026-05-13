@@ -61,6 +61,31 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **E2E test full pipeline** (`tests/test_review_evidence_e2e.py` v2 extension):
   hook bash -> collector -> S3 baseline -> reviewer agent contract.
 
+### Added (siae-fix-evidence skill)
+
+- **Skill `siae-fix-evidence`** (`skills/siae-fix-evidence/SKILL.md`): auto-fix
+  loop hook-driven per `BLOCK_REGRESSION` review-evidence v2. Skill composer
+  che legge `block_reasons` atomici e dispatcha `siae-tdd` o
+  `siae-code-standards` via Skill tool (ADR-7 dynamic prompt) fino ad
+  `AUTO_APPROVE` o escalation. Max 5 iter, token budget 200k, oscillation
+  guard (stesso `frozenset(block_reasons)` 2 iter consecutivi -> escalate).
+- **Fix parser** (`lib/review_evidence/fix_parser.py`): `parse_block_reasons`
+  riusa `evidence_from_json` (forward-compat 1.x/2.x). MVP 2 atomic patterns:
+  `coverage_below_threshold:X<Y` -> `siae-tdd` (priority 2), `lint_errors:N>M`
+  -> `siae-code-standards` (priority 1, applied first per minimizzare blast
+  radius). Unknown reasons -> `FixAction(kind="unknown", sub_skill=None)`
+  per escalation safety vs crash. 3 pattern follow-up MVP (complexity, drift,
+  ci_critical) marcati TODO in-code.
+- **Test unit** (`tests/test_fix_parser.py`): 5 test (coverage match, lint
+  match, both sorted by priority, unknown reason, empty reasons). E2E loop
+  test deferred a follow-up PR-D.
+- **Command `/forge-fix-evidence`** (`commands/forge-fix-evidence.md`):
+  espone la skill con `allowed-tools: Read, Bash, Skill`. Pre-flight check
+  documentato (working tree pulito + evidence presente + decision ==
+  BLOCK_REGRESSION + hard_floor_breaches vuoto).
+- **Env vars** (`hooks/ENV_VARS.md`): `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET`
+  (default 200000), `DEVFORGE_FIX_EVIDENCE_MAX_ITER` (default 5).
+
 ### Configuration
 
 - `.devforge-scores.yml` template: `docs/templates/.devforge-scores.yml`
