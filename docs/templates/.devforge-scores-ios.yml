@@ -1,0 +1,58 @@
+# DevForge Review Evidence v2 — iOS stack template (v1.57+)
+#
+# Copy to repo root as `.devforge-scores.yml` and customize.
+#
+# Stack: iOS Swift apps SIAE.
+# Tooling: swiftlint (security rules + style/quality) + semgrep cross-stack.
+# Quality is heavy because swiftlint covers both style and many quality
+# concerns; Xcode coverage is harder to instrument so coverage weight/floor
+# are intentionally lower.
+#
+# Schema JSON: docs/schemas/devforge-scores.schema.json (draft-07)
+
+# ----------------------------------------------------------------------------
+# weights: pesi della media ponderata per overall (sum 1.0 ± 0.01).
+# ----------------------------------------------------------------------------
+weights:
+  security: 0.25        # swiftlint security rules + semgrep
+  quality: 0.40         # swiftlint heavy (style+quality on iOS critical)
+  coverage: 0.15        # Xcode coverage (harder to instrument)
+  spec_compliance: 0.10
+  discipline: 0.10
+
+# ----------------------------------------------------------------------------
+# hard_floors: livelli minimi 0-100 sotto i quali la PR e' BLOCK_HARD_FLOOR.
+# iOS = lower coverage expectations (Xcode tooling friction).
+# ----------------------------------------------------------------------------
+hard_floors:
+  security: 55
+  coverage: 40
+  overall: 55
+  min_dim: 35
+
+# ----------------------------------------------------------------------------
+# regression_budget: delta vs baseline tollerati in punti percentuali.
+# Snapshot at PR_OPEN_TIME (E1 fix): admin change post-PR non sposta budget.
+# ----------------------------------------------------------------------------
+regression_budget:
+  hard_block:
+    security: -2
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+
+# ----------------------------------------------------------------------------
+# ignore_paths: glob esclusi da scoring (pods, derived data, generated swift).
+# ----------------------------------------------------------------------------
+ignore_paths:
+  - "Pods/**"
+  - "build/**"
+  - "DerivedData/**"
+  - "**/*.generated.swift"
