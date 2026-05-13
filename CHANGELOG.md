@@ -111,6 +111,28 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   emitted on AUTO=1 + clean BLOCK_REGRESSION, no signal on AUTO=0,
   no signal su hard_floor_breaches non vuoto / bot actor.
 
+### BREAKING (default behavior change, follow-up `feat/fix-evidence-auto-trigger`)
+
+- **`DEVFORGE_FIX_EVIDENCE_AUTO` default flipped `0` -> `1`.** L'auto-trigger
+  fully-autonomous e' ora il comportamento **default** invece di opt-in.
+  Motivazione: DevForge default opinionato verso "zero bug usando DevForge"
+  — ogni `BLOCK_REGRESSION` clean (no hard floor, no bot, not degraded)
+  tenta un auto-fix loop prima di propagare il block all'utente.
+- **Opt-out kill-switch:** `export DEVFORGE_FIX_EVIDENCE_AUTO=0` disabilita
+  globalmente l'auto-trigger (comportamento pre-flip). Skip conditions
+  semantic (hard floor / bot PR / SEVERELY_DEGRADED) restano invariate come
+  safety net e non emettono mai il marker, indipendentemente dal valore env.
+- **Test updates** (`tests/test_review_evidence_auto_trigger.py`): il caso
+  `test_block_regression_without_auto_emits_no_signal` (AUTO=0 esplicito)
+  resta verde — opt-out funziona. Il caso
+  `test_block_regression_auto_unset_emits_no_signal` rinominato e invertito
+  (`test_block_regression_auto_unset_emits_signal_by_default`) — default
+  ON, signal ora emesso quando env unset.
+- **Hook bash** (`hooks/review-evidence`): `${DEVFORGE_FIX_EVIDENCE_AUTO:-0}`
+  -> `${DEVFORGE_FIX_EVIDENCE_AUTO:-1}`. Tutto il resto invariato
+  (skip conditions, telemetry log `evidence_auto_fix_trigger_emitted` /
+  `_skipped`, single-file architecture B3).
+
 ### Configuration
 
 - `.devforge-scores.yml` template: `docs/templates/.devforge-scores.yml`

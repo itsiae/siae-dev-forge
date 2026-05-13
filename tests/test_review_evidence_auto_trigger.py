@@ -157,11 +157,14 @@ def test_block_regression_with_auto_enabled_emits_signal(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Default opt-out: AUTO=0 (or unset) -> NO signal, normal block
+# Opt-out: explicit AUTO=0 -> NO signal (kill-switch still works)
+# Default ON: AUTO unset -> signal emitted (BREAKING flip in
+# feat/fix-evidence-auto-trigger — DevForge opinionato "zero bug").
 # ---------------------------------------------------------------------------
 
 
 def test_block_regression_without_auto_emits_no_signal(tmp_path):
+    """Opt-out kill-switch: explicit AUTO=0 disables auto-trigger globally."""
     _init_repo(tmp_path)
     sha = _head_sha(tmp_path)
     _write_evidence(tmp_path, sha)
@@ -172,7 +175,8 @@ def test_block_regression_without_auto_emits_no_signal(tmp_path):
             "command": "gh pr create --title x",
         },
         tmp_path,
-        # Explicit AUTO=0 ensures we exercise the disabled branch.
+        # Explicit AUTO=0 ensures we exercise the disabled branch
+        # (kill-switch must continue to work post default flip).
         extra_env={"DEVFORGE_FIX_EVIDENCE_AUTO": "0"},
     )
     out = json.loads(p.stdout or "{}")
@@ -184,8 +188,14 @@ def test_block_regression_without_auto_emits_no_signal(tmp_path):
     )
 
 
-def test_block_regression_auto_unset_emits_no_signal(tmp_path):
-    """Default behaviour: env unset == opt-out."""
+def test_block_regression_auto_unset_emits_signal_by_default(tmp_path):
+    """Default behaviour (BREAKING): env unset -> auto-trigger ON.
+
+    Prior to follow-up feat/fix-evidence-auto-trigger this case asserted
+    no-signal (default opt-in). The default is now `1` in
+    ``hooks/review-evidence`` (``${DEVFORGE_FIX_EVIDENCE_AUTO:-1}``), so
+    unset env must behave identically to explicit AUTO=1.
+    """
     _init_repo(tmp_path)
     sha = _head_sha(tmp_path)
     _write_evidence(tmp_path, sha)
@@ -196,12 +206,18 @@ def test_block_regression_auto_unset_emits_no_signal(tmp_path):
             "command": "gh pr create --title x",
         },
         tmp_path,
-        # No extra_env -> AUTO is unset (default behaviour).
+        # No extra_env -> AUTO is unset, default ON now applies.
     )
     out = json.loads(p.stdout or "{}")
+    # Block stays (signal is additive, never replaces decision:block).
     assert out.get("decision") == "block"
     ctx = out.get("additional_context", "")
-    assert SIGNAL_RE.search(ctx) is None
+    m = SIGNAL_RE.search(ctx)
+    assert m is not None, (
+        f"Default ON: expected AUTO_FIX_TRIGGER marker when AUTO unset, "
+        f"got: {ctx!r}"
+    )
+    assert m.group(1) == sha
 
 
 # ---------------------------------------------------------------------------
