@@ -20,8 +20,10 @@ from lib.review_evidence.schema import (
 FIXTURES = Path(__file__).parent / "fixtures" / "review-evidence"
 
 
-def test_schema_version_is_1_0():
-    assert SCHEMA_VERSION == "1.0"
+def test_schema_version_is_2_0():
+    # v2 bump: writer now emits "2.0" (scoring extension). v1 ("1.0") fixtures
+    # still deserialize via SUPPORTED_VERSIONS / SUPPORTED_MAJORS.
+    assert SCHEMA_VERSION == "2.0"
 
 
 def test_evidence_clean_roundtrip():

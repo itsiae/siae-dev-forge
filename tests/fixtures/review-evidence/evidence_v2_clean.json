@@ -1,0 +1,26 @@
+{
+  "schema_version": "2.0",
+  "sha": "abc123",
+  "base_sha": "def456",
+  "branch": "feature/test",
+  "computed_at": "2026-05-13T10:00:00Z",
+  "dirty_tree": false,
+  "base_branch": "main",
+  "stack_detected": ["python"],
+  "metrics": {},
+  "spec_drift": null,
+  "verdict": {"block": false, "block_reasons": [], "warnings": []},
+  "current_scores": {
+    "security": 85.0, "quality": 72.0, "coverage": 68.0,
+    "spec_compliance": 90.0, "discipline": 80.0, "overall": 79.0,
+    "weights_used": {"security": 0.30, "quality": 0.20, "coverage": 0.20,
+                      "spec_compliance": 0.15, "discipline": 0.15},
+    "missing_components": []
+  },
+  "baseline_scores": null,
+  "deltas": null,
+  "regression_verdict": null,
+  "reviewer_verdict": null,
+  "budget_snapshot_at": null,
+  "baseline_synthetic": true
+}
