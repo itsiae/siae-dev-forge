@@ -82,6 +82,20 @@ per test/staging o ambienti dev offline.
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
 
+### Fix Evidence Auto-Loop (skill `siae-fix-evidence`, v1.55+)
+
+Auto-remediation loop hook-driven invocato da `/forge-fix-evidence` su
+`BLOCK_REGRESSION`. Override solo per test/staging.
+
+| Env var                              | Default  | Note |
+|--------------------------------------|----------|------|
+| `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET` | `200000` | Token budget totale loop (rough est. via Claude API usage). Loop exit con `TOKEN_BUDGET_EXCEEDED` quando consumed > budget. Misurabile vs cap $5 originale che era non verificabile in-process. |
+| `DEVFORGE_FIX_EVIDENCE_MAX_ITER`     | `5`      | Hard cap iter del loop. Override richiede design review (pattern memory `feedback_spec_reviewer_iter2_roi`). |
+
+**Escalation conditions (no env override):** `hard_floor_breaches` non vuoto,
+`is_bot_pr=True`, `decision == SEVERELY_DEGRADED`, action `kind == "unknown"`,
+oscillation guard (stesso `frozenset(block_reasons)` per 2 iter consecutivi).
+
 ## Scope / feature flags
 
 | Env var | Default | Gate | Description |
