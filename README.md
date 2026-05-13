@@ -843,6 +843,49 @@ eslint + complexity-report), Python (coverage.py + ruff + radon), HCL
 "Review Evidence" — 9 env var `DEVFORGE_EVIDENCE_*` + state file bypass
 primario `~/.claude/.devforge-skip-evidence`.
 
+### Review Evidence v2 — Scoring (v1.55+)
+
+Estensione di Review Evidence v1 con **scoring deterministico regression-based**.
+5 dimensioni (security / quality / coverage / spec_compliance / discipline)
+combinate in un overall 0-100 weighted (pesi configurabili).
+
+**Decisione:** 5 branch enum (`RegressionVerdict.decision`):
+
+- `AUTO_APPROVE` — overall >= soglia, no regression > budget warn
+- `REVIEWER_HANDOFF` — area warn budget, reviewer agent rivaluta full 6-punti
+- `BLOCK_REGRESSION` — delta scende sotto `hard_block_budget`
+- `BLOCK_HARD_FLOOR` — singola dim o overall sotto `hard_floors` (NON-overridable da reviewer agent — F1+E5 fix)
+- `SEVERELY_DEGRADED` — < 2 dim disponibili (tooling rotto), fail-closed
+
+**Tool stack OSS** (zero licenze, no Qodana commercial): bandit + gitleaks +
+pip-audit + npm-audit + eslint-security + 2 check unique DevForge
+(`arch_drift` su `.devforge-arch.yml`, `skill_adoption` 4-tier signal).
+
+**Baseline cache S3** (`itsiae-review-evidence-baseline-prod`, eu-west-1,
+provisioned via Terraform in `infra/terraform/review-evidence-baseline/`)
+con local fallback (`~/.claude/review-evidence-baseline-local`) per dev offline.
+Cache key = main HEAD SHA, NO TTL (A1 CRITICAL fix), force-push invalidation.
+
+**Hard floor NON-overridable** da reviewer agent (solo admin BREAK-GLASS via
+commit message regex `BREAK-GLASS:\s+\w+-\d+`, tracked).
+
+**Config:**
+- `.devforge-scores.yml` — weights + hard_floors + regression_budget
+- `.devforge-arch.yml` — forbidden_paths per `arch_drift` check
+- Template: [`docs/templates/.devforge-scores.yml`](docs/templates/.devforge-scores.yml)
+- JSON Schema (draft-07): [`docs/schemas/devforge-scores.schema.json`](docs/schemas/devforge-scores.schema.json)
+
+**Reviewer agent:** Step 0.6 gatekeeper in `agents/code-reviewer.md`
+(consumer del `RegressionVerdict`, advisory summary anche su AUTO_APPROVE — W2 fix).
+
+**Skill on-demand:** `/forge-score` — score card 5-dim copy-paste pronto per
+`gh pr comment`. Vedi [`commands/forge-score.md`](commands/forge-score.md).
+
+**Design:** `docs/plans/2026-05-13-review-evidence-v2-scoring-design.md`
+**Plan:** `docs/plans/2026-05-13-review-evidence-v2-scoring/`
+**Env vars:** vedi [`hooks/ENV_VARS.md`](hooks/ENV_VARS.md) sezione
+"Review Evidence v2 — Scoring (v1.55+)".
+
 ### Activity Log
 
 Tutti e 3 gli hook scrivono eventi strutturati in `~/.claude/devforge-activity.jsonl` tramite il logger centralizzato `lib/logger.sh`. Il file e' in formato JSONL (una riga JSON per evento) e traccia:

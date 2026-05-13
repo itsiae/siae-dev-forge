@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://siae.it/schemas/devforge-scores.schema.json",
+  "title": "DevForge Review Evidence v2 — Scores Config",
+  "description": "Schema for `.devforge-scores.yml` (v1.55+). Validates weights, hard floors, and regression budget for the scoring algorithm in `lib/review_evidence/scoring.py`.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "weights": {
+      "type": "object",
+      "description": "Pesi della media ponderata per overall. La somma DEVE essere ~ 1.0 (± 0.01) — E4 ConfigValidationError altrimenti.",
+      "additionalProperties": false,
+      "properties": {
+        "security": { "type": "number", "minimum": 0, "maximum": 1 },
+        "quality": { "type": "number", "minimum": 0, "maximum": 1 },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "spec_compliance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "discipline": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "required": ["security", "quality", "coverage", "spec_compliance", "discipline"]
+    },
+    "hard_floors": {
+      "type": "object",
+      "description": "Livelli minimi 0-100 sotto i quali la PR e' BLOCK_HARD_FLOOR (non-overridable da reviewer agent — F1+E5 fix).",
+      "additionalProperties": false,
+      "properties": {
+        "security": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "coverage": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "overall": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "min_dim": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Qualsiasi singola dimensione sotto questo soglia -> BLOCK (E5)." }
+      }
+    },
+    "regression_budget": {
+      "type": "object",
+      "description": "Delta vs baseline tollerati in punti percentuali. Snapshot at PR_OPEN_TIME (E1 fix).",
+      "additionalProperties": false,
+      "properties": {
+        "hard_block": {
+          "type": "object",
+          "description": "Scendere oltre questi delta -> BLOCK_REGRESSION.",
+          "additionalProperties": false,
+          "properties": {
+            "security": { "type": "integer", "maximum": 0 },
+            "coverage": { "type": "integer", "maximum": 0 },
+            "quality": { "type": "integer", "maximum": 0 },
+            "spec_compliance": { "type": "integer", "maximum": 0 },
+            "discipline": { "type": "integer", "maximum": 0 }
+          }
+        },
+        "warn_reviewer": {
+          "type": "object",
+          "description": "Scendere oltre questi delta -> REVIEWER_HANDOFF (advisory, no block).",
+          "additionalProperties": false,
+          "properties": {
+            "security": { "type": "integer", "maximum": 0 },
+            "coverage": { "type": "integer", "maximum": 0 },
+            "quality": { "type": "integer", "maximum": 0 },
+            "spec_compliance": { "type": "integer", "maximum": 0 },
+            "discipline": { "type": "integer", "maximum": 0 }
+          }
+        }
+      }
+    },
+    "ignore_paths": {
+      "type": "array",
+      "description": "Glob patterns esclusi da scoring (test fixtures, generated).",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

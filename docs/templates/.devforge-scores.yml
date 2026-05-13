@@ -1,0 +1,60 @@
+# DevForge Review Evidence v2 — Scoring config template (v1.55+)
+#
+# Copy this file to the repo root as `.devforge-scores.yml`. Tutti i campi sono
+# opzionali: i default sono in `lib/review_evidence/config.py`.
+#
+# Validation rules (E4):
+#   - weights deve essere un mapping NON vuoto
+#   - sum(weights.values()) ~= 1.0 ± 0.01
+#   - hard_floors / regression_budget sono int (punti percentuali)
+#
+# Schema JSON: docs/schemas/devforge-scores.schema.json (draft-07)
+
+# ----------------------------------------------------------------------------
+# weights: pesi della media ponderata per overall (sum 1.0 ± 0.01).
+# ----------------------------------------------------------------------------
+weights:
+  security: 0.30
+  quality: 0.20
+  coverage: 0.20
+  spec_compliance: 0.15
+  discipline: 0.15
+
+# ----------------------------------------------------------------------------
+# hard_floors: livelli minimi 0-100 sotto i quali la PR e' BLOCK_HARD_FLOOR.
+# NON-overridable da reviewer agent (solo admin BREAK-GLASS, cfr. F1+E5 fix).
+# ----------------------------------------------------------------------------
+hard_floors:
+  security: 60         # sotto 60: BLOCK indipendente da overall
+  coverage: 50         # sotto 50: BLOCK indipendente da overall
+  overall: 55          # overall < 55: BLOCK
+  min_dim: 40          # qualsiasi singola dim < 40: BLOCK (E5 fix)
+
+# ----------------------------------------------------------------------------
+# regression_budget: delta vs baseline tollerati in punti percentuali.
+# hard_block: scendere oltre questi punti -> BLOCK_REGRESSION.
+# warn_reviewer: scendere oltre -> REVIEWER_HANDOFF (advisory, no block).
+# Snapshot at PR_OPEN_TIME (E1 fix): admin change post-PR non sposta budget.
+# ----------------------------------------------------------------------------
+regression_budget:
+  hard_block:
+    security: -2
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+
+# ----------------------------------------------------------------------------
+# ignore_paths: glob patterns esclusi da scoring (test fixtures, generated).
+# ----------------------------------------------------------------------------
+ignore_paths:
+  - "tests/fixtures/**"
+  - "**/*.generated.ts"
+  - "**/*.pb.go"
+  - "**/__pycache__/**"

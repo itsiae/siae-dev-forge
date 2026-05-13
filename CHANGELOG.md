@@ -32,13 +32,49 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `lib/review_evidence/collector.py`: extension `orchestrate_v2()` per scoring
   layer. v1 `orchestrate()` stays for back-compat.
 
+### Added (PR-B advanced)
+
+- **Baseline cache S3** (`lib/review_evidence/baseline_cache.py`): S3 backend
+  via boto3 + local fallback (`~/.claude/review-evidence-baseline-local`).
+  Cache key = main HEAD SHA, **NO TTL** (A1 CRITICAL fix). Force-push
+  invalidation via `git cat-file -e` (A2 fix). OIDC IAM trust provisioned per
+  `itsiae/*` repos (Task 16 Terraform).
+- **`skill_adoption` check** (`lib/review_evidence/checks/skill_adoption.py`):
+  4-tier fallback signal (activity.jsonl -> design doc -> git log -> neutral)
+  per discipline score. Bot PR detection (Dependabot, Renovate) -> discipline
+  skip (no false negatives su auto-bumps).
+- **Regression analyzer** (`lib/review_evidence/regression.py`): budget
+  snapshot at PR_OPEN_TIME (E1 CRITICAL fix — admin change budget post-PR non
+  sposta snapshot), 5 decision branch enforcement, hard floor **NON-overridable**
+  da reviewer agent (F1+E5 CRITICAL fix).
+- **Reviewer agent Step 0.6** (`agents/code-reviewer.md`): 5 decision branch
+  gatekeeper logic. AUTO_APPROVE emette comunque review summary advisory
+  (W2 fix). BLOCK_HARD_FLOOR ignora reviewer APPROVED (solo admin BREAK-GLASS).
+- **Skill `/forge-score`** (`commands/forge-score.md`): on-demand score card
+  markdown 5-dim copy-paste pronto per `gh pr comment`. Advisory only.
+- **40 edge case** (8 CRITICAL + 17 HIGH + 9 LOW) mitigati con chaos test
+  suite v2 (15+ test failure-injection): cache S3 unreachable, force-push
+  baseline, budget tampering, severely_degraded fallback, hard floor F1+E5.
+- **Terraform module** (`infra/terraform/review-evidence-baseline/`):
+  S3 bucket `itsiae-review-evidence-baseline-prod` (eu-west-1, versioning
+  on, encryption SSE-S3) + IAM role OIDC trust per `repo:itsiae/*`.
+- **E2E test full pipeline** (`tests/test_review_evidence_e2e.py` v2 extension):
+  hook bash -> collector -> S3 baseline -> reviewer agent contract.
+
+### Configuration
+
+- `.devforge-scores.yml` template: `docs/templates/.devforge-scores.yml`
+- `.devforge-arch.yml` template (esistente)
+- JSON Schema draft-07: `docs/schemas/devforge-scores.schema.json`
+
 ### Docs
 
-- `hooks/ENV_VARS.md`: sezione "Review Evidence v2 — Scoring (v1.55+)".
-
-### Pending (PR-B follow-up)
-
-- baseline cache S3 + reviewer agent Step 0.6 + budget snapshot + skill_adoption + E2E test.
+- `hooks/ENV_VARS.md`: sezione "Review Evidence v2 — Scoring (v1.55+)" estesa
+  con PR-B vars (`DEVFORGE_BASELINE_S3_*`, `DEVFORGE_BREAK_GLASS_REGEX`,
+  `DEVFORGE_ACTIVITY_PROJECT`).
+- `README.md`: sezione "Review Evidence v2 — Scoring (v1.55+)" con 5 decision
+  branch, tool stack OSS, baseline cache S3, hard floor non-overridable,
+  config + skill `/forge-score`.
 
 ## [Unreleased] — 2026-05-12
 
