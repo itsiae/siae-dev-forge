@@ -1,2 +1,3 @@
 boto3>=1.34
+moto[s3]>=5.0
 pyyaml>=6.0

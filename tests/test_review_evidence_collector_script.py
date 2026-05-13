@@ -54,7 +54,8 @@ def test_collector_runs_as_standalone_script(tmp_path):
     )
     assert out_path.exists(), "Evidence file not written"
     data = json.loads(out_path.read_text())
-    assert data["schema_version"] == "1.0"
+    # v2 bump: writer now emits "2.0" (scoring extension).
+    assert data["schema_version"] == "2.0"
     assert data["sha"] == sha
 
 

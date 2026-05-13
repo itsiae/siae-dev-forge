@@ -1,0 +1,28 @@
+schema_version: 1
+weights:
+  security: 0.30
+  quality: 0.20
+  coverage: 0.20
+  spec_compliance: 0.15
+  discipline: 0.15
+hard_floors:
+  security: 60
+  coverage: 50
+  overall: 55
+  min_dim: 40
+regression_budget:
+  hard_block:
+    security: -2
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+ignore_paths:
+  - "node_modules/"
+  - "**/*.gen.py"

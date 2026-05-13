@@ -344,7 +344,11 @@ def test_E01_just_init_repo_no_head_advisory_only(tmp_path):
 
 
 def test_E12_schema_minor_version_forward_compat():
-    """E12: schema_version 1.1 (future minor) must be accepted; 2.0 rejected."""
+    """E12: schema_version 1.x and 2.x (future minor) must be accepted; 3.x rejected.
+
+    v2 bump: 2.x is the current writer + readable major; 3.x is the new
+    "unsupported major" sentinel (next breaking change).
+    """
     from lib.review_evidence.schema import evidence_from_json
 
     base = {
@@ -353,15 +357,20 @@ def test_E12_schema_minor_version_forward_compat():
         "base_branch": "main", "stack_detected": [], "metrics": {},
         "spec_drift": None, "verdict": {"block": False, "block_reasons": [], "warnings": []},
     }
-    # Minor forward-compat
+    # Minor forward-compat — 1.x major still readable
     ev = evidence_from_json({**base, "schema_version": "1.1"})
     assert ev.schema_version == "1.1"
     ev = evidence_from_json({**base, "schema_version": "1.42"})
     assert ev.schema_version == "1.42"
+    # Minor forward-compat — 2.x current major
+    ev = evidence_from_json({**base, "schema_version": "2.0"})
+    assert ev.schema_version == "2.0"
+    ev = evidence_from_json({**base, "schema_version": "2.7"})
+    assert ev.schema_version == "2.7"
 
-    # Major bump must raise
+    # Major bump beyond SUPPORTED_MAJORS must raise
     with pytest.raises(ValueError, match="unsupported schema_version"):
-        evidence_from_json({**base, "schema_version": "2.0"})
+        evidence_from_json({**base, "schema_version": "3.0"})
 
 
 def test_E22_jacoco_doctype_stripped_no_network():

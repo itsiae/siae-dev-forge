@@ -46,6 +46,42 @@ env var possono non propagare a subprocess hook Claude Code (vedi memory
 **Pattern operativo CI:** vedi `commands/forge-evidence.md` per il flow
 `gh pr create` -> CI completes -> `gh pr edit` per pickup SARIF.
 
+## Review Evidence v2 — Scoring (v1.55+)
+
+Estensione di Review Evidence v1 con scoring deterministico regression-based.
+Tutte le env var v1 (`DEVFORGE_EVIDENCE_*`) restano valide.
+
+### Config file paths
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_SCORES_CONFIG_PATH` | `.devforge-scores.yml` | Override path config (testing) |
+| `DEVFORGE_ARCH_CONFIG_PATH` | `.devforge-arch.yml` | Override path arch rules |
+
+### Behavior toggles (PR-A foundation)
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_SCORING_V2_ENABLED` | `0` (PR-A rollout phase) -> `1` (PR-B GA) | Master kill-switch v2 scoring (fallback v1) |
+
+### PR-B vars (Baseline cache + Break-glass + Activity)
+
+Introdotte in PR-B (Task 09-15). Tutte hanno default operativi: override solo
+per test/staging o ambienti dev offline.
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_BASELINE_S3_BUCKET` | `itsiae-review-evidence-baseline-prod` | S3 bucket cache baseline (provisioned via Terraform `infra/terraform/review-evidence-baseline/`). Cache key = main HEAD SHA, NO TTL (A1 CRITICAL fix). Force-push invalidation via `git cat-file -e` (A2 fix). |
+| `DEVFORGE_BASELINE_S3_REGION` | `eu-west-1` | AWS region per S3 + OIDC IAM trust |
+| `DEVFORGE_BASELINE_LOCAL_DIR` | `~/.claude/review-evidence-baseline-local` | Local fallback path quando S3 unreachable (dev offline, network drop). Cache hit locale preferito S3 quando entrambi presenti per latency. |
+| `DEVFORGE_BREAK_GLASS_REGEX` | `BREAK-GLASS:\s+\w+-\d+` | Pattern commit msg per override `BLOCK_HARD_FLOOR` (admin only). Match = log `break_glass_invoked` in activity.jsonl + bypass gate. |
+| `DEVFORGE_ACTIVITY_PROJECT` | (auto, derivato da repo root) | Project name per lookup `~/.claude/projects/<X>/devforge-state/activity.jsonl` nel check `skill_adoption` (4-tier fallback signal). Override per test multi-project. |
+
+**Bypass behaviour:**
+- `BLOCK_REGRESSION` (delta sotto hard_block budget) -> overridable via `touch ~/.claude/.devforge-skip-evidence` (tracked, abuse 5/day).
+- `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
+- `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
+
 ## Scope / feature flags
 
 | Env var | Default | Gate | Description |

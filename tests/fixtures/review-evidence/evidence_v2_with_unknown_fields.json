@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.5",
+  "sha": "x", "branch": "x", "computed_at": "x",
+  "dirty_tree": false, "base_branch": "main", "stack_detected": [],
+  "metrics": {},
+  "spec_drift": null,
+  "verdict": {"block": false, "block_reasons": [], "warnings": [], "UNKNOWN_NEW_FIELD": "future"},
+  "FUTURE_TOP_LEVEL": "experimental"
+}

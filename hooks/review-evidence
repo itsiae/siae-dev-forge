@@ -360,6 +360,57 @@ JSON
     exit 0
 fi
 
+# ── v2 — Parse regression_verdict.decision (5 valori) ──────────────
+# Task 05: 5-branch decision routing emitted BEFORE v1 verdict.block path.
+# Empty DECISION = v1 evidence (no regression_verdict.decision field) →
+# fall through to v1 BLOCK/advisory logic below. Each non-empty branch
+# emits its own JSON and exits 0 (no fall-through).
+DECISION=$(jq -r '.regression_verdict.decision // ""' "$EVIDENCE_FILE" 2>/dev/null || echo "")
+REGRESSION_REASON=$(jq -r '.regression_verdict.reason // ""' "$EVIDENCE_FILE" 2>/dev/null || echo "")
+
+case "$DECISION" in
+    BLOCK_HARD_FLOOR)
+        # NON-OVERRIDABLE by reviewer agent
+        ESCAPED_REASON=$(echo "$REGRESSION_REASON" | sed 's/"/\\"/g')
+        cat <<JSON
+{"decision":"block","reason":"review-evidence v2: hard floor breach — ${ESCAPED_REASON}. NOT overridable by reviewer. Admin BREAK-GLASS: commit msg 'BREAK-GLASS: <jira>' + 2 reviewer + post-mortem 48h."}
+JSON
+        devforge_log "evidence_v2_block_hard_floor" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
+        exit 0
+        ;;
+    BLOCK_REGRESSION)
+        ESCAPED_REASON=$(echo "$REGRESSION_REASON" | sed 's/"/\\"/g')
+        cat <<JSON
+{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: touch ~/.claude/.devforge-skip-evidence (tracked, abuse 5/day)."}
+JSON
+        devforge_log "evidence_v2_block_regression" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
+        exit 0
+        ;;
+    REVIEWER_HANDOFF)
+        cat <<JSON
+{"additional_context":"review-evidence v2: regression in warn zone — code-reviewer agent will gatekeep. ${REGRESSION_REASON}"}
+JSON
+        exit 0
+        ;;
+    SEVERELY_DEGRADED)
+        MISSING=$(jq -r '.current_scores.missing_components | join(",")' "$EVIDENCE_FILE" 2>/dev/null || echo "unknown")
+        cat <<JSON
+{"additional_context":"review-evidence v2: SEVERELY_DEGRADED — DevForge runners parzialmente non disponibili: ${MISSING}. Hard floor SKIP."}
+JSON
+        exit 0
+        ;;
+    AUTO_APPROVE)
+        SCORE=$(jq -r '.current_scores.overall // "n/a"' "$EVIDENCE_FILE" 2>/dev/null)
+        cat <<JSON
+{"additional_context":"review-evidence v2: AUTO_APPROVE (overall=${SCORE})."}
+JSON
+        exit 0
+        ;;
+    "")
+        # No regression_verdict field → v1 evidence, fall through to v1 logic
+        ;;
+esac
+
 BLOCK=$(jq -r '.verdict.block // false' "$EVIDENCE_FILE" 2>/dev/null || echo "false")
 REASONS=$(jq -r '.verdict.block_reasons | join(", ")' "$EVIDENCE_FILE" 2>/dev/null || echo "")
 

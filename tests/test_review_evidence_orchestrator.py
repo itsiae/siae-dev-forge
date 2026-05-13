@@ -49,7 +49,8 @@ def test_orchestrate_writes_valid_evidence(tmp_path, monkeypatch):
     code = orchestrate(sha="abc", base="main", dirty=False, out_path=out, repo_root=tmp_path)
     assert code == 0
     data = json.loads(out.read_text())
-    assert data["schema_version"] == "1.0"
+    # v2 bump: writer now emits "2.0" (scoring extension).
+    assert data["schema_version"] == "2.0"
     assert data["sha"] == "abc"
     assert "fake" in data["stack_detected"]
     assert data["metrics"]["coverage"]["overall_pct"] == 90.0

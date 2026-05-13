@@ -1,0 +1,4 @@
+[
+  {"Description": "AWS Access Key", "File": "config.py", "StartLine": 5, "RuleID": "aws-access-key-id"},
+  {"Description": "Generic API key", "File": ".env", "StartLine": 1, "RuleID": "generic-api-key"}
+]

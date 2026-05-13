@@ -4,6 +4,78 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — v1.55.0 (review-evidence v2 scoring)
+
+### Added
+
+- **Schema v2** (`lib/review_evidence/schema.py`): `ScoreCard`, `RegressionVerdict`
+  (5 decision branch: AUTO_APPROVE / REVIEWER_HANDOFF / BLOCK_HARD_FLOOR /
+  BLOCK_REGRESSION / SEVERELY_DEGRADED), `ReviewerVerdict`, `EvidenceV2` extension
+  additive con forward-compat v1.
+- **Score algorithm** (`lib/review_evidence/scoring.py`): 5 score functions
+  (security/quality/coverage/spec/discipline) + `compute_overall` con D6
+  severely_degraded handling. Coverage anti-gaming via `lines_covered` drop
+  penalty (CRITICAL B1+B7+C5).
+- **5 OSS runner MVP** (`lib/review_evidence/runners/`): bandit, gitleaks,
+  pip-audit, npm-audit, eslint-security. Zero costo licenza, no Qodana
+  commercial dependency.
+- **`arch_drift` check** (`lib/review_evidence/checks/arch_drift.py`): detect
+  violazioni `forbidden_paths` configurate in `.devforge-arch.yml`.
+- **Config parsers** (`lib/review_evidence/config.py`): `.devforge-scores.yml`
+  (weights + hard_floors + regression_budget) + `.devforge-arch.yml`. Weights
+  validation sum ~= 1.0 (E4 fix). Config change detection in PR (CRITICAL B3 fix).
+- **Hook bash v2 extension** (`hooks/review-evidence`): 5 decision branch case
+  per gestire `regression_verdict.decision`. v1 fallback preservato.
+
+### Changed
+
+- `lib/review_evidence/collector.py`: extension `orchestrate_v2()` per scoring
+  layer. v1 `orchestrate()` stays for back-compat.
+
+### Added (PR-B advanced)
+
+- **Baseline cache S3** (`lib/review_evidence/baseline_cache.py`): S3 backend
+  via boto3 + local fallback (`~/.claude/review-evidence-baseline-local`).
+  Cache key = main HEAD SHA, **NO TTL** (A1 CRITICAL fix). Force-push
+  invalidation via `git cat-file -e` (A2 fix). OIDC IAM trust provisioned per
+  `itsiae/*` repos (Task 16 Terraform).
+- **`skill_adoption` check** (`lib/review_evidence/checks/skill_adoption.py`):
+  4-tier fallback signal (activity.jsonl -> design doc -> git log -> neutral)
+  per discipline score. Bot PR detection (Dependabot, Renovate) -> discipline
+  skip (no false negatives su auto-bumps).
+- **Regression analyzer** (`lib/review_evidence/regression.py`): budget
+  snapshot at PR_OPEN_TIME (E1 CRITICAL fix — admin change budget post-PR non
+  sposta snapshot), 5 decision branch enforcement, hard floor **NON-overridable**
+  da reviewer agent (F1+E5 CRITICAL fix).
+- **Reviewer agent Step 0.6** (`agents/code-reviewer.md`): 5 decision branch
+  gatekeeper logic. AUTO_APPROVE emette comunque review summary advisory
+  (W2 fix). BLOCK_HARD_FLOOR ignora reviewer APPROVED (solo admin BREAK-GLASS).
+- **Skill `/forge-score`** (`commands/forge-score.md`): on-demand score card
+  markdown 5-dim copy-paste pronto per `gh pr comment`. Advisory only.
+- **40 edge case** (8 CRITICAL + 17 HIGH + 9 LOW) mitigati con chaos test
+  suite v2 (15+ test failure-injection): cache S3 unreachable, force-push
+  baseline, budget tampering, severely_degraded fallback, hard floor F1+E5.
+- **Terraform module** (`infra/terraform/review-evidence-baseline/`):
+  S3 bucket `itsiae-review-evidence-baseline-prod` (eu-west-1, versioning
+  on, encryption SSE-S3) + IAM role OIDC trust per `repo:itsiae/*`.
+- **E2E test full pipeline** (`tests/test_review_evidence_e2e.py` v2 extension):
+  hook bash -> collector -> S3 baseline -> reviewer agent contract.
+
+### Configuration
+
+- `.devforge-scores.yml` template: `docs/templates/.devforge-scores.yml`
+- `.devforge-arch.yml` template (esistente)
+- JSON Schema draft-07: `docs/schemas/devforge-scores.schema.json`
+
+### Docs
+
+- `hooks/ENV_VARS.md`: sezione "Review Evidence v2 — Scoring (v1.55+)" estesa
+  con PR-B vars (`DEVFORGE_BASELINE_S3_*`, `DEVFORGE_BREAK_GLASS_REGEX`,
+  `DEVFORGE_ACTIVITY_PROJECT`).
+- `README.md`: sezione "Review Evidence v2 — Scoring (v1.55+)" con 5 decision
+  branch, tool stack OSS, baseline cache S3, hard floor non-overridable,
+  config + skill `/forge-score`.
+
 ## [Unreleased] — 2026-05-12
 
 ### Added
