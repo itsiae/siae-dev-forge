@@ -160,6 +160,52 @@ affermazioni soggettive ("la coverage sembra bassa").
 
 ---
 
+## Step 0.6 — Gatekeeper Logic (v2 scoring)
+
+Schema evidence v2 estende v1 con `regression_verdict.decision` (5 valori).
+Dopo aver caricato evidence in Step 0.5, controlla `decision`:
+
+### Decision branches
+
+| Decision | Behavior | Override |
+|---|---|---|
+| `AUTO_APPROVE` | Emit **review summary advisory** (no full 6-point review) — score card markdown + 1-line judgment qualitativo. Decision finale: approve. **W2 fix:** anche su AUTO_APPROVE il reviewer genera un comment summary (no buchi naming/intent). | No override needed (already pass) |
+| `BLOCK_HARD_FLOOR` | Emit `{"decision": "block"}` immediatamente. **NON-OVERRIDABLE.** Reviewer NON può approvare. Reviewer **cannot overrule** questa decisione e **can NEVER override** `hard_floor_breaches`. | Solo admin BREAK-GLASS: commit message contains `BREAK-GLASS: <jira-id>` + 2 reviewer approvals + post-mortem entro 48h |
+| `BLOCK_REGRESSION` | Emit `{"decision": "block"}`. Reasons in `regression_verdict.block_dimensions`. | Override via `touch ~/.claude/.devforge-skip-evidence` (tracked, abuse 5/day) |
+| `REVIEWER_HANDOFF` | Procedi con **review qualitativa full 6-point** (standard SIAE). Verdict finale: `APPROVED` / `REJECTED`. | N/A (reviewer È il gatekeeper qui) |
+| `SEVERELY_DEGRADED` | Tooling parzialmente broken (runner missing, AWS unreachable). **Skip hard floor enforcement** (dev non punito). Procedi con review qualitativa standard + nota in commento PR: "DevForge runners parzialmente non disponibili: <missing_components>". | N/A |
+
+### Rules
+
+- **CRITICAL F1: Reviewer can NEVER override `hard_floor_breaches`. NON-OVERRIDABLE.** La decisione `BLOCK_HARD_FLOOR` è terminale lato reviewer: il reviewer **cannot overrule** la pipeline. Solo admin BREAK-GLASS via repo flag. Auto-approve su hard_floor = bug critico, segnala immediatamente.
+- **`AUTO_APPROVE` (W2 fix):** anche se la pipeline passa automaticamente, emetti uno **score card summary advisory** in PR comment con:
+  - Tabella 5 dim score + overall
+  - 1-line qualitative judgment (es. "Naming consistente, intent chiaro, no smell trovati")
+  - Improvement opportunities (se score < 90 su qualche dim) come advisory non-blocking
+- **`SEVERELY_DEGRADED`:** la review qualitativa procede ma il punteggio NON è hard-enforced. Il dev non è punito per tool broken.
+- **`REVIEWER_HANDOFF`:** la full review 6-point è IL gating mechanism. Decisione finale del reviewer = decisione finale del pipeline.
+
+### BREAK-GLASS (admin override path)
+
+Il BREAK-GLASS è l'**unico** modo per bypassare `BLOCK_HARD_FLOOR`. Requisiti cumulativi:
+
+1. **Commit message** contiene il marker `BREAK-GLASS: <jira-id>` (es. `BREAK-GLASS: SIAE-1234`)
+2. **2 reviewer approvals** distinte sulla PR (no self-approval, no stesso autore)
+3. **Post-mortem** scritto entro **48h** dal merge (template in `docs/post-mortem/`)
+
+Senza tutti e 3 i requisiti, il `BLOCK_HARD_FLOOR` resta in vigore. Il BREAK-GLASS è tracciato (audit log) e l'abuso ricorrente (>1 al mese per autore) attiva escalation al lead.
+
+### Output
+
+Reviewer emette sempre uno dei seguenti formati:
+- `{"decision": "block", "reason": "<text>"}` → blocca push
+- `{"decision": "approve", "reason": "<text>"}` → approva
+- `{"decision": "review_required", "reason": "<text>"}` → richiede ulteriore review umana (raro)
+
+Score card markdown sempre incluso in PR comment via `gh pr comment` (pattern siae-gh-actions).
+
+---
+
 ## PRIMA DELLA REVIEW — Raccolta Contesto
 
 Prima di iniziare la review, raccogli queste informazioni:
