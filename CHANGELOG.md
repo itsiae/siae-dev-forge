@@ -86,6 +86,31 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **Env vars** (`hooks/ENV_VARS.md`): `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET`
   (default 200000), `DEVFORGE_FIX_EVIDENCE_MAX_ITER` (default 5).
 
+### Added (auto-trigger fully-autonomous, follow-up PR #244)
+
+- **Auto-trigger pattern fully-autonomous** (`hooks/review-evidence` +
+  `skills/siae-fix-evidence/SKILL.md`): chiude il loop "zero bug usando
+  DevForge" senza azione utente manuale. Quando `DEVFORGE_FIX_EVIDENCE_AUTO=1`
+  e il hook emette `BLOCK_REGRESSION` (no hard floor, no bot, not degraded),
+  il campo `additional_context` include signal canonico grep-friendly
+  `AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=<SHA>`. L'agent (Claude Code)
+  intercept signal PRIMA di propagare il block all'utente, auto-invoca
+  `siae-fix-evidence` skill, e ri-prova action originale su `AUTO_APPROVE`.
+- **Env var** `DEVFORGE_FIX_EVIDENCE_AUTO` (default `0`, opt-in): attiva il
+  pattern auto-trigger. `0` = no behaviour change vs MVP manuale
+  `/forge-fix-evidence`.
+- **Signal additivo** (NOT replace block): `decision:block` resta per safety,
+  signal in `additional_context` per intercept agent. Hook resta single-file
+  (B3 PR #243 fix preserved).
+- **Skip conditions hook-level** identiche alla skill: `hard_floor_breaches`
+  non vuoto, `GITHUB_ACTOR` matches bot pattern (`dependabot[bot]`,
+  `renovate[bot]`, `github-actions[bot]`), decision SEVERELY_DEGRADED /
+  BLOCK_HARD_FLOOR (case branch separati). Telemetry log
+  `evidence_auto_fix_trigger_emitted` / `_skipped`.
+- **Test** (`tests/test_review_evidence_auto_trigger.py`): verifica signal
+  emitted on AUTO=1 + clean BLOCK_REGRESSION, no signal on AUTO=0,
+  no signal su hard_floor_breaches non vuoto / bot actor.
+
 ### Configuration
 
 - `.devforge-scores.yml` template: `docs/templates/.devforge-scores.yml`

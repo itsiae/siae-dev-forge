@@ -380,8 +380,41 @@ JSON
         ;;
     BLOCK_REGRESSION)
         ESCAPED_REASON=$(echo "$REGRESSION_REASON" | sed 's/"/\\"/g')
+        # ── Auto-trigger fully-autonomous (PR #244 follow-up) ──────
+        # When DEVFORGE_FIX_EVIDENCE_AUTO=1 AND we are on a clean
+        # BLOCK_REGRESSION (no hard floor, no bot, not degraded),
+        # emit canonical AUTO_FIX_TRIGGER signal in additional_context
+        # so the agent (Claude Code) can intercept and auto-invoke the
+        # `siae-fix-evidence` skill before propagating the block to
+        # the user.
+        #
+        # Skip conditions (identical to skill SKIP table):
+        #   - hard_floor_breaches non-empty  → BREAK-GLASS, human only
+        #   - GITHUB_ACTOR matches bot pattern → skill not applicable
+        #   - decision == SEVERELY_DEGRADED  → already handled above
+        # Signal is ADDITIVE: decision:block stays for safety.
+        # Format: AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=<SHA>
+        AUTO_SIGNAL=""
+        if [ "${DEVFORGE_FIX_EVIDENCE_AUTO:-0}" = "1" ]; then
+            HARD_FLOOR_COUNT=$(jq -r '.regression_verdict.hard_floor_breaches | length' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+            ACTOR="${GITHUB_ACTOR:-}"
+            IS_BOT=0
+            case "$ACTOR" in
+                dependabot\[bot\]|renovate\[bot\]|github-actions\[bot\])
+                    IS_BOT=1
+                    ;;
+            esac
+            if [ "$HARD_FLOOR_COUNT" = "0" ] && [ "$IS_BOT" = "0" ]; then
+                AUTO_SIGNAL=" AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=${SHA}"
+                devforge_log "evidence_auto_fix_trigger_emitted" "info" \
+                    "{\"sha\":\"${SHA}\",\"reason\":\"${ESCAPED_REASON}\"}" 2>/dev/null || true
+            else
+                devforge_log "evidence_auto_fix_trigger_skipped" "info" \
+                    "{\"sha\":\"${SHA}\",\"hard_floor_count\":${HARD_FLOOR_COUNT},\"is_bot\":${IS_BOT}}" 2>/dev/null || true
+            fi
+        fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: touch ~/.claude/.devforge-skip-evidence (tracked, abuse 5/day)."}
+{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: touch ~/.claude/.devforge-skip-evidence (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
 JSON
         devforge_log "evidence_v2_block_regression" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
         exit 0

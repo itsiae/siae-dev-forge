@@ -91,10 +91,16 @@ Auto-remediation loop hook-driven invocato da `/forge-fix-evidence` su
 |--------------------------------------|----------|------|
 | `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET` | `200000` | Token budget totale loop (rough est. via Claude API usage). Loop exit con `TOKEN_BUDGET_EXCEEDED` quando consumed > budget. Misurabile vs cap $5 originale che era non verificabile in-process. |
 | `DEVFORGE_FIX_EVIDENCE_MAX_ITER`     | `5`      | Hard cap iter del loop. Override richiede design review (pattern memory `feedback_spec_reviewer_iter2_roi`). |
+| `DEVFORGE_FIX_EVIDENCE_AUTO`         | `0`      | **v1.55+ NEW.** Set `1` per attivare auto-trigger fully-autonomous: hook `review-evidence` v2 emette signal canonico `AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=<SHA>` in `additional_context` su `BLOCK_REGRESSION` (no hard floor, no bot, not degraded). Agent (Claude Code) intercept signal e auto-invoca `siae-fix-evidence`. Default `0` = opt-in (no behaviour change vs MVP manual `/forge-fix-evidence`). |
 
 **Escalation conditions (no env override):** `hard_floor_breaches` non vuoto,
 `is_bot_pr=True`, `decision == SEVERELY_DEGRADED`, action `kind == "unknown"`,
 oscillation guard (stesso `frozenset(block_reasons)` per 2 iter consecutivi).
+
+**Auto-trigger skip conditions hook-level** (signal NON emesso, block resta):
+identiche alle skill skip conditions sopra (`hard_floor_breaches` non vuoto,
+`GITHUB_ACTOR` matches bot pattern). Vedi
+`skills/siae-fix-evidence/SKILL.md` sezione "Auto-trigger pattern".
 
 ## Scope / feature flags
 
