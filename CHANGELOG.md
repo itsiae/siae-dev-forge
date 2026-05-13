@@ -4,6 +4,42 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — v1.55.0 (review-evidence v2 scoring)
+
+### Added
+
+- **Schema v2** (`lib/review_evidence/schema.py`): `ScoreCard`, `RegressionVerdict`
+  (5 decision branch: AUTO_APPROVE / REVIEWER_HANDOFF / BLOCK_HARD_FLOOR /
+  BLOCK_REGRESSION / SEVERELY_DEGRADED), `ReviewerVerdict`, `EvidenceV2` extension
+  additive con forward-compat v1.
+- **Score algorithm** (`lib/review_evidence/scoring.py`): 5 score functions
+  (security/quality/coverage/spec/discipline) + `compute_overall` con D6
+  severely_degraded handling. Coverage anti-gaming via `lines_covered` drop
+  penalty (CRITICAL B1+B7+C5).
+- **5 OSS runner MVP** (`lib/review_evidence/runners/`): bandit, gitleaks,
+  pip-audit, npm-audit, eslint-security. Zero costo licenza, no Qodana
+  commercial dependency.
+- **`arch_drift` check** (`lib/review_evidence/checks/arch_drift.py`): detect
+  violazioni `forbidden_paths` configurate in `.devforge-arch.yml`.
+- **Config parsers** (`lib/review_evidence/config.py`): `.devforge-scores.yml`
+  (weights + hard_floors + regression_budget) + `.devforge-arch.yml`. Weights
+  validation sum ~= 1.0 (E4 fix). Config change detection in PR (CRITICAL B3 fix).
+- **Hook bash v2 extension** (`hooks/review-evidence`): 5 decision branch case
+  per gestire `regression_verdict.decision`. v1 fallback preservato.
+
+### Changed
+
+- `lib/review_evidence/collector.py`: extension `orchestrate_v2()` per scoring
+  layer. v1 `orchestrate()` stays for back-compat.
+
+### Docs
+
+- `hooks/ENV_VARS.md`: sezione "Review Evidence v2 — Scoring (v1.55+)".
+
+### Pending (PR-B follow-up)
+
+- baseline cache S3 + reviewer agent Step 0.6 + budget snapshot + skill_adoption + E2E test.
+
 ## [Unreleased] — 2026-05-12
 
 ### Added

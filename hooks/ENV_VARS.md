@@ -46,6 +46,30 @@ env var possono non propagare a subprocess hook Claude Code (vedi memory
 **Pattern operativo CI:** vedi `commands/forge-evidence.md` per il flow
 `gh pr create` -> CI completes -> `gh pr edit` per pickup SARIF.
 
+## Review Evidence v2 — Scoring (v1.55+)
+
+Estensione di Review Evidence v1 con scoring deterministico regression-based.
+Tutte le env var v1 (`DEVFORGE_EVIDENCE_*`) restano valide.
+
+### Config file paths
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_SCORES_CONFIG_PATH` | `.devforge-scores.yml` | Override path config (testing) |
+| `DEVFORGE_ARCH_CONFIG_PATH` | `.devforge-arch.yml` | Override path arch rules |
+
+### Behavior toggles (PR-A foundation)
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_SCORING_V2_ENABLED` | `0` (PR-A rollout phase) -> `1` (PR-B GA) | Master kill-switch v2 scoring (fallback v1) |
+
+PR-B aggiungera':
+- `DEVFORGE_BASELINE_S3_BUCKET` (default `itsiae-review-evidence-baseline-prod`)
+- `DEVFORGE_BASELINE_S3_REGION` (default `eu-west-1`)
+- `DEVFORGE_BASELINE_LOCAL_FALLBACK` (default `1`)
+- `DEVFORGE_BREAK_GLASS_REGEX` (default `BREAK-GLASS: \w+-\d+`)
+
 ## Scope / feature flags
 
 | Env var | Default | Gate | Description |
