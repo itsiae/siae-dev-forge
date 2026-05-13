@@ -17,6 +17,7 @@ from lib.review_evidence.config import DevForgeScoresConfig
 from lib.review_evidence.regression import (
     RegressionInput,
     compute_regression_verdict,
+    compute_regression_verdict_from_input,
     is_hard_floor_breached,
     snapshot_budget_at_pr_open,
 )
@@ -183,3 +184,26 @@ def test_regression_input_dataclass_roundtrip():
     assert inp.baseline is baseline
     assert inp.cfg is cfg
     assert inp.baseline_synthetic is False
+
+
+def test_compute_regression_verdict_from_input_delegates():
+    """Convenience wrapper produces the same verdict as the positional form.
+
+    Closes the dead-code gap on ``RegressionInput`` (fresh-eyes review iter 1
+    finding): the dataclass now has a real consumer.
+    """
+    cfg = DevForgeScoresConfig()
+    current = _sc(security=80, overall=78)
+    baseline = _sc(security=80, overall=78)
+    inp = RegressionInput(
+        current=current, baseline=baseline, cfg=cfg, baseline_synthetic=False
+    )
+
+    rv_via_input = compute_regression_verdict_from_input(inp)
+    rv_positional = compute_regression_verdict(
+        current=current, baseline=baseline, cfg=cfg, baseline_synthetic=False
+    )
+
+    assert rv_via_input.decision == rv_positional.decision
+    assert rv_via_input.reason == rv_positional.reason
+    assert rv_via_input.block_dimensions == rv_positional.block_dimensions

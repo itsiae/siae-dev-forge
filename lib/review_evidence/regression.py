@@ -137,6 +137,22 @@ def _hard_floor_breaches_list(
     return out
 
 
+def compute_regression_verdict_from_input(inp: RegressionInput) -> RegressionVerdict:
+    """Convenience wrapper that consumes a ``RegressionInput`` bundle.
+
+    Added in the fresh-eyes review iter 1 follow-up to give callers a way to
+    actually use the ``RegressionInput`` dataclass (previously a dead bundle:
+    declared but never consumed). The positional-arg signature stays the
+    canonical entry point — this just unpacks the fields.
+    """
+    return compute_regression_verdict(
+        current=inp.current,
+        baseline=inp.baseline,
+        cfg=inp.cfg,
+        baseline_synthetic=inp.baseline_synthetic,
+    )
+
+
 def compute_regression_verdict(
     current: ScoreCard,
     baseline: Optional[ScoreCard],

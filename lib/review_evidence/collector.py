@@ -206,13 +206,24 @@ def orchestrate_v2(
     out_path: Path,
     repo_root: Path | None = None,
 ) -> int:
-    """v2 orchestrator: scoring + runners + arch_drift + config (PR-A foundation).
+    """v2 orchestrator: scoring + runners + arch_drift + config (PR-B fully wired).
 
-    Extends v1 ``orchestrate()`` with the scoring layer. PR-A scope only —
-    baseline cache + budget snapshot + reviewer agent stay deferred to PR-B,
-    so ``baseline_synthetic`` is always True here.
+    Extends v1 ``orchestrate()`` with the scoring layer. PR-B wiring (fresh-eyes
+    review iter 1 fix, post-task-15):
 
-    Plan-review iter1 fixes:
+    - **Baseline cache**: try S3 (with local fallback) keyed by ``origin/main``
+      HEAD SHA. ``baseline_scores=None`` → ``baseline_synthetic=True`` (first
+      PR / fresh repo / force-push) drives the AUTO_APPROVE short-circuit in
+      ``compute_regression_verdict``.
+    - **Discipline via skill_adoption**: 4-tier fallback (activity.jsonl →
+      design doc → git log --grep "test:" → neutral 50). Bot PRs short-circuit
+      to discipline=100 (Edge C1).
+    - **Regression verdict**: ``compute_regression_verdict`` is the single
+      source of truth for decision branches (BLOCK_HARD_FLOOR / BLOCK_REGRESSION
+      / REVIEWER_HANDOFF / AUTO_APPROVE). SEVERELY_DEGRADED is layered on top
+      from ``compute_overall``'s degraded flag.
+
+    Plan-review iter1 fixes (preserved):
     - IMPORTS espliciti al TOP della funzione (subprocess, asdict, datetime,
       timezone): mai ellipsis, niente reliance su import opzionali.
     - sec_score uses ``sec_runners_with_result`` counter to avoid false 100
@@ -225,8 +236,11 @@ def orchestrate_v2(
     from datetime import datetime, timezone
 
     from lib.review_evidence.atomic_io import write_evidence_atomic
+    from lib.review_evidence.baseline_cache import fetch_baseline
     from lib.review_evidence.checks.arch_drift import detect_arch_drift
+    from lib.review_evidence.checks.skill_adoption import detect_skill_adoption
     from lib.review_evidence.config import load_scores_config
+    from lib.review_evidence.regression import compute_regression_verdict
     from lib.review_evidence.runners import applicable as runners_applicable
     from lib.review_evidence.schema import (
         SCHEMA_VERSION,
@@ -236,8 +250,10 @@ def orchestrate_v2(
     from lib.review_evidence.scoring import (
         ArchDriftInput,
         SecurityFindings,
+        SkillAdoptionInput,
         SpecDriftInput,
         compute_overall,
+        score_discipline,
         score_security,
         score_spec_compliance,
     )
@@ -304,8 +320,30 @@ def orchestrate_v2(
 
     spec_score = score_spec_compliance(sd_input, arch_input)
 
-    # ---- Discipline: signal missing → 50 (W4 fallback, real impl PR-B Task 10) ----
-    disc_score = 50.0
+    # ---- Discipline via skill_adoption (W4, PR-B Task 10 wired) ----
+    # 4-tier fallback: activity.jsonl → design doc → git log → neutral 50.
+    # CI passes pr_open_time + pr_user via env; locally we fall back to "now"
+    # + GITHUB_ACTOR or "local" so the call site stays deterministic.
+    pr_open_time = datetime.now(timezone.utc)
+    pr_user = os.environ.get("GITHUB_ACTOR", "local")
+    adoption = detect_skill_adoption(
+        repo_root=repo_root,
+        pr_open_time=pr_open_time,
+        pr_labels=[],  # PR labels not available at hook time; CI may extend
+        pr_user=pr_user,
+    )
+    if adoption.discipline_signal_missing:
+        # W4: no signal in any tier → neutral 50 (no false negative on non-DevForge devs)
+        disc_score = 50.0
+    else:
+        disc_score = score_discipline(
+            SkillAdoptionInput(
+                is_bot_pr=adoption.is_bot_pr,
+                brainstorming_done=adoption.brainstorming_done,
+                tdd_cycle_seen=adoption.tdd_cycle_seen,
+                verification_run=adoption.verification_run,
+            )
+        )
 
     scores = {
         "security": sec_score,
@@ -328,28 +366,49 @@ def orchestrate_v2(
         missing_components=missing,
     )
 
-    # ---- Decision (PR-A: no baseline → AUTO_APPROVE unless hard-floor breach) ----
-    decision = "AUTO_APPROVE"
-    if degraded:
-        decision = "SEVERELY_DEGRADED"
-    elif sec_score is not None and sec_score < config.hard_floors.get("security", 60):
-        decision = "BLOCK_HARD_FLOOR"
-    elif overall < config.hard_floors.get("overall", 55):
-        decision = "BLOCK_HARD_FLOOR"
-
-    rv = RegressionVerdict(
-        block_dimensions=[],
-        warn_dimensions=[],
-        improved_dimensions=[],
-        hard_floor_breaches=(
-            ["overall_or_security"] if decision == "BLOCK_HARD_FLOOR" else []
-        ),
-        decision=decision,
-        reason=(
-            f"PR-A foundation (baseline_synthetic). overall={overall}, "
-            f"degraded={degraded}, missing={missing}"
-        ),
+    # ---- Baseline cache lookup (PR-B Task 09 wired) ----
+    # Resolve `origin/main` HEAD SHA — fall back to the requested base ref so
+    # the lookup still works on a feature branch without a configured remote.
+    main_sha = (
+        _git(["rev-parse", "origin/main"], repo_root)
+        or _git(["rev-parse", base], repo_root)
     )
+    repo_full_name = os.environ.get("GITHUB_REPOSITORY", "local/unknown")
+    baseline_scores: ScoreCard | None = None
+    if main_sha:
+        try:
+            baseline_scores = fetch_baseline(repo_full_name, main_sha)
+        except Exception:
+            # Cache layer is non-fatal: treat any unexpected error as miss so
+            # the regression check falls back to baseline_synthetic semantics.
+            baseline_scores = None
+    baseline_synthetic = baseline_scores is None
+
+    # ---- Decision via regression analyzer (PR-B Task 11 wired) ----
+    # SEVERELY_DEGRADED is reserved for the orchestrator (regression.py module
+    # docstring): when compute_overall flags degraded (<2 dims available) OR
+    # when any dim is missing (tooling absent → zero placeholder would
+    # otherwise trip the hard-floor gate as a false positive).
+    if degraded or missing:
+        rv = RegressionVerdict(
+            block_dimensions=[],
+            warn_dimensions=[],
+            improved_dimensions=[],
+            hard_floor_breaches=[],
+            decision="SEVERELY_DEGRADED",
+            reason=(
+                f"Severely degraded (missing dims: {missing or '<2 available'}). "
+                "Fix tooling before re-run."
+            ),
+        )
+    else:
+        rv = compute_regression_verdict(
+            current=scorecard,
+            baseline=baseline_scores,
+            cfg=config,
+            baseline_synthetic=baseline_synthetic,
+        )
+    decision = rv.decision
 
     branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], repo_root) or "unknown"
     evidence = {
@@ -368,12 +427,12 @@ def orchestrate_v2(
             "warnings": [],
         },
         "current_scores": asdict(scorecard),
-        "baseline_scores": None,
+        "baseline_scores": asdict(baseline_scores) if baseline_scores else None,
         "deltas": None,
         "regression_verdict": asdict(rv),
         "reviewer_verdict": None,
         "budget_snapshot_at": None,
-        "baseline_synthetic": True,  # PR-A: always synthetic; PR-B populates
+        "baseline_synthetic": baseline_synthetic,
     }
 
     content = _json.dumps(evidence, indent=2, default=str)
