@@ -1,0 +1,42 @@
+[
+  {
+    "Filename": "/repo/templates/api.yml",
+    "Location": {
+      "Start": {"LineNumber": 12, "ColumnNumber": 5},
+      "End": {"LineNumber": 12, "ColumnNumber": 30}
+    },
+    "Level": "Error",
+    "Message": "Property Resources/MyBucket/Properties/BucketName has invalid value",
+    "Rule": {"Id": "E3001", "Description": "Basic CloudFormation Resource Check"}
+  },
+  {
+    "Filename": "/repo/templates/api.yml",
+    "Location": {
+      "Start": {"LineNumber": 18, "ColumnNumber": 5},
+      "End": {"LineNumber": 18, "ColumnNumber": 30}
+    },
+    "Level": "Error",
+    "Message": "Missing required key Properties at Resources/MyQueue",
+    "Rule": {"Id": "E3002", "Description": "Required property missing"}
+  },
+  {
+    "Filename": "/repo/templates/api.yml",
+    "Location": {
+      "Start": {"LineNumber": 25, "ColumnNumber": 5},
+      "End": {"LineNumber": 25, "ColumnNumber": 30}
+    },
+    "Level": "Warning",
+    "Message": "Parameter UnusedParam is not used in template",
+    "Rule": {"Id": "W2001", "Description": "Check unused parameters"}
+  },
+  {
+    "Filename": "/repo/templates/api.yml",
+    "Location": {
+      "Start": {"LineNumber": 30, "ColumnNumber": 5},
+      "End": {"LineNumber": 30, "ColumnNumber": 30}
+    },
+    "Level": "Informational",
+    "Message": "Consider adding metadata interface",
+    "Rule": {"Id": "I1022", "Description": "Informational best-practice"}
+  }
+]
