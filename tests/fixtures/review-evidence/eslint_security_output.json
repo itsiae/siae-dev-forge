@@ -1,0 +1,37 @@
+[
+  {
+    "filePath": "/repo/src/api.js",
+    "messages": [
+      {
+        "ruleId": "security/detect-eval-with-expression",
+        "severity": 2,
+        "message": "Found eval()",
+        "line": 15,
+        "column": 5
+      },
+      {
+        "ruleId": "security/detect-non-literal-fs-filename",
+        "severity": 1,
+        "message": "Non-literal fs filename",
+        "line": 22,
+        "column": 10
+      }
+    ],
+    "errorCount": 1,
+    "warningCount": 1
+  },
+  {
+    "filePath": "/repo/src/util.js",
+    "messages": [
+      {
+        "ruleId": "security/detect-non-literal-fs-filename",
+        "severity": 1,
+        "message": "Non-literal fs filename",
+        "line": 8,
+        "column": 3
+      }
+    ],
+    "errorCount": 0,
+    "warningCount": 1
+  }
+]

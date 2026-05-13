@@ -1,0 +1,16 @@
+{
+  "vulnerabilities": {
+    "lodash": {"severity": "critical", "via": ["CVE-2021-23337"], "fixAvailable": true},
+    "axios": {"severity": "high", "via": ["CVE-2023-45857"], "fixAvailable": true}
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "critical": 1,
+      "high": 1,
+      "moderate": 0,
+      "low": 0,
+      "info": 0,
+      "total": 2
+    }
+  }
+}
