@@ -18,6 +18,8 @@ V2_EXPECTED_VARS = {
     "DEVFORGE_ARCH_CONFIG_PATH",
     "DEVFORGE_SCORING_V2_ENABLED",
     # PR-B vars saranno aggiunte in Task 15
+    # v1.57+ runner-level overrides
+    "DEVFORGE_SEMGREP_CONFIG",
 }
 
 # Env vars that are documented in ENV_VARS.md but not yet consumed by the
