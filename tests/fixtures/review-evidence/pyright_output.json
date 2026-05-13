@@ -1,0 +1,31 @@
+{
+  "version": "1.1.350",
+  "time": "1700000000",
+  "generalDiagnostics": [
+    {
+      "file": "src/main.py",
+      "severity": "error",
+      "message": "Argument of type X is not assignable",
+      "range": {"start": {"line": 10, "character": 4}}
+    },
+    {
+      "file": "src/util.py",
+      "severity": "error",
+      "message": "Cannot access member 'foo' for type 'None'",
+      "range": {"start": {"line": 22, "character": 8}}
+    },
+    {
+      "file": "src/util.py",
+      "severity": "warning",
+      "message": "Unused variable 'x'",
+      "range": {"start": {"line": 25, "character": 4}}
+    }
+  ],
+  "summary": {
+    "filesAnalyzed": 12,
+    "errorCount": 2,
+    "warningCount": 1,
+    "informationCount": 0,
+    "timeInSec": 1.2
+  }
+}
