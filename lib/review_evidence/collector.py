@@ -199,6 +199,198 @@ def orchestrate(sha: str, base: str, dirty: bool, out_path: Path, repo_root: Pat
     return EXIT_OK
 
 
+def orchestrate_v2(
+    sha: str,
+    base: str,
+    dirty: bool,
+    out_path: Path,
+    repo_root: Path | None = None,
+) -> int:
+    """v2 orchestrator: scoring + runners + arch_drift + config (PR-A foundation).
+
+    Extends v1 ``orchestrate()`` with the scoring layer. PR-A scope only —
+    baseline cache + budget snapshot + reviewer agent stay deferred to PR-B,
+    so ``baseline_synthetic`` is always True here.
+
+    Plan-review iter1 fixes:
+    - IMPORTS espliciti al TOP della funzione (subprocess, asdict, datetime,
+      timezone): mai ellipsis, niente reliance su import opzionali.
+    - sec_score uses ``sec_runners_with_result`` counter to avoid false 100
+      when security runners are applicable but all returned None (tool
+      missing). Score stays None in that case → ``missing_components``.
+    """
+    import json as _json
+    import subprocess
+    from dataclasses import asdict
+    from datetime import datetime, timezone
+
+    from lib.review_evidence.atomic_io import write_evidence_atomic
+    from lib.review_evidence.checks.arch_drift import detect_arch_drift
+    from lib.review_evidence.config import load_scores_config
+    from lib.review_evidence.runners import applicable as runners_applicable
+    from lib.review_evidence.schema import (
+        SCHEMA_VERSION,
+        RegressionVerdict,
+        ScoreCard,
+    )
+    from lib.review_evidence.scoring import (
+        ArchDriftInput,
+        SecurityFindings,
+        SpecDriftInput,
+        compute_overall,
+        score_security,
+        score_spec_compliance,
+    )
+
+    repo_root = repo_root or Path.cwd()
+    config = load_scores_config(repo_root)
+
+    # ---- Security runners (aggregate findings + count successful runners) ----
+    sec_findings = SecurityFindings()
+    sec_runners_with_result = 0
+    applicable_runners = list(runners_applicable(repo_root))
+    for runner in applicable_runners:
+        try:
+            result = runner.run(repo_root)
+        except Exception:
+            result = None
+        if result is None:
+            continue
+        if isinstance(result, SecurityFindings):
+            sec_findings.critical += result.critical
+            sec_findings.high += result.high
+            sec_findings.medium += result.medium
+            sec_findings.low += result.low
+            sec_runners_with_result += 1
+
+    # sec_score = None if no runner produced a result (avoids false 100 when
+    # tools are applicable but missing — plan-review iter1 fix).
+    sec_score: float | None = (
+        score_security(sec_findings) if sec_runners_with_result > 0 else None
+    )
+    qual_score: float | None = None  # PR-B: quality runners
+    cov_score: float | None = None  # PR-B: coverage runner integration
+
+    # ---- Spec drift (best-effort) ----
+    try:
+        from lib.review_evidence.spec_drift import detect_drift
+        sd = detect_drift(repo_root=repo_root, base=base, head=sha)
+        sd_input = (
+            SpecDriftInput(unplanned_files=sd.get("unplanned_files", []))
+            if sd else SpecDriftInput()
+        )
+    except Exception:
+        sd_input = SpecDriftInput()
+
+    # ---- Arch drift (changed files vs forbidden_paths) ----
+    changed_files: list[str] = []
+    try:
+        p = subprocess.run(
+            ["git", "diff", "--name-only", f"{base}...{sha}"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        changed_files = [l.strip() for l in p.stdout.splitlines() if l.strip()]
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    arch = detect_arch_drift(repo_root, changed_files)
+    arch_input = ArchDriftInput(
+        violations=[f"{v.file}:{v.import_}" for v in arch.violations]
+    )
+
+    spec_score = score_spec_compliance(sd_input, arch_input)
+
+    # ---- Discipline: signal missing → 50 (W4 fallback, real impl PR-B Task 10) ----
+    disc_score = 50.0
+
+    scores = {
+        "security": sec_score,
+        "quality": qual_score,
+        "coverage": cov_score,
+        "spec_compliance": spec_score,
+        "discipline": disc_score,
+    }
+    overall, degraded = compute_overall(scores, config.weights)
+    missing = [k for k, v in scores.items() if v is None]
+
+    scorecard = ScoreCard(
+        security=sec_score if sec_score is not None else 0.0,
+        quality=qual_score if qual_score is not None else 0.0,
+        coverage=cov_score if cov_score is not None else 0.0,
+        spec_compliance=spec_score if spec_score is not None else 0.0,
+        discipline=disc_score,
+        overall=overall,
+        weights_used=dict(config.weights),
+        missing_components=missing,
+    )
+
+    # ---- Decision (PR-A: no baseline → AUTO_APPROVE unless hard-floor breach) ----
+    decision = "AUTO_APPROVE"
+    if degraded:
+        decision = "SEVERELY_DEGRADED"
+    elif sec_score is not None and sec_score < config.hard_floors.get("security", 60):
+        decision = "BLOCK_HARD_FLOOR"
+    elif overall < config.hard_floors.get("overall", 55):
+        decision = "BLOCK_HARD_FLOOR"
+
+    rv = RegressionVerdict(
+        block_dimensions=[],
+        warn_dimensions=[],
+        improved_dimensions=[],
+        hard_floor_breaches=(
+            ["overall_or_security"] if decision == "BLOCK_HARD_FLOOR" else []
+        ),
+        decision=decision,
+        reason=(
+            f"PR-A foundation (baseline_synthetic). overall={overall}, "
+            f"degraded={degraded}, missing={missing}"
+        ),
+    )
+
+    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], repo_root) or "unknown"
+    evidence = {
+        "schema_version": SCHEMA_VERSION,  # "2.0"
+        "sha": sha,
+        "branch": branch,
+        "computed_at": datetime.now(timezone.utc).isoformat(),
+        "dirty_tree": bool(dirty),
+        "base_branch": base,
+        "stack_detected": [r.name for r in applicable_runners],
+        "metrics": {},  # v1 metrics filled by orchestrate(); v2 foundation skips
+        "spec_drift": None,
+        "verdict": {
+            "block": decision.startswith("BLOCK"),
+            "block_reasons": [rv.reason] if decision.startswith("BLOCK") else [],
+            "warnings": [],
+        },
+        "current_scores": asdict(scorecard),
+        "baseline_scores": None,
+        "deltas": None,
+        "regression_verdict": asdict(rv),
+        "reviewer_verdict": None,
+        "budget_snapshot_at": None,
+        "baseline_synthetic": True,  # PR-A: always synthetic; PR-B populates
+    }
+
+    content = _json.dumps(evidence, indent=2, default=str)
+    try:
+        success, used_fallback, reason = write_evidence_atomic(
+            out_path, content, sha=sha, repo_root=repo_root
+        )
+    except DiskFullError as e:
+        sys.stderr.write(f"review-evidence: ENOSPC writing evidence ({e})\n")
+        return EXIT_DISK_FULL
+    if not success:
+        return EXIT_GENERIC
+    if used_fallback:
+        sys.stderr.write(f"review-evidence: used fallback path ({reason})\n")
+    return EXIT_OK
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--sha", required=True)
