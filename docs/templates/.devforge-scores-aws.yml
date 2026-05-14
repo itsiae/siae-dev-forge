@@ -1,0 +1,59 @@
+# DevForge Review Evidence v2 — AWS IaC stack template (v1.57+)
+#
+# Copy to repo root as `.devforge-scores.yml` and customize.
+#
+# Stack: AWS Infrastructure-as-Code (Terraform + CloudFormation).
+# Tooling: tflint (quality), tfsec+checkov+cfn-lint+semgrep (security).
+# Security is dominant because IaC misconfig = breach risk (public S3,
+# permissive IAM, open security groups). Regression budget on security is
+# tightened (-1 hard_block, 0 warn) so any drop blocks immediately.
+#
+# Schema JSON: docs/schemas/devforge-scores.schema.json (draft-07)
+
+# ----------------------------------------------------------------------------
+# weights: pesi della media ponderata per overall (sum 1.0 ± 0.01).
+# AWS IaC = security dominant (tfsec+checkov+cfn-lint+semgrep).
+# ----------------------------------------------------------------------------
+weights:
+  security: 0.50        # AWS IaC = security dominant
+  quality: 0.20         # tflint
+  coverage: 0.10        # terratest harder, lower bar
+  spec_compliance: 0.10
+  discipline: 0.10
+
+# ----------------------------------------------------------------------------
+# hard_floors: security extremely strict, coverage lenient (terratest hard).
+# ----------------------------------------------------------------------------
+hard_floors:
+  security: 75
+  coverage: 30
+  overall: 65
+  min_dim: 50
+
+# ----------------------------------------------------------------------------
+# regression_budget: AWS security tightened (-1 hard_block, 0 warn_reviewer).
+# Any drop in security score blocks immediately given breach risk surface.
+# Snapshot at PR_OPEN_TIME (E1 fix): admin change post-PR non sposta budget.
+# ----------------------------------------------------------------------------
+regression_budget:
+  hard_block:
+    security: -1
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+
+# ----------------------------------------------------------------------------
+# ignore_paths: glob esclusi da scoring (terraform state, cdk output, examples).
+# ----------------------------------------------------------------------------
+ignore_paths:
+  - ".terraform/**"
+  - "**/*.tfstate*"
+  - "**/*.tfvars.example"
+  - "**/cdk.out/**"

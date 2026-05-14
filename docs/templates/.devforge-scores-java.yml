@@ -1,0 +1,57 @@
+# DevForge Review Evidence v2 — Java stack template (v1.57+)
+#
+# Copy to repo root as `.devforge-scores.yml` and customize.
+#
+# Stack: Java microservices SIAE (Spring Boot, Maven).
+# Tooling: spotbugs+find-sec-bugs+mvn-deps+semgrep (security), checkstyle+pmd
+# (quality), jacoco line+branch (coverage). Java mature ecosystem -> stricter
+# floors and balanced quality/coverage weights.
+#
+# Schema JSON: docs/schemas/devforge-scores.schema.json (draft-07)
+
+# ----------------------------------------------------------------------------
+# weights: pesi della media ponderata per overall (sum 1.0 ± 0.01).
+# ----------------------------------------------------------------------------
+weights:
+  security: 0.30        # spotbugs+find-sec-bugs+mvn-deps+semgrep
+  quality: 0.25         # checkstyle+pmd
+  coverage: 0.25        # jacoco line+branch (Java mature ecosystem)
+  spec_compliance: 0.10
+  discipline: 0.10
+
+# ----------------------------------------------------------------------------
+# hard_floors: livelli minimi 0-100 sotto i quali la PR e' BLOCK_HARD_FLOOR.
+# Java enterprise = stricter (security >=65, coverage >=60).
+# ----------------------------------------------------------------------------
+hard_floors:
+  security: 65
+  coverage: 60
+  overall: 60
+  min_dim: 45
+
+# ----------------------------------------------------------------------------
+# regression_budget: delta vs baseline tollerati in punti percentuali.
+# Snapshot at PR_OPEN_TIME (E1 fix): admin change post-PR non sposta budget.
+# ----------------------------------------------------------------------------
+regression_budget:
+  hard_block:
+    security: -2
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+
+# ----------------------------------------------------------------------------
+# ignore_paths: glob esclusi da scoring (build output, generated sources).
+# ----------------------------------------------------------------------------
+ignore_paths:
+  - "target/**"
+  - "build/**"
+  - "**/generated/**"
+  - "**/*.java.tmpl"
