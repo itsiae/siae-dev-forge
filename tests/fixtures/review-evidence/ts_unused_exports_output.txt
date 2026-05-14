@@ -1,0 +1,4 @@
+3 modules with unused exports
+/repo/src/foo.ts: barFn, bazFn
+/repo/src/legacy.tsx: default
+/repo/src/util.ts: helperA, helperB, helperC

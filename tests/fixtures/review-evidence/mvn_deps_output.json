@@ -1,0 +1,20 @@
+{
+  "reportSchema": "1.1",
+  "projectInfo": {"name": "demo-app"},
+  "dependencies": [
+    {
+      "fileName": "jackson-databind-2.9.10.jar",
+      "vulnerabilities": [
+        {"name": "CVE-2020-36518", "severity": "CRITICAL"},
+        {"name": "CVE-2019-12814", "severity": "HIGH"}
+      ]
+    },
+    {
+      "fileName": "commons-lang-2.6.jar",
+      "vulnerabilities": [
+        {"name": "CVE-2022-33980", "severity": "MEDIUM"},
+        {"name": "CVE-2020-9488", "severity": "LOW"}
+      ]
+    }
+  ]
+}

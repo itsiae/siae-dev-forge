@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "rule_id": "aws-s3-enable-bucket-encryption",
+      "severity": "CRITICAL",
+      "description": "Bucket does not have encryption enabled"
+    },
+    {
+      "rule_id": "aws-iam-no-policy-wildcards",
+      "severity": "HIGH",
+      "description": "IAM policy allows wildcard actions"
+    },
+    {
+      "rule_id": "aws-vpc-no-public-egress-sg",
+      "severity": "MEDIUM",
+      "description": "Security group has open egress"
+    },
+    {
+      "rule_id": "aws-ec2-no-public-ingress-acl",
+      "severity": "LOW",
+      "description": "Network ACL is permissive"
+    },
+    {
+      "rule_id": "aws-misc-unknown",
+      "severity": "UNKNOWN",
+      "description": "Unclassified finding"
+    }
+  ]
+}
