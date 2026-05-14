@@ -1,6 +1,6 @@
 # Task 33 — slash command /forge-release-risk
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-32
 

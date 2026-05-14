@@ -1,6 +1,6 @@
 # Task 31 — reference 18 criteri detail
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-30
 

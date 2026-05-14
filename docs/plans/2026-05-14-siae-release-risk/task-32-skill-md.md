@@ -1,6 +1,6 @@
 # Task 32 — SKILL.md 10-step orchestrator
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-28 (cli), task-30, task-31
 

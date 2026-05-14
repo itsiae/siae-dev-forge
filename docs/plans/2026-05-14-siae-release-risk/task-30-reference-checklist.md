@@ -1,6 +1,6 @@
 # Task 30 — reference checklist template
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-03 (scaffold)
 

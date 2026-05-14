@@ -32,7 +32,7 @@
 | 10 | detector.py criteri 11-15 (coverage-stub, E2E, perf, user impact, files count) | `task-10-detector-criteri-11-15.md` | 1.5/0.5 | [DONE] |
 | 11 | [TDD] tests detector.py criteri 11-15 + integration end-to-end | `task-11-test-detector-11-15.md` | 1/0.5 | [DONE] |
 | 12 | kg_lookup.py (MCP sport-kg + heuristic 6 condizioni) — Criterion 5 | `task-12-kg-lookup.md` | 2/1 | [DONE] |
-| 12b | Bridge MCP sport-kg → CLI via JSON prefetch (resolve ADR-2 inesigibilità) | `task-12b-kg-bridge-skill-to-cli.md` | 1.5/0.75 | [DONE-PARTIAL] (Step 3 SKILL.md → task-32) |
+| 12b | Bridge MCP sport-kg → CLI via JSON prefetch (resolve ADR-2 inesigibilità) | `task-12b-kg-bridge-skill-to-cli.md` | 1.5/0.75 | [DONE] |
 | 13 | [TDD] tests kg_lookup.py (mock MCP, timeout, criticality matrix) | `task-13-test-kg-lookup.md` | 1.5/0.5 | [DONE] |
 | 14 | coverage_src.py chain fallback (evidence → CI artifact → ask) — Criterion 11 | `task-14-coverage-src.md` | 1.5/0.5 | [DONE] |
 | 15 | [TDD] tests coverage_src.py | `task-15-test-coverage-src.md` | 1/0.5 | [DONE] |
@@ -50,10 +50,10 @@
 | 27 | [TDD] tests renderer.py snapshot 4 livelli | `task-27-test-renderer.md` | 1.5/0.5 | [DONE] |
 | 28 | cli.py argparse + entry point `python -m lib.release_risk assess` | `task-28-cli.md` | 1.5/0.5 | [DONE] |
 | 29 | [TDD] tests cli.py e2e con fixture repo | `task-29-test-cli.md` | 1.5/0.5 | [DONE] |
-| 30 | skills/siae-release-risk/reference/release-criticality-checklist.md (template) | `task-30-reference-checklist.md` | 1/0.5 | [PENDING] |
-| 31 | skills/siae-release-risk/reference/release-risk-criteria.md (18 criteri detail) | `task-31-reference-criteri.md` | 1/0.5 | [PENDING] |
-| 32 | skills/siae-release-risk/SKILL.md (10-step orchestrator) | `task-32-skill-md.md` | 2/1 | [PENDING] |
-| 33 | commands/forge-release-risk.md (slash command) | `task-33-slash-command.md` | 1/0.5 | [PENDING] |
+| 30 | skills/siae-release-risk/reference/release-criticality-checklist.md (template) | `task-30-reference-checklist.md` | 1/0.5 | [DONE] |
+| 31 | skills/siae-release-risk/reference/release-risk-criteria.md (18 criteri detail) | `task-31-reference-criteri.md` | 1/0.5 | [DONE] |
+| 32 | skills/siae-release-risk/SKILL.md (10-step orchestrator) | `task-32-skill-md.md` | 2/1 | [DONE] |
+| 33 | commands/forge-release-risk.md (slash command) | `task-33-slash-command.md` | 1/0.5 | [DONE] |
 | 34 | hooks/pr-release-gate (PostToolUse Bash + cache + gh api comments idempotency) | `task-34-hook-pr-release-gate.md` | 2.5/1 | [PENDING] |
 | 35 | hooks/hooks.json register pr-release-gate | `task-35-hooks-json-register.md` | 0.5/0.25 | [PENDING] |
 | 36 | [TDD] tests/test_release_risk_hook.py integration | `task-36-test-hook.md` | 2/1 | [PENDING] |
