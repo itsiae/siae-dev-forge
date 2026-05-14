@@ -1,6 +1,6 @@
 # Task 17 — [TDD] test regression_delta.py
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-16
 

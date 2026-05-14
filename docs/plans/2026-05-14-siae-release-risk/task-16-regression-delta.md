@@ -1,6 +1,6 @@
 # Task 16 — regression_delta.py — Criterion 16
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04, task-01
 

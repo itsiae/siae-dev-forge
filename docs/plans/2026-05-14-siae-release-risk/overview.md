@@ -36,8 +36,8 @@
 | 13 | [TDD] tests kg_lookup.py (mock MCP, timeout, criticality matrix) | `task-13-test-kg-lookup.md` | 1.5/0.5 | [DONE] |
 | 14 | coverage_src.py chain fallback (evidence → CI artifact → ask) — Criterion 11 | `task-14-coverage-src.md` | 1.5/0.5 | [DONE] |
 | 15 | [TDD] tests coverage_src.py | `task-15-test-coverage-src.md` | 1/0.5 | [DONE] |
-| 16 | regression_delta.py + prev_release_main_sha resolution — Criterion 16 | `task-16-regression-delta.md` | 2/1 | [PENDING] |
-| 17 | [TDD] tests regression_delta.py (mock baseline_cache) | `task-17-test-regression-delta.md` | 1.5/0.5 | [PENDING] |
+| 16 | regression_delta.py + prev_release_main_sha resolution — Criterion 16 | `task-16-regression-delta.md` | 2/1 | [DONE] |
+| 17 | [TDD] tests regression_delta.py (mock baseline_cache) | `task-17-test-regression-delta.md` | 1.5/0.5 | [DONE] |
 | 18 | security_state.py HEAD-only MVP (runners pip_audit/npm_audit) — Criterion 17 | `task-18-security-state.md` | 2/1 | [PENDING] |
 | 19 | [TDD] tests security_state.py | `task-19-test-security-state.md` | 1.5/0.5 | [PENDING] |
 | 20 | genesis.py Step 4b workflow + 3-outcome — Criterion 18 | `task-20-genesis.md` | 2/1 | [PENDING] |
