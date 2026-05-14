@@ -1,0 +1,6 @@
+diff --git a/db/migration/V42__add_user_email.sql b/db/migration/V42__add_user_email.sql
+new file mode 100644
+--- /dev/null
++++ b/db/migration/V42__add_user_email.sql
+@@ -0,0 +1,3 @@
++ALTER TABLE users ADD COLUMN email VARCHAR(255);
