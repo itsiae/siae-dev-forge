@@ -1,6 +1,6 @@
 # Task 18 — security_state.py HEAD-only MVP — Criterion 17
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04, task-01
 

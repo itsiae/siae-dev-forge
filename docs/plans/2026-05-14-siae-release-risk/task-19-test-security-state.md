@@ -1,6 +1,6 @@
 # Task 19 — [TDD] test security_state.py
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-18
 
