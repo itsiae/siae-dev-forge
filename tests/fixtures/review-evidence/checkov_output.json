@@ -1,0 +1,33 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "passed_checks": [],
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_19",
+        "severity": "CRITICAL",
+        "resource": "aws_s3_bucket.demo"
+      },
+      {
+        "check_id": "CKV_AWS_18",
+        "severity": "HIGH",
+        "resource": "aws_s3_bucket.demo"
+      },
+      {
+        "check_id": "CKV_AWS_21",
+        "severity": "MEDIUM",
+        "resource": "aws_s3_bucket.demo"
+      },
+      {
+        "check_id": "CKV_AWS_57",
+        "severity": "LOW",
+        "resource": "aws_s3_bucket.demo"
+      },
+      {
+        "check_id": "CKV_AWS_99",
+        "severity": "INFO",
+        "resource": "aws_s3_bucket.demo"
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+[
+  {
+    "file": "/repo/src/main/kotlin/Login.kt",
+    "errors": [
+      {
+        "line": 12,
+        "column": 1,
+        "message": "Unexpected indentation",
+        "rule": "indent"
+      },
+      {
+        "line": 13,
+        "column": 80,
+        "message": "Line too long",
+        "rule": "max-line-length"
+      },
+      {
+        "line": 22,
+        "column": 1,
+        "message": "Trailing whitespace not allowed",
+        "rule": "no-trailing-spaces"
+      }
+    ]
+  },
+  {
+    "file": "/repo/src/main/kotlin/Profile.kt",
+    "errors": [
+      {
+        "line": 5,
+        "column": 1,
+        "message": "Wildcard import",
+        "rule": "no-wildcard-imports"
+      }
+    ]
+  }
+]

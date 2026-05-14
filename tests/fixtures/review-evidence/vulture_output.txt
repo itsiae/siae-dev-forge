@@ -1,0 +1,3 @@
+src/legacy.py:12:0: unused function 'old_helper' (90% confidence)
+src/legacy.py:45:4: unused variable 'tmp_buf' (80% confidence)
+src/auth.py:7:0: unused import 'deprecated_module' (90% confidence)
