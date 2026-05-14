@@ -83,3 +83,40 @@ def test_lookup_mcp_empty_result():
     r = lookup_criticality("sport-x-service", mcp_invoker=fake_mcp_empty)
     assert r.status == "REQUIRES_INPUT"
     assert "not found in KG" in r.evidence[0]
+
+
+# Task-12b: bridge MCP → CLI via JSON prefetch file
+import json
+from lib.release_risk.kg_lookup import mcp_invoker_from_json_file
+
+
+def test_invoker_from_json_file_hit(tmp_path):
+    p = tmp_path / "kg.json"
+    p.write_text(json.dumps({
+        "service_name": "sport-x-service",
+        "describe_service": {"has_payment_chain": True, "auth_chain_length": 4},
+        "service_health": {"traffic_rps_p95": 200},
+    }))
+    invoker = mcp_invoker_from_json_file(p)
+    result = invoker("sport-x-service")
+    assert result["has_payment_chain"] is True
+    assert result["auth_chain_length"] == 4
+    assert result["traffic_rps_p95"] == 200
+
+
+def test_invoker_from_json_file_name_mismatch(tmp_path):
+    p = tmp_path / "kg.json"
+    p.write_text(json.dumps({"service_name": "other", "describe_service": {}}))
+    invoker = mcp_invoker_from_json_file(p)
+    assert invoker("sport-x-service") is None
+
+
+def test_invoker_from_missing_file(tmp_path):
+    p = tmp_path / "nonexistent.json"
+    assert mcp_invoker_from_json_file(p) is None
+
+
+def test_invoker_from_corrupted_json(tmp_path):
+    p = tmp_path / "bad.json"
+    p.write_text("not valid {{{")
+    assert mcp_invoker_from_json_file(p) is None

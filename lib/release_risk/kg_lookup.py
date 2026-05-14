@@ -91,3 +91,39 @@ def lookup_criticality(service_name: str, mcp_invoker=None) -> CriterionResult:
                   f"auth_chain_length={kg_data.get('auth_chain_length', 0)}"],
         source="mcp:sport-kg",
     )
+
+
+def mcp_invoker_from_json_file(kg_data_path: Optional[Path]):
+    """Construct mcp_invoker callable from a JSON file pre-populated by SKILL.md.
+
+    JSON schema:
+    {
+      "service_name": "sport-x-service",
+      "describe_service": { ...output di mcp__sport-kg__describe_service... },
+      "service_health": { ...output di mcp__sport-kg__service_health... }
+    }
+
+    Returns None se file non esiste (CLI degraderà a TOOL_UNAVAILABLE).
+    """
+    if not kg_data_path or not kg_data_path.exists():
+        return None
+    try:
+        data = json.loads(kg_data_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    def invoker(name: str) -> Optional[dict]:
+        if data.get("service_name") != name:
+            return None
+        ds = data.get("describe_service") or {}
+        sh = data.get("service_health") or {}
+        # Normalizza in dict piatto consumato da derive_criticality_from_kg
+        return {
+            "service_name": name,
+            "has_payment_chain": ds.get("has_payment_chain", False),
+            "auth_chain_length": ds.get("auth_chain_length", 0),
+            "traffic_rps_p95": sh.get("traffic_rps_p95", 0),
+            "drools_rules_count": ds.get("drools_rules_count", 0),
+            "called_by_count": ds.get("called_by_count", 0),
+        }
+    return invoker
