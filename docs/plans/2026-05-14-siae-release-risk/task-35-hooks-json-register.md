@@ -1,6 +1,6 @@
 # Task 35 — Register pr-release-gate in hooks.json
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 0.5 Human / 0.25 Augmented
 **Dipendenze:** task-34
 

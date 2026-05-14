@@ -1,6 +1,6 @@
 # Task 34 — hooks/pr-release-gate
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2.5 Human / 1 Augmented
 **Dipendenze:** task-28, task-32
 

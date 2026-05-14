@@ -1,6 +1,6 @@
 # Task 36 — [TDD] integration test hook
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-34, task-35
 

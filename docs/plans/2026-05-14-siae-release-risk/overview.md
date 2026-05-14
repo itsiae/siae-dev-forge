@@ -54,9 +54,9 @@
 | 31 | skills/siae-release-risk/reference/release-risk-criteria.md (18 criteri detail) | `task-31-reference-criteri.md` | 1/0.5 | [DONE] |
 | 32 | skills/siae-release-risk/SKILL.md (10-step orchestrator) | `task-32-skill-md.md` | 2/1 | [DONE] |
 | 33 | commands/forge-release-risk.md (slash command) | `task-33-slash-command.md` | 1/0.5 | [DONE] |
-| 34 | hooks/pr-release-gate (PostToolUse Bash + cache + gh api comments idempotency) | `task-34-hook-pr-release-gate.md` | 2.5/1 | [PENDING] |
-| 35 | hooks/hooks.json register pr-release-gate | `task-35-hooks-json-register.md` | 0.5/0.25 | [PENDING] |
-| 36 | [TDD] tests/test_release_risk_hook.py integration | `task-36-test-hook.md` | 2/1 | [PENDING] |
+| 34 | hooks/pr-release-gate (PostToolUse Bash + cache + gh api comments idempotency) | `task-34-hook-pr-release-gate.md` | 2.5/1 | [DONE] |
+| 35 | hooks/hooks.json register pr-release-gate | `task-35-hooks-json-register.md` | 0.5/0.25 | [DONE] |
+| 36 | [TDD] tests/test_release_risk_hook.py integration | `task-36-test-hook.md` | 2/1 | [DONE] |
 | 37 | evals/release-risk/disambiguation.yaml (10 prompt) | `task-37-eval-set.md` | 1/0.5 | [PENDING] |
 | 38 | .claude-plugin/plugin.json bump 1.56→1.57 + count | `task-38-plugin-manifest-bump.md` | 0.5/0.25 | [PENDING] |
 | 39 | README.md skill count update + CHANGELOG.md 1.57.0 + hooks/ENV_VARS.md | `task-39-docs-update.md` | 1.5/0.5 | [PENDING] |
