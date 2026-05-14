@@ -1,6 +1,6 @@
 # Task 10 — detector.py criteri 11-15
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-08
 
