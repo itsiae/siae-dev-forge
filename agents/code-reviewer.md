@@ -185,6 +185,21 @@ Dopo aver caricato evidence in Step 0.5, controlla `decision`:
 - **`SEVERELY_DEGRADED`:** la review qualitativa procede ma il punteggio NON è hard-enforced. Il dev non è punito per tool broken.
 - **`REVIEWER_HANDOFF`:** la full review 6-point è IL gating mechanism. Decisione finale del reviewer = decisione finale del pipeline.
 
+### Mutation testing advisory (v1.58+, opt-in)
+
+Quando `evidence.mutation` non è `None`, il reviewer DEVE leggerlo come **advisory signal aggiuntivo** durante la full 6-point review (categoria #3: testing).
+
+- Se `mutation.score_pct < DEVFORGE_MUTATION_THRESHOLD` (default 60):
+  - Trigger `REVIEWER_HANDOFF` se la decision pipeline era `AUTO_APPROVE` (escalation soft)
+  - Aggiungi in PR comment: "⚠️ Mutation score X% sotto threshold Y% (tool: pit/mutmut/stryker). Coverage % è alto ma molti mutanti sopravvivono — i test eseguono il codice ma non verificano la logica. Considera test aggiuntivi mirati ai survived mutants."
+  - **MAI** convertire in BLOCK su mutation alone (ThoughtWorks pattern: shift focus from execution to verification, no friction)
+- Se `mutation.score_pct >= threshold`:
+  - Conferma "✅ Mutation score X% — test quality verificata" nel comment summary
+- Se `evidence.mutation is None` (opt-in disabled o tool/report missing):
+  - **Nessun mention** nel comment (advisory feature opt-in, non rumore)
+
+Hard rule: **mutation NON è in `hard_floor_breaches`**, mai BLOCK_HARD_FLOOR.
+
 ### BREAK-GLASS (admin override path)
 
 Il BREAK-GLASS è l'**unico** modo per bypassare `BLOCK_HARD_FLOOR`. Requisiti cumulativi:

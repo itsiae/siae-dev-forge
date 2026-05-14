@@ -249,6 +249,7 @@ def orchestrate_v2(
     )
     from lib.review_evidence.scoring import (
         ArchDriftInput,
+        MutationFindings,
         SecurityFindings,
         SkillAdoptionInput,
         SpecDriftInput,
@@ -262,8 +263,10 @@ def orchestrate_v2(
     config = load_scores_config(repo_root)
 
     # ---- Security runners (aggregate findings + count successful runners) ----
+    # ---- Mutation runner (first non-None advisory, v1.58+ opt-in) ----
     sec_findings = SecurityFindings()
     sec_runners_with_result = 0
+    mutation_findings: MutationFindings | None = None
     applicable_runners = list(runners_applicable(repo_root))
     for runner in applicable_runners:
         try:
@@ -278,6 +281,10 @@ def orchestrate_v2(
             sec_findings.medium += result.medium
             sec_findings.low += result.low
             sec_runners_with_result += 1
+        elif isinstance(result, MutationFindings) and mutation_findings is None:
+            # First non-None wins (Java vs Python vs JS — typically only 1 stack).
+            # E5 mitigation: multi-stack would otherwise mix incompatible scores.
+            mutation_findings = result
 
     # sec_score = None if no runner produced a result (avoids false 100 when
     # tools are applicable but missing — plan-review iter1 fix).
@@ -433,6 +440,7 @@ def orchestrate_v2(
         "reviewer_verdict": None,
         "budget_snapshot_at": None,
         "baseline_synthetic": baseline_synthetic,
+        "mutation": asdict(mutation_findings) if mutation_findings else None,
     }
 
     content = _json.dumps(evidence, indent=2, default=str)
