@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# PostToolUse:Bash hook — release risk assessment on gh pr create release/**→main
+# Hook:     pr-release-gate
+# Evento:   PostToolUse
+# Matcher:  Bash
+# Timeout:  30s — CLI assessment + gh api comments
+# Formato:  additional_context (standard DevForge)
+
+set -euo pipefail
+export DEVFORGE_CURRENT_HOOK="pr-release-gate"
+
+HOOK_INPUT=$(cat)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Skip if disabled
+if [ -f "${HOME}/.claude/.devforge-skip-release-risk" ]; then
+    exit 0
+fi
+if [ "${DEVFORGE_RELEASE_RISK_DISABLED:-0}" = "1" ]; then
+    exit 0
+fi
+
+# Extract command from hook input
+if command -v jq >/dev/null 2>&1; then
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
+else
+    TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
+fi
+
+# Match only `gh pr create --base main` or similar
+if ! echo "$TOOL_COMMAND" | grep -qE 'gh pr create.+--base[= ]main' 2>/dev/null; then
+    exit 0
+fi
+
+# Verify current branch is release/**
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+if ! echo "$CURRENT_BRANCH" | grep -qE '^release/' 2>/dev/null; then
+    exit 0
+fi
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+SERVICE=$(basename "$REPO_ROOT")
+
+# Generate diff
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+git fetch origin main --quiet 2>/dev/null || true
+git diff "origin/main...origin/$CURRENT_BRANCH" --name-only > "$TMPDIR/diff-files.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-files.txt"
+git diff "origin/main...origin/$CURRENT_BRANCH" > "$TMPDIR/diff-content.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-content.txt"
+
+# Find PR number (just created by gh pr create)
+PR_NUMBER=$(gh pr list --head "$CURRENT_BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+# Detect timeout cmd portatile (macOS BSD non ha `timeout` di default)
+# Vedi memory feedback_macos_timeout_portability.md
+TIMEOUT_CMD=""
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout 25"
+elif command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout 25"
+fi
+# Se nessun timeout disponibile (macOS senza coreutils), proceed senza wrapper
+# (hook ha già il proprio timeout di 30s impostato in hooks.json)
+
+# Invoke CLI (timeout 25s portable, hook total budget 30s)
+ASSESS_OUTPUT=$($TIMEOUT_CMD python3 -m lib.release_risk assess \
+    --repo-root "$REPO_ROOT" \
+    --branch "$CURRENT_BRANCH" \
+    --service "$SERVICE" \
+    --diff-files "$TMPDIR/diff-files.txt" \
+    --diff-content "$TMPDIR/diff-content.txt" \
+    --trigger pr-open 2>/dev/null) || {
+    # Fail-open: emit additional_context warning, no block
+    cat <<EOF
+{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"⚠️ [siae-release-risk] CLI timeout o errore. Run /forge-release-risk manualmente."}}
+EOF
+    exit 0
+}
+
+# Parse output
+OUTPUT_PATH=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.output_path // empty' 2>/dev/null)
+CACHED=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.cached // false' 2>/dev/null)
+LEVEL=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.level // "UNKNOWN"' 2>/dev/null)
+DIFF_HASH=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.diff_hash // empty' 2>/dev/null)
+
+# Idempotency check via gh api repos/{owner}/{repo}/issues/<pr>/comments
+if [ -n "$PR_NUMBER" ] && [ -n "$DIFF_HASH" ]; then
+    REPO_FULL=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "")
+    if [ -n "$REPO_FULL" ]; then
+        EXISTING=$(gh api "repos/$REPO_FULL/issues/$PR_NUMBER/comments" --jq ".[].body" 2>/dev/null | grep -F "<!-- release-risk:$DIFF_HASH -->" || echo "")
+        if [ -z "$EXISTING" ]; then
+            # Post scorecard to PR
+            gh pr comment "$PR_NUMBER" --body-file "$OUTPUT_PATH" 2>/dev/null || true
+        fi
+    fi
+fi
+
+# Emit additional_context summary
+cat <<EOF
+{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"🔨 [siae-release-risk] Scorecard posted to PR #$PR_NUMBER. Level: $LEVEL. Output: $OUTPUT_PATH. Cached: $CACHED."}}
+EOF
+exit 0
