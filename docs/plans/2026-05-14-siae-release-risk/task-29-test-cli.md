@@ -1,6 +1,6 @@
 # Task 29 — [TDD] test cli.py e2e
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-28
 

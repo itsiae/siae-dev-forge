@@ -1,6 +1,6 @@
 # Task 28 — cli.py entry point
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-22, task-24, task-26 + tutti i detector
 
