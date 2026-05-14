@@ -1,6 +1,6 @@
 # Task 12b — Bridge MCP sport-kg → CLI via JSON prefetch file
 
-**Stato:** [PENDING]
+**Stato:** [DONE-PARTIAL] — Step 1+4+5 (factory + test + commit) DONE. Step 2 (cli.py) deferred a task-28, Step 3 (SKILL.md) deferred a task-32 (file non ancora esistenti).
 **SP:** 1.5 Human / 0.75 Augmented
 **Dipendenze:** task-12 (kg_lookup), task-13 (test file `tests/test_release_risk_kg_lookup.py` esistente — Step 4 di questo task aggiunge 4 test al file esistente)
 

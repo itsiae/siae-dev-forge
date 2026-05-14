@@ -1,6 +1,6 @@
 # Task 12 — kg_lookup.py (MCP sport-kg + heuristic) — Criterion 5
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04 (schema), task-01 (verifica MCP)
 

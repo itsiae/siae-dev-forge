@@ -31,9 +31,9 @@
 | 09 | [TDD] tests detector.py criteri 6-10 | `task-09-test-detector-6-10.md` | 1/0.5 | [DONE] |
 | 10 | detector.py criteri 11-15 (coverage-stub, E2E, perf, user impact, files count) | `task-10-detector-criteri-11-15.md` | 1.5/0.5 | [DONE] |
 | 11 | [TDD] tests detector.py criteri 11-15 + integration end-to-end | `task-11-test-detector-11-15.md` | 1/0.5 | [DONE] |
-| 12 | kg_lookup.py (MCP sport-kg + heuristic 6 condizioni) — Criterion 5 | `task-12-kg-lookup.md` | 2/1 | [PENDING] |
-| 12b | Bridge MCP sport-kg → CLI via JSON prefetch (resolve ADR-2 inesigibilità) | `task-12b-kg-bridge-skill-to-cli.md` | 1.5/0.75 | [PENDING] |
-| 13 | [TDD] tests kg_lookup.py (mock MCP, timeout, criticality matrix) | `task-13-test-kg-lookup.md` | 1.5/0.5 | [PENDING] |
+| 12 | kg_lookup.py (MCP sport-kg + heuristic 6 condizioni) — Criterion 5 | `task-12-kg-lookup.md` | 2/1 | [DONE] |
+| 12b | Bridge MCP sport-kg → CLI via JSON prefetch (resolve ADR-2 inesigibilità) | `task-12b-kg-bridge-skill-to-cli.md` | 1.5/0.75 | [DONE-PARTIAL] |
+| 13 | [TDD] tests kg_lookup.py (mock MCP, timeout, criticality matrix) | `task-13-test-kg-lookup.md` | 1.5/0.5 | [DONE] |
 | 14 | coverage_src.py chain fallback (evidence → CI artifact → ask) — Criterion 11 | `task-14-coverage-src.md` | 1.5/0.5 | [PENDING] |
 | 15 | [TDD] tests coverage_src.py | `task-15-test-coverage-src.md` | 1/0.5 | [PENDING] |
 | 16 | regression_delta.py + prev_release_main_sha resolution — Criterion 16 | `task-16-regression-delta.md` | 2/1 | [PENDING] |
