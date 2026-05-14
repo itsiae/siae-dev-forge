@@ -4,6 +4,39 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.57.0] - 2026-05-14
+
+### Added — Release Risk Assessment
+- **siae-release-risk** skill: pre-deploy risk assessment per release branch (18 criteri, score 0-36, level LOW/MEDIUM/HIGH/CRITICAL, decision GO/POSTPONE/NO_GO)
+- **/forge-release-risk** slash command on-demand
+- **hooks/pr-release-gate** PostToolUse Bash hook automatic su `gh pr create --base main` con head `release/**` (advisory-only)
+- 3 controlli aggiuntivi vs skill esterna originale:
+  - Criterion 16: Functional regression delta vs precedente release (coverage + test disabled/deleted)
+  - Criterion 17: Security vulnerability state (MVP HEAD-only via pip-audit + npm-audit)
+  - Criterion 18: Unexpected feature in release (genesis confirmation Step 4b)
+- Integrazione MCP sport-kg per critical service detection (Criterion 5) via JSON prefetch bridge
+- Cache `(branch, diff-hash, baseline-main-sha)` per skip re-run idempotenti
+- Output versionato `docs/releases/<date>-<service>-<branch>.md` + PR comment auto con idempotency marker
+- Activity ledger event `release-risk` via `devforge_log`
+
+### Changed
+- Plugin manifest: bump 1.56.0 → 1.57.0
+- Plugin description: count audit accurato (42 skill, 17 comandi, 5 agent, 24 hook)
+
+### Reference
+- Design doc: `docs/plans/2026-05-14-siae-release-risk-design.md` (13 ADR)
+- Plan: `docs/plans/2026-05-14-siae-release-risk/` (42 task bite-sized)
+
+### Out of scope (backlog futuro)
+- CVE per-ID identification (v3.x)
+- Criterion 17 delta vs baseline (v2.x — richiede extension EvidenceV2 schema)
+- Maven security runner (estensione runners/)
+- 4 controlli aggiuntivi: data migration delta, perf regression, contract breaking, OCP drift
+- Auto-calibrazione weight via incident correlation
+- CAB ticket auto-creation
+- Dashboard release-risk in siae-dev-analytics
+- Tag-creation hook + auto-block evolution
+
 ## [Unreleased] — v1.55.0 (review-evidence v2 scoring)
 
 ### Added

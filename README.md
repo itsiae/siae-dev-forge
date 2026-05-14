@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 39 skill, 11 comandi, 3 agent, 17 hook e una test suite, organizzati in una catena a 7 fasi.
+**siae-devforge** e' un plugin [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) progettato per lo sviluppo software conforme agli standard SIAE. Copre l'intero ciclo di vita del software (SDLC) con 42 skill, 17 comandi, 5 agent, 24 hook e una test suite, organizzati in una catena a 7 fasi.
 
 > **Versione:** 1.48.0
 > **Autore:** SIAE AI Competence Center
@@ -234,7 +234,7 @@ Ogni feature, fix o task attraversa una catena ordinata. Non tutte le fasi sono 
 4. Implementation  →  5. Testing           →  6. QA Gate             →  7. Release
        ↓                     ↓                      ↓                       ↓
   siae-code-standards      siae-tdd             siae-debugging            siae-documentation
-  siae-security            siae-qa (Xray TC)    siae-parallel-agents
+  siae-security            siae-qa (Xray TC)    siae-parallel-agents      siae-release-risk
   siae-iac                 siae-automation
   siae-data-engineering    (Appium/Cypress)
   siae-frontend
@@ -352,7 +352,15 @@ all'ultima domanda in un unico comando.
 
 ---
 
-## Skill (39)
+## Skill (42)
+
+### Release Management (v1.57.0)
+
+#### `siae-release-risk` — Pre-Deploy Risk Assessment
+
+Scorecard 18 criteri per release branch vs main: score 0-36, level LOW/MEDIUM/HIGH/CRITICAL, decision GO / GO_WITH_MONITORING / POSTPONE_WITHOUT_TL / NO_GO_WITHOUT_CAB. Integrazione MCP sport-kg (Criterion 5), baseline_cache regression delta (Criterion 16), runners pip-audit/npm-audit security state HEAD-only MVP (Criterion 17), genesis check feature branch confermate (Criterion 18). Output versionato `docs/releases/<date>-<service>-<branch>.md` + PR comment auto. Hook automatico `pr-release-gate` su `gh pr create --base main` con head `release/**`. Slash command on-demand `/forge-release-risk`.
+
+
 
 ### Meta-skill
 
