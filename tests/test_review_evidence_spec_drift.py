@@ -98,3 +98,104 @@ def test_detect_drift_auto_picks_latest_design(tmp_path, monkeypatch):
 def test_detect_drift_returns_none_when_no_design(tmp_path):
     result = detect_drift(repo_root=tmp_path, base="main", head="HEAD")
     assert result is None
+
+
+def test_detect_drift_treats_docs_plans_changes_as_planning_artifacts(
+    tmp_path, monkeypatch
+):
+    """Regression: commits that only touch ``docs/plans/`` are planning
+    artifacts (the plan itself), not implementation drift.
+
+    Before the fix: a docs-only commit with 6+ files under ``docs/plans/``
+    flagged ``drift_severity:high`` and blocked the commit (e.g. brainstorming
+    + writing-plans output: design.md + overview.md + task-NN.md files).
+    """
+    design = tmp_path / "design.md"
+    design.write_text("## File coinvolti\n- `src/feature/a.py`\n")
+    monkeypatch.setenv("DEVFORGE_EVIDENCE_DESIGN_DOC", str(design))
+
+    docs_plans_files = [
+        "docs/plans/2026-05-14-new-feature-design.md",
+        "docs/plans/2026-05-14-new-feature/overview.md",
+        "docs/plans/2026-05-14-new-feature/task-01.md",
+        "docs/plans/2026-05-14-new-feature/task-02.md",
+        "docs/plans/2026-05-14-new-feature/task-03.md",
+        "docs/plans/2026-05-14-new-feature/task-04.md",
+        "docs/plans/2026-05-14-new-feature/task-05.md",
+        "docs/plans/2026-05-14-new-feature/task-06.md",
+    ]
+
+    def fake_run(cmd, **kwargs):
+        from subprocess import CompletedProcess
+        if cmd[0] == "git" and "diff" in cmd:
+            return CompletedProcess(cmd, 0, stdout="\n".join(docs_plans_files) + "\n", stderr="")
+        return CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    with patch("lib.review_evidence.spec_drift.subprocess.run", side_effect=fake_run):
+        result = detect_drift(repo_root=tmp_path, base="main", head="HEAD")
+
+    # files_changed must remain raw for transparency
+    assert result["files_changed"] == docs_plans_files
+    # but unplanned excludes planning artifacts (docs/plans/*)
+    assert result["unplanned_files"] == []
+    assert result["drift_severity"] == "none"
+
+
+def test_detect_drift_mixed_impl_and_planning_only_counts_impl(
+    tmp_path, monkeypatch
+):
+    """Mixed commit: impl files outside ``docs/plans/`` still count toward
+    drift. The planning-artifact filter must NOT mask real implementation
+    drift hidden alongside a docs/plans update.
+    """
+    design = tmp_path / "design.md"
+    design.write_text("## File coinvolti\n- `src/feature/a.py`\n")
+    monkeypatch.setenv("DEVFORGE_EVIDENCE_DESIGN_DOC", str(design))
+
+    changed = [
+        "docs/plans/2026-05-14-feature-design.md",  # planning — excluded
+        "docs/plans/2026-05-14-feature/task-01.md",  # planning — excluded
+        "src/feature/a.py",  # in plan
+        "src/feature/b.py",  # IMPL drift — must be flagged
+    ]
+
+    def fake_run(cmd, **kwargs):
+        from subprocess import CompletedProcess
+        if cmd[0] == "git" and "diff" in cmd:
+            return CompletedProcess(cmd, 0, stdout="\n".join(changed) + "\n", stderr="")
+        return CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    with patch("lib.review_evidence.spec_drift.subprocess.run", side_effect=fake_run):
+        result = detect_drift(repo_root=tmp_path, base="main", head="HEAD")
+
+    assert result["files_changed"] == changed
+    assert result["unplanned_files"] == ["src/feature/b.py"]
+    # 1 unplanned, same parent dir as in_plan → low (severity helper logic)
+    assert result["drift_severity"] == "low"
+
+
+def test_detect_drift_docs_outside_plans_still_counted(tmp_path, monkeypatch):
+    """``docs/hld/``, ``docs/api/`` are implementation artifacts (not plans).
+    They must NOT be filtered by the planning-artifact rule.
+    """
+    design = tmp_path / "design.md"
+    design.write_text("## File coinvolti\n- `src/feature/a.py`\n")
+    monkeypatch.setenv("DEVFORGE_EVIDENCE_DESIGN_DOC", str(design))
+
+    changed = [
+        "docs/hld/service-x.md",
+        "docs/api/openapi.yaml",
+        "docs/runbook.md",
+    ]
+
+    def fake_run(cmd, **kwargs):
+        from subprocess import CompletedProcess
+        if cmd[0] == "git" and "diff" in cmd:
+            return CompletedProcess(cmd, 0, stdout="\n".join(changed) + "\n", stderr="")
+        return CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    with patch("lib.review_evidence.spec_drift.subprocess.run", side_effect=fake_run):
+        result = detect_drift(repo_root=tmp_path, base="main", head="HEAD")
+
+    # All 3 are unplanned (outside docs/plans/ — they ARE impl artifacts).
+    assert set(result["unplanned_files"]) == set(changed)

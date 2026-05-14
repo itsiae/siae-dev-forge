@@ -205,6 +205,18 @@ def _safe_read_design(path: Path) -> Optional[str]:
         return None
 
 
+def _is_planning_artifact(path: str) -> bool:
+    """Files under ``docs/plans/`` ARE the plan — they cannot drift FROM it.
+
+    A commit that only adds/updates design docs and task spec files is a
+    planning act, not implementation. Treating those paths as "unplanned
+    implementation" produced false-positive ``drift_severity:high`` blocks
+    on docs-only PRs (e.g. brainstorming + writing-plans output committed
+    before any code lands).
+    """
+    return path.startswith("docs/plans/")
+
+
 def detect_drift(repo_root: Path, base: str, head: str) -> Optional[dict[str, Any]]:
     design = _find_design_doc(repo_root)
     if design is None:
@@ -230,7 +242,12 @@ def detect_drift(repo_root: Path, base: str, head: str) -> Optional[dict[str, An
         changed = [l.strip() for l in p.stdout.splitlines() if l.strip()]
     except (FileNotFoundError, subprocess.TimeoutExpired):
         changed = []
-    unplanned = sorted(set(changed) - set(files_in_plan))
+    # Planning artifacts (docs/plans/*) ARE the plan and cannot drift FROM
+    # it. Keep them visible in ``files_changed`` for transparency, but
+    # exclude from ``unplanned_files`` / severity. Implementation files
+    # outside docs/plans/ still count toward drift.
+    impl_changed = [f for f in changed if not _is_planning_artifact(f)]
+    unplanned = sorted(set(impl_changed) - set(files_in_plan))
     return {
         "design_doc_path": str(design),
         "files_in_plan": files_in_plan,
