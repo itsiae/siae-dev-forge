@@ -61,7 +61,7 @@
 | 38 | .claude-plugin/plugin.json bump 1.56→1.57 + count | `task-38-plugin-manifest-bump.md` | 0.5/0.25 | [DONE] |
 | 39 | README.md skill count update + CHANGELOG.md 1.57.0 + hooks/ENV_VARS.md | `task-39-docs-update.md` | 1.5/0.5 | [DONE] |
 | 40 | Full test suite + mutation testing target ≥60% + coverage ≥85% verification | `task-40-test-suite-verification.md` | 1/0.5 | [DONE-PARTIAL] (coverage/mutation/lint deferred a CI — vedi mutation-report.md) |
-| 41 | siae-finishing-branch pre-flight + open PR | `task-41-finishing-branch-pr.md` | 1/0.5 | [PENDING] |
+| 41 | siae-finishing-branch pre-flight + open PR | `task-41-finishing-branch-pr.md` | 1/0.5 | [DONE] (PR #252 https://github.com/itsiae/siae-dev-forge/pull/252) |
 
 **Totale:** 42 task (41 + task-12b bridge MCP) — somma effettiva tabella: **51 Human SP / 22.25 Augmented SP**.
 

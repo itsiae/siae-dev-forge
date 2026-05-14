@@ -1,6 +1,6 @@
 # Task 41 — siae-finishing-branch + open PR
 
-**Stato:** [PENDING]
+**Stato:** [DONE] — PR #252 opened https://github.com/itsiae/siae-dev-forge/pull/252
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-40 (full test suite green)
 
