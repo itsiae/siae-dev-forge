@@ -28,7 +28,7 @@
 | 06 | detector.py criteri 1-5 (DB, OCP, API, deps, critical-stub) | `task-06-detector-criteri-1-5.md` | 1.5/0.5 | [DONE] |
 | 07 | [TDD] tests detector.py criteri 1-5 con fixture diff | `task-07-test-detector-1-5.md` | 1/0.5 | [DONE] |
 | 08 | detector.py criteri 6-10 (first release, rollback, downtime, migration, feature flag) | `task-08-detector-criteri-6-10.md` | 1.5/0.5 | [DONE] |
-| 09 | [TDD] tests detector.py criteri 6-10 | `task-09-test-detector-6-10.md` | 1/0.5 | [PENDING] |
+| 09 | [TDD] tests detector.py criteri 6-10 | `task-09-test-detector-6-10.md` | 1/0.5 | [DONE] |
 | 10 | detector.py criteri 11-15 (coverage-stub, E2E, perf, user impact, files count) | `task-10-detector-criteri-11-15.md` | 1.5/0.5 | [PENDING] |
 | 11 | [TDD] tests detector.py criteri 11-15 + integration end-to-end | `task-11-test-detector-11-15.md` | 1/0.5 | [PENDING] |
 | 12 | kg_lookup.py (MCP sport-kg + heuristic 6 condizioni) — Criterion 5 | `task-12-kg-lookup.md` | 2/1 | [PENDING] |

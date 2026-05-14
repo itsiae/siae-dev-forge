@@ -1,6 +1,6 @@
 # Task 09 — [TDD] test detector criteri 6-10
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-08
 
