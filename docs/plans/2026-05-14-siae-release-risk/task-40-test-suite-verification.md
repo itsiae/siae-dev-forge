@@ -1,6 +1,6 @@
 # Task 40 — Full test suite + mutation testing + coverage verification
 
-**Stato:** [PENDING]
+**Stato:** [DONE-PARTIAL] — 134/134 test PASS, coverage 89% (escl. cli.py e2e). Mutation/lint DEFERRED a CI (tooling non in PATH locale). Vedi mutation-report.md.
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-29 (cli test ultima), task-39 (docs done)
 
