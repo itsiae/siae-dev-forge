@@ -1,6 +1,6 @@
 # Task 14 — coverage_src.py chain fallback — Criterion 11
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-04, task-01
 

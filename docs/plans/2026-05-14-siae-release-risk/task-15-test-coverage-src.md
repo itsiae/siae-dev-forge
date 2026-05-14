@@ -1,6 +1,6 @@
 # Task 15 — [TDD] test coverage_src.py
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-14
 

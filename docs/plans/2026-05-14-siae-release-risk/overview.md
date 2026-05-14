@@ -34,8 +34,8 @@
 | 12 | kg_lookup.py (MCP sport-kg + heuristic 6 condizioni) — Criterion 5 | `task-12-kg-lookup.md` | 2/1 | [DONE] |
 | 12b | Bridge MCP sport-kg → CLI via JSON prefetch (resolve ADR-2 inesigibilità) | `task-12b-kg-bridge-skill-to-cli.md` | 1.5/0.75 | [DONE-PARTIAL] |
 | 13 | [TDD] tests kg_lookup.py (mock MCP, timeout, criticality matrix) | `task-13-test-kg-lookup.md` | 1.5/0.5 | [DONE] |
-| 14 | coverage_src.py chain fallback (evidence → CI artifact → ask) — Criterion 11 | `task-14-coverage-src.md` | 1.5/0.5 | [PENDING] |
-| 15 | [TDD] tests coverage_src.py | `task-15-test-coverage-src.md` | 1/0.5 | [PENDING] |
+| 14 | coverage_src.py chain fallback (evidence → CI artifact → ask) — Criterion 11 | `task-14-coverage-src.md` | 1.5/0.5 | [DONE] |
+| 15 | [TDD] tests coverage_src.py | `task-15-test-coverage-src.md` | 1/0.5 | [DONE] |
 | 16 | regression_delta.py + prev_release_main_sha resolution — Criterion 16 | `task-16-regression-delta.md` | 2/1 | [PENDING] |
 | 17 | [TDD] tests regression_delta.py (mock baseline_cache) | `task-17-test-regression-delta.md` | 1.5/0.5 | [PENDING] |
 | 18 | security_state.py HEAD-only MVP (runners pip_audit/npm_audit) — Criterion 17 | `task-18-security-state.md` | 2/1 | [PENDING] |
