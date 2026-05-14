@@ -1,0 +1,7 @@
+diff --git a/pom.xml b/pom.xml
++ <dependency><groupId>org.x</groupId></dependency>
+diff --git a/k8s/deployment.yaml b/k8s/deployment.yaml
+kind: Deployment
+strategy: Recreate
+diff --git a/db/V42__add_email.sql b/db/V42__add_email.sql
++ALTER TABLE users ADD COLUMN email VARCHAR(255);
