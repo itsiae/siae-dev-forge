@@ -57,9 +57,9 @@
 | 34 | hooks/pr-release-gate (PostToolUse Bash + cache + gh api comments idempotency) | `task-34-hook-pr-release-gate.md` | 2.5/1 | [DONE] |
 | 35 | hooks/hooks.json register pr-release-gate | `task-35-hooks-json-register.md` | 0.5/0.25 | [DONE] |
 | 36 | [TDD] tests/test_release_risk_hook.py integration | `task-36-test-hook.md` | 2/1 | [DONE] |
-| 37 | evals/release-risk/disambiguation.yaml (10 prompt) | `task-37-eval-set.md` | 1/0.5 | [PENDING] |
-| 38 | .claude-plugin/plugin.json bump 1.56→1.57 + count | `task-38-plugin-manifest-bump.md` | 0.5/0.25 | [PENDING] |
-| 39 | README.md skill count update + CHANGELOG.md 1.57.0 + hooks/ENV_VARS.md | `task-39-docs-update.md` | 1.5/0.5 | [PENDING] |
+| 37 | evals/release-risk/disambiguation.yaml (10 prompt) | `task-37-eval-set.md` | 1/0.5 | [DONE] |
+| 38 | .claude-plugin/plugin.json bump 1.56→1.57 + count | `task-38-plugin-manifest-bump.md` | 0.5/0.25 | [DONE] |
+| 39 | README.md skill count update + CHANGELOG.md 1.57.0 + hooks/ENV_VARS.md | `task-39-docs-update.md` | 1.5/0.5 | [DONE] |
 | 40 | Full test suite + mutation testing target ≥60% + coverage ≥85% verification | `task-40-test-suite-verification.md` | 1/0.5 | [PENDING] |
 | 41 | siae-finishing-branch pre-flight + open PR | `task-41-finishing-branch-pr.md` | 1/0.5 | [PENDING] |
 

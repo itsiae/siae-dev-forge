@@ -1,6 +1,6 @@
 # Task 39 — README + CHANGELOG + ENV_VARS
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-38
 

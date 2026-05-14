@@ -1,6 +1,6 @@
 # Task 37 — eval disambiguation set
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-32
 

@@ -1,6 +1,6 @@
 # Task 38 — plugin manifest bump 1.56→1.57
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 0.5 Human / 0.25 Augmented
 **Dipendenze:** task-02 (audit), task-37 (eval ready)
 
