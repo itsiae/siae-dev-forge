@@ -25,7 +25,7 @@
 | 03 | Scaffold directory structure (skills/, lib/, tests/, evals/) | `task-03-scaffold-structure.md` | 0.5/0.25 | [DONE] |
 | 04 | lib/release_risk/schema.py — dataclass CriterionResult, ScoreCard, GenesisInfo, ReleaseRiskReport | `task-04-schema-dataclass.md` | 1.5/0.5 | [DONE] |
 | 05 | [TDD] tests/test_release_risk_schema.py — roundtrip serialization | `task-05-test-schema.md` | 1/0.5 | [DONE] |
-| 06 | detector.py criteri 1-5 (DB, OCP, API, deps, critical-stub) | `task-06-detector-criteri-1-5.md` | 1.5/0.5 | [PENDING] |
+| 06 | detector.py criteri 1-5 (DB, OCP, API, deps, critical-stub) | `task-06-detector-criteri-1-5.md` | 1.5/0.5 | [DONE] |
 | 07 | [TDD] tests detector.py criteri 1-5 con fixture diff | `task-07-test-detector-1-5.md` | 1/0.5 | [PENDING] |
 | 08 | detector.py criteri 6-10 (first release, rollback, downtime, migration, feature flag) | `task-08-detector-criteri-6-10.md` | 1.5/0.5 | [PENDING] |
 | 09 | [TDD] tests detector.py criteri 6-10 | `task-09-test-detector-6-10.md` | 1/0.5 | [PENDING] |
