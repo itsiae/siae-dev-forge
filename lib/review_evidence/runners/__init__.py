@@ -12,4 +12,7 @@ from lib.review_evidence.runners import gitleaks  # noqa: F401,E402
 from lib.review_evidence.runners import pip_audit  # noqa: F401,E402
 from lib.review_evidence.runners import npm_audit  # noqa: F401,E402
 from lib.review_evidence.runners import eslint_security  # noqa: F401,E402
-from lib.review_evidence.runners import semgrep  # noqa: F401,E402
+# v1.58+ — mutation testing adapters (advisory, opt-in via DEVFORGE_MUTATION_ENABLED)
+from lib.review_evidence.runners import pit  # noqa: F401,E402
+from lib.review_evidence.runners import mutmut  # noqa: F401,E402
+from lib.review_evidence.runners import stryker  # noqa: F401,E402

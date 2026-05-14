@@ -82,13 +82,24 @@ per test/staging o ambienti dev offline.
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
 
-### Runner-level overrides (v1.57+)
+### Mutation Testing (v1.58+)
 
-Per-tool config override per i 17 OSS runner adapter in `lib/review_evidence/runners/`.
+Advisory test-quality metric via mutation runner (PIT/mutmut/Stryker).
+**Opt-in** — runner ritorna `None` quando disabled, zero overhead.
+Reviewer agent advisory: `mutation_score < threshold` -> `REVIEWER_HANDOFF`,
+**mai BLOCK** (ThoughtWorks pattern "shift focus from execution to verification").
 
 | Env var | Default | Note |
 |---|---|---|
-| `DEVFORGE_SEMGREP_CONFIG` | `auto` | Override Semgrep ruleset (es. `p/owasp-top-ten`, `p/ci`, `p/security-audit`). Default `auto` usa community ruleset. Consumato in `lib/review_evidence/runners/semgrep.py`. |
+| `DEVFORGE_MUTATION_ENABLED` | `0` | Master switch. `1` abilita PIT/mutmut/Stryker runner. Default OFF perche' mutation testing e' slow per definizione (M x test_runtime). |
+| `DEVFORGE_MUTATION_THRESHOLD` | `60` | `mutation_score < threshold` -> reviewer advisory `REVIEWER_HANDOFF`. Mai BLOCK su mutation alone. |
+| `DEVFORGE_PIT_REPORT_PATH` | `target/pit-reports/mutations.xml` | Override Java PIT XML report path. |
+| `DEVFORGE_MUTMUT_CACHE_PATH` | `.mutmut-cache` | Override Python mutmut SQLite cache directory. |
+| `DEVFORGE_STRYKER_REPORT_PATH` | `reports/mutation/mutation.json` | Override JS/TS Stryker JSON report path. |
+
+**Operational note:** mutation runner NON eseguono i tool live (M x test_runtime troppo
+slow). Parse SOLO pre-existing report file. Dev runna `mvn org.pitest:pitest-maven:mutationCoverage` / `mutmut run` / `npx stryker run` separatamente (CI o local) e DevForge
+collector legge il report quando presente.
 
 ### Fix Evidence Auto-Loop (skill `siae-fix-evidence`, v1.55+)
 

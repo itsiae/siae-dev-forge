@@ -18,8 +18,12 @@ V2_EXPECTED_VARS = {
     "DEVFORGE_ARCH_CONFIG_PATH",
     "DEVFORGE_SCORING_V2_ENABLED",
     # PR-B vars saranno aggiunte in Task 15
-    # v1.57+ runner-level overrides
-    "DEVFORGE_SEMGREP_CONFIG",
+    # v1.58+ mutation testing runner-level overrides
+    "DEVFORGE_MUTATION_ENABLED",
+    "DEVFORGE_MUTATION_THRESHOLD",
+    "DEVFORGE_PIT_REPORT_PATH",
+    "DEVFORGE_MUTMUT_CACHE_PATH",
+    "DEVFORGE_STRYKER_REPORT_PATH",
 }
 
 # Env vars that are documented in ENV_VARS.md but not yet consumed by the
@@ -36,6 +40,10 @@ DOCUMENTED_BUT_NOT_CONSUMED_TOLERATED = {
     # BREAK-GLASS regex is read by the hook + agent advisory; the Python
     # collector does not (yet) inspect commit messages.
     "DEVFORGE_BREAK_GLASS_REGEX",
+    # v1.58+ — consumed by agents/code-reviewer.md (markdown advisory),
+    # not Python lib code. Reviewer agent reads `mutation.score_pct` and
+    # compares against this threshold for advisory message generation.
+    "DEVFORGE_MUTATION_THRESHOLD",
 }
 
 

@@ -51,6 +51,23 @@ class SkillAdoptionInput:
     verification_run: bool = False
 
 
+@dataclass
+class MutationFindings:
+    """Test-quality verification — mutation testing output.
+
+    Advisory metric (v1.58+): mutation_score < threshold triggers
+    REVIEWER_HANDOFF, never BLOCK. Opt-in via DEVFORGE_MUTATION_ENABLED.
+    See docs/plans/2026-05-14-mutation-testing-design.md.
+    """
+    score_pct: float = 0.0     # 0-100 — killed / total ratio
+    killed: int = 0
+    survived: int = 0
+    timeout: int = 0
+    no_coverage: int = 0
+    total_mutants: int = 0
+    tool: str = ""              # "pit" | "mutmut" | "stryker"
+
+
 def score_security(findings: SecurityFindings) -> float:
     penalty = (findings.critical * 30 + findings.high * 10
                 + findings.medium * 3 + findings.low * 1)
