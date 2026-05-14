@@ -82,6 +82,14 @@ per test/staging o ambienti dev offline.
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
 
+### Runner-level overrides (v1.57+)
+
+Per-tool config override per i 17 OSS runner adapter in `lib/review_evidence/runners/`.
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_SEMGREP_CONFIG` | `auto` | Override Semgrep ruleset (es. `p/owasp-top-ten`, `p/ci`, `p/security-audit`). Default `auto` usa community ruleset. Consumato in `lib/review_evidence/runners/semgrep.py`. |
+
 ### Fix Evidence Auto-Loop (skill `siae-fix-evidence`, v1.55+)
 
 Auto-remediation loop hook-driven invocato da `/forge-fix-evidence` su

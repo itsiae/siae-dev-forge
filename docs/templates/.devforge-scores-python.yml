@@ -1,0 +1,59 @@
+# DevForge Review Evidence v2 — Python stack template (v1.57+)
+#
+# Copy to repo root as `.devforge-scores.yml` and customize.
+#
+# Stack: Python services / data pipelines / FastAPI.
+# Tooling: bandit+pip-audit+semgrep (security), vulture+pyright+ruff (quality),
+# coverage.py line+branch (coverage). Python ecosystem -> coverage is easy to
+# instrument so we raise the coverage weight and floor.
+#
+# Schema JSON: docs/schemas/devforge-scores.schema.json (draft-07)
+
+# ----------------------------------------------------------------------------
+# weights: pesi della media ponderata per overall (sum 1.0 ± 0.01).
+# ----------------------------------------------------------------------------
+weights:
+  security: 0.30        # bandit+pip-audit+semgrep
+  quality: 0.20         # vulture+pyright+ruff
+  coverage: 0.30        # coverage.py line+branch (Python easier to test)
+  spec_compliance: 0.10
+  discipline: 0.10
+
+# ----------------------------------------------------------------------------
+# hard_floors: livelli minimi 0-100 sotto i quali la PR e' BLOCK_HARD_FLOOR.
+# Python = higher coverage expectations (>=65), security baseline.
+# ----------------------------------------------------------------------------
+hard_floors:
+  security: 60
+  coverage: 65
+  overall: 60
+  min_dim: 40
+
+# ----------------------------------------------------------------------------
+# regression_budget: delta vs baseline tollerati in punti percentuali.
+# Snapshot at PR_OPEN_TIME (E1 fix): admin change post-PR non sposta budget.
+# ----------------------------------------------------------------------------
+regression_budget:
+  hard_block:
+    security: -2
+    coverage: -5
+    quality: -5
+    spec_compliance: -10
+    discipline: -20
+  warn_reviewer:
+    security: 0
+    coverage: -2
+    quality: -2
+    spec_compliance: -5
+    discipline: -10
+
+# ----------------------------------------------------------------------------
+# ignore_paths: glob esclusi da scoring (venv, cache, migrations, fixtures).
+# ----------------------------------------------------------------------------
+ignore_paths:
+  - ".venv/**"
+  - "venv/**"
+  - "__pycache__/**"
+  - "**/*.pyc"
+  - "tests/fixtures/**"
+  - "**/migrations/**"
