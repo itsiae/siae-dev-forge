@@ -1,6 +1,6 @@
 # Task 21 — [TDD] test genesis.py
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-20
 

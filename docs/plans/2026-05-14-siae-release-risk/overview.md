@@ -40,8 +40,8 @@
 | 17 | [TDD] tests regression_delta.py (mock baseline_cache) | `task-17-test-regression-delta.md` | 1.5/0.5 | [DONE] |
 | 18 | security_state.py HEAD-only MVP (runners pip_audit/npm_audit) — Criterion 17 | `task-18-security-state.md` | 2/1 | [DONE] |
 | 19 | [TDD] tests security_state.py | `task-19-test-security-state.md` | 1.5/0.5 | [DONE] |
-| 20 | genesis.py Step 4b workflow + 3-outcome — Criterion 18 | `task-20-genesis.md` | 2/1 | [PENDING] |
-| 21 | [TDD] tests genesis.py | `task-21-test-genesis.md` | 1/0.5 | [PENDING] |
+| 20 | genesis.py Step 4b workflow + 3-outcome — Criterion 18 | `task-20-genesis.md` | 2/1 | [DONE] |
+| 21 | [TDD] tests genesis.py | `task-21-test-genesis.md` | 1/0.5 | [DONE] |
 | 22 | scoring.py compute_score + level assignment max 36 | `task-22-scoring.md` | 1/0.5 | [PENDING] |
 | 23 | [TDD] tests scoring.py boundaries 0-4/5-9/10-14/15+ | `task-23-test-scoring.md` | 1/0.5 | [PENDING] |
 | 24 | cache.py 3-key (branch, diff-hash, baseline-main-sha) + idempotency marker | `task-24-cache.md` | 2/1 | [PENDING] |

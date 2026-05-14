@@ -1,6 +1,6 @@
 # Task 20 — genesis.py Step 4b + 3-outcome — Criterion 18
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04
 
