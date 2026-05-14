@@ -1,6 +1,6 @@
 # Task 11 — [TDD] test detector 11-15 + integration end-to-end
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-10
 
