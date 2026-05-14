@@ -21,7 +21,7 @@
 | # | Task | File | SP (H/A) | Stato |
 |---|------|------|---|-------|
 | 01 | Pre-flight infra check (baseline_cache schema, runners, MCP) | `task-01-preflight-infra-check.md` | 1.5/0.5 | [DONE] |
-| 02 | Plugin manifest count audit (pre-bump) | `task-02-plugin-manifest-audit.md` | 1/0.5 | [PENDING] |
+| 02 | Plugin manifest count audit (pre-bump) | `task-02-plugin-manifest-audit.md` | 1/0.5 | [DONE] |
 | 03 | Scaffold directory structure (skills/, lib/, tests/, evals/) | `task-03-scaffold-structure.md` | 0.5/0.25 | [PENDING] |
 | 04 | lib/release_risk/schema.py — dataclass CriterionResult, ScoreCard, GenesisInfo, ReleaseRiskReport | `task-04-schema-dataclass.md` | 1.5/0.5 | [PENDING] |
 | 05 | [TDD] tests/test_release_risk_schema.py — roundtrip serialization | `task-05-test-schema.md` | 1/0.5 | [PENDING] |
