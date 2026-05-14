@@ -212,3 +212,30 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start
 Le double-quote (escaped come `\"` nel JSON source) sono **necessarie** per consentire a bash di espandere `${CLAUDE_PLUGIN_ROOT}` iniettata dall'harness. Single quotes bloccherebbero l'espansione e l'hook fallisce con `bash: ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd: No such file or directory`.
 
 Regola enforced da `tests/hooks/hooks-json-var-expansion.test.sh`.
+
+## Release Risk Assessment
+
+| Env var | Default | Effect |
+|---|---|---|
+| `DEVFORGE_RELEASE_RISK_DISABLED` | `0` | `1` → skip hook pr-release-gate + slash skill (kill switch) |
+| `DEVFORGE_RELEASE_RISK_KG_TIMEOUT_SEC` | `5` | Timeout MCP sport-kg lookup (Criterion 5 critical service detection) |
+| `DEVFORGE_RELEASE_RISK_SECURITY_CRITICAL_THRESHOLD` | `0` | Soglia Criterion 17 critical CVE count per trigger YES (>) |
+| `DEVFORGE_RELEASE_RISK_SECURITY_HIGH_THRESHOLD` | `5` | Soglia Criterion 17 high CVE count per trigger YES (>) |
+
+### Skip override file-based
+
+```bash
+# Disabilita hook pr-release-gate
+touch ~/.claude/.devforge-skip-release-risk
+
+# Riabilita
+rm ~/.claude/.devforge-skip-release-risk
+```
+
+### Trigger automatico
+
+Hook `pr-release-gate` (PostToolUse Bash, 30s timeout) si attiva su:
+- `gh pr create --base main` AND
+- branch corrente `release/**`
+
+Posta scorecard come PR comment con idempotency marker `<!-- release-risk:<diff-hash> -->`.

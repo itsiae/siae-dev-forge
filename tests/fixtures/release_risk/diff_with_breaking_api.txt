@@ -1,0 +1,9 @@
+diff --git a/src/main/java/it/siae/UserController.java b/src/main/java/it/siae/UserController.java
+--- a/src/main/java/it/siae/UserController.java
++++ b/src/main/java/it/siae/UserController.java
+@@ -10,8 +10,3 @@
+-    @GetMapping("/api/v1/users/{id}")
+-    public ResponseEntity<User> getUser(@PathVariable Long id) { ... }
+-
+     @GetMapping("/api/v2/users/{id}")
+     public ResponseEntity<UserDto> getUserV2(@PathVariable Long id) { ... }

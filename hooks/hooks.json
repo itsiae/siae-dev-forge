@@ -171,6 +171,11 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" batch-checkpoint",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" pr-release-gate",
+            "timeout": 30
           }
         ]
       },
