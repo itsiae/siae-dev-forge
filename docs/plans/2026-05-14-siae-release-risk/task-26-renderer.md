@@ -1,6 +1,6 @@
 # Task 26 — renderer.py markdown output
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04, task-22
 

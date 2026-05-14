@@ -46,8 +46,8 @@
 | 23 | [TDD] tests scoring.py boundaries 0-4/5-9/10-14/15+ | `task-23-test-scoring.md` | 1/0.5 | [DONE] |
 | 24 | cache.py 3-key (branch, diff-hash, baseline-main-sha) + idempotency marker | `task-24-cache.md` | 2/1 | [DONE] |
 | 25 | [TDD] tests cache.py (hit/miss/baseline drift) | `task-25-test-cache.md` | 1/0.5 | [DONE] |
-| 26 | renderer.py template fill + 4 livelli + SUGGESTED FOLLOW-UP block | `task-26-renderer.md` | 2/1 | [PENDING] |
-| 27 | [TDD] tests renderer.py snapshot 4 livelli | `task-27-test-renderer.md` | 1.5/0.5 | [PENDING] |
+| 26 | renderer.py template fill + 4 livelli + SUGGESTED FOLLOW-UP block | `task-26-renderer.md` | 2/1 | [DONE] |
+| 27 | [TDD] tests renderer.py snapshot 4 livelli | `task-27-test-renderer.md` | 1.5/0.5 | [DONE] |
 | 28 | cli.py argparse + entry point `python -m lib.release_risk assess` | `task-28-cli.md` | 1.5/0.5 | [PENDING] |
 | 29 | [TDD] tests cli.py e2e con fixture repo | `task-29-test-cli.md` | 1.5/0.5 | [PENDING] |
 | 30 | skills/siae-release-risk/reference/release-criticality-checklist.md (template) | `task-30-reference-checklist.md` | 1/0.5 | [PENDING] |

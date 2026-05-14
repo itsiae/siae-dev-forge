@@ -1,6 +1,6 @@
 # Task 27 — [TDD] test renderer snapshot 4 livelli
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1.5 Human / 0.5 Augmented
 **Dipendenze:** task-26
 
