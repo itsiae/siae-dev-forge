@@ -1,6 +1,6 @@
 # Task 25 — [TDD] test cache.py
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-24
 

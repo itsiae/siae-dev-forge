@@ -1,6 +1,6 @@
 # Task 24 — cache.py 3-key + idempotency
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 2 Human / 1 Augmented
 **Dipendenze:** task-04
 

@@ -42,10 +42,10 @@
 | 19 | [TDD] tests security_state.py | `task-19-test-security-state.md` | 1.5/0.5 | [DONE] |
 | 20 | genesis.py Step 4b workflow + 3-outcome — Criterion 18 | `task-20-genesis.md` | 2/1 | [DONE] |
 | 21 | [TDD] tests genesis.py | `task-21-test-genesis.md` | 1/0.5 | [DONE] |
-| 22 | scoring.py compute_score + level assignment max 36 | `task-22-scoring.md` | 1/0.5 | [PENDING] |
-| 23 | [TDD] tests scoring.py boundaries 0-4/5-9/10-14/15+ | `task-23-test-scoring.md` | 1/0.5 | [PENDING] |
-| 24 | cache.py 3-key (branch, diff-hash, baseline-main-sha) + idempotency marker | `task-24-cache.md` | 2/1 | [PENDING] |
-| 25 | [TDD] tests cache.py (hit/miss/baseline drift) | `task-25-test-cache.md` | 1/0.5 | [PENDING] |
+| 22 | scoring.py compute_score + level assignment max 36 | `task-22-scoring.md` | 1/0.5 | [DONE] |
+| 23 | [TDD] tests scoring.py boundaries 0-4/5-9/10-14/15+ | `task-23-test-scoring.md` | 1/0.5 | [DONE] |
+| 24 | cache.py 3-key (branch, diff-hash, baseline-main-sha) + idempotency marker | `task-24-cache.md` | 2/1 | [DONE] |
+| 25 | [TDD] tests cache.py (hit/miss/baseline drift) | `task-25-test-cache.md` | 1/0.5 | [DONE] |
 | 26 | renderer.py template fill + 4 livelli + SUGGESTED FOLLOW-UP block | `task-26-renderer.md` | 2/1 | [PENDING] |
 | 27 | [TDD] tests renderer.py snapshot 4 livelli | `task-27-test-renderer.md` | 1.5/0.5 | [PENDING] |
 | 28 | cli.py argparse + entry point `python -m lib.release_risk assess` | `task-28-cli.md` | 1.5/0.5 | [PENDING] |

@@ -1,6 +1,6 @@
 # Task 23 — [TDD] test scoring boundaries
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-22
 

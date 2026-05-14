@@ -1,6 +1,6 @@
 # Task 22 — scoring.py max 36
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **SP:** 1 Human / 0.5 Augmented
 **Dipendenze:** task-04
 
