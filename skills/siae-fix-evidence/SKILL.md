@@ -202,6 +202,94 @@ fix-evidence loop — SHA <final-sha>
 |------------------------------------------|---------|------|
 | `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET`     | `200000`| Token budget loop (Claude API usage rough). |
 | `DEVFORGE_FIX_EVIDENCE_MAX_ITER`         | `5`     | Hard cap iter (override richiede design review). |
+| `DEVFORGE_FIX_EVIDENCE_AUTO`             | `1`     | **Default ON (BREAKING dal follow-up `feat/fix-evidence-auto-trigger`).** Auto-trigger fully-autonomous: hook `review-evidence` emette signal `AUTO_FIX_TRIGGER` in `additional_context` su `BLOCK_REGRESSION`, agent intercept e auto-invoca questa skill. Set `0` per disabilitare (opt-out kill-switch). |
+
+---
+
+## Auto-trigger pattern (fully-autonomous)
+
+> **Quando si attiva:** sempre, di default (`DEVFORGE_FIX_EVIDENCE_AUTO=1`
+> e' il default dal follow-up `feat/fix-evidence-auto-trigger`).
+> **BREAKING change** vs v1.55 PR #244 dove il default era `0` (opt-in).
+
+Pattern semantic (doc-level, NO bash enforcement) per chiudere il loop "zero
+bug usando DevForge" senza azione utente manuale. DevForge e' opinionato
+verso questo comportamento: ogni `BLOCK_REGRESSION` clean (no hard floor,
+no bot, not degraded) tenta un auto-fix loop prima di propagare il block
+all'utente.
+
+### Signal canonico hook -> agent
+
+Quando il hook `review-evidence` v2 emette `BLOCK_REGRESSION` E
+`DEVFORGE_FIX_EVIDENCE_AUTO=1` E nessuna skip condition matcha, l'output JSON
+contiene `additional_context` con marker grep-friendly:
+
+```
+AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=<SHA>
+```
+
+### Comportamento agent (Claude Code)
+
+**Quando vedi `AUTO_FIX_TRIGGER:/forge-fix-evidence` in tool output**, l'agent
+DEVE:
+
+1. **Intercept** il marker PRIMA di propagare il block all'utente.
+2. **Invocare automaticamente** `Skill(skill="siae-fix-evidence", args="sha=<SHA>")`.
+3. **Aspettare result** della skill (max 5 iter + token budget 200k).
+4. **Se skill ritorna `AUTO_APPROVE`** → ri-prova action originale (`gh pr create`).
+5. **Se `ESCALATED`** → mostra all'utente con context per intervento manuale.
+
+Non chiedere conferma utente: il design e' opt-in via env, la conferma e'
+gia' stata data attivando `DEVFORGE_FIX_EVIDENCE_AUTO=1`.
+
+### Skip conditions hook-level (no signal emitted)
+
+Identiche alle skill SKIP conditions:
+
+| Condizione                                          | Hook check                                                            |
+|-----------------------------------------------------|-----------------------------------------------------------------------|
+| `regression_verdict.hard_floor_breaches` non vuoto  | `jq '.regression_verdict.hard_floor_breaches \| length'` > 0 -> skip |
+| Bot PR (Dependabot / Renovate / github-actions)     | `GITHUB_ACTOR` matches pattern -> skip                                |
+| `decision == SEVERELY_DEGRADED`                     | Diverso case branch, signal non raggiunto                             |
+| `decision == BLOCK_HARD_FLOOR`                      | Diverso case branch, signal non raggiunto                             |
+
+In tutte queste condizioni il hook **non emette il signal**: il block resta
+ma senza auto-trigger, escalation human come da skill skip table.
+
+### Vincoli di safety
+
+1. **Signal e' ADDITIVO**, NOT al posto di `decision:block`. Block resta per
+   safety; agent intercept `additional_context` -> auto-launch skill ->
+   re-check block sulla nuova evidence.
+2. **Default ON, opt-out kill-switch via env:** `DEVFORGE_FIX_EVIDENCE_AUTO=1`
+   e' il default. Set `0` per disabilitare globalmente (vedi sezione
+   "Opt-out" sotto). Skip conditions semantic (hard floor / bot /
+   SEVERELY_DEGRADED) restano invariate.
+3. **Hook resta single-file** (B3 PR #243 fix preserved): il signal e' una
+   stringa nel campo `additional_context` esistente, non un nuovo hook.
+
+### Opt-out
+
+Per disabilitare globalmente l'auto-trigger (es. agent non-Claude-Code che
+non riesce a fare intercept del marker, debug/troubleshooting, policy
+aziendale "human in the loop" mandatoria):
+
+```bash
+# Opt-out per la sessione corrente
+export DEVFORGE_FIX_EVIDENCE_AUTO=0
+
+# Opt-out persistente
+echo 'export DEVFORGE_FIX_EVIDENCE_AUTO=0' >> ~/.zshrc
+
+# Opt-out one-shot
+DEVFORGE_FIX_EVIDENCE_AUTO=0 gh pr create --title "..."
+```
+
+Con `=0` il hook non emette il marker `AUTO_FIX_TRIGGER`: `BLOCK_REGRESSION`
+si comporta come pre-PR-#244 (block + reason, fix manuale via
+`/forge-fix-evidence` o human review). Le skip conditions semantic restano
+in vigore identicamente (hard floor / bot / SEVERELY_DEGRADED non emettono
+mai il marker, anche con `=1`).
 
 ---
 

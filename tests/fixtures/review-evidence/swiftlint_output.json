@@ -1,0 +1,42 @@
+[
+  {
+    "file": "/repo/Sources/App/Login.swift",
+    "line": 12,
+    "character": 9,
+    "severity": "error",
+    "reason": "Force cast should be avoided",
+    "rule_id": "force_cast"
+  },
+  {
+    "file": "/repo/Sources/App/Login.swift",
+    "line": 34,
+    "character": 5,
+    "severity": "error",
+    "reason": "Force try should be avoided",
+    "rule_id": "force_try"
+  },
+  {
+    "file": "/repo/Sources/App/Profile.swift",
+    "line": 7,
+    "character": 1,
+    "severity": "warning",
+    "reason": "Line should be 120 characters or less",
+    "rule_id": "line_length"
+  },
+  {
+    "file": "/repo/Sources/App/Profile.swift",
+    "line": 18,
+    "character": 1,
+    "severity": "warning",
+    "reason": "Function body should span 40 lines or less",
+    "rule_id": "function_body_length"
+  },
+  {
+    "file": "/repo/Sources/App/Profile.swift",
+    "line": 22,
+    "character": 1,
+    "severity": "warning",
+    "reason": "Trailing whitespace",
+    "rule_id": "trailing_whitespace"
+  }
+]

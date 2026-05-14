@@ -17,6 +17,8 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
+from lib.review_evidence.scoring import MutationFindings
+
 SCHEMA_VERSION = "2.0"  # current writer version
 # Versions historically present in fixtures + the new v2 writer. Forward-compat
 # for any 1.x or 2.x minor bump is handled by `_check_version` below.
@@ -158,6 +160,8 @@ class EvidenceV2(Evidence):
     reviewer_verdict: Optional[ReviewerVerdict] = None
     budget_snapshot_at: Optional[str] = None
     baseline_synthetic: bool = False
+    # v1.58+ — mutation testing (opt-in advisory, additive Optional)
+    mutation: Optional[MutationFindings] = None
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +267,10 @@ def evidence_from_json(raw: dict[str, Any]) -> Evidence:
             ReviewerVerdict(**_safe_kwargs(ReviewerVerdict, raw["reviewer_verdict"]))
             if raw.get("reviewer_verdict") else None
         )
+        mutation = (
+            MutationFindings(**_safe_kwargs(MutationFindings, raw["mutation"]))
+            if raw.get("mutation") else None
+        )
         return EvidenceV2(
             schema_version=version,
             sha=raw["sha"],
@@ -282,6 +290,7 @@ def evidence_from_json(raw: dict[str, Any]) -> Evidence:
             reviewer_verdict=reviewer_verdict,
             budget_snapshot_at=raw.get("budget_snapshot_at"),
             baseline_synthetic=raw.get("baseline_synthetic", False),
+            mutation=mutation,
         )
 
     # v1.x — existing return path unchanged
@@ -323,4 +332,5 @@ def evidence_to_json(ev: Evidence) -> str:
         out["base_sha"] = ev.base_sha
         out["budget_snapshot_at"] = ev.budget_snapshot_at
         out["baseline_synthetic"] = ev.baseline_synthetic
+        out["mutation"] = asdict(ev.mutation) if ev.mutation else None
     return json.dumps(out, indent=2, sort_keys=False)

@@ -82,6 +82,25 @@ per test/staging o ambienti dev offline.
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
 
+### Mutation Testing (v1.58+)
+
+Advisory test-quality metric via mutation runner (PIT/mutmut/Stryker).
+**Opt-in** — runner ritorna `None` quando disabled, zero overhead.
+Reviewer agent advisory: `mutation_score < threshold` -> `REVIEWER_HANDOFF`,
+**mai BLOCK** (ThoughtWorks pattern "shift focus from execution to verification").
+
+| Env var | Default | Note |
+|---|---|---|
+| `DEVFORGE_MUTATION_ENABLED` | `0` | Master switch. `1` abilita PIT/mutmut/Stryker runner. Default OFF perche' mutation testing e' slow per definizione (M x test_runtime). |
+| `DEVFORGE_MUTATION_THRESHOLD` | `60` | `mutation_score < threshold` -> reviewer advisory `REVIEWER_HANDOFF`. Mai BLOCK su mutation alone. |
+| `DEVFORGE_PIT_REPORT_PATH` | `target/pit-reports/mutations.xml` | Override Java PIT XML report path. |
+| `DEVFORGE_MUTMUT_CACHE_PATH` | `.mutmut-cache` | Override Python mutmut SQLite cache directory. |
+| `DEVFORGE_STRYKER_REPORT_PATH` | `reports/mutation/mutation.json` | Override JS/TS Stryker JSON report path. |
+
+**Operational note:** mutation runner NON eseguono i tool live (M x test_runtime troppo
+slow). Parse SOLO pre-existing report file. Dev runna `mvn org.pitest:pitest-maven:mutationCoverage` / `mutmut run` / `npx stryker run` separatamente (CI o local) e DevForge
+collector legge il report quando presente.
+
 ### Fix Evidence Auto-Loop (skill `siae-fix-evidence`, v1.55+)
 
 Auto-remediation loop hook-driven invocato da `/forge-fix-evidence` su
@@ -91,10 +110,45 @@ Auto-remediation loop hook-driven invocato da `/forge-fix-evidence` su
 |--------------------------------------|----------|------|
 | `DEVFORGE_FIX_EVIDENCE_TOKEN_BUDGET` | `200000` | Token budget totale loop (rough est. via Claude API usage). Loop exit con `TOKEN_BUDGET_EXCEEDED` quando consumed > budget. Misurabile vs cap $5 originale che era non verificabile in-process. |
 | `DEVFORGE_FIX_EVIDENCE_MAX_ITER`     | `5`      | Hard cap iter del loop. Override richiede design review (pattern memory `feedback_spec_reviewer_iter2_roi`). |
+| `DEVFORGE_FIX_EVIDENCE_AUTO`         | `1`      | **v1.55+ NEW.** **Default ON dal follow-up `feat/fix-evidence-auto-trigger` (BREAKING vs v1.55 PR #244).** Hook `review-evidence` v2 emette signal canonico `AUTO_FIX_TRIGGER:/forge-fix-evidence:sha=<SHA>` in `additional_context` su `BLOCK_REGRESSION` (no hard floor, no bot, not degraded). Agent (Claude Code) intercept signal e auto-invoca `siae-fix-evidence`. Set `0` per disabilitare globalmente (opt-out kill-switch). |
 
 **Escalation conditions (no env override):** `hard_floor_breaches` non vuoto,
 `is_bot_pr=True`, `decision == SEVERELY_DEGRADED`, action `kind == "unknown"`,
 oscillation guard (stesso `frozenset(block_reasons)` per 2 iter consecutivi).
+
+**Auto-trigger skip conditions hook-level** (signal NON emesso, block resta):
+identiche alle skill skip conditions sopra (`hard_floor_breaches` non vuoto,
+`GITHUB_ACTOR` matches bot pattern). Vedi
+`skills/siae-fix-evidence/SKILL.md` sezione "Auto-trigger pattern".
+
+#### Opt-out kill-switch
+
+A partire dal follow-up `feat/fix-evidence-auto-trigger` il default di
+`DEVFORGE_FIX_EVIDENCE_AUTO` e' flippato da `0` a `1`: l'auto-trigger e' ora
+il comportamento **default** (DevForge opinionato verso "zero bug usando
+DevForge"). Le skip conditions semantic (hard floor / bot PR /
+SEVERELY_DEGRADED) restano invariate come safety net.
+
+Per disabilitare globalmente l'auto-trigger (kill-switch):
+
+```bash
+# Shell corrente (opt-out per la sessione)
+export DEVFORGE_FIX_EVIDENCE_AUTO=0
+
+# Persistente in shell rc (~/.zshrc, ~/.bashrc)
+echo 'export DEVFORGE_FIX_EVIDENCE_AUTO=0' >> ~/.zshrc
+
+# One-shot per singolo comando
+DEVFORGE_FIX_EVIDENCE_AUTO=0 gh pr create --title "..."
+```
+
+Quando `DEVFORGE_FIX_EVIDENCE_AUTO=0`:
+
+- Hook **non** emette il marker `AUTO_FIX_TRIGGER` in `additional_context`.
+- `decision:block` resta normalmente per safety (BLOCK_REGRESSION va risolto
+  manualmente via `/forge-fix-evidence` o human review).
+- Telemetry log resta `evidence_auto_fix_trigger_skipped` (motivazione skip
+  tracciata in `is_bot=0,hard_floor_count=0` -> implicito env opt-out).
 
 ## Scope / feature flags
 
