@@ -81,3 +81,18 @@ def test_c10_feature_flag_yes_conditional():
 def test_c10_feature_flag_no():
     r = criterion_10_feature_flag("if (true) { doStuff(); }")
     assert r.status == "NO"
+
+
+def test_c6_tool_unavailable_on_subprocess_fail():
+    """Quando _count_release_tags fallisce, criterion 6 propaga TOOL_UNAVAILABLE invece di YES."""
+    r = criterion_6_first_release(0, tag_lookup_status="UNAVAILABLE")
+    assert r.status == "TOOL_UNAVAILABLE"
+    assert r.weight == 2
+    assert "git_tag_lookup_failed" in r.evidence
+
+
+def test_c6_no_with_explicit_ok_status():
+    """Tag count positivo + status OK → NO esplicito."""
+    r = criterion_6_first_release(5, tag_lookup_status="OK")
+    assert r.status == "NO"
+    assert "git_tag_count=5" in r.evidence

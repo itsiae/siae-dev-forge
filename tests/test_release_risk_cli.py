@@ -94,3 +94,27 @@ def test_cli_cache_idempotent_second_run(fake_git_repo, diff_fixtures):
     r2 = subprocess.run(args, capture_output=True, text=True, check=True)
     out2 = json.loads(r2.stdout.strip().split("\n")[-1])
     assert out2.get("cached") is True
+
+
+def test_count_release_tags_returns_tuple_with_status_ok(tmp_path, monkeypatch):
+    """_count_release_tags ritorna (count, status='OK') in repo valido con tag."""
+    import subprocess
+    subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.email", "t@t"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.name", "t"], cwd=tmp_path)
+    (tmp_path / "f").write_text("x")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "init"], cwd=tmp_path)
+    subprocess.check_call(["git", "tag", "2.3.5-RELEASE"], cwd=tmp_path)
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    assert status == "OK"
+    assert count >= 1, f"Expected tag '2.3.5-RELEASE' matched by *-RELEASE glob, got count={count}"
+
+
+def test_count_release_tags_returns_unavailable_on_subprocess_fail(tmp_path):
+    """_count_release_tags ritorna (0, 'UNAVAILABLE') in directory non-git."""
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    assert status == "UNAVAILABLE"
+    assert count == 0
