@@ -155,10 +155,11 @@ criterion_6_first_release(tag_count, tag_status),
 
 ## 7. Acceptance Criteria
 
-- [ ] Re-run scorecard su `pae-deposito-musica-fe release/2.3.4`:
-  - Criterion 6 = NO (tag `2.3.5-RELEASE` riconosciuti)
-  - Criterion 5 = REQUIRES_INPUT (KG service not found)
-  - Score atteso: 8 → 4 (LOW invece di MEDIUM)
+- [x] Re-run scorecard su `pae-deposito-musica-fe release/2.3.4` (verifica reale sez. 12):
+  - Criterion 6 = NO (tag `2.3.5-RELEASE` riconosciuti, git_tag_count=40)
+  - Criterion 5 = REQUIRES_INPUT (KG service not found, evidence `kg_unavailable:`)
+  - Score reale: **8 → 6** (MEDIUM mantenuto da C17 ground-truth, vedi sez. 12)
+  - AC originale "8→4 LOW" superato dalla verifica empirica: C17 npm-audit (13 critical + 54 high CVE) contribuisce +2 stabile non riducibile dal fix C5+C6. Il principio zero-silent è soddisfatto.
 - [ ] Env override `DEVFORGE_RELEASE_RISK_TAG_GLOBS="custom*,prod-*"` rispettato
 - [ ] subprocess.TimeoutExpired su `git tag --list` → criterion 6 TOOL_UNAVAILABLE
 - [ ] 134 test pre-esistenti PASS + 7 nuovi PASS

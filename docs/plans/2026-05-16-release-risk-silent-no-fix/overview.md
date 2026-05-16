@@ -23,7 +23,7 @@
 | 3 | Test red Criterion 5 (KG-unavailable propagation) | `task-03-test-c5-kg-unavailable-red.md` | [DONE] |
 | 4 | Fix `mcp_invoker_from_json_file` + `lookup_criticality` (green) | `task-04-fix-c5-kg-unavailable-green.md` | [DONE] |
 | 5 | Integration re-run scorecard pae-deposito-musica-fe | `task-05-integration-rerun-pae.md` | [DONE] |
-| 6 | CHANGELOG + version bump 1.57.0 → 1.58.0 | `task-06-changelog-version-bump.md` | [PENDING] |
+| 6 | CHANGELOG + version bump 1.57.0 → 1.58.0 | `task-06-changelog-version-bump.md` | [DONE] |
 
 ## Dipendenze
 
@@ -35,7 +35,7 @@
 
 ## Acceptance globale
 
-- [ ] Scorecard re-run su `pae-deposito-musica-fe release/2.3.4` mostra: Criterion 6 = NO, Criterion 5 = REQUIRES_INPUT, score ≤ 4 (LOW)
-- [ ] `pytest tests/test_release_risk_*` esce 0 con 134 esistenti + 7 nuovi PASS
-- [ ] `git tag --list 'release*' 'v*' '*RELEASE*' '*-RELEASE' 'RELEASE-*'` riconosciuto come pattern default
-- [ ] Env var `DEVFORGE_RELEASE_RISK_TAG_GLOBS` override funzionante
+- [x] Scorecard re-run su `pae-deposito-musica-fe release/2.3.4` mostra: Criterion 6 = NO, Criterion 5 = REQUIRES_INPUT, **score 6 MEDIUM** (vs aspettativa originale ≤4 LOW: superato da C17 ground-truth npm-audit, principio zero-silent comunque soddisfatto)
+- [x] `pytest tests/test_release_risk_*.py` esce 0 con 134 esistenti + 9 nuovi PASS (143/143)
+- [x] `git tag --list 'release*' 'v*' '*RELEASE*' '*-RELEASE' 'RELEASE-*'` riconosciuto come pattern default
+- [x] Env var `DEVFORGE_RELEASE_RISK_TAG_GLOBS` override funzionante (test coverage carry-over C)

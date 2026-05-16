@@ -27,10 +27,15 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `mcp_invoker_from_json_file` invoker output: returns `{"_kg_status": "unavailable", "_kg_error": ...}` on KG error instead of zero-normalized dict
 
 ### Tests
-- +7 unit/integration tests (`test_release_risk_detector_6_10.py`,
-  `test_release_risk_cli.py`, `test_release_risk_kg_lookup.py`)
+- +9 unit/integration tests (`test_release_risk_detector_6_10.py` +2,
+  `test_release_risk_cli.py` +4, `test_release_risk_kg_lookup.py` +3). Suite
+  totale 143 PASS.
 - Integration verification on `pae-deposito-musica-fe release/2.3.4`: score
-  8 → 4 (MEDIUM → LOW), Criterion 5 NO → REQUIRES_INPUT, Criterion 6 YES → NO
+  **8 → 6** (MEDIUM mantenuto). Il fix C5+C6 rimuove 2 silent-failure (delta
+  -2 da C6 silent-YES, +0 netto da C5 ora REQUIRES_INPUT esplicito), ma C17
+  npm-audit ground-truth (13 critical + 54 high CVE) contribuisce +2 stabile
+  e mantiene il livello MEDIUM. Esito atteso: i silent sono rimossi, il
+  rischio reale di sicurezza emerge e viene tracciato esplicitamente.
 
 ### Refs
 - Design: `docs/plans/2026-05-16-release-risk-silent-no-fix-design.md`

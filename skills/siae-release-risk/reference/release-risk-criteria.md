@@ -48,6 +48,8 @@
 
 **Fallback:** servizio non in prefix → `REQUIRES_INPUT` (ask user). MCP timeout/error → `TOOL_UNAVAILABLE`.
 
+**KG-unavailable propagation (v1.58.0+):** se JSON prefetch contiene `describe_service.error` o `service_health.error` (servizio non in KG / VPN down / ES unreachable), `mcp_invoker_from_json_file` propaga dict `{"_kg_status": "unavailable", "_kg_error": <msg>}` invece di normalizzare a zero. `lookup_criticality` mappa a `REQUIRES_INPUT` con evidence `kg_unavailable: <err msg>` (no silent NO da heuristic su zeri). ADR-3.
+
 **Bridge ADR-2:** SKILL.md prefetcha JSON via MCP tool e lo passa al CLI via `--kg-data-file` (vedi `mcp_invoker_from_json_file`).
 
 ### Criterion 6 — First release — +2
@@ -162,6 +164,7 @@
 | `DEVFORGE_RELEASE_RISK_KG_TIMEOUT_SEC` | `5` | Timeout MCP sport-kg lookup (Criterion 5) |
 | `DEVFORGE_RELEASE_RISK_SECURITY_CRITICAL_THRESHOLD` | `0` | Soglia Criterion 17 critical |
 | `DEVFORGE_RELEASE_RISK_SECURITY_HIGH_THRESHOLD` | `5` | Soglia Criterion 17 high |
+| `DEVFORGE_RELEASE_RISK_TAG_GLOBS` | `release*,v*,*RELEASE*,*-RELEASE,RELEASE-*` | Pattern glob csv per `git tag --list` (Criterion 6 first-release detection) |
 
 ## Skip override
 
