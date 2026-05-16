@@ -77,6 +77,14 @@ def lookup_criticality(service_name: str, mcp_invoker=None) -> CriterionResult:
             evidence=[f"mcp_error: {type(e).__name__}"], source="mcp:sport-kg",
         )
 
+    # NEW: propagazione _kg_status="unavailable" da JSON prefetch (anti silent-NO)
+    if kg_data and kg_data.get("_kg_status") == "unavailable":
+        return CriterionResult(
+            id=5, name="Critical service", status="REQUIRES_INPUT", weight=3,
+            evidence=[f"kg_unavailable: {kg_data.get('_kg_error', 'unknown')}"],
+            source="mcp:sport-kg",
+        )
+
     if not kg_data:
         return CriterionResult(
             id=5, name="Critical service", status="REQUIRES_INPUT", weight=3,
@@ -104,6 +112,11 @@ def mcp_invoker_from_json_file(kg_data_path: Optional[Path]):
     }
 
     Returns None se file non esiste (CLI degraderà a TOOL_UNAVAILABLE).
+
+    Se describe_service o service_health contengono field 'error' (es. service
+    not found, VPN down, ES unreachable), il dict propagato contiene
+    _kg_status='unavailable' invece di valori normalizzati a zero — evita
+    silent-NO in lookup_criticality.
     """
     if not kg_data_path or not kg_data_path.exists():
         return None
@@ -117,6 +130,14 @@ def mcp_invoker_from_json_file(kg_data_path: Optional[Path]):
             return None
         ds = data.get("describe_service") or {}
         sh = data.get("service_health") or {}
+        # Propaga error esplicito invece di normalizzare zeri (anti silent-NO)
+        ds_error = ds.get("error")
+        sh_error = sh.get("error")
+        if ds_error or sh_error:
+            return {
+                "_kg_status": "unavailable",
+                "_kg_error": ds_error or sh_error,
+            }
         # Normalizza in dict piatto consumato da derive_criticality_from_kg
         return {
             "service_name": name,
