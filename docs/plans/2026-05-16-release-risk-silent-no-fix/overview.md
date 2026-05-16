@@ -18,11 +18,11 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Test red Criterion 6 (tag pattern + status) | `task-01-test-c6-tag-pattern-red.md` | [PENDING] |
-| 2 | Fix Criterion 6 + `_count_release_tags` (green) | `task-02-fix-c6-tag-pattern-green.md` | [PENDING] |
-| 3 | Test red Criterion 5 (KG-unavailable propagation) | `task-03-test-c5-kg-unavailable-red.md` | [PENDING] |
-| 4 | Fix `mcp_invoker_from_json_file` + `lookup_criticality` (green) | `task-04-fix-c5-kg-unavailable-green.md` | [PENDING] |
-| 5 | Integration re-run scorecard pae-deposito-musica-fe | `task-05-integration-rerun-pae.md` | [PENDING] |
+| 1 | Test red Criterion 6 (tag pattern + status) | `task-01-test-c6-tag-pattern-red.md` | [DONE] |
+| 2 | Fix Criterion 6 + `_count_release_tags` (green) | `task-02-fix-c6-tag-pattern-green.md` | [DONE] |
+| 3 | Test red Criterion 5 (KG-unavailable propagation) | `task-03-test-c5-kg-unavailable-red.md` | [DONE] |
+| 4 | Fix `mcp_invoker_from_json_file` + `lookup_criticality` (green) | `task-04-fix-c5-kg-unavailable-green.md` | [DONE] |
+| 5 | Integration re-run scorecard pae-deposito-musica-fe | `task-05-integration-rerun-pae.md` | [DONE] |
 | 6 | CHANGELOG + version bump 1.57.0 → 1.58.0 | `task-06-changelog-version-bump.md` | [PENDING] |
 
 ## Dipendenze

@@ -183,7 +183,8 @@ def _count_release_tags(repo_root: Path) -> tuple[int, str]:
             ["git", "tag", "--list", *globs], cwd=repo_root, text=True, timeout=5
         )
         return (len([l for l in out.splitlines() if l.strip()]), "OK")
-    except Exception:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            FileNotFoundError, OSError):
         return (0, "UNAVAILABLE")
 
 

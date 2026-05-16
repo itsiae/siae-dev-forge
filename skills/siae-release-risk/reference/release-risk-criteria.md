@@ -51,7 +51,9 @@
 **Bridge ADR-2:** SKILL.md prefetcha JSON via MCP tool e lo passa al CLI via `--kg-data-file` (vedi `mcp_invoker_from_json_file`).
 
 ### Criterion 6 — First release — +2
-**Detection:** `criterion_6_first_release(git_tag_count)` · **Source:** `git:tag`
+**Detection:** `criterion_6_first_release(git_tag_count, tag_lookup_status="OK")` · **Source:** `git:tag`
+- Status `TOOL_UNAVAILABLE` quando subprocess git fallisce (no silent-YES da count=0)
+- Default tag globs: `release*, v*, *RELEASE*, *-RELEASE, RELEASE-*` (env override `DEVFORGE_RELEASE_RISK_TAG_GLOBS`)
 - YES se `git tag --list 'release*' 'v*'` count == 0
 
 ### Criterion 7 — Complex rollback — +2
