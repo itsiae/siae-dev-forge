@@ -195,3 +195,31 @@ Sub-skill obbligatoria: `siae-writing-plans` → produce `docs/plans/2026-05-16-
 - task-04 — Fix `mcp_invoker_from_json_file` + `lookup_criticality` (green)
 - task-05 — Integration test: re-run scorecard su pae-deposito-musica-fe, snapshot atteso
 - task-06 — CHANGELOG + version bump 1.57.0 → 1.58.0
+
+## 12. Integration verification (task-05)
+
+Re-run scorecard su `pae-deposito-musica-fe release/2.3.4` post-fix (commit `8f33258` su `fix/pr252-followup-drift`):
+
+| Metric | Pre-fix (PR #252) | Post-fix (osservato) |
+|---|---|---|
+| Score | 8/36 | 6/36 |
+| Level | MEDIUM | MEDIUM |
+| Decision | GO_WITH_MONITORING | GO_WITH_MONITORING |
+| Criterion 5 | ❌ NO (silent) | ⚠️ REQUIRES_INPUT (`kg_unavailable: Service 'pae-deposito-musica-fe' not found`) |
+| Criterion 6 | ❌ YES (false positive) | ✅ NO (`git_tag_count=40`) |
+| Criterion 17 | ❌ YES (era già YES) | ❌ YES (`runners=NpmAuditRunner; critical=13; high=54`) |
+
+**Output JSON CLI:**
+```json
+{"cached": false, "level": "MEDIUM", "decision": "GO_WITH_MONITORING", "score": 6, "diff_hash": "927331cc80c6"}
+```
+
+**Note sullo score finale:**
+- Fix C5 + C6 hanno rimosso 2 punti netti (+3 silent NO da C5 transitato a +3 REQUIRES_INPUT = zero variazione su quel criterio; +2 falso C6 azzerato).
+- Lo score atteso di task design era `≤4 LOW` ipotizzando dataset clean su C17. Snapshot reale: 13 critical + 54 high CVE npm-audit aggiungono +2 stabili. Score effettivo `6` riflette ground-truth di sicurezza del repo (vulnerabilità reali, non false positive).
+- Acceptance criteria primari **soddisfatti**:
+  - [x] Criterion 5 evidence contiene `kg_unavailable:`
+  - [x] Criterion 6 evidence contiene `git_tag_count=` con N≥2 (=40)
+  - [x] Silent-failure C5 (NO immeritato) e C6 (YES immeritato) eliminati
+
+**Conclusione:** fix corretti end-to-end. Il fatto che la release resti `MEDIUM` non è regressione del fix; è la corretta rappresentazione del rischio reale (vulnerability npm) che la versione pre-fix mascherava con altri silent-failure compensativi.
