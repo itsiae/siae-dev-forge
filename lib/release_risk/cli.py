@@ -31,6 +31,9 @@ from lib.release_risk.cache import (
 from lib.release_risk.renderer import write_scorecard
 
 
+RELEASE_TAG_GLOBS_DEFAULT = ("release*", "v*", "*RELEASE*", "*-RELEASE", "RELEASE-*")
+
+
 def assess(args) -> int:
     repo_root = Path(args.repo_root).resolve()
     branch = args.branch
@@ -69,7 +72,7 @@ def assess(args) -> int:
     genesis = build_genesis_info(merge_commits, user_confirmed, declined)
 
     # Run all 18 criteria
-    git_tag_count = _count_release_tags(repo_root)
+    git_tag_count, tag_lookup_status = _count_release_tags(repo_root)
     ci_present, e2e_found = _ci_config_check(repo_root)
 
     # ADR-2: load MCP sport-kg invoker da JSON prefetch (task-12b bridge)
@@ -92,7 +95,7 @@ def assess(args) -> int:
             service,
             kg_lookup_fn=lambda name: lookup_criticality(name, mcp_invoker=mcp_invoker),
         ),
-        criterion_6_first_release(git_tag_count),
+        criterion_6_first_release(git_tag_count, tag_lookup_status),
         criterion_7_complex_rollback(c1.status, c9.status, diff_content),
         criterion_8_downtime(diff_content),
         c9,
@@ -168,14 +171,20 @@ def _extract_jira_tickets(repo_root: Path, branch: str) -> list[str]:
         return []
 
 
-def _count_release_tags(repo_root: Path) -> int:
+def _count_release_tags(repo_root: Path) -> tuple[int, str]:
+    """Returns (count, status) where status in {"OK", "UNAVAILABLE"}.
+
+    Env override: DEVFORGE_RELEASE_RISK_TAG_GLOBS (csv).
+    """
+    env_globs = os.environ.get("DEVFORGE_RELEASE_RISK_TAG_GLOBS", "")
+    globs = [g.strip() for g in env_globs.split(",") if g.strip()] or list(RELEASE_TAG_GLOBS_DEFAULT)
     try:
         out = subprocess.check_output(
-            ["git", "tag", "--list", "release*", "v*"], cwd=repo_root, text=True, timeout=5
+            ["git", "tag", "--list", *globs], cwd=repo_root, text=True, timeout=5
         )
-        return len([l for l in out.splitlines() if l.strip()])
+        return (len([l for l in out.splitlines() if l.strip()]), "OK")
     except Exception:
-        return 0
+        return (0, "UNAVAILABLE")
 
 
 def _ci_config_check(repo_root: Path) -> tuple[bool, bool]:
