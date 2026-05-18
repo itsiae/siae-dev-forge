@@ -1,0 +1,13 @@
+# SIAE Custom Semgrep Rules Registry
+# Aggregator entry point — Semgrep consuma questa via --config.
+# Vedi README.md per naming + severity + suppression workflow.
+
+rules:
+  # Wave 1 — pentest 2026-05-18 broadcasting
+  - rules/semgrep/siae/formula-injection/ts-csv-concat.yaml
+  # Wave 1 follow-up:
+  # - rules/semgrep/siae/formula-injection/ts-csv-rfc4180.yaml
+  # - rules/semgrep/siae/authz-tenant/ts-dao-missing-tenant.yaml
+  # - rules/semgrep/siae/authz-tenant/ts-query-param-tenant-override.yaml
+  # - rules/semgrep/siae/soft-delete/sql-view-only-filter.yaml
+  # - rules/semgrep/siae/jwt/ts-jwt-localstorage.yaml

@@ -11,10 +11,16 @@ from lib.review_evidence.runners._registry import register
 from lib.review_evidence.scoring import SecurityFindings
 
 
-# Env override: allow custom config (e.g., DEVFORGE_SEMGREP_CONFIG=p/owasp-top-ten).
-# Default `auto` uses Semgrep community default ruleset.
-_DEFAULT_CONFIG = "auto"
-_TIMEOUT_SEC = 120  # Semgrep median 10s, p95 ~60s — give it 2min headroom
+# Env override: allow custom config (e.g., DEVFORGE_SEMGREP_CONFIG=p/owasp-top-ten,...).
+# Default = community "auto" + SIAE custom registry (Wave 1 Vulnerability Prevention Library).
+# Multiple configs accepted as CSV; Semgrep accetta multiple --config args.
+_REPO_ROOT = Path(__file__).parents[3]
+_SIAE_REGISTRY = _REPO_ROOT / "rules" / "semgrep" / "siae" / "registry.yaml"
+_DEFAULT_CONFIGS = ["auto"]
+if _SIAE_REGISTRY.is_file():
+    _DEFAULT_CONFIGS.append(str(_SIAE_REGISTRY))
+_DEFAULT_CONFIG = ",".join(_DEFAULT_CONFIGS)
+_TIMEOUT_SEC = 180  # Wave 1: ext timeout for layered config + diff-aware (Task 09/10 follow-up)
 
 _SOURCE_SUFFIXES = (
     ".py",
@@ -45,9 +51,11 @@ class SemgrepRunner:
 
     def run(self, repo_root: Path) -> Optional[SecurityFindings]:
         config = os.environ.get("DEVFORGE_SEMGREP_CONFIG", _DEFAULT_CONFIG)
+        # Semgrep accetta multipli --config args; CSV viene splittato.
+        config_args = [f"--config={c.strip()}" for c in config.split(",") if c.strip()]
         try:
             p = subprocess.run(
-                ["semgrep", f"--config={config}", "--json", "--quiet", "."],
+                ["semgrep", *config_args, "--json", "--quiet", "."],
                 cwd=repo_root,
                 capture_output=True,
                 text=True,
