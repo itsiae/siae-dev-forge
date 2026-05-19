@@ -51,6 +51,13 @@ Famiglie attive (cartelle):
 
 ## Suppression Workflow
 
+> **⚠️ Wave 1 MVP scope**: solo le modalità **2 (inline `// nosemgrep`)** e
+> **3 (annotation domain-specific)** sono operative oggi. La modalità **1
+> (`suppressions.yaml` strutturata + PR-gate schema validation)** richiede
+> l'implementazione di task-11/12/13 del piano (suppression engine + PR-gate
+> validator) — Wave 1 follow-up sessione separata. Il file `suppressions.yaml`
+> referenziato sotto è preview del workflow target post-Wave 1 follow-up.
+
 Per sopprimere finding legittimi (audit_log globali, edge case validi):
 
 ### 1. Strutturata (preferito) — `suppressions.yaml`
