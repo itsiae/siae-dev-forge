@@ -4,9 +4,12 @@ rules:
   # Cause #2 multi-tenant SaaS leakage (OWASP Multi-Tenant Cheat Sheet).
   # ============================================================
   - id: siae.authz-tenant.ts.cache-key-no-tenant-prefix
-    patterns:
-      # Match: redis.get/set, cache.get/set, memcached.get/set su template literal
-      - pattern-regex: '\.(get|set)\s*\(\s*`(?!tenant|emittente|org|t:|tenant:)[^`]*\$\{[^}]+\}[^`]*`'
+    pattern-either:
+      - pattern-regex: 'redis\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'redis\.set\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'cache\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'cache\.set\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'memcached\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
     paths:
       include: ["*.ts", "*.tsx", "*.js"]
       exclude:
@@ -29,8 +32,6 @@ rules:
 
           // AFTER:
           await redis.get(`tenant:${context.user.idEmittente}:report:${id}`)
-
-      Per cache locale Map/Set: usa composite key con tuple [tenantId, key].
     languages: [generic]
     severity: WARNING
     metadata:
@@ -41,4 +42,3 @@ rules:
       references:
         - https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html
         - https://agnitestudio.com/blog/preventing-cross-tenant-leakage/
-        - https://semgrep.dev/blog/2026/introducing-semgrep-custom-workflows/

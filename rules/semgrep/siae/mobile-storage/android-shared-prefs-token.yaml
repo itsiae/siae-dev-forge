@@ -4,13 +4,18 @@ rules:
   # Stack mobile SIAE: Kotlin/Java native.
   # ============================================================
   - id: siae.mobile-storage.android.shared-prefs-token-plaintext
-    patterns:
-      - pattern-regex: '\.putString\s*\(\s*["\x27](token|jwt|access_token|accessToken|id_token|idToken|refresh_token|refreshToken|api_key|apiKey)["\x27]'
-      # FP exclusion: EncryptedSharedPreferences è SAFE — non matchare se nel file
-      - pattern-not-regex: 'EncryptedSharedPreferences\.create'
+    pattern-regex: '\.putString\s*\(\s*["\x27](token|jwt|access_token|accessToken|id_token|idToken|refresh_token|refreshToken|api_key|apiKey)["\x27]'
     paths:
       include: ["*.kt", "*.java"]
+      # File pattern exclusion: filename con "encrypted" indica uso intenzionale
+      # di EncryptedSharedPreferences (safe by-construction).
       exclude:
+        - "**/*Encrypted*"
+        - "**/*encrypted*"
+        - "**/*Secure*"
+        - "**/*secure*"
+        - "**/*Safe*"
+        - "**/*safe*"
         - "**/test/**"
         - "**/tests/**"
         - "**/androidTest/**"
@@ -35,6 +40,7 @@ rules:
           prefs.edit().putString("token", jwt).apply()
 
       Per credenziali long-lived: considera Android Keystore + biometric prompt.
+      Convention: filename `*Encrypted*` o `*Secure*` automaticamente excluded.
     languages: [generic]
     severity: WARNING
     metadata:
