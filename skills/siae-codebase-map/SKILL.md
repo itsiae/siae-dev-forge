@@ -209,7 +209,29 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 ---
 
-## Step 7 — Aggiorna `CLAUDE.md`
+## Step 7a — Tiered mode (opt-in)
+
+Se l'utente ha invocato `/forge-map --tiered` o ha richiesto esplicitamente
+CLAUDE.md gerarchici (L1 root + L2 package + L3 child on-demand):
+
+```
+REQUIRED SUB-SKILL: siae-codebase-map-tiered
+```
+
+La sub-skill genera la gerarchia secondo best practice Anthropic
+([post 14 mag 2026](https://claude.com/blog/how-claude-code-works-in-large-codebases-best-practices-and-where-to-start)):
+- L1 root: big picture (<200 righe)
+- L2 per package: import `@../CLAUDE.md` + local conventions
+- L3 child opzionale: solo se subdir >=10 file + pattern locale distintivo
+
+**Trigger:** flag `--tiered` o richiesta esplicita gerarchia. Senza flag,
+comportamento default (Step 7b) invariato.
+
+Se NON in tiered mode → procedi a Step 7b.
+
+---
+
+## Step 7b — Aggiorna `CLAUDE.md` (mono-file, default)
 
 🟡 MEDIO — Mostra pre-flight card prima di aggiornare
 

@@ -4,6 +4,46 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.62.0] - 2026-05-19
+
+### Added — Tiered CLAUDE.md generation
+
+Implementa best practice Anthropic post [How Claude Code works in large codebases](https://claude.com/blog/how-claude-code-works-in-large-codebases-best-practices-and-where-to-start) (14 mag 2026): generazione automatica gerarchia `CLAUDE.md` (L1 root + L2 package + L3 child on-demand) con import `@` chain e anti-bloat.
+
+**Nuova sub-skill `siae-codebase-map-tiered`**
+- Invocata da `siae-codebase-map` Step 7a quando flag `--tiered` presente
+- Genera L1 root (`./CLAUDE.md`, <200 righe big picture)
+- Genera L2 per ogni Maven module / TS package (`./<module>/CLAUDE.md` con import `@../CLAUDE.md`)
+- Genera L3 child on-demand solo se subdir >=10 file AND pattern locale distintivo (anti-bloat)
+
+**Nuovo hook `session-start-tiered-advisor`**
+- Async, non-bloccante (exit 0 sempre — memory `feedback_session_start_hook_invariants`)
+- Matcher `startup|resume` (escluso `clear|compact`)
+- Rileva CLAUDE.md mancante → suggerimento via `additionalContext`
+- Rileva stale (>=30 commit OR >14 giorni dal `last_mapped`) → suggerimento update
+- Timeout 3s hard cap, errori silent
+
+**Script Python (stdlib only, Python 3.9+):**
+- `scripts/emit-claude-md.py`: frammenta `docs/CODEBASE_MAP.md` → CLAUDE.md gerarchici (90% coverage, 6/6 test PASS)
+- `scripts/anti-bloat-lint.py`: lint advisory exit-0 (line_count, parent_overlap, placeholder, missing_import, empty_sections — 94% coverage, 18/18 test PASS)
+
+**Modifiche `siae-codebase-map`**
+- Step 7 split: 7a (tiered mode opt-in) + 7b (mono-file default, comportamento invariato)
+- Zero-regression: `/forge-map` senza `--tiered` produce CODEBASE_MAP.md identico a prima
+
+**Test:**
+- 32 nuovi test (6 emit + 18 anti-bloat + 8 hook tiered-advisor) — TUTTI PASS
+- Test no-regression hook count bumped 25 → 26
+
+**Design e piano:**
+- Design doc: `docs/plans/2026-05-19-tiered-claude-md-design.md`
+- Piano implementativo: `docs/plans/2026-05-19-tiered-claude-md/` (overview + 8 task)
+
+**Note operative:**
+- Per attivare: `/forge-map --tiered` su repo Maven multi-module o monorepo TS
+- L'hook advisory è async, non blocca boot
+- Anti-bloat lint mostra warning su stdout, exit code 0
+
 ## [1.60.0] - 2026-05-19
 
 ### Added — Security Hook Vulnerability Prevention Library (Wave 1)

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# session-start-tiered-advisor — non-blocking stale CLAUDE.md detector
+# ─────────────────────────────────────────────────────────────────
+# Hook:     session-start-tiered-advisor
+# Evento:   SessionStart
+# Matcher:  startup|resume
+# Output:   additionalContext via stdout JSON (opzionale)
+# Exit:     0 SEMPRE (memory feedback_session_start_hook_invariants)
+# Timeout:  3s hard cap (auto-kill subshell)
+# Portable: macOS BSD date + Linux GNU date fallback
+# ─────────────────────────────────────────────────────────────────
+#
+# Memory rationale (vedi MEMORY.md):
+# - feedback_session_start_hook_invariants → set -uo pipefail (NO -e),
+#   stdout pulito (solo JSON), errori redirect 2>/dev/null
+# - feedback_macos_timeout_portability → no `timeout` binary, usa
+#   subshell + sleep + kill manuale per portabilità BSD/GNU
+# - feedback_bash_grep_count_fallback → `cmd 2>/dev/null || true` + ${:-0}
+#
+# Contract Claude Code SessionStart hook:
+#   {"hookSpecificOutput": {
+#     "hookEventName": "SessionStart",
+#     "additionalContext": "<markdown>"
+#   }}
+
+set -uo pipefail
+
+ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+cd "$ROOT" 2>/dev/null || exit 0
+
+MAP="docs/CODEBASE_MAP.md"
+TMP_OUT=$(mktemp 2>/dev/null) || exit 0
+
+# Worker subshell — tutto il lavoro inside, redirect stdout su TMP_OUT.
+# Hook principale fa attendere max 3s poi kill + cat TMP_OUT.
+(
+  # ── Branch 1: map mancante ────────────────────────────────────
+  if [[ ! -f "$MAP" ]]; then
+    cat <<'EOF_NO_MAP'
+{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "Nessuna codebase map in docs/CODEBASE_MAP.md. Per generarla: /forge-map (o /forge-map --tiered per gerarchia)."}}
+EOF_NO_MAP
+    exit 0
+  fi
+
+  # ── Parse last_mapped dal frontmatter ─────────────────────────
+  LAST_MAPPED=$(awk '/^last_mapped:/ {print $2; exit}' "$MAP" 2>/dev/null || true)
+  LAST_MAPPED=${LAST_MAPPED:-}
+  [[ -z "$LAST_MAPPED" ]] && exit 0
+
+  # ── Età in giorni (BSD date -j -f / GNU date -d fallback) ─────
+  NOW_TS=$(date -u +%s 2>/dev/null || echo 0)
+  MAP_TS=$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$LAST_MAPPED" +%s 2>/dev/null \
+        || date -u -d "$LAST_MAPPED" +%s 2>/dev/null \
+        || echo 0)
+  if [[ "$NOW_TS" -gt 0 && "$MAP_TS" -gt 0 ]]; then
+    AGE_DAYS=$(( (NOW_TS - MAP_TS) / 86400 ))
+  else
+    AGE_DAYS=0
+  fi
+
+  # ── Commits dal last_mapped ───────────────────────────────────
+  COMMITS=$(git -C "$ROOT" rev-list --count HEAD --since="$LAST_MAPPED" 2>/dev/null || true)
+  COMMITS=${COMMITS:-0}
+  # Sanitize: deve essere numero
+  if ! [[ "$COMMITS" =~ ^[0-9]+$ ]]; then
+    COMMITS=0
+  fi
+
+  # ── Decision: stale se age>14 OR commits>=30 ─────────────────
+  if (( AGE_DAYS > 14 )) || (( COMMITS >= 30 )); then
+    # JSON inline (additionalContext escapato basic)
+    MSG="Codebase map stale: ${AGE_DAYS} giorni, ${COMMITS} commit dall'ultimo mapping. Suggerito: /forge-map (--tiered per gerarchia)."
+    printf '{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "%s"}}\n' "$MSG"
+  fi
+  # else: silent (no output)
+
+  exit 0
+) > "$TMP_OUT" 2>/dev/null &
+WORKER_PID=$!
+
+# ── Timeout 3s ───────────────────────────────────────────────────
+# Polling 100ms x 30 = 3s max (no `timeout` binary, portable BSD/GNU)
+ELAPSED_MS=0
+while kill -0 "$WORKER_PID" 2>/dev/null; do
+  if (( ELAPSED_MS >= 3000 )); then
+    kill "$WORKER_PID" 2>/dev/null || true
+    # Grace per cleanup
+    sleep 0.1 2>/dev/null || true
+    kill -9 "$WORKER_PID" 2>/dev/null || true
+    break
+  fi
+  sleep 0.1 2>/dev/null || true
+  ELAPSED_MS=$(( ELAPSED_MS + 100 ))
+done
+
+# Wait reap (no zombie)
+wait "$WORKER_PID" 2>/dev/null || true
+
+# Emit output se prodotto (silent altrimenti)
+if [[ -s "$TMP_OUT" ]]; then
+  cat "$TMP_OUT" 2>/dev/null || true
+fi
+rm -f "$TMP_OUT" 2>/dev/null || true
+
+exit 0
