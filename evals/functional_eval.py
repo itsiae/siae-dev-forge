@@ -6,7 +6,6 @@ Esegue claude -p con query realistiche, cattura output,
 poi usa grader.py (Opus 4.5) per valutare la qualita'.
 """
 
-import json
 import os
 import shutil
 import subprocess

@@ -27,6 +27,20 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 PRIORITY_RULES_PATH = SKILL_ROOT / "assets" / "priority-rules.json"
 
 
+def _glob_to_regex(pattern: str) -> str:
+    """Converte glob in regex senza cascade re-replace.
+
+    Strategia sentinel-based: rimpiazza `**/` e `**` con sentinel uniche prima
+    di sostituire `*` singolo, poi ripristina le sentinel a `.*/` / `.*`.
+    Evita il bug del triple-cascade replace che trasforma `.*` in `.[^/]*`.
+    """
+    SENT_DSTAR_SLASH = "\x00DSTARSLASH\x00"
+    SENT_DSTAR = "\x00DSTAR\x00"
+    s = pattern.replace("**/", SENT_DSTAR_SLASH).replace("**", SENT_DSTAR)
+    s = s.replace("*", "[^/]*")
+    return s.replace(SENT_DSTAR, ".*").replace(SENT_DSTAR_SLASH, ".*/")
+
+
 def load_priority_rules() -> dict:
     with open(PRIORITY_RULES_PATH) as f:
         return json.load(f)
@@ -75,7 +89,7 @@ def build_batches(file_list: list, ceilings: dict) -> list:
 
 def is_skipped(path: str, skip_patterns: list) -> bool:
     for pattern in skip_patterns:
-        regex = pattern.replace("**/", ".*/").replace("**", ".*").replace("*", "[^/]*")
+        regex = _glob_to_regex(pattern)
         if re.search(regex, path):
             return True
     return False

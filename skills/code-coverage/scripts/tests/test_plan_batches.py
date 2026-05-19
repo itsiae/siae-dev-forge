@@ -71,6 +71,83 @@ def test_cli_entry_point():
     assert plan["total_files"] > 0
 
 
+def test_is_skipped_returns_false_when_no_pattern_matches():
+    """plan_batches.py:94 — fallback return False quando nessun pattern matcha."""
+    assert pb.is_skipped("src/foo.ts", []) is False
+    assert pb.is_skipped("src/foo.ts", ["*.py", "test_*.js"]) is False
+
+
+def test_is_skipped_returns_true_when_pattern_matches():
+    """plan_batches.py:92-93 — return True quando pattern matcha."""
+    assert pb.is_skipped("src/test_foo.py", ["test_*.py"]) is True
+    assert pb.is_skipped("dist/bundle.js", ["dist/*"]) is True
+
+
+def _make_size_stack(tmp_path, file_list=None, module_coverage=None):
+    size = tmp_path / "size.json"
+    size.write_text(json.dumps({"file_list": file_list or []}))
+    stack = tmp_path / "stack.json"
+    stack.write_text(json.dumps({"module_coverage": module_coverage or []}))
+    return size, stack
+
+
+def test_main_size_file_missing_returns_1(tmp_path, monkeypatch):
+    """plan_batches.py:150-152 — error path se --size file not exists."""
+    import sys
+    _, stack = _make_size_stack(tmp_path)
+    nonexistent = tmp_path / "missing-size.json"
+    monkeypatch.setattr(sys, "argv", ["plan_batches.py", "--size", str(nonexistent), "--stack", str(stack)])
+    assert pb.main() == 1
+
+
+def test_main_stack_file_missing_returns_1(tmp_path, monkeypatch):
+    """plan_batches.py:153-155 — error path se --stack file not exists."""
+    import sys
+    size, _ = _make_size_stack(tmp_path)
+    nonexistent = tmp_path / "missing-stack.json"
+    monkeypatch.setattr(sys, "argv", ["plan_batches.py", "--size", str(size), "--stack", str(nonexistent)])
+    assert pb.main() == 1
+
+
+def test_main_invalid_json_returns_1(tmp_path, monkeypatch):
+    """plan_batches.py:160-162 — error path su JSONDecodeError."""
+    import sys
+    size = tmp_path / "size.json"
+    size.write_text("this is not json {")
+    stack = tmp_path / "stack.json"
+    stack.write_text("{}")
+    monkeypatch.setattr(sys, "argv", ["plan_batches.py", "--size", str(size), "--stack", str(stack)])
+    assert pb.main() == 1
+
+
+def test_main_writes_to_out_file_when_specified(tmp_path, monkeypatch):
+    """plan_batches.py:168-169 — write to --out path invece di stdout."""
+    import sys
+    size, stack = _make_size_stack(tmp_path)
+    out = tmp_path / "plan.json"
+    monkeypatch.setattr(
+        sys, "argv",
+        ["plan_batches.py", "--size", str(size), "--stack", str(stack), "--out", str(out)],
+    )
+    assert pb.main() == 0
+    assert out.exists()
+    plan = json.loads(out.read_text())
+    assert plan["ordering_strategy"] == "none"
+    assert plan["total_files"] == 0
+
+
+def test_main_prints_to_stdout_when_no_out(tmp_path, monkeypatch, capsys):
+    """plan_batches.py:170-171 — stdout default quando --out non specificato."""
+    import sys
+    size, stack = _make_size_stack(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["plan_batches.py", "--size", str(size), "--stack", str(stack)])
+    assert pb.main() == 0
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    assert plan["batches"] == []
+    assert plan["deferred"] == []
+
+
 def test_e2e_with_estimate_size_real_output(tmp_path):
     """E2E: verifica che estimate_size.py emetta REALMENTE tier+priority,
     e che plan_batches.py possa consumarli senza fixture hand-written.

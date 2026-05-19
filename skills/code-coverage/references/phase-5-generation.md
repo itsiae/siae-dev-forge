@@ -7,6 +7,40 @@ and use idiomatic mocking for the selected framework.
 
 ---
 
+## Step 0 — Pre-write hard gate (PRESERVE_EXISTING)
+
+Prima di QUALSIASI write in Phase 5, esegui:
+
+```bash
+if [ -f "${TEST_PATH}" ]; then
+  echo "[PRESERVE_EXISTING] test already exists at ${TEST_PATH}" \
+    >> "${REPO}/.code-coverage/decisions.log"
+  continue  # skip questo file, NON sovrascrivere
+fi
+```
+
+**Rationale (ADR-6):** brownfield repos hanno tipicamente test gia' scritti
+dall'umano. Sovrascriverli e' violazione "never destroy user work". Block 9
+elenchera' i file preservati con messaggio:
+"M existing tests preserved (PRESERVE_EXISTING). Use /code-coverage --augment
+per estendere coverage su moduli esistenti."
+
+Convention naming `${TEST_PATH}`:
+- JS/TS co-location: `${MODULE_DIR}/${MODULE_BASENAME}.test.${ext}`
+- JS/TS __tests__: `${MODULE_DIR}/__tests__/${MODULE_BASENAME}.test.${ext}`
+- Python pytest: `${TEST_ROOT}/test_${MODULE_BASENAME}.py`
+- Java JUnit: `${TEST_ROOT}/${MODULE_BASENAME}Test.java`
+- Kotlin MockK: `${TEST_ROOT}/${MODULE_BASENAME}Test.kt`
+- Go: `${MODULE_DIR}/${MODULE_BASENAME}_test.go`
+- Rust: inline `#[cfg(test)] mod tests` nel source OR `tests/${MODULE_BASENAME}.rs`
+- C# xUnit: `${TEST_ROOT}/${MODULE_BASENAME}Tests.cs`
+- Flutter: `test/${MODULE_DIR_REL}/${MODULE_BASENAME}_test.dart`
+
+Check entrambe le naming convention (co-located + __tests__) prima di concludere
+che il test non esiste.
+
+---
+
 ## Testability Classification
 
 Before generating any test, classify each target file by testability tier. Within a priority level (P1/P2/P3), process **T1 before T2 before T3 before T4**.
@@ -29,9 +63,9 @@ When the next N files in the queue share all three preconditions, generate their
 - (b) Similar export shape: ≤ 3 public functions OR one class with ≤ 5 methods each
 - (c) No shared mutable state between siblings
 
-Batch ceilings by tier:
-- **T1**: up to 5 files per call
-- **T2**: up to 3 files per call
+Batch ceilings by tier (canonical — see D2 table below for rationale):
+- **T1**: up to 3 files per call
+- **T2**: up to 2 files per call
 - **T3**: 1 file per call (always)
 - **T4**: 1 file per call (always)
 
@@ -41,12 +75,37 @@ Batch ceilings by tier:
 
 ## Template caching policy
 
-Per ogni framework selezionato (es. `vitest`, `pytest`, `junit5`):
-1. **PRIMO batch**: leggi `skills/code-coverage/templates/<framework>.template.*` UNA volta. Salva contenuto in variabile di sessione `_TEMPLATE_<FRAMEWORK>` (es. `_TEMPLATE_VITEST`).
-2. **BATCH SUCCESSIVI** nella stessa session: NON ri-leggere il template file. Riusa la variabile cached.
-3. Cache invalidata solo da nuova invocazione skill.
+Cache realmente effettiva via filesystem: `lib/template-cache.sh` materializza il template framework in `<repo>/.code-coverage/_templates/<framework>.cached` alla prima richiesta. Tutti i batch successivi della session leggono dal cache file.
 
-Razionale: per MEDIUM repo con 10 batch, ri-lettura template = ~3-9 KB × 10 = ~30-90 KB di token sprecati.
+### API
+
+```bash
+source skills/code-coverage/lib/template-cache.sh
+
+# Primo batch — ritorna path al file cached (lo crea da templates/<fw>.template.<ext>)
+TEMPLATE_PATH=$(get_template vitest <repo>)
+
+# Batch successivi nella stessa session — ritorna path al cache esistente (no re-read source)
+TEMPLATE_PATH=$(get_template vitest <repo>)
+```
+
+### Framework coperti
+
+`vitest`, `vitest-lambda`, `jest`, `pytest`, `pyspark`, `junit5`, `mockk`, `go-test`, `cargo-test`, `xunit`, `flutter_test`. Framework non listato → `get_template` esce con errore esplicito su stderr.
+
+### Invalidazione
+
+Cache invalidata solo da:
+- Eliminazione manuale di `<repo>/.code-coverage/_templates/`
+- Re-init workdir (`init_workdir`) — non rimuove cache esistente per design (preserva hit cross-session)
+
+### Razionale
+
+Per MEDIUM repo con 10 batch:
+- Senza cache: ri-lettura template ~3-9 KB × 10 = ~30-90 KB di token sprecati per session.
+- Con filesystem cache: 1 read del template source + 9 read del cache file (`cp` no-op se hit). Riduzione effettiva ~80-90% del token spend su template.
+
+Il cache è **filesystem-backed** (non variabile shell), quindi sopravvive a re-invocazioni successive di Skill tool nella stessa session conversazionale.
 
 ---
 

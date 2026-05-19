@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PLUGIN_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(PLUGIN_ROOT))
 
-from evals.trigger_eval import run_trigger_eval, read_skill_description
+from evals.trigger_eval import run_trigger_eval
 from evals.functional_eval import run_functional_eval
 from evals.e2e_eval import run_e2e_eval
 from evals.ab_test import run_ab_test
@@ -83,7 +83,7 @@ def main():
     results_dir = SCRIPT_DIR / "results"
     reports_dir = SCRIPT_DIR / "reports"
     project_root = find_project_root()
-    levels = [l.strip() for l in args.level.split(",")]
+    levels = [lvl.strip() for lvl in args.level.split(",")]
 
     # A/B test mode
     if args.ab_test:

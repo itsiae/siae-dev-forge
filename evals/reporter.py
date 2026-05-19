@@ -3,7 +3,6 @@
 reporter.py — Genera report HTML autocontenuto da risultati eval.
 """
 
-import json
 import time
 from pathlib import Path
 

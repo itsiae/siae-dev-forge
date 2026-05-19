@@ -138,7 +138,7 @@ def read_skill_description(skill_name: str) -> str | None:
     if desc_lines:
         while desc_lines and desc_lines[-1] == "":
             desc_lines.pop()
-        return " ".join(l for l in desc_lines if l != "").strip() or None
+        return " ".join(line for line in desc_lines if line != "").strip() or None
     return None
 
 
@@ -524,7 +524,7 @@ def extract_rules(skill_name: str, changelog: list[dict]) -> list[str]:
             text = text.split("```")[1].split("```")[0].strip()
         return json.loads(text)
     except Exception:
-        return [f"Estrazione regole fallita — analizza manualmente il changelog"]
+        return ["Estrazione regole fallita — analizza manualmente il changelog"]
 
 
 def save_rules(skill_name: str, rules: list[str], changelog: list[dict]):
@@ -635,7 +635,7 @@ def run_autoresearch(
     except RuntimeError as e:
         print(f"{C.RED}FALLITO{C.RESET}")
         print(f"  {C.RED}ERRORE:{C.RESET} {e}")
-        print(f"  Verifica credenziali AWS: aws sts get-caller-identity")
+        print("  Verifica credenziali AWS: aws sts get-caller-identity")
         sys.exit(1)
     print()
 
@@ -845,8 +845,8 @@ Rispondi SOLO con la nuova description di {top_thief}. Nessuna spiegazione."""
               f"--description-b \"{best_desc[:80]}...\"")
     else:
         print(f"\n  {C.DIM}Nessun miglioramento trovato. Considera:{C.RESET}")
-        print(f"  - Ampliare l'eval set con piu' query diverse")
-        print(f"  - Rivedere la struttura della skill (non solo description)")
+        print("  - Ampliare l'eval set con piu' query diverse")
+        print("  - Rivedere la struttura della skill (non solo description)")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
