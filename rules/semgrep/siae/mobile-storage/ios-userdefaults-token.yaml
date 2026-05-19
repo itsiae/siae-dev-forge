@@ -1,0 +1,43 @@
+rules:
+  # ============================================================
+  # iOS cross-stack — UserDefaults plaintext token (CWE-312).
+  # Stack mobile SIAE: Swift native.
+  # ============================================================
+  - id: siae.mobile-storage.ios.userdefaults-token-plaintext
+    pattern-regex: '(?:UserDefaults\.standard|defaults)\s*\.\s*set\s*\([^,]+,\s*forKey\s*:\s*["\x27](token|jwt|access_token|accessToken|id_token|idToken|refresh_token|refreshToken|api_key|apiKey)["\x27]\s*\)'
+    paths:
+      include: ["*.swift"]
+      exclude:
+        - "**/Tests/**"
+        - "**/*Tests.swift"
+        - "**/*Test.swift"
+        - "**/fixtures/**"
+    message: |
+      Token / credential stored in plaintext via UserDefaults (CWE-312).
+      iOS UserDefaults persiste in plist `Library/Preferences/<bundle>.plist`,
+      leggibile in jailbreak/iTunes backup/forensic → exfiltration locale.
+
+      Fix: usa iOS Keychain Services (encrypted, hardware-backed Secure Enclave
+      su device A12+):
+
+          let data = jwt.data(using: .utf8)!
+          let query: [String: Any] = [
+              kSecClass as String: kSecClassGenericPassword,
+              kSecAttrAccount as String: "auth_token",
+              kSecValueData as String: data,
+              kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+          ]
+          SecItemDelete(query as CFDictionary)
+          SecItemAdd(query as CFDictionary, nil)
+
+      UserDefaults è OK SOLO per dati non sensibili (UI preferences, last view).
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-312", "CWE-922"]
+      confidence: HIGH
+      owasp: ["A02:2021"]
+      references:
+        - https://developer.apple.com/documentation/security/keychain_services
+        - https://owasp.org/www-project-mobile-top-10/2023-risks/m9-insecure-data-storage
