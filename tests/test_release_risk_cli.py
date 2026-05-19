@@ -94,3 +94,53 @@ def test_cli_cache_idempotent_second_run(fake_git_repo, diff_fixtures):
     r2 = subprocess.run(args, capture_output=True, text=True, check=True)
     out2 = json.loads(r2.stdout.strip().split("\n")[-1])
     assert out2.get("cached") is True
+
+
+def test_count_release_tags_returns_tuple_with_status_ok(tmp_path, monkeypatch):
+    """_count_release_tags ritorna (count, status='OK') in repo valido con tag."""
+    import subprocess
+    subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.email", "t@t"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.name", "t"], cwd=tmp_path)
+    (tmp_path / "f").write_text("x")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "init"], cwd=tmp_path)
+    subprocess.check_call(["git", "tag", "2.3.5-RELEASE"], cwd=tmp_path)
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    assert status == "OK"
+    assert count >= 1, f"Expected tag '2.3.5-RELEASE' matched by *-RELEASE glob, got count={count}"
+
+
+def test_count_release_tags_returns_unavailable_on_subprocess_fail(tmp_path):
+    """_count_release_tags ritorna (0, 'UNAVAILABLE') in directory non-git."""
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    assert status == "UNAVAILABLE"
+    assert count == 0
+
+
+def test_count_release_tags_uses_env_override_globs(tmp_path, monkeypatch):
+    """Env DEVFORGE_RELEASE_RISK_TAG_GLOBS override usato."""
+    import subprocess
+    subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.email", "t@t"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.name", "t"], cwd=tmp_path)
+    (tmp_path / "f").write_text("x")
+    subprocess.check_call(["git", "add", "."], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "init"], cwd=tmp_path)
+    subprocess.check_call(["git", "tag", "custom-prod-tag"], cwd=tmp_path)
+    monkeypatch.setenv("DEVFORGE_RELEASE_RISK_TAG_GLOBS", "custom-*,prod-*")
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    assert status == "OK"
+    assert count >= 1, "Expected custom-prod-tag matched by custom-* env override"
+
+
+def test_count_release_tags_malformed_env_falls_back_default(tmp_path, monkeypatch):
+    """Env malformata (solo virgole/spazi) → fallback a default globs."""
+    monkeypatch.setenv("DEVFORGE_RELEASE_RISK_TAG_GLOBS", " , , , ")
+    from lib.release_risk.cli import _count_release_tags
+    count, status = _count_release_tags(tmp_path)
+    # tmp_path non-git → UNAVAILABLE (verifica che almeno il fallback default non crashi)
+    assert status == "UNAVAILABLE"

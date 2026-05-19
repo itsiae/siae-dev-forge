@@ -74,8 +74,16 @@ def criterion_5_critical_service_stub(service_name: str, kg_lookup_fn=None) -> C
     return kg_lookup_fn(service_name)
 
 
-def criterion_6_first_release(git_tag_count: int) -> CriterionResult:
-    """+2 se prima release del servizio (nessun tag release precedente)."""
+def criterion_6_first_release(git_tag_count: int, tag_lookup_status: str = "OK") -> CriterionResult:
+    """+2 se prima release del servizio (nessun tag release precedente).
+
+    tag_lookup_status="UNAVAILABLE" se subprocess git ha fallito → TOOL_UNAVAILABLE
+    (no silent fallback a YES da count=0 indistinguibile).
+    """
+    if tag_lookup_status == "UNAVAILABLE":
+        return CriterionResult(id=6, name="First release", status="TOOL_UNAVAILABLE",
+                               weight=2, evidence=["git_tag_lookup_failed"],
+                               source="git:tag")
     if git_tag_count == 0:
         return CriterionResult(id=6, name="First release", status="YES", weight=2,
                                evidence=[f"git_tag_count={git_tag_count}"],
