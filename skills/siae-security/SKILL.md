@@ -437,3 +437,155 @@ Invoca `siae-verification` prima di dichiarare il codice sicuro.
 | Gestione file con segreti (.env, credenziali) | 🚨 Critico | Si |
 | Modifica configurazione CI/CD security | 🚨 Critico | Si |
 | Rotazione credenziali / Secrets Manager | 🚨 Critico | Si |
+
+---
+
+## Rule Reference — Semgrep SIAE Custom Rules (Wave 1)
+
+Catalogo rule attive in `rules/semgrep/siae/`. Default `severity: WARNING` (ADR-005) — promotion `ERROR` (block) richiede FP rate `<5%` misurato per 30gg via `lib/review_evidence/tools/fp_rate.py` (ADR-005a).
+
+### siae.formula-injection.ts.csv-row-join-naive (F1.a)
+
+- **CWE:** CWE-1236 (Improper Neutralization of Formula Elements in CSV)
+- **OWASP:** A03:2021
+- **Stack:** TypeScript / JavaScript
+- **Severity:** WARNING · confidence HIGH
+- **Pentest:** F-01 broadcasting 2026-05-18
+- **Fix:**
+  ```typescript
+  import { stringify } from 'csv-stringify/sync';
+  function sanitizeCsvCell(v: unknown): string {
+    const s = v == null ? '' : String(v);
+    return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  }
+  const csv = stringify([headers, ...rows], { quoted: true, cast: { string: sanitizeCsvCell } });
+  ```
+- **Suppress:** `// nosemgrep: siae.formula-injection.ts.csv-row-join-naive reason=... expires=YYYY-MM-DD`
+
+### siae.formula-injection.ts.csv-rows-join-newline-naive (F1.b)
+
+- **CWE:** CWE-1236 + CWE-93 (RFC 4180 violation)
+- **OWASP:** A03:2021
+- **Stack:** TypeScript / JavaScript
+- **Severity:** WARNING · confidence MEDIUM
+- **Pentest:** F-01 + F-05 broadcasting 2026-05-18
+- **Fix:** identico a F1.a (csv-stringify con cast sanitize)
+
+### siae.authz-tenant.ts.dao-missing-tenant-filter (F2)
+
+- **CWE:** CWE-639 (Broken Object Level Authorization / IDOR)
+- **OWASP:** A01:2021
+- **Stack:** TypeScript
+- **Severity:** WARNING · confidence HIGH
+- **Pentest:** F-03 broadcasting 2026-05-18
+- **Fix:**
+  ```typescript
+  // BEFORE (vulnerable):
+  db.query("SELECT * FROM file_logs WHERE id_file = $1", [id])
+
+  // AFTER (safe):
+  db.query(
+    "SELECT * FROM file_logs WHERE id_file = $1 AND id_emittente = $2",
+    [id, context.user.idEmittente]   // tenant dal token, mai da input
+  )
+  ```
+- **Allowlist by-design** (tabelle globali, già in `paths.exclude` della rule):
+  - `**/dao/audit_log*.ts` + `**/audit_log_dao*.ts`
+  - `**/dao/system_config*.ts` + `**/system_config_dao*.ts`
+  - `**/dao/migration_history*.ts` + `**/migration_history_dao*.ts`
+  - `**/dao/feature_flag*.ts` + `**/feature_flag_dao*.ts`
+  - `**/dao/kg_topology_snapshot*.ts`
+- **Suppress per casi edge:** entry in `rules/semgrep/siae/suppressions.yaml` (PR-gate ADR-009 valida schema)
+
+### siae.authz-tenant.ts.query-param-tenant-override (F6)
+
+- **CWE:** CWE-639
+- **OWASP:** A01:2021
+- **Stack:** TypeScript
+- **Severity:** WARNING · confidence HIGH
+- **Pentest:** F-06 broadcasting 2026-05-18
+- **Fix:**
+  ```typescript
+  // Reject token con tenant null su ruolo scoped (NEVER user-supplied):
+  if (context.user.idEmittente == null) {
+    throw new UnauthorizedError("Missing tenant scope on token");
+  }
+  filters.idEmittente = [context.user.idEmittente];
+  ```
+
+### siae.soft-delete.sql.view-only-state-filter (F4)
+
+- **CWE:** CWE-639 (soft-delete logical deletion bypass)
+- **OWASP:** A01:2021
+- **Stack:** SQL (Postgres)
+- **Severity:** WARNING · confidence MEDIUM (cross-file: rule non vede i GRANT)
+- **Pentest:** F-04 broadcasting 2026-05-18
+- **Fix:**
+  ```sql
+  ALTER TABLE dettaglio_canale_mensile ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY hide_cancelled ON dettaglio_canale_mensile
+    USING (EXISTS (
+      SELECT 1 FROM report_logico rl
+      WHERE rl.id_canale = dettaglio_canale_mensile.id_canale
+        AND rl.id_stato_report <> 6
+    ));
+  -- Verify GRANT con `\dp` (psql).
+  ```
+
+### siae.jwt.ts.jwt-in-localstorage (F26)
+
+- **CWE:** CWE-1004 (Sensitive Cookie Without HttpOnly) + CWE-79 (XSS amplification)
+- **OWASP:** A02:2021
+- **Stack:** TypeScript / JavaScript (frontend)
+- **Severity:** WARNING · confidence HIGH
+- **Fix:** HttpOnly + Secure + SameSite=Strict cookie server-side (vedi sezione "JWT" sopra in questa SKILL).
+
+---
+
+## Suppression Workflow (Wave 1)
+
+3 modalità di soppressione per finding legittimi:
+
+1. **Inline `// nosemgrep`** (Wave 1 MVP):
+   ```typescript
+   // nosemgrep: siae.formula-injection.ts.csv-row-join-naive reason=false-positive-confirmed expires=2026-09-01
+   ```
+2. **Annotation domain-specific** (Wave 1 MVP, inline contextual):
+   ```typescript
+   // siae-tenant-safe: tabella audit globale by-design SDLC-1234
+   db.query('SELECT * FROM audit_log WHERE id_file = $1', [id]);
+   ```
+3. **Strutturata** (`rules/semgrep/siae/suppressions.yaml`, validata da PR-gate ADR-009):
+   ```yaml
+   suppressions:
+     - rule_id: siae.authz-tenant.ts.dao-missing-tenant-filter
+       path_glob: "**/dao/audit_log*.ts"
+       reason: "Globale by-design ARCH-2026-05-12"
+       owner: tuo.email@siae.it
+       expires_at: "2026-08-15"  # <=90gg
+   ```
+
+PR-gate hook valida schema strutturata: no catch-all glob, reason ≥30 char + Jira ref, expires ≤90gg, owner `@siae.it`. Violazione → BLOCK_REGRESSION.
+
+## FP Rate Measurement (ADR-005a)
+
+Tool `lib/review_evidence/tools/fp_rate.py` misura false positive rate per rule SIAE:
+
+```bash
+semgrep --config rules/semgrep/siae/ --json . | \
+  python -m lib.review_evidence.tools.fp_rate \
+    --rule siae.formula-injection.ts.csv-row-join-naive \
+    --corpus . \
+    --output reports/fp_rate.json
+```
+
+Thresholds: <5% PROMOTE | 5-10% RETRY +30gg | ≥10% REWORK.
+
+## Drools `.drl` Review (ADR-007)
+
+Semgrep CE non parsa Drools. PR che modifica `*.drl` deve avere UNA delle 2 forme:
+
+- **Form A** (PR-level): label `drools-security-reviewed` (security team)
+- **Form B** (file header): `// drools-security-reviewed: <Jira> by:<email@siae.it> on:<YYYY-MM-DD>`
+
+Missing → WARNING (NON block, ADR-007 goal "no bloccare tutto").

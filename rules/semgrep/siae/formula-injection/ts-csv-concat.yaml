@@ -1,0 +1,101 @@
+rules:
+  # ============================================================
+  # F1 — CSV row build via .join(',') (server-side cell concat naive)
+  #
+  # Pentest 2026-05-18 F-01 root cause: cells joined with comma without
+  # sanitizing leading =, +, -, @, \t, \r → Excel formula injection
+  # exfiltration via =WEBSERVICE/=HYPERLINK on file open.
+  #
+  # Design: KISS pattern + concrete exclude list (no pattern-not-inside vague).
+  # ============================================================
+  - id: siae.formula-injection.ts.csv-row-join-naive
+    patterns:
+      - pattern: $X.join(',')
+      - pattern-not: $X.map($I => String($I)).join(',')
+      - pattern-not: sanitizeCsvCell($_).join(',')
+      - pattern-not: $X.map($SAFE).join(',')
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/test/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      CSV Formula Injection (CWE-1236). Array joined with comma without cell
+      sanitization. If cells contain user/DB data, Excel/LibreOffice evaluates
+      =WEBSERVICE / =HYPERLINK payloads on file open → cross-tenant exfil.
+
+      Fix: use `csv-stringify` with custom cast, OR sanitizeCsvCell helper:
+
+          function sanitizeCsvCell(v: unknown): string {
+            const s = v == null ? '' : String(v);
+            return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+          }
+          const csv = rows.map(r => r.map(sanitizeCsvCell).join(',')).join('\n');
+
+      Suppress: `// nosemgrep: siae.formula-injection.ts.csv-row-join-naive reason=... expires=...`
+      OR rules/semgrep/siae/suppressions.yaml entry.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-1236"]
+      confidence: HIGH
+      owasp: ["A03:2021"]
+      references:
+        - https://owasp.org/www-community/attacks/CSV_Injection
+        - pentest_2026-05-18_F-01
+
+  # ============================================================
+  # F1.b — CSV row build via .join('\n') (multi-row CSV assembly)
+  # Catches the OUTER .join('\n') that combines headers + rows into final CSV.
+  # ============================================================
+  - id: siae.formula-injection.ts.csv-rows-join-newline-naive
+    patterns:
+      - pattern-either:
+          - pattern: $X.join('\n')
+          - pattern: $X.join("\n")
+      # Cutting-edge: metavariable-pattern AST sub-match per escludere
+      # casi safe-by-construction (mappature con sanitizer/String/stringify).
+      - metavariable-pattern:
+          metavariable: $X
+          patterns:
+            - pattern-not: $_.map($_ => String(...))
+            - pattern-not: $_.map(($_) => String(...))
+            - pattern-not: $_.map(sanitizeCsvCell)
+            - pattern-not: $_.map($_ => sanitizeCsvCell(...))
+            - pattern-not: $_.map(($_) => sanitizeCsvCell(...))
+            - pattern-not: stringify(...)
+            - pattern-not: sanitizeCsvCell(...)
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/test/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      CSV assembly via raw `.join('\n')` (CWE-1236). Combined with F1.a (cell
+      concat) this builds a CSV vulnerable to formula injection on file open
+      in Excel/LibreOffice.
+
+      Fix: use `csv-stringify` library with `{quoted: true}` + cell sanitizer.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      # F1.b covers F-01 (formula injection) AND F-05 (RFC 4180 violation):
+      # join('\n') without csv-stringify breaks BOTH formula sanitization AND quoting.
+      cwe: ["CWE-1236", "CWE-93"]
+      confidence: MEDIUM
+      owasp: ["A03:2021"]
+      references:
+        - https://owasp.org/www-community/attacks/CSV_Injection
+        - https://datatracker.ietf.org/doc/html/rfc4180
+        - pentest_2026-05-18_F-01
+        - pentest_2026-05-18_F-05

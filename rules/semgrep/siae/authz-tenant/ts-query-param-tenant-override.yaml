@@ -1,0 +1,48 @@
+rules:
+  # ============================================================
+  # F6 — Query-param tenant injection (CWE-639)
+  # Pentest 2026-05-18 F-06: filters.idEmittente assigned from req.query
+  # without override from authenticated token.
+  # ============================================================
+  - id: siae.authz-tenant.ts.query-param-tenant-override
+    pattern-either:
+      - pattern: $FILTERS.idEmittente = $REQ.query.idEmittente
+      - pattern: $FILTERS.idEmittente = $REQ.query.$FIELD
+      - pattern: |
+          $FILTERS.idEmittente = $REQ.query.idEmittente ? ... : ...
+      - pattern: |
+          $FILTERS.idEmittente = $REQ.query.$F ? ... : ...
+      - pattern: $FILTERS["idEmittente"] = $REQ.query[$F]
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      Tenant scoping bypass via query-param (CWE-639). Handler assigns
+      idEmittente from req.query without overriding with token-derived tenant.
+      If user.idEmittente is null (internal SIAE operator), query-param
+      user-supplied passes → cross-tenant access.
+
+      Fix: ALWAYS derive idEmittente from authenticated token; reject token
+      with missing tenant scope at middleware level:
+
+          if (context.user.idEmittente == null) {
+            throw new UnauthorizedError("Missing tenant scope on token");
+          }
+          filters.idEmittente = [context.user.idEmittente];
+
+      Suppress: `// nosemgrep: siae.authz-tenant.ts.query-param-tenant-override
+      reason=... expires=...` OR rules/semgrep/siae/suppressions.yaml.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-639"]
+      confidence: HIGH
+      owasp: ["A01:2021"]
+      references:
+        - pentest_2026-05-18_F-06

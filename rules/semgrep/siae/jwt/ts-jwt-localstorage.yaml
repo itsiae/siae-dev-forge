@@ -1,0 +1,65 @@
+rules:
+  # ============================================================
+  # F26 — JWT stored in localStorage (CWE-1004, CWE-79 amplification)
+  # Pentest 2026-05-18 catalog Wave 1 minimal: localStorage.setItem('token', ...)
+  # IndexedDB + non-HttpOnly cookie variants deferred Wave 2.
+  # ============================================================
+  - id: siae.jwt.ts.jwt-in-localstorage
+    pattern-either:
+      - pattern: localStorage.setItem('token', $JWT)
+      - pattern: localStorage.setItem("token", $JWT)
+      - pattern: localStorage.setItem('jwt', $JWT)
+      - pattern: localStorage.setItem("jwt", $JWT)
+      - pattern: localStorage.setItem('accessToken', $JWT)
+      - pattern: localStorage.setItem("accessToken", $JWT)
+      - pattern: localStorage.setItem('access_token', $JWT)
+      - pattern: localStorage.setItem("access_token", $JWT)
+      - pattern: localStorage.setItem('idToken', $JWT)
+      - pattern: localStorage.setItem("idToken", $JWT)
+      - pattern: localStorage.setItem('id_token', $JWT)
+      - pattern: localStorage.setItem("id_token", $JWT)
+    paths:
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      JWT stored in localStorage exposes the token to XSS attack (CWE-1004 +
+      amplification of CWE-79). Any script with XSS can call
+      `localStorage.getItem('token')` and exfiltrate the credential to an
+      attacker-controlled endpoint.
+
+      Fix: use HttpOnly + Secure + SameSite=Strict cookie set server-side via
+      `Set-Cookie` header. The JS code never sees the JWT, so XSS cannot
+      exfiltrate it.
+
+          // Server (Express):
+          res.cookie("session", jwt, {
+            httpOnly: true, secure: true, sameSite: "strict",
+          });
+
+          // Client:
+          await fetch("/api/login", {
+            method: "POST",
+            credentials: "include",  // browser auto-sends HttpOnly cookie
+            body: JSON.stringify({ email, password }),
+          });
+
+      Alternative for stateless apps: store in memory (variable scoped to app
+      lifecycle) + silent refresh pattern via short-lived access token.
+
+      Suppress: `// nosemgrep: siae.jwt.ts.jwt-in-localstorage reason=...
+      expires=...` OR rules/semgrep/siae/suppressions.yaml.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-1004", "CWE-79"]
+      confidence: HIGH
+      owasp: ["A02:2021"]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html
+        - pentest_2026-05-18_F-26

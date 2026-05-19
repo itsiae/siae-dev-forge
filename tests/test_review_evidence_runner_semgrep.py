@@ -73,7 +73,7 @@ def test_run_error_security_critical(tmp_path):
             }
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):
@@ -94,7 +94,7 @@ def test_run_error_other_high(tmp_path):
             }
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):
@@ -115,7 +115,7 @@ def test_run_warning_security_high(tmp_path):
             }
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):
@@ -136,7 +136,7 @@ def test_run_warning_other_medium(tmp_path):
             }
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):
@@ -157,7 +157,7 @@ def test_run_info_low(tmp_path):
             }
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):
@@ -169,15 +169,18 @@ def test_run_info_low(tmp_path):
 
 
 def test_run_semgrep_not_installed(tmp_path):
+    """Wave 1 follow-up: semgrep missing → tool_unavailable, NOT silent None."""
     with patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         side_effect=FileNotFoundError("semgrep"),
     ):
-        assert SemgrepRunner().run(tmp_path) is None
+        result = SemgrepRunner().run(tmp_path)
+        assert result is not None
+        assert result.tool_unavailable_reason == "semgrep not installed"
 
 
 def test_run_semgrep_timeout(tmp_path):
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         side_effect=subprocess.TimeoutExpired(cmd="semgrep", timeout=120),
     ):
@@ -185,7 +188,7 @@ def test_run_semgrep_timeout(tmp_path):
 
 
 def test_run_invalid_json(tmp_path):
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc("not json at all"),
     ):
@@ -193,7 +196,7 @@ def test_run_invalid_json(tmp_path):
 
 
 def test_run_empty_stdout(tmp_path):
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(""),
     ):
@@ -201,7 +204,7 @@ def test_run_empty_stdout(tmp_path):
 
 
 def test_run_permission_error(tmp_path):
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         side_effect=PermissionError("denied"),
     ):
@@ -219,7 +222,7 @@ def test_run_custom_config_env(tmp_path, monkeypatch):
         captured["cmd"] = cmd
         return _mock_proc({"results": []})
 
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         side_effect=fake_run,
     ):
@@ -228,7 +231,7 @@ def test_run_custom_config_env(tmp_path, monkeypatch):
 
 
 def test_run_default_config_auto(tmp_path, monkeypatch):
-    """Without env override, default config is 'auto'."""
+    """Without env override, default config includes 'auto' + SIAE rules dir."""
     monkeypatch.delenv("DEVFORGE_SEMGREP_CONFIG", raising=False)
     captured = {}
 
@@ -236,7 +239,7 @@ def test_run_default_config_auto(tmp_path, monkeypatch):
         captured["cmd"] = cmd
         return _mock_proc({"results": []})
 
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         side_effect=fake_run,
     ):
@@ -272,7 +275,7 @@ def test_run_mixed_findings(tmp_path):
             },
         ]
     }
-    with patch(
+    with patch.object(SemgrepRunner, "_check_version", return_value=None), patch(
         "lib.review_evidence.runners.semgrep.subprocess.run",
         return_value=_mock_proc(payload),
     ):

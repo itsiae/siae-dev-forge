@@ -1,0 +1,48 @@
+rules:
+  # ============================================================
+  # F4 — Soft-delete bypass via view-only state filter (CWE-639)
+  # Pentest 2026-05-18 F-04: VIEW filters id_stato_report <> 6 (CANCELLATO)
+  # but underlying table has no RLS — bypass via SELECT * FROM <table>.
+  #
+  # Detection: regex on CREATE [OR REPLACE] VIEW ... id_stato_report <> 6
+  # Caveat: rule does NOT see GRANT statements (cross-file). Confidence MEDIUM.
+  # ============================================================
+  - id: siae.soft-delete.sql.view-only-state-filter
+    # Pattern-regex matches CREATE VIEW followed by id_stato_report <> 6
+    # anywhere in the statement. Tested with whitespace/tab variations.
+    # Note: Semgrep regex supports (?i) but NOT (?s); use [\s\S] for any-char-incl-newline.
+    pattern-regex: '(?i)CREATE\s+(OR\s+REPLACE\s+)?VIEW\s+\w+[\s\S]*?id_stato_report\s*<>\s*6'
+    paths:
+      include: ["*.sql"]
+      exclude:
+        - "**/test/**"
+        - "**/tests/**"
+        - "**/fixtures/**"
+        - "**/migrations/test*/**"
+    message: |
+      Soft-delete bypass risk (CWE-639). View filters `id_stato_report <> 6`
+      (CANCELLATO), but if the app user has SELECT grant on the underlying
+      table, the filter is bypassed via `SELECT * FROM <table>` (skipping
+      the view).
+
+      Fix: enforce filter at table level via Postgres Row-Level Security:
+
+          ALTER TABLE <tabella> ENABLE ROW LEVEL SECURITY;
+          CREATE POLICY hide_cancelled ON <tabella>
+            USING (EXISTS (
+              SELECT 1 FROM report_logico rl
+              WHERE rl.id_canale = <tabella>.id_canale
+                AND rl.id_stato_report <> 6
+            ));
+
+      Verify GRANT on underlying table with `\dp` (psql).
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-639"]
+      confidence: MEDIUM
+      owasp: ["A01:2021"]
+      references:
+        - https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+        - pentest_2026-05-18_F-04

@@ -1,0 +1,20 @@
+# SIAE Semgrep Suppressions — Layer 3 ADR-009
+#
+# Auditate da hooks/pr-gate validator (lib/review_evidence/suppression_validator.py).
+# Schema hard:
+#   - rule_id: exact match (no regex catch-all su rule_id stessa)
+#   - path_glob: NO catch-all "**" come unico token (EC-35 anti-abuse)
+#   - reason: >=30 char + Jira/ticket ref [A-Z]+-[0-9]+ (es. SDLC-1234, ARCH-5678)
+#   - owner: email @siae.it
+#   - expires_at: ISO date, <=90 giorni futuro
+#
+# Esempio commentato (rimuovi # per attivare):
+#
+# suppressions:
+#   - rule_id: siae.authz-tenant.ts.dao-missing-tenant-filter
+#     path_glob: "**/dao/audit_log*.ts"
+#     reason: "Tabella audit globale by-design. ARCH-2026-05-12 confermato review."
+#     owner: lorenzo.detomasi@siae.it
+#     expires_at: "2026-08-15"
+
+suppressions: []

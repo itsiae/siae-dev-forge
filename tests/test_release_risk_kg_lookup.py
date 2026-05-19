@@ -120,3 +120,52 @@ def test_invoker_from_corrupted_json(tmp_path):
     p = tmp_path / "bad.json"
     p.write_text("not valid {{{")
     assert mcp_invoker_from_json_file(p) is None
+
+
+# Task-03: Criterion 5 KG-unavailable propagation (RED tests)
+def test_invoker_propagates_kg_status_unavailable_on_describe_error(tmp_path):
+    """JSON prefetch con describe_service.error -> invoker ritorna _kg_status=unavailable."""
+    payload = {
+        "service_name": "pae-deposito-musica-fe",
+        "describe_service": {"error": "Service 'pae-deposito-musica-fe' not found"},
+        "service_health": {"status": "CRITICO"},
+    }
+    p = tmp_path / "kg.json"
+    p.write_text(json.dumps(payload))
+    invoker = mcp_invoker_from_json_file(p)
+    assert invoker is not None
+    result = invoker("pae-deposito-musica-fe")
+    assert result is not None
+    assert result.get("_kg_status") == "unavailable"
+    assert "not found" in (result.get("_kg_error") or "")
+
+
+def test_lookup_returns_requires_input_on_kg_unavailable(tmp_path):
+    """lookup_criticality con invoker che ritorna _kg_status=unavailable → REQUIRES_INPUT."""
+    payload = {
+        "service_name": "pae-x",
+        "describe_service": {"error": "Service not found"},
+        "service_health": {},
+    }
+    p = tmp_path / "kg.json"
+    p.write_text(json.dumps(payload))
+    invoker = mcp_invoker_from_json_file(p)
+    r = lookup_criticality("pae-x", mcp_invoker=invoker)
+    assert r.status == "REQUIRES_INPUT"
+    assert r.weight == 3
+    assert "kg_unavailable" in r.evidence[0]
+
+
+def test_lookup_returns_requires_input_on_es_unreachable(tmp_path):
+    """VPN down → service_health.error present → REQUIRES_INPUT (non NO da zeri)."""
+    payload = {
+        "service_name": "sport-x-service",
+        "describe_service": {"has_payment_chain": False, "auth_chain_length": 0},
+        "service_health": {"error": "ES non raggiungibile — VPN non attiva", "sample_size": 0},
+    }
+    p = tmp_path / "kg.json"
+    p.write_text(json.dumps(payload))
+    invoker = mcp_invoker_from_json_file(p)
+    r = lookup_criticality("sport-x-service", mcp_invoker=invoker)
+    assert r.status == "REQUIRES_INPUT", f"Expected REQUIRES_INPUT on ES unreachable, got {r.status}"
+    assert "kg_unavailable" in r.evidence[0]
