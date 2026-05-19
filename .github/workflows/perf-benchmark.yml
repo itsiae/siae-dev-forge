@@ -1,0 +1,31 @@
+name: Perf Benchmark
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # nightly 05:00 UTC
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  perf:
+    if: |
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'perf-benchmark')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r requirements.txt pytest && pipx install semgrep
+      - run: bash scripts/build_perf_corpus.sh
+      - name: Run perf benchmark (P95<90s)
+        run: pytest tests/test_review_evidence_perf.py -v -m slow --junit-xml=reports/perf.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-reports-${{ github.run_id }}
+          path: reports/
+          retention-days: 90

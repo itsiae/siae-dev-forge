@@ -124,6 +124,69 @@ EOF
 fi
 
 # ─────────────────────────────────────────────────────────────────
+# SIAE Semgrep suppressions.yaml schema validation (ADR-009)
+# ─────────────────────────────────────────────────────────────────
+
+REPO_TARGET="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SUPPRESSIONS_FILE="${REPO_TARGET}/rules/semgrep/siae/suppressions.yaml"
+if [[ -f "$SUPPRESSIONS_FILE" ]]; then
+  SUPP_VALIDATION_OUTPUT=$(python3 -c "
+import sys
+from pathlib import Path
+try:
+    from lib.review_evidence.suppression_validator import (
+        validate_suppressions_yaml, ValidationError,
+    )
+    validate_suppressions_yaml(Path('$SUPPRESSIONS_FILE'))
+    print('OK')
+except ValidationError as e:
+    print(f'FAIL: {e}', flush=True)
+    sys.exit(2)
+except ImportError:
+    # validator module non installato (degraded mode): non-blocking warning
+    print('SKIP: suppression_validator not importable', flush=True)
+    sys.exit(0)
+" 2>&1)
+  SUPP_RC=$?
+  if [[ "$SUPP_RC" == "2" ]]; then
+    devforge_log "pr_gate" "fail" "{\"check\":\"suppressions_schema\",\"reason\":\"validation_failed\"}"
+    BLOCK_REASON=$(printf '%s' "$SUPP_VALIDATION_OUTPUT" | head -20)
+    BLOCK_ESCAPED=$(printf '%s' "$BLOCK_REASON" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read())[1:-1])")
+    cat <<EOF
+{
+  "permissionDecision": "deny",
+  "reason": "DevForge PR Gate — suppressions.yaml schema ADR-009 violation:\n${BLOCK_ESCAPED}"
+}
+EOF
+    exit 0
+  fi
+  devforge_log "pr_gate" "success" "{\"check\":\"suppressions_schema\",\"result\":\"$SUPP_VALIDATION_OUTPUT\"}"
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# Drools .drl review check (ADR-007 + EC-29 — WARNING, NON BLOCK)
+# ─────────────────────────────────────────────────────────────────
+
+# DRL files modificati nella PR (rispetto a origin/main)
+DRL_FILES=$(cd "$REPO_TARGET" 2>/dev/null && git diff --name-only "origin/$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || echo main)"...HEAD 2>/dev/null | grep -E '\.drl$' || true)
+if [[ -n "$DRL_FILES" ]]; then
+  PR_LABELS="${GITHUB_PR_LABELS:-}"
+  DROOLS_CHECK_OUTPUT=$(cd "$REPO_TARGET" && python3 -c "
+import sys
+from pathlib import Path
+try:
+    from lib.review_evidence.drools_check import check_drools_review
+    modified = [Path(f.strip()) for f in '''$DRL_FILES'''.split('\n') if f.strip()]
+    labels = [l.strip() for l in '''$PR_LABELS'''.split(',') if l.strip()]
+    result = check_drools_review(modified, labels)
+    print(result.message if not result.ok else f'OK via {result.method}')
+except ImportError:
+    print('SKIP: drools_check not importable')
+" 2>&1)
+  devforge_log "pr_gate" "success" "{\"check\":\"drools_review\",\"output\":\"${DROOLS_CHECK_OUTPUT:0:200}\"}"
+fi
+
+# ─────────────────────────────────────────────────────────────────
 # PASS — security scan clean, inject review + security instructions
 # ─────────────────────────────────────────────────────────────────
 

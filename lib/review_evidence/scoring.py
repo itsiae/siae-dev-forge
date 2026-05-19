@@ -15,6 +15,16 @@ class SecurityFindings:
     high: int = 0
     medium: int = 0
     low: int = 0
+    # Wave 1 follow-up: distinguish "0 findings (clean)" vs "tool not ran"
+    # (EC-22 EVIDENCE_TOOL_MISSING distinct from BLOCK_REGRESSION).
+    tool_unavailable_reason: Optional[str] = None
+    # by_family breakdown per traceability (rule-id siae.<family>.<...>).
+    by_family: dict[str, int] = field(default_factory=dict)
+
+    @classmethod
+    def tool_unavailable(cls, reason: str) -> "SecurityFindings":
+        """Factory: build SecurityFindings marking tool as unavailable."""
+        return cls(tool_unavailable_reason=reason)
 
 
 @dataclass

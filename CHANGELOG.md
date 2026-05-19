@@ -4,45 +4,48 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.58.0] - 2026-05-16
+## [1.60.0] - 2026-05-19
 
-### Fixed — Release Risk silent-NO failures
-- **Criterion 5** (Critical service): `mcp_invoker_from_json_file` ora propaga
-  field `_kg_status="unavailable"` quando `describe_service.error` o
-  `service_health.error` sono presenti nel JSON prefetch. `lookup_criticality`
-  mappa il status a `REQUIRES_INPUT` invece di calcolare heuristic NO da
-  valori normalizzati a zero. Risolve silent-NO su servizi non mappati nel KG
-  e su VPN down.
-- **Criterion 6** (First release): `_count_release_tags` ora ritorna tuple
-  `(count, status)`. Subprocess failure ritorna `status="UNAVAILABLE"` →
-  `criterion_6_first_release` mappa a `TOOL_UNAVAILABLE` invece di silent-YES
-  da `return 0`. Default glob esteso a `release*, v*, *RELEASE*, *-RELEASE,
-  RELEASE-*` per catturare pattern SIAE custom (es. `2.3.5-RELEASE`,
-  `CERTIFICAZIONE`). Env override `DEVFORGE_RELEASE_RISK_TAG_GLOBS` (csv).
+### Added — Security Hook Vulnerability Prevention Library (Wave 1)
 
-### Changed
-- `criterion_6_first_release` accepts new optional param `tag_lookup_status: str = "OK"`
-  (backwards-compatible default)
-- `_count_release_tags` return type: `int` → `tuple[int, str]`
-- `mcp_invoker_from_json_file` invoker output: returns `{"_kg_status": "unavailable", "_kg_error": ...}` on KG error instead of zero-normalized dict
+Estensione DevForge per intercettare automaticamente codice con vulnerability pattern OWASP/JWT/XSS + 5 SIAE-specific famiglie dal pentest 2026-05-18 broadcasting.
 
-### Tests
-- +9 unit/integration tests (`test_release_risk_detector_6_10.py` +2,
-  `test_release_risk_cli.py` +4, `test_release_risk_kg_lookup.py` +3). Suite
-  totale 143 PASS.
-- Integration verification on `pae-deposito-musica-fe release/2.3.4`: score
-  **8 → 6** (MEDIUM mantenuto). Il fix C5+C6 rimuove 2 silent-failure (delta
-  -2 da C6 silent-YES, +0 netto da C5 ora REQUIRES_INPUT esplicito), ma C17
-  npm-audit ground-truth (13 critical + 54 high CVE) contribuisce +2 stabile
-  e mantiene il livello MEDIUM. Esito atteso: i silent sono rimossi, il
-  rischio reale di sicurezza emerge e viene tracciato esplicitamente.
+**5 Semgrep custom rules SIAE attive in `rules/semgrep/siae/`:**
+- F1 `siae.formula-injection.ts.csv-row-join-naive` + sibling `csv-rows-join-newline-naive` (CWE-1236 + CWE-93)
+- F2 `siae.authz-tenant.ts.dao-missing-tenant-filter` (CWE-639 IDOR)
+- F4 `siae.soft-delete.sql.view-only-state-filter` (CWE-639 soft-delete bypass)
+- F6 `siae.authz-tenant.ts.query-param-tenant-override` (CWE-639)
+- F26 `siae.jwt.ts.jwt-in-localstorage` (CWE-1004 + CWE-79)
 
-### Refs
-- Design: `docs/plans/2026-05-16-release-risk-silent-no-fix-design.md`
-- Plan: `docs/plans/2026-05-16-release-risk-silent-no-fix/`
-- Bug discovery: test reale 2026-05-16 su pae-deposito-musica-fe
+**Architettura layered (5 layer):**
+- L1 community Semgrep `auto` ruleset (preserved)
+- L2 SIAE custom YAML rules con DIR auto-discovery
+- L3 structured suppression engine + PR-gate schema validation (ADR-009)
+- L4 balanced severity (ADR-005) — ERROR+HIGH = critical (block); WARNING = high bucket (visible, no block default)
+- L5 performance: `--diff-aware` env-driven, `--jobs` parallel, `--timeout=10` per-file (ReDoS protection)
 
----
+**Componenti aggiunti:**
+- `lib/review_evidence/suppression.py` + `suppression_validator.py` (parse + apply + ADR-009 schema validation hard)
+- `lib/review_evidence/drools_check.py` (ADR-007 Form A label + Form B header)
+- `lib/review_evidence/tools/fp_rate.py` (ADR-005a FP measurement, thresholds 5%/10%)
+- `rules/semgrep/siae/` con MANIFEST.md + README.md + suppressions.yaml + version.lock
+- 14 fixture sintetiche in `tests/fixtures/semgrep_siae/synthetic/` (ADR-004 no broadcasting reale)
+
+**Componenti modificati:**
+- `lib/review_evidence/runners/semgrep.py` — version check ≥1.50, layered config DIR, by_family parsing, EVIDENCE_TOOL_MISSING distinct exit
+- `lib/review_evidence/scoring.py` — `SecurityFindings.tool_unavailable` factory + `by_family` field
+- `hooks/pr-gate` — suppressions schema validation + Drools `.drl` review check
+- `skills/siae-security/SKILL.md` — Rule Reference section con 5 rule documentate
+
+**Test coverage:** 56/56 PASS (19 regression + 17 SIAE MVP + 8 perf + 14 suppression + 10 FP/Drools).
+
+**Riferimenti:**
+- Design v2.1: `docs/plans/2026-05-18-security-hook-vulnerability-prevention-design.md` (9 ADR, 23 AC, 46 edge-case CRITICAL chiusi)
+- Pentest: `pentest-broadcasting/PENTEST_REPORT.md` (2026-05-18 itsiae/broadcasting-*)
+- North Star: zero-bug-jul-2026
+- PR: [#255](https://github.com/itsiae/siae-dev-forge/pull/255)
+
+**Breaking changes:** nessuno. Backward-compatible via env `DEVFORGE_SEMGREP_CONFIG`.
 
 ## [1.57.0] - 2026-05-14
 

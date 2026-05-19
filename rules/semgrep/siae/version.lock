@@ -1,0 +1,9 @@
+# Semgrep + community ruleset version pinning (aggiornato da scripts/sync-semgrep-registry.sh)
+semgrep_min_version=1.50.0
+community_rulesets_last_sync=PENDING_SYNC
+community_rulesets_sha256_p-owasp-top-ten=PENDING_SYNC
+community_rulesets_sha256_p-javascript=PENDING_SYNC
+community_rulesets_sha256_p-typescript=PENDING_SYNC
+community_rulesets_sha256_p-jwt=PENDING_SYNC
+community_rulesets_sha256_p-xss=PENDING_SYNC
+community_rulesets_sha256_p-sql-injection=PENDING_SYNC

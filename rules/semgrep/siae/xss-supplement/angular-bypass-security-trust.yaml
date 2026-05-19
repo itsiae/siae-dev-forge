@@ -1,0 +1,48 @@
+rules:
+  # ============================================================
+  # F19 cross-stack (Wave 3): Angular DomSanitizer bypassSecurityTrust*
+  # CWE-79 — disabilita la sanitization built-in di Angular.
+  # ============================================================
+  - id: siae.xss-supplement.angular.bypass-security-trust
+    pattern-either:
+      - pattern: $SANITIZER.bypassSecurityTrustHtml(...)
+      - pattern: $SANITIZER.bypassSecurityTrustStyle(...)
+      - pattern: $SANITIZER.bypassSecurityTrustScript(...)
+      - pattern: $SANITIZER.bypassSecurityTrustUrl(...)
+      - pattern: $SANITIZER.bypassSecurityTrustResourceUrl(...)
+    paths:
+      include: ["*.ts", "*.tsx"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      Angular DomSanitizer.bypassSecurityTrust* disables built-in XSS protection
+      (CWE-79). Su input untrusted, abilita HTML injection, JS execution via
+      data: URL, iframe src injection.
+
+      Fix:
+      - Usa template interpolation `{{}}` quando possibile (escape automatico)
+      - Se servono tag HTML legittimi: usa libreria `DOMPurify.sanitize()`
+        e SOLO POI passa il risultato al template (no bypass)
+      - Per URL: validate scheme allowlist (`https:` only) prima del bind
+
+          // BEFORE:
+          this.safeHtml = this.sanitizer.bypassSecurityTrustHtml(userInput);
+
+          // AFTER:
+          import DOMPurify from "dompurify";
+          this.safeHtml = DOMPurify.sanitize(userInput, { USE_PROFILES: { html: true } });
+          // poi nel template: <div [innerHTML]='safeHtml'></div> (no bypass)
+    languages: [typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-79"]
+      confidence: HIGH
+      owasp: ["A03:2021"]
+      references:
+        - https://angular.io/guide/security#bypass-security-apis
+        - design_v2.1_wave3
