@@ -1,0 +1,45 @@
+rules:
+  # ============================================================
+  # F9 — TS cast bypass: `as unknown as <Type>` (CWE-20)
+  # Pentest 2026-05-18: handler API che bypassa Zod parse via TS cast.
+  # ============================================================
+  - id: siae.input-validation.ts.cast-bypass-zod
+    pattern-either:
+      - pattern: $X as unknown as $T
+      - pattern: |
+          const $V = $X as unknown as $T
+      - pattern: |
+          let $V = $X as unknown as $T
+    paths:
+      include: ["*.ts", "*.tsx"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      Type cast bypass (CWE-20). `as unknown as <Type>` salta type checking
+      TS senza runtime validation. Su input untrusted (event.body, req.body,
+      req.params, req.query) → schema mismatch, prototype pollution,
+      arbitrary keys arrival.
+
+      Fix: usa runtime validation library (Zod / io-ts / class-validator):
+
+          import { z } from 'zod';
+          const Schema = z.object({ nomeFile: z.string(), idEmittente: z.number() });
+          const body = Schema.parse(JSON.parse(event.body ?? '{}'));
+
+      Per cast veramente legittimi (es. type narrowing post-runtime check):
+      preferisci `as <Type>` diretto o type guard function.
+    languages: [typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-20"]
+      confidence: MEDIUM
+      owasp: ["A03:2021"]
+      references:
+        - pentest_2026-05-18_F-01_ingress
+        - https://zod.dev/
