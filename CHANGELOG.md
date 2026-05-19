@@ -4,6 +4,49 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.60.0] - 2026-05-19
+
+### Added — Security Hook Vulnerability Prevention Library (Wave 1)
+
+Estensione DevForge per intercettare automaticamente codice con vulnerability pattern OWASP/JWT/XSS + 5 SIAE-specific famiglie dal pentest 2026-05-18 broadcasting.
+
+**5 Semgrep custom rules SIAE attive in `rules/semgrep/siae/`:**
+- F1 `siae.formula-injection.ts.csv-row-join-naive` + sibling `csv-rows-join-newline-naive` (CWE-1236 + CWE-93)
+- F2 `siae.authz-tenant.ts.dao-missing-tenant-filter` (CWE-639 IDOR)
+- F4 `siae.soft-delete.sql.view-only-state-filter` (CWE-639 soft-delete bypass)
+- F6 `siae.authz-tenant.ts.query-param-tenant-override` (CWE-639)
+- F26 `siae.jwt.ts.jwt-in-localstorage` (CWE-1004 + CWE-79)
+
+**Architettura layered (5 layer):**
+- L1 community Semgrep `auto` ruleset (preserved)
+- L2 SIAE custom YAML rules con DIR auto-discovery
+- L3 structured suppression engine + PR-gate schema validation (ADR-009)
+- L4 balanced severity (ADR-005) — ERROR+HIGH = critical (block); WARNING = high bucket (visible, no block default)
+- L5 performance: `--diff-aware` env-driven, `--jobs` parallel, `--timeout=10` per-file (ReDoS protection)
+
+**Componenti aggiunti:**
+- `lib/review_evidence/suppression.py` + `suppression_validator.py` (parse + apply + ADR-009 schema validation hard)
+- `lib/review_evidence/drools_check.py` (ADR-007 Form A label + Form B header)
+- `lib/review_evidence/tools/fp_rate.py` (ADR-005a FP measurement, thresholds 5%/10%)
+- `rules/semgrep/siae/` con MANIFEST.md + README.md + suppressions.yaml + version.lock
+- 14 fixture sintetiche in `tests/fixtures/semgrep_siae/synthetic/` (ADR-004 no broadcasting reale)
+
+**Componenti modificati:**
+- `lib/review_evidence/runners/semgrep.py` — version check ≥1.50, layered config DIR, by_family parsing, EVIDENCE_TOOL_MISSING distinct exit
+- `lib/review_evidence/scoring.py` — `SecurityFindings.tool_unavailable` factory + `by_family` field
+- `hooks/pr-gate` — suppressions schema validation + Drools `.drl` review check
+- `skills/siae-security/SKILL.md` — Rule Reference section con 5 rule documentate
+
+**Test coverage:** 56/56 PASS (19 regression + 17 SIAE MVP + 8 perf + 14 suppression + 10 FP/Drools).
+
+**Riferimenti:**
+- Design v2.1: `docs/plans/2026-05-18-security-hook-vulnerability-prevention-design.md` (9 ADR, 23 AC, 46 edge-case CRITICAL chiusi)
+- Pentest: `pentest-broadcasting/PENTEST_REPORT.md` (2026-05-18 itsiae/broadcasting-*)
+- North Star: zero-bug-jul-2026
+- PR: [#255](https://github.com/itsiae/siae-dev-forge/pull/255)
+
+**Breaking changes:** nessuno. Backward-compatible via env `DEVFORGE_SEMGREP_CONFIG`.
+
 ## [1.57.0] - 2026-05-14
 
 ### Added — Release Risk Assessment
