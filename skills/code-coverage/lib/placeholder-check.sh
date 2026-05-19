@@ -12,7 +12,7 @@ if [ ! -f "$FILE" ]; then
   exit 1
 fi
 
-MATCHES=$(grep -nE '\{\{[A-Z_]+\}\}' "$FILE" || true)
+MATCHES=$(grep -nE '\{\{[[:space:]]*[[:alnum:]_.\-]+[[:space:]]*\}\}' "$FILE" || true)
 
 if [ -n "$MATCHES" ]; then
   echo "PLACEHOLDER LEAK in $FILE:" >&2

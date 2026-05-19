@@ -6,6 +6,14 @@
     "alt_bun": "bun add -d vitest @vitest/coverage-v8",
     "manual_manifest_edit": null
   },
+  "vitest-react": {
+    "command": "npm install --save-dev vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom",
+    "alt_yarn": "yarn add --dev vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom",
+    "alt_pnpm": "pnpm add -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom",
+    "alt_bun": "bun add -d vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom",
+    "manual_manifest_edit": "vitest.config.ts MUST include: plugins:[react()], test.environment:'jsdom', test.setupFiles:['./vitest.setup.ts'] dove vitest.setup.ts importa '@testing-library/jest-dom/vitest'. Risolvere resolve.alias allineato a tsconfig paths.",
+    "notes": "Variant React per stack javascript_frontend con detection_keywords=react. Senza questo bundle T3 components falliscono su render()/screen non risolti."
+  },
   "jest": {
     "command": "npm install --save-dev jest @types/jest ts-jest",
     "alt_yarn": "yarn add --dev jest @types/jest ts-jest",
@@ -16,6 +24,12 @@
     "command": "pip install pytest pytest-cov pytest-asyncio pytest-mock",
     "alt_poetry": "poetry add --group=dev pytest pytest-cov pytest-asyncio pytest-mock",
     "manual_manifest_edit": null
+  },
+  "pytest+chispa": {
+    "command": "pip install pytest pytest-cov pytest-asyncio pytest-mock chispa pyspark",
+    "alt_poetry": "poetry add --group=dev pytest pytest-cov pytest-asyncio pytest-mock chispa pyspark",
+    "manual_manifest_edit": null,
+    "notes": "Variant per stack 'pyspark'. Include chispa per DataFrame equality. Test code DEVE usare session-scoped SparkSession fixture con master='local[*]' (no real cluster). Per Glue job: aggiungere conftest con sys.modules['awsglue']=MagicMock() PRIMA della collection."
   },
   "junit5": {
     "command": null,
@@ -36,6 +50,11 @@
   "go-test": {
     "command": "go get -t github.com/stretchr/testify",
     "manual_manifest_edit": null
+  },
+  "go-test-db": {
+    "command": "go get -t github.com/stretchr/testify github.com/DATA-DOG/go-sqlmock github.com/go-redis/redismock/v9 google.golang.org/grpc/test/bufconn",
+    "manual_manifest_edit": null,
+    "notes": "Variant opt-in per microservizi con DB/Redis/gRPC. Include sqlmock (sqlx/database/sql), redismock (go-redis v9), bufconn (in-process gRPC server). Senza, T3/T4 handler bruciano repair iter su mock setup inventato."
   },
   "flutter_test": {
     "command": null,

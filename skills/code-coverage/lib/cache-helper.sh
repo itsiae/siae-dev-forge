@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # cache-helper.sh — utility per persistence layer .code-coverage/
 # Usage: source skills/code-coverage/lib/cache-helper.sh
-
-set -euo pipefail
+#
+# NB: NON impostiamo `set -euo pipefail` perché il file è destinato al `source`.
+# Le opzioni propagherebbero al parent shell alterando il suo error-handling.
+# Gestione errori esplicita: ogni funzione usa `return 1` su failure path.
 
 is_cache_valid() {
   local cache="$1"
@@ -32,7 +34,7 @@ ensure_gitignore() {
 
 init_workdir() {
   local repo="$1"
-  mkdir -p "$repo/.code-coverage"
+  mkdir -p "$repo/.code-coverage" || return 1
   ensure_gitignore "$repo"
   local log="$repo/.code-coverage/decisions.log"
   if [ ! -f "$log" ]; then

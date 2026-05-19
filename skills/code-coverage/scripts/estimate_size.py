@@ -17,6 +17,20 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 PRIORITY_RULES_PATH = SKILL_ROOT / "assets" / "priority-rules.json"
 
 
+def _glob_to_regex(pattern: str) -> str:
+    """Converte glob in regex senza cascade re-replace.
+
+    Strategia sentinel-based: rimpiazza `**/` e `**` con sentinel uniche prima
+    di sostituire `*` singolo, poi ripristina le sentinel a `.*/` / `.*`.
+    Evita il bug del triple-cascade replace che trasforma `.*` in `.[^/]*`.
+    """
+    SENT_DSTAR_SLASH = "\x00DSTARSLASH\x00"
+    SENT_DSTAR = "\x00DSTAR\x00"
+    s = pattern.replace("**/", SENT_DSTAR_SLASH).replace("**", SENT_DSTAR)
+    s = s.replace("*", "[^/]*")
+    return s.replace(SENT_DSTAR, ".*").replace(SENT_DSTAR_SLASH, ".*/")
+
+
 def _load_priority_rules() -> dict:
     try:
         with open(PRIORITY_RULES_PATH) as f:
@@ -26,15 +40,58 @@ def _load_priority_rules() -> dict:
 
 
 def _classify_priority(rel_path: str, priority_rules: dict) -> str | None:
-    """P1/P2/P3 da priority_levels.path_patterns in priority-rules.json."""
+    """P1/P2/P3: prima match diretto su ``parent_dirs`` (basename del dir
+    contenitore), poi fallback ANCORATO su ``path_patterns`` glob ristretto
+    agli ultimi 2 segment di directory.
+
+    ADR-3: Pass 2 anchored a ``last_2_segments`` previene il bug per cui
+    namespace progetto contenente ``services`` (Java SIAE
+    ``it/siae/pae/services/``) o ``modules/service/lambda/**`` (SIAE Lambda
+    layout) classifica TUTTI i file come P1 esplodendo il floor enforcement
+    loop. Empirical baseline Agent-A: 90% file → P1 false-positive.
+    """
+    # parent dir basename (immediato sopra il file)
+    dirname = rel_path.rsplit("/", 1)[0] if "/" in rel_path else ""
+    parent = dirname.rsplit("/", 1)[-1] if dirname else ""
+
     levels = priority_rules.get("priority_levels", {})
+    # Pass 1: parent_dirs (preferito, niente glob)
+    if parent:
+        for level_name in ("P1", "P2", "P3"):
+            dir_names = levels.get(level_name, {}).get("parent_dirs", [])
+            if parent in dir_names:
+                return level_name
+    # Pass 2: path_patterns fallback ANCORATO agli ultimi 2 segment.
+    # "modules/service/lambda/src/api/uptime/uptime.get.ts" -> window = "uptime/uptime.get.ts"
+    # cosi' "**/service/**" NON triggera P1 su file con penultimate ancestor != "service".
+    segments = rel_path.split("/")
+    anchor_window = "/".join(segments[-2:]) if len(segments) >= 2 else rel_path
     for level_name in ("P1", "P2", "P3"):
         patterns = levels.get(level_name, {}).get("path_patterns", [])
         for pattern in patterns:
-            regex = pattern.replace("**/", ".*/").replace("**", ".*").replace("*", "[^/]*")
-            if re.search(regex, rel_path):
+            regex = _glob_to_regex(pattern)
+            if re.search(regex, anchor_window):
                 return level_name
     return None
+
+
+_HEADER_SNIFF_BYTES = 1024
+
+
+def _is_generated_file(abs_path: Path, generated_markers: list) -> bool:
+    """True se prime ~1KB del file contengono un marker di generazione automatica.
+
+    ADR-4: skip auto-generated files (OpenAPI codegen, drizzle-kit, prisma,
+    protoc, gRPC, jOOQ, ts-proto). Marker list in
+    ``priority-rules.json.generated_file_markers``.
+    """
+    if not generated_markers:
+        return False
+    try:
+        head = abs_path.read_bytes()[:_HEADER_SNIFF_BYTES].decode("utf-8", errors="ignore")
+    except OSError:
+        return False
+    return any(marker in head for marker in generated_markers)
 
 
 _T4_PATH_RE = re.compile(r"(?:^|/)(handlers?|controllers?|repositor(?:y|ies)|gateways?|adapters?)/")
@@ -139,6 +196,7 @@ def main() -> None:
             coverage_path = Path(sys.argv[idx + 1])
 
     priority_rules = _load_priority_rules() if want_file_list else {}
+    generated_markers = priority_rules.get("generated_file_markers", []) if want_file_list else []
 
     breakdown: dict[str, dict] = {}
     file_entries: list[dict] = []
@@ -169,6 +227,9 @@ def main() -> None:
                 continue
 
             fpath = Path(dirpath) / fname
+            # ADR-4: skip auto-generated files (sniff header)
+            if generated_markers and _is_generated_file(fpath, generated_markers):
+                continue
             loc = count_lines(fpath)
 
             # Map extension to language label

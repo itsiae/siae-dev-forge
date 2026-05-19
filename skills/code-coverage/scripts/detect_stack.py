@@ -11,8 +11,10 @@ import fnmatch
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
+from typing import Optional, Tuple
 
 _SECRET_PATTERNS = (
     ".env", "*.env", ".env.*",
@@ -52,6 +54,169 @@ def _read_text_safe(path: Path) -> str:
         return ""
 
 
+# URL forms supportati:
+#   https://github.com/owner/repo[.git][/]
+#   https://user:token@github.com/owner/repo[.git][/]
+#   git@github.com:owner/repo[.git]
+#   git@github.com-<alias>:owner/repo[.git]      (SSH multi-account)
+#   ssh://git@github.com[:port]/owner/repo[.git]
+#   git+ssh://git@github.com/owner/repo[.git]
+# Owner non può contenere `/`; repo può contenere `.` (ma rimuoviamo solo `.git` finale).
+_GITHUB_HOST_RE = re.compile(r"github\.com(?:-[\w-]+)?")
+
+
+def _parse_github_owner_repo(url: str) -> Optional[str]:
+    """Estrai ``owner/repo`` da un URL git remote in qualunque forma supportata.
+
+    Logica robusta in 3 step:
+    1. trim trailing `/`, `.git`, query/fragment
+    2. localizza host `github.com` (con eventuale alias SSH `-name`)
+    3. raccogli `path` post-host: salta `:port` se presente, salta `:`, prende
+       prossimi due path segment ``owner`` e ``repo``
+
+    Ritorna None se URL non è GitHub o malformato.
+    """
+    if not url:
+        return None
+    url = url.strip().rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-4]
+    # Trova host github.com (con eventuale -alias per SSH multi-account)
+    m = _GITHUB_HOST_RE.search(url)
+    if not m:
+        return None
+    after_host = url[m.end():]
+    # after_host inizia con ':' (SSH/SSH-port) o '/' (https)
+    if after_host.startswith(":"):
+        after_host = after_host[1:]
+        # Skip porta numerica se presente: "22/owner/repo" -> "owner/repo"
+        port_m = re.match(r"^(\d+)/(.+)$", after_host)
+        if port_m:
+            after_host = port_m.group(2)
+    elif after_host.startswith("/"):
+        after_host = after_host[1:]
+    else:
+        return None
+    # Ora after_host è "owner/repo" o "owner/repo/extra"
+    parts = after_host.split("/")
+    if len(parts) < 2:
+        return None
+    owner = parts[0]
+    repo = parts[1]
+    if not owner or not repo:
+        return None
+    return f"{owner}/{repo}"
+
+
+def _resolve_github_remote(repo_path: Path) -> Optional[str]:
+    """Estrai ``owner/repo`` da ``git remote get-url origin``.
+
+    Ritorna None se: git non disponibile, repo senza remote, remote non-GitHub,
+    timeout. Side-effect free, non solleva eccezioni.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    return _parse_github_owner_repo(result.stdout.strip())
+
+
+_IAC_NAME_RE = re.compile(r"(?:^|[-/])[\w-]*-(iac|iaac)(?:[-/]|$)", re.IGNORECASE)
+
+_RUNTIME_MANIFESTS = {
+    "package.json", "pom.xml", "build.gradle", "build.gradle.kts",
+    "requirements.txt", "pyproject.toml", "setup.py", "setup.cfg",
+    "Pipfile", "poetry.lock", "Cargo.toml", "go.mod",
+    "pubspec.yaml", "Gemfile", "composer.json", "*.csproj", "*.fsproj",
+}
+
+
+def is_orchestration_only_repo(root: Path) -> Tuple[bool, Optional[str]]:
+    """Detect IaC/orchestration-only repos (Terraform, Terragrunt) senza runtime code.
+
+    Two-step:
+      1. By-name: ``-iac`` o ``-iaac`` suffix nel repo slug GitHub.
+      2. By-content: nessun manifest runtime (package.json/pom.xml/etc.) e
+         >50%% dei file sono ``.tf``/``.hcl``/``.tfvars``.
+
+    Ritorna (True, reason) per orchestration-only, (False, None) altrimenti.
+    """
+    # 1. By-name check via git remote
+    slug = _resolve_github_remote(root)
+    if slug:
+        repo_name = slug.split("/")[-1]
+        m = _IAC_NAME_RE.search(repo_name)
+        if m:
+            return True, f"name_pattern_{m.group(1).lower()}"
+
+    # 2. By-content check
+    has_runtime_manifest = False
+    for manifest in _RUNTIME_MANIFESTS:
+        if "*" in manifest:
+            try:
+                if any(root.rglob(manifest)):
+                    has_runtime_manifest = True
+                    break
+            except OSError:
+                continue
+        elif _find(root, {manifest}):
+            has_runtime_manifest = True
+            break
+    if has_runtime_manifest:
+        return False, None
+
+    # Count .tf/.hcl vs total
+    tf_hcl = 0
+    total = 0
+    for _, filenames in _walk(root):
+        for f in filenames:
+            total += 1
+            if f.endswith((".tf", ".hcl", ".tf.json", ".tfvars")):
+                tf_hcl += 1
+    if total > 0 and (tf_hcl / total) > 0.5:
+        return True, "terraform_dominant_no_runtime_manifest"
+    return False, None
+
+
+def read_github_coverage_variable(repo_path: Path) -> Tuple[float, str]:
+    """Legge ``TEST_COVERAGE_PERCENTAGE`` come repository variable GitHub.
+
+    Pattern: ``gh variable get TEST_COVERAGE_PERCENTAGE -R <owner/repo>``.
+    Ritorna (value, source) dove source vale ``"github_variable"`` (var trovata
+    e parsabile) oppure ``"missing"`` (gh assente, non autenticato, repo
+    non-GitHub, var assente, timeout, valore non parsabile).
+
+    Convenzione: var assente == no tests configurati lato repo → baseline 0.0.
+    """
+    repo_slug = _resolve_github_remote(repo_path)
+    if not repo_slug:
+        return 0.0, "missing"
+    try:
+        result = subprocess.run(
+            ["gh", "variable", "get", "TEST_COVERAGE_PERCENTAGE", "-R", repo_slug],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return 0.0, "missing"
+    if result.returncode != 0:
+        return 0.0, "missing"
+    raw = result.stdout.strip().rstrip("%").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        return 0.0, "missing"
+    return value, "github_variable"
+
+
 _SKIP_DIRS = {
     "node_modules", ".git", "dist", "build", "out", "target",
     ".terraform", "vendor", "coverage", "__pycache__", ".venv", "venv",
@@ -59,7 +224,13 @@ _SKIP_DIRS = {
 }
 
 
-def _walk(root: Path, max_depth: int = 6):
+def _walk(root: Path, max_depth: int = 10):
+    """Walk filesystem skip dir di build/cache.
+
+    max_depth=10 supporta layout Java enterprise SIAE (es.
+    ``src/main/java/it/siae/<modulo>/<package>/<sub>/<file>.java``,
+    depth 7-11). Coerente con ``estimate_size.py`` walk.
+    """
     for dirpath, dirnames, filenames in os.walk(root):
         depth = len(Path(dirpath).relative_to(root).parts)
         if depth > max_depth:
@@ -195,11 +366,53 @@ def detect_monorepo(root: Path) -> bool:
     if "workspaces" in pkg:
         return True
     child_count = 0
-    for d in ["packages", "apps", "services"]:
+    for d in ["packages", "apps", "services", "modules"]:
         dpath = root / d
         if dpath.is_dir():
+            # Direct: <d>/<x>/package.json
             child_count += sum(1 for _ in dpath.glob("*/package.json"))
-    return child_count >= 2
+            # Nested SIAE-canonical: <d>/<x>/<y>/package.json (es. modules/service/lambda/)
+            child_count += sum(1 for _ in dpath.glob("*/*/package.json"))
+    if child_count >= 2:
+        return True
+    # Edge case: 1 nested child + root package.json (root husky-only + nested lambda real pkg)
+    return child_count >= 1 and (root / "package.json").exists()
+
+
+def _manifest_declares_tests(manifest_path: Path) -> bool:
+    """True se il manifest dichiara test framework o test script."""
+    fname = manifest_path.name
+    if fname == "package.json":
+        pkg = _read_json_safe(manifest_path)
+        scripts = pkg.get("scripts", {})
+        deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+        if any("test" in k.lower() for k in scripts.keys()):
+            return True
+        return any(k in deps for k in ("vitest", "jest", "mocha", "@vitest/coverage-v8"))
+    text = _read_text_safe(manifest_path).lower()
+    return any(kw in text for kw in ("junit", "pytest", "spring-boot-starter-test", "testng"))
+
+
+def detect_manifest_root(root: Path) -> str:
+    """Trova il PIU' DEEP manifest che dichiara test. Default ``"."``.
+
+    ADR-2: per repo SIAE monorepo Terraform-root con TS Lambda annidato
+    (``modules/service/lambda/package.json``), il "real" manifest e' nested,
+    non il root husky-only. Phase 4/6 useranno questo path per ``cd``.
+    """
+    candidates: list[tuple[str, bool, int]] = []
+    for dirpath, filenames in _walk(root, max_depth=4):
+        rel = dirpath.relative_to(root)
+        rel_str = "." if str(rel) == "." else str(rel)
+        for fname in ("package.json", "pom.xml", "pyproject.toml", "build.gradle", "build.gradle.kts"):
+            if fname in filenames:
+                has_tests = _manifest_declares_tests(dirpath / fname)
+                candidates.append((rel_str, has_tests, len(rel.parts)))
+    if not candidates:
+        return "."
+    # Preferenza: has_tests=True > deepest path
+    candidates.sort(key=lambda x: (not x[1], -x[2]))
+    return candidates[0][0]
 
 
 def detect_ci_cd(root: Path) -> list[str]:
@@ -264,13 +477,41 @@ def detect_existing_test_frameworks(root: Path) -> list[str]:
     return sorted(existing)
 
 
+_TEST_FILE_PATTERNS = (
+    "*.test.ts", "*.test.tsx", "*.test.js", "*.test.jsx",
+    "*.spec.ts", "*.spec.js",
+    "test_*.py", "*_test.py",
+    "*Test.java", "*IT.java", "*Test.kt",
+    "*_test.go", "*_test.rs",
+)
+
+
+def _dir_contains_test_files(dir_path: Path) -> bool:
+    """True se la dir contiene almeno un file con pattern test riconoscibile.
+
+    ADR-12: previene false-positive su source dir literalmente nominate
+    ``test/``/``tests/`` ma contenenti solo codice di produzione (es. route
+    ``src/api/test/route.ts`` in jarvis-bff).
+    """
+    for pat in _TEST_FILE_PATTERNS:
+        try:
+            if any(dir_path.glob(pat)) or any(dir_path.rglob(pat)):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def detect_test_infrastructure(repo_path: Path, frameworks: list[str]) -> dict:
     test_dirs = []
     for d in ["__tests__", "tests", "test", "spec"]:
         for found in repo_path.rglob(d):
-            if found.is_dir() and not any(
-                excl in str(found) for excl in ("node_modules", ".venv", "target", "dist", "build", ".git")
-            ):
+            if not found.is_dir():
+                continue
+            if any(excl in str(found) for excl in ("node_modules", ".venv", "target", "dist", "build", ".git")):
+                continue
+            # ADR-12: co-presenza required prima di contare come test dir
+            if _dir_contains_test_files(found):
                 test_dirs.append(str(found.relative_to(repo_path)))
     test_dirs = sorted(set(test_dirs))[:10]
 
@@ -380,29 +621,86 @@ def detect_coverage_exclude(repo_path: Path) -> list[str]:
     return sorted(set(excludes))
 
 
+_OUTPUT_SCHEMA_DEFAULTS: dict = {
+    "repo_path": "",
+    "languages": [],
+    "frameworks": [],
+    "package_managers": [],
+    "build_systems": [],
+    "monorepo": False,
+    "ci_cd": [],
+    "architecture_style": "unknown",
+    "existing_test_frameworks": [],
+    "test_infrastructure": {"frameworks_detected": [], "test_dirs": [], "patterns_sample": ""},
+    "pre_existing_coverage_pct": 0.0,
+    "pre_existing_coverage_source": "missing",
+    "pre_existing_coverage_hint": 0.0,
+    "module_coverage": [],
+    "coverage_exclude": [],
+    "manifest_root": ".",
+    "orchestration_only": False,
+    "orchestration_reason": None,
+}
+
+
+def _emit_error(message: str) -> None:
+    """Pattern Anthropic: stdout JSON full-shape con ``error`` non-null + exit 0.
+
+    Consumer (SKILL.md Phase 1) puo' sempre parsare lo stesso shape e leggere
+    ``.error // empty`` senza branching su exit code o stderr.
+    """
+    payload = dict(_OUTPUT_SCHEMA_DEFAULTS)
+    payload["error"] = message
+    print(json.dumps(payload, indent=2))
+    sys.exit(0)
+
+
 def main() -> None:
     if sys.version_info < (3, 8):
-        print(json.dumps({"error": f"Python 3.8+ required. Found: {sys.version}"}), file=sys.stderr)
-        sys.exit(1)
+        _emit_error(f"Python 3.8+ required. Found: {sys.version}")
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "Usage: detect_stack.py <repo_path>"}), file=sys.stderr)
-        sys.exit(1)
+        _emit_error("Usage: detect_stack.py <repo_path>")
 
     root = Path(sys.argv[1]).resolve()
     if not root.is_dir():
-        print(json.dumps({"error": f"Not a directory: {root}"}), file=sys.stderr)
-        sys.exit(1)
+        _emit_error(f"Not a directory: {root}")
 
     languages = detect_languages(root)
     frameworks = detect_frameworks(root)
     existing_tf = detect_existing_test_frameworks(root)
 
     test_infra = detect_test_infrastructure(root, existing_tf)
-    pre_existing_pct, module_cov = parse_lcov_info(root / "coverage" / "lcov.info")
-    if pre_existing_pct == 0.0 and not module_cov:
-        jacoco_path = root / "target" / "site" / "jacoco" / "jacoco.xml"
-        pre_existing_pct, module_cov = parse_jacoco_for_existing(jacoco_path)
+    # ADR-8: local report = source of truth. gh variable demoted to hint.
+    pre_existing_pct = 0.0
+    pre_existing_source = "missing"
+    module_cov: list = []
+    lcov_pct, lcov_modules = parse_lcov_info(root / "coverage" / "lcov.info")
+    if lcov_modules:
+        pre_existing_pct = lcov_pct
+        pre_existing_source = "local_report"
+        module_cov = lcov_modules
+    else:
+        jacoco_pct, jacoco_modules = parse_jacoco_for_existing(root / "target" / "site" / "jacoco" / "jacoco.xml")
+        if jacoco_modules:
+            pre_existing_pct = jacoco_pct
+            pre_existing_source = "local_report"
+            module_cov = jacoco_modules
+    # gh variable as auxiliary hint (non source of truth)
+    gh_hint, _ = read_github_coverage_variable(root)
     coverage_exclude = detect_coverage_exclude(root)
+
+    # ADR-1: orchestration-only early-exit (IaC/Terragrunt repo).
+    orch_only, orch_reason = is_orchestration_only_repo(root)
+    if orch_only:
+        payload = dict(_OUTPUT_SCHEMA_DEFAULTS)
+        payload.update({
+            "repo_path": str(root),
+            "orchestration_only": True,
+            "orchestration_reason": orch_reason,
+            "error": None,
+        })
+        print(json.dumps(payload, indent=2))
+        return
 
     print(json.dumps({
         "repo_path": str(root),
@@ -416,8 +714,14 @@ def main() -> None:
         "existing_test_frameworks": existing_tf,
         "test_infrastructure": test_infra,
         "pre_existing_coverage_pct": pre_existing_pct,
+        "pre_existing_coverage_source": pre_existing_source,
+        "pre_existing_coverage_hint": gh_hint,
         "module_coverage": module_cov,
         "coverage_exclude": coverage_exclude,
+        "manifest_root": detect_manifest_root(root),
+        "orchestration_only": False,
+        "orchestration_reason": None,
+        "error": None,
     }, indent=2))
 
 

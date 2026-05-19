@@ -89,18 +89,57 @@ def _version_ok(actual: str, minimum: str) -> bool:
     return _parse_version(actual) >= _parse_version(minimum)
 
 
+_SKIP_DIRS_VALIDATE = {
+    "node_modules", ".git", "dist", "build", "out", "target",
+    ".terraform", "vendor", "coverage", "__pycache__", ".venv", "venv",
+    ".next", ".nuxt", ".svelte-kit", ".code-coverage",
+}
+
+
+def _find_manifest_recursive(root: Path, filename: str, max_depth: int = 4) -> Path | None:
+    """Cerca ``filename`` da ``root`` con walk depth-limited (default 4).
+
+    Skippa directory di build/cache. Ritorna il PRIMO match trovato (BFS-like,
+    ma os.walk usa DFS in pratica — accettabile per detection use case).
+    Ritorna None se non trovato.
+    """
+    for dirpath, dirnames, filenames in os.walk(root):
+        depth = len(Path(dirpath).relative_to(root).parts)
+        if depth > max_depth:
+            dirnames.clear()
+            continue
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS_VALIDATE]
+        if filename in filenames:
+            return Path(dirpath) / filename
+    return None
+
+
 def _detect_required_framework(repo_path: Path) -> str:
-    """Infer the required test framework from repo manifest files."""
-    pkg_json = repo_path / "package.json"
-    if pkg_json.exists():
+    """Infer the required test framework from repo manifest files.
+
+    Walk depth=4 per supportare layout SIAE serverless con Terraform root +
+    Lambda manifest nested (es. ``modules/<service>/lambda-<name>/package.json``).
+    Allineato a ``detect_stack._find`` per evitare discrepanze tra detection.
+    """
+    # Try root-level package.json prima (fast path)
+    pkg_json = _find_manifest_recursive(repo_path, "package.json")
+    if pkg_json is not None:
+        # Condition (a) Principle 4: jest.config.{ts,js,mjs,cjs} accanto al package.json
+        pkg_dir = pkg_json.parent
+        for cfg_name in ("jest.config.ts", "jest.config.js", "jest.config.mjs", "jest.config.cjs"):
+            if (pkg_dir / cfg_name).exists():
+                return "jest"
+        # Anche al root, per retrocompat
+        if pkg_dir != repo_path:
+            for cfg_name in ("jest.config.ts", "jest.config.js", "jest.config.mjs", "jest.config.cjs"):
+                if (repo_path / cfg_name).exists():
+                    return "jest"
         try:
             import json as _json
             pkg = _json.loads(pkg_json.read_text(encoding="utf-8", errors="ignore"))
             all_deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
             scripts = pkg.get("scripts", {})
             vitest_in_deps = any("vitest" in k for k in all_deps)
-            # Condition (a): explicit jest config file is checked by detect_stack.py, not here
-            # Condition (b): scripts.test contains "jest" AND vitest NOT in devDependencies
             test_script = scripts.get("test", "")
             jest_in_deps = any("jest" in k for k in all_deps) and not vitest_in_deps
             jest_in_test_script = "jest" in test_script and "vitest" not in test_script and not vitest_in_deps
@@ -110,29 +149,60 @@ def _detect_required_framework(repo_path: Path) -> str:
         except Exception:
             return "vitest"
 
+    # Pyspark sniff prima del fallback pytest generico: allinea il dispatch al branch
+    # `pyspark` in stack-matrix.json (test_framework=pytest+chispa). Senza questo check,
+    # repository PySpark/Databricks ricadrebbero su pytest standard perdendo il template
+    # PySpark e la dep `chispa`.
+    for fname in ("pyproject.toml", "requirements.txt"):
+        p = _find_manifest_recursive(repo_path, fname)
+        if p is None:
+            continue
+        try:
+            content = p.read_text(encoding="utf-8", errors="ignore").lower()
+        except Exception:
+            continue
+        if "pyspark" in content or "databricks" in content:
+            return "pytest+chispa"
+
+    # Fallback su altri manifest, cercati a depth=4
     for fname, fw in [
         ("requirements.txt", "pytest"), ("pyproject.toml", "pytest"),
-        ("pom.xml", "junit5"), ("build.gradle.kts", "junit5"),
+        ("pom.xml", "junit5"), ("build.gradle.kts", "junit5"), ("build.gradle", "junit5"),
         ("pubspec.yaml", "flutter_test"), ("go.mod", "go-test"),
-        ("Cargo.toml", "cargo-test"), ("*.csproj", "xunit"),
+        ("Cargo.toml", "cargo-test"),
     ]:
-        if fname.startswith("*"):
-            matches = list(repo_path.glob(fname))
-            if matches:
-                return fw
-        elif (repo_path / fname).exists():
+        if _find_manifest_recursive(repo_path, fname) is not None:
             return fw
+
+    # *.csproj (glob): cerca con rglob depth-limited via list
+    for csproj in repo_path.rglob("*.csproj"):
+        try:
+            depth = len(csproj.relative_to(repo_path).parts)
+        except ValueError:
+            continue
+        if depth <= 4 and not any(skip in csproj.parts for skip in _SKIP_DIRS_VALIDATE):
+            return "xunit"
 
     return "unknown"
 
 
-def _check_framework_installed(repo_path: Path, framework: str) -> dict:
+def _check_framework_installed(repo_path: Path, framework: str, manifest_root_rel: str = ".") -> dict:
     """Real check su manifest dei build tool per framework presence (P10/ST4).
+
+    Args:
+        repo_path: Repo root.
+        framework: Framework name (vitest/jest/pytest/...).
+        manifest_root_rel: Relative path da repo_path al manifest dir (default ".").
+            Per layout monorepo/nested (es. Terraform root + Lambda nested),
+            il manifest del framework vive in ``modules/<svc>/lambda-<name>``,
+            non al repo root. Allineato a ``stack.json.manifest_root``.
 
     Returns: {"installed": bool, "version": str | None, "source": str, "location": str}
     """
+    check_root = repo_path / manifest_root_rel if manifest_root_rel not in (".", "") else repo_path
+
     if framework == "vitest":
-        pkg = repo_path / "package.json"
+        pkg = check_root / "package.json"
         if pkg.exists():
             try:
                 data = json.loads(pkg.read_text(encoding="utf-8", errors="ignore"))
@@ -141,13 +211,13 @@ def _check_framework_installed(repo_path: Path, framework: str) -> dict:
                     return {"installed": True, "version": dev["vitest"], "source": "package.json", "location": "node_modules/vitest"}
             except Exception:
                 pass
-        nm = repo_path / "node_modules" / "vitest"
+        nm = check_root / "node_modules" / "vitest"
         if nm.exists():
             return {"installed": True, "version": None, "source": "node_modules", "location": "node_modules/vitest"}
         return {"installed": False, "version": None, "source": "package.json", "location": "node_modules/vitest"}
 
     if framework == "jest":
-        pkg = repo_path / "package.json"
+        pkg = check_root / "package.json"
         if pkg.exists():
             try:
                 data = json.loads(pkg.read_text(encoding="utf-8", errors="ignore"))
@@ -156,14 +226,14 @@ def _check_framework_installed(repo_path: Path, framework: str) -> dict:
                     return {"installed": True, "version": dev["jest"], "source": "package.json", "location": "node_modules/jest"}
             except Exception:
                 pass
-        nm = repo_path / "node_modules" / "jest"
+        nm = check_root / "node_modules" / "jest"
         if nm.exists():
             return {"installed": True, "version": None, "source": "node_modules", "location": "node_modules/jest"}
         return {"installed": False, "version": None, "source": "package.json", "location": "node_modules/jest"}
 
     if framework == "pytest":
         for f in ["pyproject.toml", "requirements-dev.txt", "requirements.txt", "setup.cfg"]:
-            p = repo_path / f
+            p = check_root / f
             if p.exists():
                 try:
                     if "pytest" in p.read_text(encoding="utf-8", errors="ignore"):
@@ -176,13 +246,13 @@ def _check_framework_installed(repo_path: Path, framework: str) -> dict:
         return {"installed": False, "version": None, "source": "pyproject.toml", "location": "site-packages/pytest"}
 
     if framework == "junit5":
-        pom = repo_path / "pom.xml"
+        pom = check_root / "pom.xml"
         if pom.exists():
             content = pom.read_text(encoding="utf-8", errors="ignore")
             if re.search(r"<artifactId>junit-jupiter(?:-api)?</artifactId>", content):
                 return {"installed": True, "version": None, "source": "pom.xml", "location": "Maven dependencies"}
         for gradle_file in ["build.gradle.kts", "build.gradle"]:
-            gradle = repo_path / gradle_file
+            gradle = check_root / gradle_file
             if gradle.exists():
                 content = gradle.read_text(encoding="utf-8", errors="ignore")
                 if "junit-jupiter" in content or "useJUnitPlatform" in content:
@@ -191,33 +261,33 @@ def _check_framework_installed(repo_path: Path, framework: str) -> dict:
 
     if framework == "mockk":
         for gradle_file in ["build.gradle.kts", "build.gradle"]:
-            gradle = repo_path / gradle_file
+            gradle = check_root / gradle_file
             if gradle.exists() and "mockk" in gradle.read_text(encoding="utf-8", errors="ignore"):
                 return {"installed": True, "version": None, "source": gradle_file, "location": "Gradle dependencies"}
         return {"installed": False, "version": None, "source": "build.gradle.kts", "location": "Gradle dependencies"}
 
     if framework == "cargo-test":
-        if (repo_path / "Cargo.toml").exists():
+        if (check_root / "Cargo.toml").exists():
             return {"installed": True, "version": "stdlib", "source": "Cargo.toml", "location": "cargo (built-in)"}
         return {"installed": False, "version": None, "source": "Cargo.toml", "location": "cargo (built-in)"}
 
     if framework == "go-test":
-        if (repo_path / "go.mod").exists():
+        if (check_root / "go.mod").exists():
             return {"installed": True, "version": "stdlib", "source": "go.mod", "location": "go stdlib (built-in)"}
         return {"installed": False, "version": None, "source": "go.mod", "location": "go stdlib (built-in)"}
 
     if framework == "flutter_test":
-        pubspec = repo_path / "pubspec.yaml"
+        pubspec = check_root / "pubspec.yaml"
         if pubspec.exists() and "flutter_test:" in pubspec.read_text(encoding="utf-8", errors="ignore"):
             return {"installed": True, "version": None, "source": "pubspec.yaml", "location": "flutter SDK (built-in)"}
         return {"installed": False, "version": None, "source": "pubspec.yaml", "location": "flutter SDK"}
 
     if framework == "xunit":
-        for csproj in repo_path.rglob("*.csproj"):
+        for csproj in check_root.rglob("*.csproj"):
             try:
                 content = csproj.read_text(encoding="utf-8", errors="ignore")
                 if 'Include="xunit"' in content or 'Include="xunit.runner' in content:
-                    return {"installed": True, "version": None, "source": str(csproj.relative_to(repo_path)), "location": "NuGet packages"}
+                    return {"installed": True, "version": None, "source": str(csproj.relative_to(check_root)), "location": "NuGet packages"}
             except Exception:
                 continue
         return {"installed": False, "version": None, "source": "*.csproj", "location": "NuGet packages"}
@@ -331,6 +401,19 @@ def main() -> None:
     if framework is None:
         framework = _detect_required_framework(repo_path)
 
+    # ADR-2: leggi manifest_root da .code-coverage/stack.json (se presente)
+    # per supportare layout monorepo/nested (TF root + Lambda nested).
+    manifest_root_rel = "."
+    stack_json_path = repo_path / ".code-coverage" / "stack.json"
+    if stack_json_path.is_file():
+        try:
+            stack_data = json.loads(stack_json_path.read_text(encoding="utf-8", errors="ignore"))
+            mr = stack_data.get("manifest_root")
+            if isinstance(mr, str) and mr.strip():
+                manifest_root_rel = mr.strip()
+        except (json.JSONDecodeError, OSError):
+            manifest_root_rel = "."
+
     available = []
     missing = []
     blocking = False
@@ -377,7 +460,7 @@ def main() -> None:
                 entry["reason"] = reason_gw
             available.append(entry)
 
-    fw_status = _check_framework_installed(repo_path, framework)
+    fw_status = _check_framework_installed(repo_path, framework, manifest_root_rel)
     if not fw_status["installed"]:
         blocking = framework in ("unknown",)
         missing.append({
@@ -391,11 +474,22 @@ def main() -> None:
     if required_runtime and any(t.get("tool") == required_runtime for t in missing):
         blocking = True
 
-    install_commands = _build_install_commands(framework, repo_path)
+    raw_install_commands = _build_install_commands(framework, repo_path)
+    # ADR-2: prefix install commands con `cd <manifest_root_rel> &&` se nested.
+    # Commenti (linee che iniziano con "#") restano invariati per leggibilità.
+    if manifest_root_rel not in (".", ""):
+        prefix = f"cd {manifest_root_rel} && "
+        install_commands = [
+            (cmd if cmd.lstrip().startswith("#") else prefix + cmd)
+            for cmd in raw_install_commands
+        ]
+    else:
+        install_commands = raw_install_commands
 
     print(json.dumps({
         "repo_path": str(repo_path),
         "required_framework": framework,
+        "manifest_root": manifest_root_rel,
         "framework_installed": fw_status["installed"],
         "framework_check": {framework: fw_status},
         "available": available,

@@ -117,6 +117,131 @@
       ],
       "systemic_eligible": false,
       "systemic_threshold_count": 0
+    },
+    {
+      "id": 7,
+      "name": "snapshot",
+      "patterns": [
+        "(?:to(?:Match|Have)Snapshot|toMatchInlineSnapshot)",
+        "(?:Snapshot[s]?\\s+(?:obsolete|failed|mismatch))",
+        "(?:Snapshot name:\\s+`[^`]+`)",
+        "snapshot file did not exist",
+        "1 snapshot (?:failed|obsolete)"
+      ],
+      "fix_steps": [
+        "Distinguere snapshot obsoleto (re-run con --update-snapshot) vs assertion divergente (review change intentionality)",
+        "Se output divergente è atteso: re-run con `npx vitest run --update` o `npx jest -u`",
+        "Se divergente NON atteso: indagare SUT, NON aggiornare snapshot",
+        "Mai aggiornare snapshot in repair loop automaticamente — log come stalled"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    },
+    {
+      "id": 8,
+      "name": "setup",
+      "patterns": [
+        "Test environment torn down",
+        "(?:beforeAll|beforeEach|afterAll|afterEach)\\s+hook (?:failed|timed out)",
+        "Suite failed to run",
+        "ERROR in conftest\\.py",
+        "fixture '([\\w_]+)' not found",
+        "Cannot find module .* (?:in setupFiles|setupFilesAfterEach)"
+      ],
+      "fix_steps": [
+        "Identifica hook fallito (beforeAll/Each o fixture pytest)",
+        "Verifica setup imports e mock declarations a livello suite",
+        "Se fixture pytest mancante: aggiungi a conftest.py oppure scope='function'",
+        "Se setupFiles vitest/jest: verifica path in config"
+      ],
+      "systemic_eligible": true,
+      "systemic_threshold_count": 2
+    },
+    {
+      "id": 9,
+      "name": "config_test",
+      "patterns": [
+        "vi\\.mock.*must be (?:hoisted|at top)",
+        "moduleNameMapper",
+        "transformIgnorePatterns",
+        "experimentalVmModules",
+        "asyncio_mode (?:must be|not set)",
+        "@pytest\\.mark\\.asyncio (?:requires|not enabled)",
+        "Cannot use import statement outside a module",
+        "ERR_REQUIRE_ESM"
+      ],
+      "fix_steps": [
+        "Diagnostica config: vi.mock hoisting → sposta in cima al file; ESM → aggiungi 'type': 'module' o esm config",
+        "pytest-asyncio mode: imposta asyncio_mode = 'auto' in pyproject.toml [tool.pytest.ini_options]",
+        "Vitest ESM: usa `import` non `require`; aggiungi vite plugin se necessario",
+        "Fix config UNA volta a livello repo, non per-test"
+      ],
+      "systemic_eligible": true,
+      "systemic_threshold_count": 1,
+      "systemic_fix_template": "Modifica {config_file} (vitest.config.ts / pyproject.toml / jest.config.ts) una volta"
+    },
+    {
+      "id": 10,
+      "name": "classpath_build",
+      "patterns": [
+        "ClassNotFoundException: ([\\w$.]+)",
+        "NoClassDefFoundError: ([\\w$/]+)",
+        "(?:Skipping JaCoCo execution|No execution data file)",
+        "(?:No tests found|no test source set)",
+        "Could not resolve (?:all )?(?:files|dependencies) for configuration",
+        "package ([\\w.]+) does not exist",
+        "cannot find symbol\\s+(?:symbol|class|method)",
+        "error TS(\\d+):"
+      ],
+      "fix_steps": [
+        "Distingui: classpath missing (deps) vs jacoco-agent not attached vs compile error",
+        "JaCoCo agent: verifica `jacoco-maven-plugin` con goal `prepare-agent` legato a fase `initialize`",
+        "Classpath: verifica dependency declared + scope test corretto",
+        "Compile error: pre-test fix sorgente (NON modificare test)",
+        "Re-run con `mvn dependency:tree` o `gradle dependencies` per audit"
+      ],
+      "systemic_eligible": true,
+      "systemic_threshold_count": 1,
+      "systemic_fix_template": "Fix pom.xml/build.gradle config a livello modulo, una volta"
+    },
+    {
+      "id": 11,
+      "name": "async_leak",
+      "patterns": [
+        "Jest did not exit one second after",
+        "asyncio.*was never awaited",
+        "unclosed event loop",
+        "open handles",
+        "Worker (?:terminated|exited unexpectedly)",
+        "(?:detected (?:open|leaked) (?:handles|resources))",
+        "Promise rejection (?:was not handled|not awaited)"
+      ],
+      "fix_steps": [
+        "Identifica async leak: missing await, fixture senza teardown, connection non chiusa",
+        "Aggiungi `await` su Promise/coroutine prima di expect/assert",
+        "Verifica afterAll/afterEach chiude connection, timer, watcher",
+        "Per pytest-asyncio: usa `pytest --asyncio-mode=auto` + `async def` fixture con yield/teardown"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
+    },
+    {
+      "id": 12,
+      "name": "coverage_threshold",
+      "patterns": [
+        "coverage threshold (?:for )?(?:global|lines|branches|functions|statements) \\(\\d+%\\) not met",
+        "Coverage (?:for|of) (?:lines|branches|functions|statements) \\(\\d+\\.\\d+%\\) does not meet (?:global )?threshold",
+        "jacoco\\.report.*FAILED.*coverage ratio is \\d+\\.\\d+",
+        "kover.*coverage verification (?:failed|error)"
+      ],
+      "fix_steps": [
+        "Coverage threshold failure NON è test failure: è gate Phase 6 hit threshold",
+        "NON fixare riducendo threshold del config — proceed a Phase 7 priority module patching",
+        "Identifica modules sub-threshold da coverage-report.json e force-include in next batch",
+        "Se progress guard rispettato: log come Stalled in Block 8"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0
     }
   ],
   "normalize_regex": [

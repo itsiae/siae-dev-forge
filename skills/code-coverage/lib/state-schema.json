@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "stack.json": {
-      "description": "Output di detect_stack.py — invalidato da package.json/pom.xml/Cargo.toml/pyproject.toml/build.gradle/pubspec.yaml/go.mod mtime",
+      "description": "Output di detect_stack.py — invalidato da package.json/pom.xml/Cargo.toml/pyproject.toml/build.gradle/pubspec.yaml/go.mod mtime. Field `pre_existing_coverage_pct` deriva da GitHub repository variable TEST_COVERAGE_PERCENTAGE (var assente → 0.0); `pre_existing_coverage_source` ∈ {github_variable, missing}.",
       "ref": "scripts/detect_stack.py output contract"
     },
     "size.json": {
