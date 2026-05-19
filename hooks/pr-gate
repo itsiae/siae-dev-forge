@@ -88,13 +88,7 @@ if echo "$DIFF_CONTENT" | grep -vE '(^[[:space:]]*#|^[[:space:]]*//|\$\{|process
     CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Bearer/JWT token trovato nel diff\n"
 fi
 
-# Slack token or webhook
-if echo "$DIFF_CONTENT" | grep -qE 'xox[bpas]-[A-Za-z0-9\-]+'; then
-    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Slack token trovato nel diff\n"
-fi
-if echo "$DIFF_CONTENT" | grep -qE 'hooks\.slack\.com/services/T[A-Za-z0-9]+/B[A-Za-z0-9]+/[A-Za-z0-9]+'; then
-    CRITICAL_FINDINGS="${CRITICAL_FINDINGS}Slack webhook URL trovato nel diff\n"
-fi
+# Slack token/webhook check removed — SIAE non usa Slack come canale comunicazione.
 
 # AWS Secret Access Key (40-char base64 string near aws context keyword)
 if echo "$DIFF_CONTENT" | grep -iE '(aws_secret|secret_access_key)' | grep -qE '["\x27][A-Za-z0-9/+=]{40}["\x27]'; then
