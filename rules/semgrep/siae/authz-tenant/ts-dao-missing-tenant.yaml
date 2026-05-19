@@ -1,0 +1,75 @@
+rules:
+  # ============================================================
+  # F2 — IDOR / DAO missing tenant filter (CWE-639)
+  # Pentest 2026-05-18 F-03: SELECT WHERE id_<resource> = $N
+  # WITHOUT AND id_emittente filter from authenticated token.
+  #
+  # Cutting-edge: metavariable-regex AND/NOT su SQL string arg (regex
+  # multi-pass post-match) per evitare false positive su query safe.
+  # ============================================================
+  - id: siae.authz-tenant.ts.dao-missing-tenant-filter
+    patterns:
+      - pattern-either:
+          - pattern: $DB.query($SQL, ...)
+          - pattern: $DB.query($SQL)
+      # AND: SQL string contains tenant-bound resource id WHERE clause
+      # (metavariable-regex matches against the full string value, (?i) only — (?s) unsupported)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: '(?i).*WHERE\s+(?:id[_]?(?:file|report|canale|caricamento)|id_emittente_report)\s*=.*'
+      # AND NOT: SQL already contains AND id_emittente or AND tenant_id (safe form)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: '(?i)^(?!.*\bAND\s+(?:id_emittente|tenant_id)\b).*'
+    paths:
+      exclude:
+        # Tabelle globali single-tenant by-design (EC-01)
+        # Glob double form: with **/dao/ prefix AND bare audit_log_dao*.ts
+        # to cover both repo-root and subpath placements.
+        - "**/dao/audit_log*.ts"
+        - "**/audit_log_dao*.ts"
+        - "**/dao/system_config*.ts"
+        - "**/system_config_dao*.ts"
+        - "**/dao/migration_history*.ts"
+        - "**/migration_history_dao*.ts"
+        - "**/dao/feature_flag*.ts"
+        - "**/feature_flag_dao*.ts"
+        - "**/dao/kg_topology_snapshot*.ts"
+        # Test fixtures (EC-02)
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/mocks/**"
+    message: |
+      IDOR / Broken Object Level Authorization (CWE-639). DAO query selects by
+      tenant-bound resource id without filtering by authenticated tenant. A caller
+      may enumerate ids and access other tenants' data.
+
+      Fix: add `AND id_emittente = $N` where $N is derived from the authenticated
+      token (NEVER from request input).
+
+          // Before:
+          db.query("SELECT * FROM file_logs WHERE id_file = $1", [id])
+
+          // After:
+          db.query(
+            "SELECT * FROM file_logs WHERE id_file = $1 AND id_emittente = $2",
+            [id, context.user.idEmittente]
+          )
+
+      Suppress: move DAO under allowlist path glob (e.g. `**/dao/audit_log*.ts`)
+      for tables globally single-tenant by-design, OR add `// nosemgrep:
+      siae.authz-tenant.ts.dao-missing-tenant-filter reason=... expires=...`
+      inline (CWE-639 specific), OR entry in rules/semgrep/siae/suppressions.yaml.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-639"]
+      confidence: HIGH
+      owasp: ["A01:2021"]
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+        - pentest_2026-05-18_F-03

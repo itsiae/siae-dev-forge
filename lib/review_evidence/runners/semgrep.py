@@ -15,10 +15,22 @@ from lib.review_evidence.scoring import SecurityFindings
 # Default = community "auto" + SIAE custom registry (Wave 1 Vulnerability Prevention Library).
 # Multiple configs accepted as CSV; Semgrep accetta multiple --config args.
 _REPO_ROOT = Path(__file__).parents[3]
-_SIAE_REGISTRY = _REPO_ROOT / "rules" / "semgrep" / "siae" / "registry.yaml"
+# SIAE custom rules live as individual YAML files under rules/semgrep/siae/.
+# Semgrep accepts a DIR as --config and auto-discovers rule yaml files
+# recursively. `registry.yaml` is a documentation manifest, NOT a Semgrep
+# ruleset schema — we skip it via Semgrep's natural --config dir behavior
+# (yaml files at any depth get loaded; we ensure only real rule files exist).
+_SIAE_RULES_DIR = _REPO_ROOT / "rules" / "semgrep" / "siae"
 _DEFAULT_CONFIGS = ["auto"]
-if _SIAE_REGISTRY.is_file():
-    _DEFAULT_CONFIGS.append(str(_SIAE_REGISTRY))
+if _SIAE_RULES_DIR.is_dir():
+    # Include dir only if at least one rule yaml is present.
+    # (Skip empty scaffold dir to avoid Semgrep "no rules found" error.)
+    _siae_rule_files = [
+        p for p in _SIAE_RULES_DIR.rglob("*.yaml")
+        if p.name not in {"registry.yaml", "suppressions.yaml"}
+    ]
+    if _siae_rule_files:
+        _DEFAULT_CONFIGS.append(str(_SIAE_RULES_DIR))
 _DEFAULT_CONFIG = ",".join(_DEFAULT_CONFIGS)
 _TIMEOUT_SEC = 180  # Wave 1: ext timeout for layered config + diff-aware (Task 09/10 follow-up)
 
