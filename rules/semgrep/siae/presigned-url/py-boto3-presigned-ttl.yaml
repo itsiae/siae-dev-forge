@@ -1,0 +1,47 @@
+rules:
+  # ============================================================
+  # F8 cross-stack (Wave 3): Python boto3 presigned URL TTL too long
+  # CWE-200 / CWE-359 — URL "vendibile" oltre raccomandazione 60s.
+  # ============================================================
+  - id: siae.presigned-url.py.boto3-ttl-too-long
+    pattern-either:
+      - patterns:
+          - pattern: |
+              $S3.generate_presigned_url(..., ExpiresIn=$TTL, ...)
+          - metavariable-comparison:
+              metavariable: $TTL
+              comparison: $TTL > 60
+      - patterns:
+          - pattern: |
+              $S3.generate_presigned_post(..., ExpiresIn=$TTL, ...)
+          - metavariable-comparison:
+              metavariable: $TTL
+              comparison: $TTL > 60
+    paths:
+      include: ["*.py"]
+      exclude:
+        - "**/test_*.py"
+        - "**/*_test.py"
+        - "**/tests/**"
+        - "**/fixtures/**"
+    message: |
+      AWS S3 Presigned URL TTL exceeds recommended 60s (CWE-200 + CWE-359).
+      Lungo-vissuto URL = credenziale "vendibile": una volta esposta nel response
+      JSON, chiunque (anche off-session, da qualunque IP) può scaricare il blob
+      finché expires_at non scade.
+
+      Fix:
+      - Riduci ExpiresIn a 60s o meno
+      - Se serve TTL lungo: usa endpoint proxy applicativo con ownership-check
+        (`/report/{id}/download` con validation per-request)
+      - Considera S3 Access Point con `aws:SourceIp` condition policy
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-200", "CWE-359"]
+      confidence: HIGH
+      owasp: ["A04:2021"]
+      references:
+        - pentest_2026-05-18_F-08_cross_stack
+        - https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html

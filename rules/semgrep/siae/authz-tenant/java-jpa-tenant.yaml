@@ -1,0 +1,52 @@
+rules:
+  # ============================================================
+  # F2 / F11 cross-stack (Wave 3): Spring Data JPA @Query nativeQuery
+  # con SQL concat OR missing tenant filter (CWE-89 + CWE-639)
+  # ============================================================
+  - id: siae.authz-tenant.java.jpa-native-query-sqli-or-no-tenant
+    pattern-either:
+      # SQL injection via string concat in @Query nativeQuery=true
+      - patterns:
+          - pattern: |
+              @Query(value = $Q + $X, nativeQuery = true)
+              $RETTYPE $METHOD(...);
+      - patterns:
+          - pattern: |
+              @Query(value = $SQL, nativeQuery = true)
+              $RETTYPE $METHOD(...);
+          - metavariable-regex:
+              metavariable: $SQL
+              regex: '(?i).*WHERE\s+(?:id[_]?(?:file|report|canale|caricamento)|id_emittente_report)\s*=.*'
+          - metavariable-regex:
+              metavariable: $SQL
+              regex: '(?i)^(?!.*\bAND\s+id_emittente\b).*'
+    paths:
+      include: ["*.java"]
+      exclude:
+        - "**/*Test.java"
+        - "**/*IT.java"
+        - "**/tests/**"
+        - "**/fixtures/**"
+    message: |
+      Spring Data JPA security risk (Wave 3 cross-stack):
+      1. CWE-89: @Query(nativeQuery=true) con string concat → SQL Injection
+      2. CWE-639: Query WHERE id_<resource> senza AND id_emittente → IDOR
+
+      Fix:
+      - Usa bind parameter (`:param` o `?N`) MAI string concat
+      - Aggiungi AND id_emittente = :idEmittente dal token
+      - Preferisci method query Spring Data (findByXAndIdEmittente) quando possibile
+
+          @Query(value = "SELECT * FROM file_logs WHERE id_file = :id AND id_emittente = :tenant",
+                 nativeQuery = true)
+          Object findByFileIdSafe(@Param("id") Long id, @Param("tenant") Long idEmittente);
+    languages: [java]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-89", "CWE-639"]
+      confidence: HIGH
+      owasp: ["A01:2021", "A03:2021"]
+      references:
+        - pentest_2026-05-18_F-03_cross_stack
+        - https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html
