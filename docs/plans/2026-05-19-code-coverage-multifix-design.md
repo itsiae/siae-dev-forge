@@ -214,3 +214,40 @@ Seconda simulation 4-blind-agent (archetipi: Java Spring Boot multi-module, Reac
 **Skip esplicito**: `parse_go_cover` weighted-avg (parse_coverage.py:170) richiede switch da `coverage-func.txt` a `coverage.out` (formato testuale con statement count per blocco) + modifica `select_command` + `stack-matrix.coverage_command_go` + nuova suite test. Fuori scope round-2 → task futuro dedicato.
 
 **Approvazione utente**: esplicita ("Fixa tutto in parallelo") su consolidated report 2026-05-19 dei 4 blind agent round-2.
+
+---
+
+## 12. Addendum scope-creep (post-spec-reviewer 2026-05-19)
+
+Spec-reviewer round-2 ha identificato 4 componenti implementati ma NON elencati nella sezione 4 "Componenti modificati". Documentati qui per chiusura formale del gap doc-vs-impl. Tutti coerenti con l'intent del piano ma non esplicitati negli ADR originali.
+
+### ADR-13: Concurrency flags stack-matrix
+**Decisione:** aggiungere flag di parallelismo CPU-aware ai `coverage_command` per ogni stack (Vitest `--pool=threads --maxThreads=4`, Jest `--maxWorkers=50%`, pytest `-n auto`, Maven `-T 1C`, Gradle `--parallel --max-workers=4`, cargo `--jobs 4`, dotnet `MaxCpuCount=4`).
+**Rationale:** acceleratore wall-clock 30-50% su MEDIUM/LARGE repo, no impact su determinismo.
+**File:** `assets/stack-matrix.json`.
+
+### ADR-14: Coverage parser expansion
+**Decisione:** aggiungere 4 parser a `parse_coverage.py`: `parse_cobertura_xml` (.NET coverlet + coverage.py XML), `parse_cargo_llvm_cov` (Rust macOS/Windows), `parse_lcov` (Flutter + Ruby simplecov-lcov), `parse_jacoco_multi` (multi-module Maven/Kover aggregator). Estensione enum framework: 8 -> 12.
+**Rationale:** completa la matrice stack. Stack-matrix.json gia' referenziava questi 4 framework senza parser corrispondente.
+**File:** `scripts/parse_coverage.py`.
+
+### ADR-15: Repair-strategies cat 7-12
+**Decisione:** estendere `repair-strategies.json` da 6 a 12 categorie: snapshot_drift, setup_teardown, config_test, classpath_build, async_leak, coverage_threshold.
+**Rationale:** Phase 7 categorize logic riferisce tassonomia 12-cat (S4 strength sezione 10). Le 6 nuove cat coprono failure pattern dai blind-agent test (SparkSession leak, multi-module compile, etc).
+**File:** `assets/repair-strategies.json`.
+
+### ADR-16: select_command.py creazione ex-novo
+**Decisione:** promuovere `select_command.py` da "edit" a NEW (274 LOC). Resolution framework -> cov_cmd era prima inline in SKILL.md (jq-piped); estrazione coerente con ADR-5 (compaction) e ADR-9 (drop jq).
+**Rationale:** isolation della logica deterministica stack -> tool -> cov_cmd in modulo Python testabile.
+**File:** `scripts/select_command.py` (NEW).
+
+### Sotto-feature sotto ADR-5
+`lib/template-cache.sh` (NEW, 59 LOC) e `lib/cache-helper.sh` (revisione `set -euo pipefail` removal in script source-d) sono sotto-feature dell'ADR-5: separano caching template dal SKILL.md inline.
+
+### Fix sub-ordinati
+- `_glob_to_regex` sentinel-based fix in 3 file (`estimate_size.py`, `parse_coverage.py`, `plan_batches.py`): fix bug triple-cascade replace `* -> .*`, sub-ordinato a ADR-3/ADR-4. Refactor verso `lib/glob_match.py` documentato in memory `project_code_coverage_followup.md`.
+- `placeholder-check.sh` regex extension: matching placeholder TS/Python alphanum, sub-ordinato a ADR-6.
+- `detect_stack.py` `_walk` max_depth 6->10: supporto layout Java SIAE depth 7-11, sub-ordinato a ADR-2.
+- `_emit_error` schema-full pattern Anthropic: error reporting consistency, sub-ordinato a ADR-1/ADR-10.
+
+**Verdetto spec-reviewer post-addendum:** atteso PASS (12 ADR + 6 F + 4 ADR addendum = 22 componenti, 22/22 documentati nel diff).
