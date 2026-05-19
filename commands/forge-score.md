@@ -33,14 +33,50 @@ Solo advisory: non blocca push/PR, complementa `/forge-evidence` (v1 hook).
 
 ## Uso
 
-```bash
-# Score on-demand del SHA corrente
-bash hooks/review-evidence
-python3 -m lib.review_evidence.cli score
+Lo scoring v2 e' attualmente esposto come **API Python** (no CLI dedicato).
+Il flusso standard:
 
-# Oppure tramite skill (alias)
-# /forge-score
+```bash
+# 1. Pre-computa evidence v1 (hook on-demand)
+bash hooks/review-evidence
+
+# 2. Carica evidence + computa score card via API Python
+PYTHONPATH=. python3 <<'EOF'
+import json, pathlib, subprocess
+from lib.review_evidence.scoring import (
+    score_security, score_quality, score_coverage,
+    score_spec_compliance, score_discipline, compute_overall,
+    SecurityFindings, QualityFindings, CoverageInput,
+    SpecDriftInput, ArchDriftInput, SkillAdoptionInput,
+)
+
+sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
+ev_path = pathlib.Path(f'.claude/review-evidence/{sha}.json')
+ev = json.loads(ev_path.read_text())
+
+# Adatta input dai findings dell'evidence v1 (esempio minimale)
+sec  = score_security(SecurityFindings())
+qua  = score_quality(QualityFindings(lint_errors=ev['metrics']['lint'].get('errors', 0)))
+cov  = score_coverage(None)
+spec = score_spec_compliance(
+    SpecDriftInput(unplanned_files=ev.get('spec_drift', {}).get('files_changed_outside_plan', [])),
+    ArchDriftInput(violations=[]),
+)
+disc = score_discipline(SkillAdoptionInput(brainstorming_done=True, tdd_cycle_seen=True, verification_run=True))
+
+scores  = {'security': sec, 'quality': qua, 'coverage': cov, 'spec': spec, 'discipline': disc}
+weights = {'security': 0.25, 'quality': 0.20, 'coverage': 0.20, 'spec': 0.20, 'discipline': 0.15}
+overall, partial = compute_overall(scores, weights)
+
+print(f"Security={sec:.0f} | Quality={qua:.0f} | Coverage={cov} | Spec={spec:.0f} | Discipline={disc:.0f}")
+print(f"Overall={overall:.1f} | partial={partial}")
+EOF
 ```
+
+> **Note:** un CLI subcommand dedicato per lo scoring (`score` subcommand con
+> render markdown automatico) e' previsto in una future iteration. Per ora,
+> usa l'API Python sopra (o lo snippet dentro un subagent code-reviewer
+> Step 0.6 gatekeeper).
 
 ## 5 decision branch (output `regression_verdict.decision`)
 

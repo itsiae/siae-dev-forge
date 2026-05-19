@@ -48,10 +48,14 @@
 
 **Fallback:** servizio non in prefix → `REQUIRES_INPUT` (ask user). MCP timeout/error → `TOOL_UNAVAILABLE`.
 
+**KG-unavailable propagation (v1.58.0+):** se JSON prefetch contiene `describe_service.error` o `service_health.error` (servizio non in KG / VPN down / ES unreachable), `mcp_invoker_from_json_file` propaga dict `{"_kg_status": "unavailable", "_kg_error": <msg>}` invece di normalizzare a zero. `lookup_criticality` mappa a `REQUIRES_INPUT` con evidence `kg_unavailable: <err msg>` (no silent NO da heuristic su zeri). ADR-3.
+
 **Bridge ADR-2:** SKILL.md prefetcha JSON via MCP tool e lo passa al CLI via `--kg-data-file` (vedi `mcp_invoker_from_json_file`).
 
 ### Criterion 6 — First release — +2
-**Detection:** `criterion_6_first_release(git_tag_count)` · **Source:** `git:tag`
+**Detection:** `criterion_6_first_release(git_tag_count, tag_lookup_status="OK")` · **Source:** `git:tag`
+- Status `TOOL_UNAVAILABLE` quando subprocess git fallisce (no silent-YES da count=0)
+- Default tag globs: `release*, v*, *RELEASE*, *-RELEASE, RELEASE-*` (env override `DEVFORGE_RELEASE_RISK_TAG_GLOBS`)
 - YES se `git tag --list 'release*' 'v*'` count == 0
 
 ### Criterion 7 — Complex rollback — +2
@@ -160,6 +164,7 @@
 | `DEVFORGE_RELEASE_RISK_KG_TIMEOUT_SEC` | `5` | Timeout MCP sport-kg lookup (Criterion 5) |
 | `DEVFORGE_RELEASE_RISK_SECURITY_CRITICAL_THRESHOLD` | `0` | Soglia Criterion 17 critical |
 | `DEVFORGE_RELEASE_RISK_SECURITY_HIGH_THRESHOLD` | `5` | Soglia Criterion 17 high |
+| `DEVFORGE_RELEASE_RISK_TAG_GLOBS` | `release*,v*,*RELEASE*,*-RELEASE,RELEASE-*` | Pattern glob csv per `git tag --list` (Criterion 6 first-release detection) |
 
 ## Skip override
 

@@ -4,6 +4,46 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.58.0] - 2026-05-16
+
+### Fixed — Release Risk silent-NO failures
+- **Criterion 5** (Critical service): `mcp_invoker_from_json_file` ora propaga
+  field `_kg_status="unavailable"` quando `describe_service.error` o
+  `service_health.error` sono presenti nel JSON prefetch. `lookup_criticality`
+  mappa il status a `REQUIRES_INPUT` invece di calcolare heuristic NO da
+  valori normalizzati a zero. Risolve silent-NO su servizi non mappati nel KG
+  e su VPN down.
+- **Criterion 6** (First release): `_count_release_tags` ora ritorna tuple
+  `(count, status)`. Subprocess failure ritorna `status="UNAVAILABLE"` →
+  `criterion_6_first_release` mappa a `TOOL_UNAVAILABLE` invece di silent-YES
+  da `return 0`. Default glob esteso a `release*, v*, *RELEASE*, *-RELEASE,
+  RELEASE-*` per catturare pattern SIAE custom (es. `2.3.5-RELEASE`,
+  `CERTIFICAZIONE`). Env override `DEVFORGE_RELEASE_RISK_TAG_GLOBS` (csv).
+
+### Changed
+- `criterion_6_first_release` accepts new optional param `tag_lookup_status: str = "OK"`
+  (backwards-compatible default)
+- `_count_release_tags` return type: `int` → `tuple[int, str]`
+- `mcp_invoker_from_json_file` invoker output: returns `{"_kg_status": "unavailable", "_kg_error": ...}` on KG error instead of zero-normalized dict
+
+### Tests
+- +9 unit/integration tests (`test_release_risk_detector_6_10.py` +2,
+  `test_release_risk_cli.py` +4, `test_release_risk_kg_lookup.py` +3). Suite
+  totale 143 PASS.
+- Integration verification on `pae-deposito-musica-fe release/2.3.4`: score
+  **8 → 6** (MEDIUM mantenuto). Il fix C5+C6 rimuove 2 silent-failure (delta
+  -2 da C6 silent-YES, +0 netto da C5 ora REQUIRES_INPUT esplicito), ma C17
+  npm-audit ground-truth (13 critical + 54 high CVE) contribuisce +2 stabile
+  e mantiene il livello MEDIUM. Esito atteso: i silent sono rimossi, il
+  rischio reale di sicurezza emerge e viene tracciato esplicitamente.
+
+### Refs
+- Design: `docs/plans/2026-05-16-release-risk-silent-no-fix-design.md`
+- Plan: `docs/plans/2026-05-16-release-risk-silent-no-fix/`
+- Bug discovery: test reale 2026-05-16 su pae-deposito-musica-fe
+
+---
+
 ## [1.57.0] - 2026-05-14
 
 ### Added — Release Risk Assessment
