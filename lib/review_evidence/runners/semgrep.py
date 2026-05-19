@@ -32,7 +32,9 @@ if _SIAE_RULES_DIR.is_dir():
     if _siae_rule_files:
         _DEFAULT_CONFIGS.append(str(_SIAE_RULES_DIR))
 _DEFAULT_CONFIG = ",".join(_DEFAULT_CONFIGS)
-_TIMEOUT_SEC = 180  # Wave 1: ext timeout for layered config + diff-aware (Task 09/10 follow-up)
+_TIMEOUT_SEC = 180  # global subprocess timeout
+_TIMEOUT_PER_FILE = 10  # EC-26 ReDoS protection: per-file timeout
+_MIN_SEMGREP_VERSION = "1.50.0"  # AC7: version gate
 
 _SOURCE_SUFFIXES = (
     ".py",
@@ -61,18 +63,52 @@ class SemgrepRunner:
                 return True
         return False
 
+    def _check_version(self) -> Optional[str]:
+        """AC7: verify semgrep installed and >=_MIN_SEMGREP_VERSION. Returns error reason or None."""
+        try:
+            v = subprocess.run(
+                ["semgrep", "--version"], capture_output=True, text=True, timeout=10
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return "semgrep not installed"
+        version_str = (v.stdout or "").strip().split()[0] if v.stdout else "0.0.0"
+        try:
+            from packaging.version import Version
+            if Version(version_str) < Version(_MIN_SEMGREP_VERSION):
+                return f"semgrep {version_str} < required {_MIN_SEMGREP_VERSION}"
+        except ImportError:
+            pass  # packaging non installato: accetta qualsiasi versione (degraded mode)
+        except Exception:
+            pass  # version parse failed: accetta (defensive)
+        return None
+
     def run(self, repo_root: Path) -> Optional[SecurityFindings]:
+        # AC7: version gate
+        err = self._check_version()
+        if err:
+            return SecurityFindings.tool_unavailable(err)
+
         config = os.environ.get("DEVFORGE_SEMGREP_CONFIG", _DEFAULT_CONFIG)
-        # Semgrep accetta multipli --config args; CSV viene splittato.
         config_args = [f"--config={c.strip()}" for c in config.split(",") if c.strip()]
+
+        # AC8: diff-aware via env DEVFORGE_SEMGREP_BASELINE_COMMIT
+        baseline = os.environ.get("DEVFORGE_SEMGREP_BASELINE_COMMIT")
+        diff_args = ["--baseline-commit", baseline] if baseline else []
+
+        # Parallel jobs (default CPU count, override via SEMGREP_JOBS)
+        jobs = os.environ.get("SEMGREP_JOBS") or str(os.cpu_count() or 4)
+
+        cmd = [
+            "semgrep", *config_args, *diff_args,
+            "--json", "--quiet", "--metrics=off",
+            f"--timeout={_TIMEOUT_PER_FILE}",  # EC-26 per-file timeout
+            f"--jobs={jobs}",
+            ".",
+        ]
         try:
             p = subprocess.run(
-                ["semgrep", *config_args, "--json", "--quiet", "."],
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT_SEC,
-                check=False,
+                cmd, cwd=repo_root, capture_output=True, text=True,
+                timeout=_TIMEOUT_SEC, check=False,
             )
             if not p.stdout or not p.stdout.strip():
                 return None
@@ -85,25 +121,51 @@ class SemgrepRunner:
         ):
             return None
 
+        return self._parse_findings(data)
+
+    def _parse_findings(self, data: dict) -> SecurityFindings:
         counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        by_family: dict[str, int] = {}
         for result in data.get("results", []) or []:
             extra = result.get("extra", {}) or {}
             severity = (extra.get("severity") or "").upper()
             metadata = extra.get("metadata", {}) or {}
             category = (metadata.get("category") or "").lower()
-            bucket = _map_severity(severity, category)
+            confidence = (metadata.get("confidence") or "").upper()
+            bucket = _map_severity(severity, category, confidence)
             if bucket:
                 counts[bucket] += 1
+                # by_family traceability per siae.<family>.<...>
+                rule_id = result.get("check_id", "")
+                if rule_id.startswith("siae."):
+                    parts = rule_id.split(".", 2)
+                    if len(parts) >= 2:
+                        family = parts[1]
+                        by_family[family] = by_family.get(family, 0) + 1
+        return SecurityFindings(**counts, by_family=by_family)
 
-        return SecurityFindings(**counts)
 
+def _map_severity(severity: str, category: str, confidence: str = "") -> Optional[str]:
+    """Map Semgrep severity+category+confidence → bucket.
 
-def _map_severity(severity: str, category: str) -> Optional[str]:
-    """Map Semgrep ERROR/WARNING/INFO + category to critical/high/medium/low."""
+    Backward-compat: community rule senza confidence metadata → mapping classico.
+    ADR-005 degrade: MEDIUM/LOW confidence esplicito → degrade di un bucket
+    (block ERROR+HIGH only when confidence is explicitly HIGH or missing).
+    """
     if severity == "ERROR":
-        return "critical" if category == "security" else "high"
+        if category == "security":
+            # ERROR+security: critical unless confidence is explicitly weak
+            if confidence in ("MEDIUM", "LOW"):
+                return "high"
+            return "critical"
+        return "high"
     if severity == "WARNING":
-        return "high" if category == "security" else "medium"
+        if category == "security":
+            # WARNING+security: high bucket (visible, no block per ADR-005)
+            if confidence == "LOW":
+                return "medium"
+            return "high"
+        return "medium"
     if severity == "INFO":
         return "low"
     return None  # unknown severity — drop silently

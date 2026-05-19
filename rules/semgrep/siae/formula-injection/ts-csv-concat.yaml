@@ -89,9 +89,13 @@ rules:
     severity: WARNING
     metadata:
       category: security
-      cwe: ["CWE-1236"]
+      # F1.b covers F-01 (formula injection) AND F-05 (RFC 4180 violation):
+      # join('\n') without csv-stringify breaks BOTH formula sanitization AND quoting.
+      cwe: ["CWE-1236", "CWE-93"]
       confidence: MEDIUM
       owasp: ["A03:2021"]
       references:
         - https://owasp.org/www-community/attacks/CSV_Injection
+        - https://datatracker.ietf.org/doc/html/rfc4180
         - pentest_2026-05-18_F-01
+        - pentest_2026-05-18_F-05
