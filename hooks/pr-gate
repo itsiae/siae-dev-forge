@@ -164,6 +164,29 @@ EOF
 fi
 
 # ─────────────────────────────────────────────────────────────────
+# Drools .drl review check (ADR-007 + EC-29 — WARNING, NON BLOCK)
+# ─────────────────────────────────────────────────────────────────
+
+# DRL files modificati nella PR (rispetto a origin/main)
+DRL_FILES=$(cd "$REPO_TARGET" 2>/dev/null && git diff --name-only "origin/$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || echo main)"...HEAD 2>/dev/null | grep -E '\.drl$' || true)
+if [[ -n "$DRL_FILES" ]]; then
+  PR_LABELS="${GITHUB_PR_LABELS:-}"
+  DROOLS_CHECK_OUTPUT=$(cd "$REPO_TARGET" && python3 -c "
+import sys
+from pathlib import Path
+try:
+    from lib.review_evidence.drools_check import check_drools_review
+    modified = [Path(f.strip()) for f in '''$DRL_FILES'''.split('\n') if f.strip()]
+    labels = [l.strip() for l in '''$PR_LABELS'''.split(',') if l.strip()]
+    result = check_drools_review(modified, labels)
+    print(result.message if not result.ok else f'OK via {result.method}')
+except ImportError:
+    print('SKIP: drools_check not importable')
+" 2>&1)
+  devforge_log "pr_gate" "success" "{\"check\":\"drools_review\",\"output\":\"${DROOLS_CHECK_OUTPUT:0:200}\"}"
+fi
+
+# ─────────────────────────────────────────────────────────────────
 # PASS — security scan clean, inject review + security instructions
 # ─────────────────────────────────────────────────────────────────
 
