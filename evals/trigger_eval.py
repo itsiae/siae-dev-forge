@@ -90,7 +90,7 @@ def read_skill_description(plugin_root, skill_name):
         # Strip trailing blank lines
         while desc_lines and desc_lines[-1] == "":
             desc_lines.pop()
-        return " ".join(l for l in desc_lines if l != "").strip() or None
+        return " ".join(line for line in desc_lines if line != "").strip() or None
 
     return None
 

@@ -6,7 +6,6 @@ Confronta description corrente (A) vs candidata (B)
 eseguendo lo stesso trigger eval set su entrambe.
 """
 
-import json
 import time
 from pathlib import Path
 

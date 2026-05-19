@@ -112,21 +112,41 @@ Scoperta laterale: 3/4 repo target sono **monorepo Terraform-root con TS Lambda 
 
 ## 4. Componenti modificati
 
+Path repo-rooted (compatibile con parser spec-drift `lib/review_evidence/spec_drift.py`).
+
 | File | Fix-group | Tipo |
 |------|-----------|------|
-| `scripts/detect_stack.py` | G1, G2, G8, G12 | logic |
-| `scripts/estimate_size.py` | G3, G4 | logic |
-| `scripts/select_command.py` | G2, G10 | logic |
-| `scripts/validate_env.py` | G2 | logic |
-| `assets/priority-rules.json` | G4 | data |
-| `assets/stack-matrix.json` | G1 (new "orchestration" pseudo-stack) | data |
-| `SKILL.md` | G5, G7, G9, G11, G1 | markdown |
-| `references/phase-5-generation.md` | G6 | markdown |
-| `references/phase-2-strategy.md` | G5 (NEW) | markdown |
-| `references/phase-7-repair.md` | G5 (NEW) | markdown |
-| `references/index.md` | G5 (NEW) | markdown |
-| `lib/phase1-discover.sh` | G5 (NEW) | bash |
-| `lib/phase6-coverage.sh` | G5 (NEW), G9, G11 | bash |
+| `skills/code-coverage/scripts/detect_stack.py` | G1, G2, G8, G12 | logic |
+| `skills/code-coverage/scripts/estimate_size.py` | G3, G4 | logic |
+| `skills/code-coverage/scripts/select_command.py` | G2, G10 (NEW ADR-16) | logic |
+| `skills/code-coverage/scripts/validate_env.py` | G2, F2 (round 2) | logic |
+| `skills/code-coverage/scripts/parse_coverage.py` | F4 (round 2), ADR-14 (parser expansion) | logic |
+| `skills/code-coverage/scripts/plan_batches.py` | sub-ordinato (glob_to_regex fix) | logic |
+| `skills/code-coverage/assets/priority-rules.json` | G4 | data |
+| `skills/code-coverage/assets/stack-matrix.json` | G1 + F6 (round 2) + ADR-13 (concurrency flags) | data |
+| `skills/code-coverage/assets/install-snippets.json` | F3 (round 2) | data |
+| `skills/code-coverage/assets/repair-strategies.json` | ADR-15 (cat 7-12) | data |
+| `skills/code-coverage/SKILL.md` | G5, G7, G9, G11, G1, F5 (round 2) | markdown |
+| `skills/code-coverage/references/phase-5-generation.md` | G6, F1 (round 2) | markdown |
+| `skills/code-coverage/references/phase-2-strategy.md` | G5 (NEW) | markdown |
+| `skills/code-coverage/references/phase-7-repair.md` | G5 (NEW) | markdown |
+| `skills/code-coverage/references/index.md` | G5 (NEW) | markdown |
+| `skills/code-coverage/lib/phase1-discover.sh` | G5 (NEW) | bash |
+| `skills/code-coverage/lib/phase6-coverage.sh` | G5 (NEW), G9, G11 | bash |
+| `skills/code-coverage/lib/template-cache.sh` | G5 (NEW, sotto ADR-5) | bash |
+| `skills/code-coverage/lib/cache-helper.sh` | G5 (set -euo fix) | bash |
+| `skills/code-coverage/lib/placeholder-check.sh` | G6 (regex extension) | bash |
+| `skills/code-coverage/lib/state-schema.json` | G2 (schema update) | data |
+| `skills/code-coverage/scripts/tests/test_detect_stack_ext.py` | test | test |
+| `skills/code-coverage/scripts/tests/test_parse_coverage.py` | test | test |
+| `skills/code-coverage/scripts/tests/test_validate_env_ext.py` | test | test |
+| `skills/code-coverage/scripts/tests/test_plan_batches.py` | test (coverage rise 71->99%) | test |
+| `skills/code-coverage/scripts/tests/test_select_command_multimodule.py` | test (NEW ADR-10/ADR-16) | test |
+| `.gitignore` | runtime artifact `.code-coverage/` | data |
+| `.claude-plugin/plugin.json` | version bump 1.60.0 -> 1.61.0 | data |
+| `evals/autoresearch.py` | lint fix E741 (ambiguous var) | logic |
+| `evals/runner.py` | lint fix E741 | logic |
+| `evals/trigger_eval.py` | lint fix E741 | logic |
 
 ## 5. Flusso dati post-fix
 

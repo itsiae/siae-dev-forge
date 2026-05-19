@@ -6,7 +6,6 @@ Simula workflow completi con turn user predefiniti,
 poi usa grader.py per valutare lo stato finale.
 """
 
-import json
 import os
 import shutil
 import subprocess
