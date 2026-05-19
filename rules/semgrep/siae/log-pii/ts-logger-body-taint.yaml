@@ -1,0 +1,62 @@
+rules:
+  # ============================================================
+  # F10 — Logger.debug/info/warn/error con event.body/req.body untrusted
+  # CWE-532 — Insertion of Sensitive Information into Log File
+  # Pentest 2026-05-18 F-15 broadcasting (logger.debug body event)
+  # ============================================================
+  - id: siae.log-pii.ts.logger-body-payload-taint
+    pattern-either:
+      - pattern: |
+          $LOGGER.debug({body: $REQ.body, ...})
+      - pattern: |
+          $LOGGER.info({body: $REQ.body, ...})
+      - pattern: |
+          $LOGGER.warn({body: $REQ.body, ...})
+      - pattern: |
+          $LOGGER.error({body: $REQ.body, ...})
+      - pattern: $LOGGER.debug(..., $REQ.body, ...)
+      - pattern: $LOGGER.info(..., $REQ.body, ...)
+      - pattern: $LOGGER.warn(..., $REQ.body, ...)
+      - pattern: $LOGGER.error(..., $REQ.body, ...)
+      - pattern: $LOGGER.debug(..., JSON.stringify($REQ.body), ...)
+      - pattern: $LOGGER.debug(..., JSON.stringify($REQ.params), ...)
+      - pattern: $LOGGER.error(..., JSON.stringify($REQ.params), ...)
+    paths:
+      include: ["*.ts", "*.tsx", "*.js"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+        - "**/dev/**"   # dev environment debug log accettabile
+        - "**/local/**"
+    message: |
+      Log injection / PII leak (CWE-532). Body completo di request/event nel
+      log → CloudWatch storage permanente con PII (ISWC/ISRC artisti SIAE,
+      anagrafica emittenti, email, token, etc.).
+
+      Fix: log SOLO field minimi (id_tenant, action, count) sanitizzati:
+
+          // BEFORE:
+          logger.debug({ body: event.body });
+
+          // AFTER:
+          logger.debug({
+            tenant_id: event.body.idEmittente,
+            action: "upload",
+            file_count: event.body.files?.length ?? 0
+          });
+
+      Per debug development: usa `console.log` in `**/dev/**` path (excluded
+      dalla rule) o env-gated logger.
+    languages: [typescript, javascript]
+    severity: INFO
+    metadata:
+      category: security
+      cwe: ["CWE-532"]
+      confidence: HIGH
+      owasp: ["A09:2021"]
+      references:
+        - pentest_2026-05-18_F-15
+        - https://cwe.mitre.org/data/definitions/532.html

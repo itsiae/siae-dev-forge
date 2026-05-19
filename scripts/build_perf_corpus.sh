@@ -24,11 +24,12 @@ loc_target:
   terraform: 10000
 EOF
 
-python3 - <<'PY'
+python3 - "$OUT" <<'PY'
 """Generator deterministico (no random) per idempotenza."""
+import sys
 from pathlib import Path
 
-OUT = Path("tests/fixtures/perf_corpus_200k")
+OUT = Path(sys.argv[1])
 
 def gen_ts(i):
     return f"""// Module {i} synthetic

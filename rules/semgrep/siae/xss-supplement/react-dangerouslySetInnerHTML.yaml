@@ -1,0 +1,62 @@
+rules:
+  # ============================================================
+  # F19 — React dangerouslySetInnerHTML XSS (CWE-79)
+  # Pattern strutturale TS/JS — Semgrep TS parser non gestisce JSX
+  # quindi usiamo pattern-regex per detection robusta.
+  # ============================================================
+  - id: siae.xss-supplement.react.dangerously-set-inner-html-naive
+    pattern-regex: 'dangerouslySetInnerHTML\s*=\s*\{\{\s*__html\s*:\s*(?!DOMPurify\.sanitize)[^}]+\}\}'
+    paths:
+      include: ["*.tsx", "*.jsx", "*.ts", "*.js"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      React XSS via dangerouslySetInnerHTML senza DOMPurify.sanitize (CWE-79).
+      Fix: usa template interpolation JSX `{text}` (auto-escape), oppure wrap
+      con `DOMPurify.sanitize(userInput)` senza config permissivo.
+
+          // BEFORE:
+          <div dangerouslySetInnerHTML={{ __html: userInput }} />
+
+          // AFTER:
+          <div>{userInput}</div>  // JSX auto-escape
+          // OR
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userInput) }} />
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-79"]
+      confidence: HIGH
+      owasp: ["A03:2021"]
+      references:
+        - https://react.dev/reference/react-dom/components/common#dangerouslysetinnerhtml
+
+  # ============================================================
+  # F19 supplement — DOMPurify config permissivo (sanitizer disabilitato)
+  # ============================================================
+  - id: siae.xss-supplement.react.dompurify-permissive-config
+    pattern-regex: 'DOMPurify\.sanitize\([^,)]+,\s*\{[^}]*ALLOWED_TAGS\s*:\s*\[\s*["\x27]\*["\x27]\s*\][^}]*\}'
+    paths:
+      include: ["*.tsx", "*.jsx", "*.ts", "*.js"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      DOMPurify configurato con ALLOWED_TAGS wildcard ['*'] = sanitizer
+      effettivamente disabilitato (CWE-79). Usa config default o whitelist
+      esplicita di tag innocui (es. ['b', 'i', 'em', 'strong', 'a']).
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-79"]
+      confidence: HIGH
+      owasp: ["A03:2021"]

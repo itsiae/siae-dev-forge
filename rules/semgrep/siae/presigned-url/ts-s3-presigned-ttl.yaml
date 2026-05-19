@@ -1,0 +1,40 @@
+rules:
+  # ============================================================
+  # F8 — AWS SDK v3 getSignedUrl TTL > 60s (CWE-200 / CWE-359)
+  # Pentest 2026-05-18: presigned URL "vendibile" oltre 60s raccomandazione.
+  # ============================================================
+  - id: siae.presigned-url.ts.s3-getSignedUrl-ttl-too-long
+    patterns:
+      - pattern: |
+          getSignedUrl($CLIENT, $CMD, {expiresIn: $TTL, ...})
+      - metavariable-comparison:
+          metavariable: $TTL
+          comparison: $TTL > 60
+    paths:
+      include: ["*.ts", "*.tsx", "*.js"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      AWS S3 Presigned URL TTL exceeds recommended 60s (CWE-200 + CWE-359).
+      Lungo-vissuto URL = credenziale "vendibile": una volta esposta nel response
+      JSON, chiunque (anche off-session) può scaricare il blob finché non scade.
+
+      Fix:
+      - Riduci expiresIn a 60 (o meno)
+      - Per TTL lungo legittimi: usa endpoint proxy applicativo `/report/{id}/download`
+        con ownership check per-request
+      - Considera S3 Access Point con `aws:SourceIp` condition policy
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-200", "CWE-359"]
+      confidence: HIGH
+      owasp: ["A04:2021"]
+      references:
+        - pentest_2026-05-18_F-08
+        - https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/s3-example-creating-buckets.html

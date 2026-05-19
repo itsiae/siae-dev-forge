@@ -42,3 +42,18 @@ htmlcov/
 
 # Review evidence cache (per-SHA, deterministically computed by hooks/review-evidence)
 .claude/review-evidence/
+
+# DevForge runtime artifacts (commit accidentale via git add -A)
+.playwright-mcp/
+coverage.xml
+.coverage
+devforge-analytics.yml
+docs/demos/
+docs/releases/
+reports/
+
+# iCloud sync duplicates
+* 2.py
+*\ 2.py
+*\ 2.md
+tests/fixtures/perf_corpus_200k/
