@@ -56,3 +56,4 @@ reports/
 * 2.py
 *\ 2.py
 *\ 2.md
+tests/fixtures/perf_corpus_200k/
