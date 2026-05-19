@@ -1,0 +1,38 @@
+rules:
+  # ============================================================
+  # F19 cross-stack Vue: v-html con input untrusted (CWE-79).
+  # Vue è stack frontend principale SIAE.
+  # ============================================================
+  - id: siae.xss-supplement.vue.v-html-naive
+    pattern-regex: 'v-html\s*=\s*["\x27](?!.*(?:sanitize|DOMPurify))[^"\x27]+["\x27]'
+    paths:
+      include: ["*.vue"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      Vue.js v-html con input non sanitizzato (CWE-79). v-html bypassa
+      template auto-escape e renderizza HTML raw — XSS via stored payload.
+
+      Fix:
+      - Usa template interpolation `{{}}` (auto-escape):
+          <div>{{ userInput }}</div>
+      - Se servono tag HTML legittimi: sanitizza con DOMPurify prima:
+          import DOMPurify from "dompurify";
+          const safeHtml = computed(() => DOMPurify.sanitize(userInput.value));
+          // template:
+          <div v-html="safeHtml"></div>
+      - Per testo puro preferisci `v-text` (semanticamente più chiaro).
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-79"]
+      confidence: HIGH
+      owasp: ["A03:2021"]
+      references:
+        - https://vuejs.org/api/built-in-directives.html#v-html
+        - design_v2.1_F19_vue

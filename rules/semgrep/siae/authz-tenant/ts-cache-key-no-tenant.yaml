@@ -1,0 +1,44 @@
+rules:
+  # ============================================================
+  # OWASP 2026 — Cache key cross-tenant leakage (CWE-639).
+  # Cause #2 multi-tenant SaaS leakage (OWASP Multi-Tenant Cheat Sheet).
+  # ============================================================
+  - id: siae.authz-tenant.ts.cache-key-no-tenant-prefix
+    pattern-either:
+      - pattern-regex: 'redis\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'redis\.set\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'cache\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'cache\.set\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+      - pattern-regex: 'memcached\.get\(\s*`[a-zA-Z][a-zA-Z0-9_]*:\$'
+    paths:
+      include: ["*.ts", "*.tsx", "*.js"]
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/tests/**"
+        - "**/__tests__/**"
+        - "**/fixtures/**"
+    message: |
+      Cache key non include tenant identifier (CWE-639). Su cache shared
+      (Redis cluster, Memcached, in-memory) tenant A può leggere dati cached
+      da tenant B se la key non discrimina. OWASP 2026 Multi-Tenant Cheat
+      Sheet identifica questa come causa #2 di cross-tenant data leakage
+      (dopo missing WHERE id_tenant).
+
+      Fix: prefisso tenant sempre nella cache key:
+
+          // BEFORE:
+          await redis.get(`report:${id}`)
+
+          // AFTER:
+          await redis.get(`tenant:${context.user.idEmittente}:report:${id}`)
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-639"]
+      confidence: MEDIUM
+      owasp: ["A01:2021"]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html
+        - https://agnitestudio.com/blog/preventing-cross-tenant-leakage/
