@@ -1,0 +1,37 @@
+name: Sync Semgrep Registry
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # weekly Monday 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pipx install semgrep
+      - run: bash scripts/sync-semgrep-registry.sh
+      - name: Open PR on diff
+        run: |
+          if [ -n "$(git status --porcelain rules/semgrep/vendored/ rules/semgrep/siae/version.lock)" ]; then
+            git config user.name 'devforge-bot'
+            git config user.email 'devforge-bot@siae.it'
+            BRANCH="chore/sync-semgrep-registry-$(date +%Y-%m-%d)"
+            git checkout -b "$BRANCH"
+            git add rules/semgrep/vendored/ rules/semgrep/siae/version.lock
+            git commit -m "chore(rules): weekly sync community Semgrep rulesets"
+            git push origin "$BRANCH"
+            gh pr create --base main \
+              --title "chore(rules): sync community Semgrep rulesets ($(date +%Y-%m-%d))" \
+              --body "Automated weekly sync of community Semgrep rulesets to rules/semgrep/vendored/. Updates version.lock SHA256 hashes."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
