@@ -76,7 +76,7 @@ bash hooks/review-evidence
 
 ```bash
 # Primary (state file — affidabile in subprocess hook)
-touch ~/.claude/.devforge-skip-evidence
+`export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)
 
 # Secondary (env var — fallback)
 export DEVFORGE_SKIP_EVIDENCE=1
@@ -96,6 +96,6 @@ Block:
 ```
 review-evidence abc12345: BLOCK
 Reasons: coverage_below_threshold:55<60, lint_errors:5>0
-Override: touch ~/.claude/.devforge-skip-evidence
+Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)
 File: .claude/review-evidence/abc12345....json
 ```

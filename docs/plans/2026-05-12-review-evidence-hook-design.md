@@ -363,7 +363,7 @@ Test fixture obbligatorio (`tests/fixtures/spec_drift/design_with_codefences.md`
 
 **Bypass via state file (W8 fix):** il pattern env var solo non è affidabile per i subprocess hook (cfr. feedback_env_var_not_propagated_to_hooks). Il bypass primario usa un state file:
 
-- Touch: `touch ~/.claude/.devforge-skip-evidence` (o `.claude/.devforge-skip-evidence` repo-local)
+- Touch: ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)` (o `.claude/.devforge-skip-evidence` repo-local)
 - L'hook controlla l'esistenza del file PRIMA del compute
 - Auto-cleanup dopo N usi (counter nel file: `echo "N=3" > file`, decremento per ogni usage; `0` = remove file)
 - Logging `evidence_bypass_used` ogni invocazione bypassata, `evidence_bypass_abuse_suspected` su soglia 5/day

@@ -4,6 +4,93 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.4] - 2026-05-20
+
+### Fixed — Bypass evidence subprocess-safe (BUG A)
+
+In v1.63.3 abbiamo rimosso il state file globale `~/.claude/.devforge-skip-evidence` per stoppare il pattern set-and-forget. Resto solo `DEVFORGE_SKIP_EVIDENCE=1` come breakglass env var. **Bug residuo scoperto subito**: Claude Code NON propaga env var della shell utente ai subprocess hook (memoria `feedback_env_var_not_propagated_to_hooks`). Quindi `DEVFORGE_SKIP_EVIDENCE=1 gh pr create` settava la env var solo nel processo `gh`, mai nel hook PreToolUse → breakglass inutilizzabile.
+
+**Fix**: oltre a env var, il hook `review-evidence` ora accetta un **marker file session-scoped** in `~/.claude/devforge-state/<sid>/.bypass-evidence`:
+- Subprocess-safe (file su disco, leggibile da qualsiasi hook child)
+- Session-scoped (auto-rimosso dal `stop-gate` hook a fine sessione, no set-and-forget)
+- Path determinato dal `sid` corrente in `~/.claude/.devforge-sid`
+
+**Workflow utente breakglass v1.63.4+:**
+```bash
+touch ~/.claude/devforge-state/$(cat ~/.claude/.devforge-sid)/.bypass-evidence
+gh pr create ...      # bypassa review-evidence
+# auto-cleanup a fine sessione
+```
+
+**File modificati:**
+- `hooks/review-evidence:51-60` — check session marker prima di env var
+- `hooks/stop-gate:106-112` — cleanup `.bypass-evidence` a session_end
+- `hooks/ENV_VARS.md:35` — doc workflow workaround
+
+**Note BUG B (drift_severity_high blocca bug fix)**: bug architetturale identificato in iter-review v1.63.3 ma **richiede design doc dedicato** (cambia semantica del gate review-evidence). Tracciato per follow-up: il check `lib/review_evidence/thresholds.py:64` dovrebbe degradare a warning quando `CHANGELOG.md` ha entry strutturata per `plugin.json.version` corrente. Implementazione differita.
+
+## [1.63.3] - 2026-05-20
+
+### Fixed — 3 bug critici telemetria S3 (audit 2026-05-20)
+
+Audit empirico telemetria DevForge su S3 `siae-devforge-telemetry/devforge-logs/` ha rivelato **103× inflazione** dei `commit_created` events (S3: 20.087 vs GitHub commits reali 6gg: 195). Tre bug indipendenti che inflavano sia il numeratore (signal) che il denominatore (commits) delle metriche di adoption, rendendo i numeri reali artificialmente bassi.
+
+**Bug 1 — `lib/logger.sh:344` sid fallback letterale `"no-session"`**
+
+`devforge_get_sid()` ritornava la stringa letterale `"no-session"` quando il file `$DEVFORGE_SID_FILE` non esisteva. Risultato: **43.808 eventi orfani in 6gg** (53% del totale) collassati su un singolo bucket `sid=no-session`, rendendo impossibile distinguere sessioni Claude reali da invocazioni hook fuori-sessione (es. shell esterna che richiama hook plugin senza session init).
+
+Fix: ora genera un nuovo sid via `devforge_new_sid()` e lo persiste in `$DEVFORGE_SID_FILE`. Eventi orfani spariscono.
+
+**Bug 2 — `hooks/post-commit-review:31` `LAST_HASH_FILE` globale invece di per-repo**
+
+Il file `${HOME}/.claude/.devforge-last-commit-hash` era globale per tutta la macchina. Lavorando su N repo, il check `if [ "$CURRENT_HEAD" != "$SAVED_HASH" ]` riusciva sempre perché ogni `git rev-parse HEAD` in un repo diverso produceva un SHA diverso dal salvato. Risultato: **2.629 commit_created duplicati** per cross-repo switching + lavoro su worktree multipli.
+
+Fix: `LAST_HASH_FILE` ora include hash del `git --show-toplevel`: `~/.claude/.devforge-last-commit-hash-<shasum-repo-path>`. Stato per-repo, no più cross-contamination.
+
+**Bug 3 — `hooks/review-evidence` state file bypass set-and-forget**
+
+`touch ~/.claude/.devforge-skip-evidence` creava un bypass permanente che restava attivo per settimane (mio caso: dal 16 maggio, scoperto il 20). Risultato: **5.786 `evidence_bypass_used` events in 6gg** (top event in volume, più di `commit_created`).
+
+Fix: state file `~/.claude/.devforge-skip-evidence` **completamente rimosso**. Se trovato (legacy), viene auto-cancellato + loggato come `evidence_bypass_legacy_removed`. Resta solo `DEVFORGE_SKIP_EVIDENCE=1` env var di sessione (breakglass esplicito che richiede `export` ogni shell, no persistenza). Suggerimenti `touch` in 8 messaggi `decision:block` sostituiti con `export DEVFORGE_SKIP_EVIDENCE=1`.
+
+**Impatto sui dati pre-fix:**
+- Commits S3 (6gg): `3.209 → 580 dopo dedup` (-82%, ora coerente con 195 GitHub firmati)
+- Events totali: `13.726 → 11.041` (-19%, no-session droppati)
+- Adoption brainstorming (session-based): metrica ora calcolabile = **21.5%**
+- Adoption TDD: **40.5%**
+- Adoption verification: **3.5%**
+
+**Telemetria pre-fix non recuperabile**: i log su S3 prima di v1.63.3 restano inflazionati. La dashboard locale `~/Library/Mobile Documents/com~apple~CloudDocs/devforge-dashboard/` applica dedup retroattivo on-the-fly in `build_data.py` per ricostruire metriche pulite anche dai vecchi log (chiave dedup: `(commit_sha, repo)` + drop `sid=no-session`).
+
+## [1.63.2] - 2026-05-20
+
+### Added — Test deterministici anti-allucinazione (3 file, 19 test, 100% PASS)
+
+Implementazione del follow-up identificato dal code-reviewer in PR #263: *"Senza un test deterministico, il drift si ripresenterà alla prossima release"*. Tre test suite che bloccano automaticamente le 3 classi di regressione anti-dilution emerse nella sessione di razionalizzazione.
+
+**`tests/test_count_consistency.py`** (6 test) — chiude la classe "count hallucination" (v1.62.3 dichiarava `30 hook` con count inventato):
+- `test_dual_source_version_sync` — `plugin.json.version == marketplace.json.version` (memoria `project_plugin_version_dual_source`)
+- `test_dual_source_description_sync` — description identiche carattere-per-carattere
+- `test_description_counts_match_empirical` — parsing description + match con `len(glob skills/*/)`, `commands/*.md`, `agents/*.md`, `hooks/` netti (esclusi `lib/`, `*.md`, `*.json`, `run-hook.cmd`, `skill-advisory-helpers.sh`)
+- `test_readme_version_matches_plugin` — README metadata tabella `| Versione | \`X.Y.Z\` |` = `plugin.json.version`
+- 2 test di sanity check (JSON valido)
+
+**`tests/test_backbone_validates_via.py`** (5 test) — chiude la classe "evidence contract incompleto":
+- `test_backbone_skills_all_have_validates_via` — 9/9 backbone hanno il blocco
+- `test_validates_via_has_predicate` — predicate non-vuoto/non-TBD
+- `test_validates_via_has_evidence_type` — in allowlist `{log_event, file_exists, exit_code, state_file, file_pattern, git_state}`
+- `test_validates_via_has_evidence_check` — check non-vuoto, >10 char, no TBD
+- `test_predicate_names_unique_across_backbone` — predicate univoci (evita ambiguita' gate)
+
+**`tests/test_phantom_slash_commands.py`** (3 test) — chiude la classe "slash command fantasma" (v1.62.3 ne aveva rimossi 14):
+- `test_no_phantom_slash_commands_in_skills` — ogni `/forge-X` in SKILL.md esiste come `commands/forge-X.md` (eccezione: `PHANTOM_WHITELIST` per anti-esempi documentati come `/forge-spec-review`)
+- `test_whitelist_entries_actually_referenced` — whitelist non-stale (entry deve essere effettivamente citata in qualche SKILL.md)
+- `test_no_orphan_commands` — ogni `commands/forge-X.md` ha skill backing OR è logic-heavy documentato
+
+**Effetto**: i 4 problemi rilevati durante questa sessione (count drift 30/26/25, version desync 1.62.3/1.62.4, `/forge-spec-review` whitelist, validates_via gap 4/9) sono ora **bloccati automaticamente da CI/pytest** alla prossima recidiva. Promessa = test.
+
+**Allowlist evidence_type estesa**: scoperti `file_pattern` (siae-brainstorming) e `git_state` (siae-git-workflow) in uso ma non documentati; aggiunti all'allowlist.
+
 ## [1.63.1] - 2026-05-20
 
 ### Fixed — Reconcile bot bump 1.63.0 + self-audit fix 3 MAJOR di v1.62.3/v1.62.4

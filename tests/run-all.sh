@@ -1090,16 +1090,24 @@ rm -f "$F5_LOG" "${HOME}/.claude/.devforge-session-start-ns" "${HOME}/.claude/.d
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 
 # Test F2: commit_created detection via HEAD hash comparison
+# v1.63.3: LAST_HASH_FILE è per-repo (era globale). Allinea path al fix di post-commit-review.
 F2_LOG="/tmp/devforge-test-f2.jsonl"
 rm -f "$F2_LOG"
 export DEVFORGE_LOG_FILE="$F2_LOG"
 REAL_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "abc123")
+F2_GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$F2_GIT_ROOT" ]; then
+  F2_REPO_KEY=$(echo "$F2_GIT_ROOT" | shasum 2>/dev/null | awk '{print $1}' | head -c 16)
+  F2_LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash-${F2_REPO_KEY:-global}"
+else
+  F2_LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash-nogit"
+fi
 # Same hash → should NOT emit commit_created
-echo "$REAL_HEAD" > "${HOME}/.claude/.devforge-last-commit-hash"
+echo "$REAL_HEAD" > "$F2_LAST_HASH_FILE"
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
 F2_COUNT_SAME=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
 # Different hash → should emit commit_created
-echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash"
+echo "0000000000000000000000000000000000000000" > "$F2_LAST_HASH_FILE"
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | bash "${PLUGIN_ROOT}/hooks/post-commit-review" 2>/dev/null || true
 F2_COUNT_DIFF=$(grep -c '"event":"commit_created"' "$F2_LOG" 2>/dev/null || echo "0")
@@ -1110,7 +1118,7 @@ else
   echo "  FAIL  post-commit-review F2: same_hash_events=$F2_COUNT_SAME (want 0), diff_hash_events=$F2_COUNT_DIFF (want 1)"
   telfunc_fail=$((telfunc_fail + 1))
 fi
-rm -f "$F2_LOG" "${HOME}/.claude/.devforge-last-commit-hash" "${HOME}/.claude/.devforge-session-commits"
+rm -f "$F2_LOG" "$F2_LAST_HASH_FILE" "${HOME}/.claude/.devforge-session-commits"
 
 # Test post-commit-review commit_sha enrichment (K8 adoption health AC-8)
 if bash "${PLUGIN_ROOT}/tests/hooks/post-commit-review-sha.test.sh" >/dev/null 2>&1; then

@@ -446,7 +446,7 @@ JSON
     BLOCK_REGRESSION)
         REASON=$(jq -r '.regression_verdict.reason' "$EVIDENCE_FILE")
         cat <<JSON
-{"decision":"block","reason":"review-evidence v2: regression block — ${REASON}. Override via touch ~/.claude/.devforge-skip-evidence (tracked, abuse 5/day)."}
+{"decision":"block","reason":"review-evidence v2: regression block — ${REASON}. Override via `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped) (tracked, abuse 5/day)."}
 JSON
         exit 0
         ;;

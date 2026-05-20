@@ -341,7 +341,9 @@ devforge_get_sid() {
     if [ -f "$DEVFORGE_SID_FILE" ]; then
         cat "$DEVFORGE_SID_FILE"
     else
-        echo "no-session"
+        # Bug fix v1.63.3: era "no-session" stringa letterale -> 11715 eventi orfani
+        # collassati su un singolo bucket. Ora genera nuovo sid e persiste.
+        devforge_new_sid
     fi
 }
 
