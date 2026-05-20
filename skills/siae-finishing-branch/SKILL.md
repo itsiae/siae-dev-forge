@@ -7,6 +7,10 @@ description: >
   Trigger: "pronto per PR", "finisco il branch", "ready to merge", "apro la PR",
   gh pr create, git push + PR, apertura pull request, branch completato,
   implementazione finita, lavoro completato su branch, pre-merge checklist.
+validates_via:
+  predicate: pre_flight_passed
+  evidence_type: log_event
+  evidence_check: "DEVFORGE_LOG_FILE contains finishing_branch_verdict event with verdict=PASS for current task_id"
 ---
 
 # SIAE Finishing Branch — Chiusura Sicura di un Branch

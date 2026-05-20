@@ -5,8 +5,8 @@ description: >
   compliance, or identifying idle resources and waste. Analizza costi AWS,
   stima impatto PR, verifica tag compliance e identifica sprechi.
   Trigger: review costi AWS, stima impatto PR, ottimizzazione risorse,
-  tag compliance, budget analysis, /forge-cost, /forge-finops, Infracost,
-  Steampipe, Cloud Custodian, risorse idle, sprechi.
+  tag compliance, budget analysis, Infracost, Steampipe, Cloud Custodian,
+  risorse idle, sprechi.
 ---
 
 # SIAE FinOps — Cost Visibility & Governance
@@ -47,7 +47,7 @@ description: >
 
 ---
 
-## 0. Analisi Completa — /forge-finops
+## 0. Analisi Completa
 
 Questa sezione descrive il flusso operativo principale. Quando l'utente chiede
 un'analisi costi, esegui questo flusso **automaticamente**.
@@ -249,7 +249,7 @@ Basta **uno** tra AWS CLI e Azure CLI. L'analisi completa funziona con soli CLI 
 
 | Tool | Scopo | Quando serve |
 |------|-------|-------------|
-| Infracost CLI | Stima costi pre-deploy nelle PR | Solo per /forge-cost su repo Terraform |
+| Infracost CLI | Stima costi pre-deploy nelle PR | Solo per stima costi PR su repo Terraform |
 | Steampipe + MCP | Query SQL interattive | Alternativa piu' potente ad AWS CLI |
 | Cloud Custodian | Governance automatizzata | Solo per enforcement policy automatiche |
 
@@ -267,7 +267,7 @@ puo' stimare i costi di un `terraform plan`.
 
 **Prerequisito:** `infracost` CLI + `INFRACOST_API_KEY` (gratuito: `infracost auth login`)
 
-### Flusso manuale (/forge-cost)
+### Flusso manuale shift-left
 
 ```
 REQUIRED SUB-SKILL: siae-iac

@@ -5,7 +5,7 @@ description: >
   trigger, prompt) via the autoresearch method (Karpathy). Ottimizza
   iterativamente una skill DevForge. Trigger: ottimizza skill, migliora
   description, autoresearch, migliora trigger, ottimizza prompt,
-  /forge-autoresearch, analizza performance skill. NON usare per: scrivere
+  analizza performance skill. NON usare per: scrivere
   nuove skill (usa siae-writing-skills), eseguire eval singoli (usa runner.py
   direttamente), debug skill (usa siae-debugging).
 ---

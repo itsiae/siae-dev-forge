@@ -4,6 +4,148 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.1] - 2026-05-20
+
+### Fixed — Reconcile bot bump 1.63.0 + self-audit fix 3 MAJOR di v1.62.3/v1.62.4
+
+**Context**: durante l'apertura PR #263 (rationalization v1.62.4), il bot
+`chore/bump-version-1.63.0` ha mergiato un auto-bump a 1.63.0 (PR #262) con
+`marketplace.json` description stale (`39 skill, 8 comandi, 3 agent, 20 hook`)
+e `plugin.json` description con count `17 comandi` (pre-cleanup v1.62.2). Il
+rebase ha richiesto reconciliation: tengo i count empirici corretti e bumpo
+a 1.63.1.
+
+**Description finale empirica:**
+- 43 skill (immutato dalle release recenti)
+- 10 comandi (post-cleanup v1.62.2)
+- 5 agent (immutato)
+- 25 hook (count empirico verificato)
+
+### Fixed — Self-audit: 3 MAJOR introdotte da v1.62.3/v1.62.4 chiuse
+
+Code review della PR #263 ha identificato che la PR stessa (mentre razionalizzava il catalog e chiudeva gap anti-dilution) ha introdotto **3 nuove regressioni anti-dilution**: count drift, version drift e file tree incoerenza. Il code-reviewer ha sintetizzato il pattern: *"l'auditor non audita se stesso"*.
+
+**Fix MAJOR-1 — Count hook drift revert.** v1.62.3 dichiarava di fixare drift `25 → 30 hook` perché aveva contato male (`ls hooks/* | grep -v '\.md$'` includeva `lib/`, `run-hook.cmd`, `skill-advisory-helpers.sh`, `hooks.json`). Count empirico corretto: **25 hook file netti** (`ls hooks/` escludendo `.md`, `.json`, `lib/`, `run-hook.cmd`, `skill-advisory-helpers`). Revert in 4 punti:
+- `plugin.json` description: `30 hook` → `25 hook`
+- `marketplace.json` description: idem
+- `README.md:18` (TL;DR header)
+- `README.md:251` (sezione "Hook (30)" → "Hook (25)") + indice + ancora link
+
+**Fix MAJOR-2 — README version sync.** v1.62.4 ha bumped `plugin.json`/`marketplace.json`/`CHANGELOG` a `1.62.4` ma ha lasciato `README.md:22` metadata tabella su `1.62.3`. Aggiunto inoltre row mancante `| 1.62.4 |` nella tabella "Release recenti" del README.
+
+**Fix MAJOR-3 — File tree README incoerenza.** File tree dichiarava `25 trigger script` mentre testo poco sopra dichiarava `30 hook`. Ora entrambi `25` (count empirico).
+
+**Fix MINOR-1 — SDLC diagram ADR removal.** Diagramma backbone `1. BRAINSTORMING → 7-step design intake → opzioni → ADR` aveva ancora `ADR` come output, ma `docs/adr/` non esiste. Sostituito con `→ doc` (design doc `docs/plans/<topic>-design.md`).
+
+**Lezione (memoria candidata):** quando una release dichiara di chiudere drift di promesse non verificabili, l'auditor stesso deve sottoporsi a verifica empirica prima del merge. Pattern follow-up identificato dal code-reviewer: aggiungere `tests/test_count_consistency.py` deterministico che verifica `plugin.json` count == `len(glob hooks/*)` empirico, `marketplace.json` count == `plugin.json` count, skill count == `len(glob skills/*/SKILL.md)`, command count == `len(glob commands/*.md)`. Senza test, il drift si ripresenterà alla prossima release.
+
+**Verdetti review PR #263:**
+- code-reviewer: CHANGES REQUESTED → tutti i 3 MAJOR chiusi in questo commit, verdetto atteso APPROVED
+- spec-reviewer: PASS (28/28 claim CONFIRMED, 2 low-severity discrepancies cosmetiche tracciate)
+
+## [1.62.4] - 2026-05-20
+
+### Added/Fixed — Anti-dilution gap closure
+
+Audit anti-dilution su 9 backbone skill ha rilevato **4 gap di evidence contract** e **5 menzioni ADR fantasma** nel README. Il backbone enforcement è efficace solo se ogni skill backbone dichiara `validates_via` nel frontmatter — altrimenti i gate hook non possono verificare il completamento e l'utente può claimare "fatto" senza evidence concreta.
+
+**1. validates_via aggiunto a 4 backbone skill (closure gap):**
+
+| Skill | predicate | evidence_type | check |
+|---|---|---|---|
+| `siae-writing-plans` | `plan_produced` | `file_exists` | `docs/plans/<topic>/overview.md` con task-NN files + marker `[PENDING]`/`[DONE]` |
+| `siae-debugging` | `root_cause_identified` | `log_event` | `debugging_root_cause` event con `hypothesis_validated=true` |
+| `siae-security` | `security_review_run` | `log_event` | `security_check` event per current task_id |
+| `siae-finishing-branch` | `pre_flight_passed` | `log_event` | `finishing_branch_verdict` event con `verdict=PASS` |
+
+Coverage backbone evidence contract: 5/9 (56%) → **9/9 (100%)**.
+
+**2. README ADR fantasma rimossi (5 occorrenze):**
+
+Il README v1.62.3 citava `docs/adr/ADR-001…ADR-009`, `### Evidence contract (ADR-002)`, `### Task-scoped enforcement (ADR-001)`, `ADR-2 MCP bridge`. La directory `docs/adr/` non esiste e nessun ADR è mai stato creato. Promesse non mantenute = dilute trust nel catalog. Rimosse:
+- Riferimento alla directory `docs/adr/` nel file tree
+- `ADR-001`/`ADR-002` dalle section headers Evidence contract / Task-scoped enforcement
+- `ADR-2` dalla tabella release recenti (v1.57.0)
+
+**Rationale**: il principio anti-dilution è che ogni promessa del catalog deve essere verificabile. Documentazione che cita strutture inesistenti è anti-dilution debt che si accumula nel tempo.
+
+**Follow-up identificati (NON in questa release):**
+- **8 escape hatches attivi** (`DEVFORGE_SKIP_*` × 6 + `DEVFORGE_FORCE_*` × 2): proporre consolidamento in singolo `DEVFORGE_SKIP=<feature>` con allowlist temporanea (3 usi/giorno tracked).
+- **10+ piani vecchi orfani** in `docs/plans/` con marker `[PENDING]` ≥60 giorni (best-practices-alignment 12/12 PENDING, session-aware-enforcement, superpowers-improvements): archiviare in `docs/plans/archived/` con marker `[ABANDONED]`.
+- **57 file dup iCloud untracked** (`X 2.py`, `X 3.sh`): aggiungere pattern `* [0-9].*` a `.gitignore`.
+
+## [1.62.3] - 2026-05-20
+
+### Removed/Fixed — Contraddizioni catalog (allineamento)
+
+Audit sistematico del catalog DevForge ha rilevato 16 contraddizioni interne fra ciò che le SKILL.md prometteono e ciò che esiste:
+
+**1. 14 `/forge-X` fantasma rimossi dalle SKILL.md description.** Citati come trigger ma il file `commands/` non esisteva (mai creato oppure eliminato in 1.62.2). Le skill restano invocabili tramite trigger sentence naturali (presenti nel description).
+
+| Fantasma rimosso | Skill | Sostituzione |
+|---|---|---|
+| `/forge-automate` | siae-automation | "automatizza test", "setup Playwright/Cypress" |
+| `/forge-autoresearch` | siae-autoresearch | "ottimizza skill", "analizza performance skill" |
+| `/forge-blind-review` | siae-blind-review | "blind review", "audit spec-vs-codice" |
+| `/forge-cost` | siae-finops | "stima costi PR", "Infracost" |
+| `/forge-doc` | siae-documentation | "richiesta documentazione" |
+| `/forge-finops` | siae-finops | "review costi AWS" |
+| `/forge-flows` | siae-nr-test-flows | "NRT suite", "mappa flussi" |
+| `/forge-jasper` | siae-jasper-from-pdf | "jrxml da pdf" |
+| `/forge-logic-build` | siae-service-logic-map | "build catalogo L1/L2/L3" |
+| `/forge-logic-search` | siae-service-logic-map | "cerca workflow di X" |
+| `/forge-map` | siae-codebase-map | "mappa codebase" |
+| `/forge-qa` | siae-qa | "genera test plan Xray" |
+| `/forge-retro` | siae-retrospective | "retrospettiva", "lezioni apprese" |
+| `/forge-sysmap` | siae-microservices-map | "mappa sistema", "topologia distribuita" |
+
+Mantenuto solo `/forge-spec-review` come **anti-esempio intenzionale** in `siae-subagent-development` Permission Denied ("NON inventare slash command", documentazione difensiva).
+
+**2. Count hook drift fixed.** `plugin.json` / `marketplace.json` dichiaravano "25 hook" ma quelli reali sono **30**. Aggiornato.
+
+**Rationale**: zero false promesse, catalog onesto. Un utente che digita un comando inesistente prima vedeva "command not found"; ora trova solo trigger sentence naturali che il modello sa interpretare.
+
+**Trade-off accettato**: ridotta discoverability slash per i 14 comandi mai esistiti. Le skill restano scoperte via descrizione + skill catalog injection.
+
+## [1.62.2] - 2026-05-20
+
+### Removed — Slash command thin-wrapper
+
+Elimina 8 slash command che erano "thin wrapper" di una singola skill (testo unico: "Invoca la skill X e seguila esattamente") senza logica propria, allowed-tools speciali, argomenti, o multi-step. Le skill restano pienamente invocabili via **trigger sentence** (frase naturale: es. "scrivi test prima del codice" → `siae-tdd`).
+
+**Eliminati (8):**
+| Slash command rimosso | Skill backing | Come invocare ora |
+|---|---|---|
+| `/forge-automate` | `siae-automation` | "automatizza test", "setup Playwright", "setup Cypress" |
+| `/forge-cost` | `siae-finops` | "stima costi PR", "Infracost", "shift-left FinOps" |
+| `/forge-doc` | `siae-documentation` | "genera HLD", "genera LLD", "documentazione tecnica" |
+| `/forge-finops` | `siae-finops` | "review costi AWS", "ottimizzazione risorse", "tag compliance" |
+| `/forge-flows` | `siae-nr-test-flows` | "NRT suite", "flow map test", "test list per sezione" |
+| `/forge-jasper` | `siae-jasper-from-pdf` | "jrxml da pdf", "ricostruisci jasper" |
+| `/forge-test` | `siae-tdd` | "TDD per feature", "Red-Green-Refactor", "scrivo test prima" |
+| `/forge-mcp-snapshot` | (utility, no skill) | invocare manualmente lo script (raramente usato, 0 ext-refs) |
+
+**Mantenuti (10):** comandi con logica/argomenti propri o allowed-tools speciali — `code-coverage`, `forge-adoption`, `forge-analytics`, `forge-evidence`, `forge-execute`, `forge-fix-evidence`, `forge-implement`, `forge-mcp-preflight`, `forge-release-risk`, `forge-score`.
+
+**Rationale:** la skill catalog è la fonte primaria di discovery; gli slash command devono essere un'optimization, non un duplicato. Il count 18→10 riduce friction discovery, allinea con principio anti-bloat e con la regola "comando esiste = ha logica oltre a invocare la skill".
+
+**Trade-off accettato:** ridotta discoverability per gli 8 comandi rimossi. Le menzioni `/forge-<nome>` residue nelle SKILL.md description restano come trigger sentence colloquiale (il modello le interpreta in chat), ma l'autocompletion slash sparisce.
+
+## [1.62.1] - 2026-05-20
+
+### Fixed — Execution handoff slash command mancante
+
+Quando `siae-writing-plans` completava il piano e proponeva l'Opzione 2 ("sessione separata"), il modello inventava per simmetria con `/forge-implement` uno slash command `/forge-execute` che non esisteva — l'utente apriva la nuova sessione, digitava il comando suggerito e otteneva "command not found". Cause: (a) `/forge-execute` mai registrato in `commands/`, (b) `writing-plans-execution-handoff.md` istruiva un handoff in prosa libera ("Carica il piano con: cat docs/plans/...") senza ancorare il modello a uno slash command esistente, (c) `siae-subagent-development` permission-denied path emetteva istruzioni "Apri una nuova sessione ... e incolla questo prompt" senza nominare un comando concreto.
+
+**Aggiunte:**
+- Nuovo slash command `/forge-execute` → invoca `siae-executing-plans` (pendant di `/forge-implement` per la sessione separata)
+
+**Modifiche:**
+- `skills/siae-writing-plans/reference/writing-plans-execution-handoff.md` — Opzione 2 emette ora un blocco prompt esatto con `/forge-execute docs/plans/<topic>/overview.md`, con anti-pattern documentato ("NON dire 'incolla il prompt qui sopra fino a Procedi'")
+- `skills/siae-subagent-development/SKILL.md` Permission Denied — vieta esplicitamente l'invenzione di slash command, distingue Implementer (`/forge-execute`) da reviewer (trigger sentence + blocco prompt copy-paste)
+
+**Memoria correlata:** `feedback_verify_code_before_documenting` (grep nomi prima di referenziarli)
+
 ## [1.62.0] - 2026-05-19
 
 ### Added — Tiered CLAUDE.md generation

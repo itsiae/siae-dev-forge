@@ -34,7 +34,7 @@ description: >
 - `docs/CODEBASE_MAP.md` deve esistere (generato da `siae-codebase-map` Step 1-6)
 - Repository git valido (`git rev-parse --is-inside-work-tree`)
 
-Se mancano: errore esplicito, no fallback. L'utente deve eseguire `/forge-map` prima.
+Se mancano: errore esplicito, no fallback. L'utente deve invocare `siae-codebase-map` prima (trigger: "mappa codebase").
 
 ---
 
@@ -51,7 +51,7 @@ Se mancano: errore esplicito, no fallback. L'utente deve eseguire `/forge-map` p
 ## Step 1 — Read CODEBASE_MAP.md
 
 ```bash
-test -f docs/CODEBASE_MAP.md || { echo "ERROR: docs/CODEBASE_MAP.md not found. Run /forge-map first."; exit 1; }
+test -f docs/CODEBASE_MAP.md || { echo "ERROR: docs/CODEBASE_MAP.md not found. Invoke siae-codebase-map first (trigger: 'mappa codebase')."; exit 1; }
 ```
 
 Parse frontmatter YAML per `last_mapped`, `stack`, `total_files`.

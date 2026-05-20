@@ -5,7 +5,7 @@ description: >
   persist in auto-memory. Saves both abstract lessons (feedback) and session
   narrative (what was done, decisions, state).
   Trigger: fine sessione, lezioni apprese, cosa ho imparato, retrospettiva,
-  salva per la prossima volta, /forge-retro, apertura PR, REQUIRED da post-commit-review
+  salva per la prossima volta, apertura PR, REQUIRED da post-commit-review
   hook su gh pr create.
 ---
 

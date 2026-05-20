@@ -7,7 +7,7 @@ description: >
   genera JRXML, renderizza, confronta pixel-per-pixel, corregge fino a
   soglia <2% diff.
   Trigger: "jrxml da pdf", "ricostruisci jasper", "pdf to jrxml", "genera template jasper",
-  "replica pdf in jasper", "/forge-jasper", "jasper from pdf", "crea jrxml dal pdf",
+  "replica pdf in jasper", "jasper from pdf", "crea jrxml dal pdf",
   "reverse engineering pdf jasper", "JasperReports da pdf".
 ---
 

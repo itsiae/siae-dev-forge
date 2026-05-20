@@ -394,12 +394,25 @@ IMPLEMENTAZIONE COMPLETATA:
 ## Permission Denied Handling
 
 **Se Agent tool viene negato (dispatch subagent):**
-1. Presenta il prompt completo del subagent come output testuale
-2. Suggerisci all'utente di aprire una sessione Claude Code separata con il prompt
-3. Fornisci istruzioni per ogni tipo di subagent:
-   - **Implementer:** "Apri una nuova sessione nella directory del progetto e incolla questo prompt"
-   - **Spec-reviewer:** "Dopo l'implementazione, apri una nuova sessione per la review con questo prompt"
-   - **Code-quality-reviewer:** "Dopo la spec-review, usa questo prompt per la quality review"
+1. Presenta il prompt completo del subagent come output testuale, racchiuso in
+   un fenced code block ` ```text ` per facilitare il copy-paste senza
+   rendering markdown.
+2. Suggerisci all'utente di aprire una sessione Claude Code separata
+   (`cd <project-path>` + `claude`) e incollare il blocco completo come
+   primo messaggio della nuova sessione.
+3. **NON inventare slash command** (es. `/forge-execute` esiste,
+   `/forge-spec-review` no). Per execution piano usa `/forge-execute
+   docs/plans/<topic>/overview.md`. Per review post-impl usa la trigger
+   sentence della skill (`siae-spec-review` non esiste come slash command —
+   il subagent viene dispatchato dall'orchestratore).
+4. Fornisci istruzioni per ogni tipo di subagent:
+   - **Implementer:** "Apri una nuova sessione nella directory del progetto e
+     digita `/forge-execute docs/plans/<topic>/overview.md`. Il piano
+     contiene il task da eseguire."
+   - **Spec-reviewer:** "Dopo l'implementazione, apri una nuova sessione e
+     incolla il blocco prompt sotto (NON è uno slash command)."
+   - **Code-quality-reviewer:** "Dopo la spec-review, apri una nuova sessione
+     e incolla il blocco prompt sotto (NON è uno slash command)."
 
 **Se Bash viene negato (test suite finale — Step 6):**
 - Fornisci i comandi test esatti per esecuzione manuale

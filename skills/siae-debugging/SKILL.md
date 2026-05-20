@@ -6,6 +6,10 @@ description: >
   NullPointerException, TypeError, "non funziona", "rotto", "fallisce", "non va"
   — prima di proporre qualsiasi fix. Forza root cause analysis a 4 fasi
   (reproduce → pattern → hypothesize → fix) con HARD-GATE su Fase 1.
+validates_via:
+  predicate: root_cause_identified
+  evidence_type: log_event
+  evidence_check: "DEVFORGE_LOG_FILE contains debugging_root_cause event with hypothesis_validated=true for current task_id"
 ---
 
 # SIAE Debugging Sistematico

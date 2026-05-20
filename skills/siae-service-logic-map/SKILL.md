@@ -7,7 +7,7 @@ description: >
     map + business rules) for a cluster of microservices. Trigger: "build catalogo
     L1/L2/L3", "lanciamo su <pattern>", "analizziamo <sistema>", "regole business
     di X", "Drools in Y", "cosa fa {servizio}", "mappa la logica", "quali servizi
-    gestiscono X", /forge-logic-build, /forge-logic-search.
+    gestiscono X".
   - **Mode B (impact-analysis)**: pre-flight MCP single-task con output
     standardizzato (rischio + 3 vincoli + volumi). Trigger: "modifica su servizio
     business-critical", "impact analysis", "blast radius", "demand impact",
@@ -66,7 +66,7 @@ copiabile in cima al design doc.
    └── NO → Step 2
 
 2. Stai facendo DOCUMENTAZIONE / onboarding di un sistema?
-   ├── SI → Mode A (build-catalog): /forge-logic-build
+   ├── SI → Mode A (build-catalog): "build catalogo L1/L2/L3" o "analizziamo <sistema>"
    └── NO → Step 3
 
 3. Stai facendo INVESTIGAZIONE Q&A su come funziona X?
@@ -208,7 +208,7 @@ Cerca SYSTEM_MAP.md in questo ordine:
 - Onboarding su servizio sconosciuto: "cosa fa sport-X?"
 - Impact analysis cross-repo: "quali servizi gestiscono Y?"
 - Build catalogo logic per cluster: dispatch skill `siae-service-logic-map` direttamente (modalità A)
-- Ricerca concetti/workflow: `/forge-logic-search`
+- Ricerca concetti/workflow: trigger sentence "cerca workflow di X" o "quali servizi gestiscono Y"
 
 **Output:** un documento per cluster (non per singolo servizio) che descrive
 il dominio funzionale e i workflow di tutti i servizi del cluster.
