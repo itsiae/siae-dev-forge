@@ -32,7 +32,7 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 | `DEVFORGE_EVIDENCE_CI_SARIF_BLOCK_LEVEL` | `critical` | `critical` / `high` / `off` per findings SARIF CI |
 | `DEVFORGE_EVIDENCE_SPEC_DRIFT_BLOCK` | `1` | Block se `drift_severity == high` |
 | `DEVFORGE_EVIDENCE_DESIGN_DOC` | (auto) | Override path design doc (default: file piu' recente in `docs/plans/`) |
-| `DEVFORGE_SKIP_EVIDENCE` | `0` | Bypass fallback. Preferito: `export DEVFORGE_SKIP_EVIDENCE=1 (breakglass session-scoped)` (state file piu' affidabile in subprocess hook). Tracked, abuse log a 5/day. |
+| `DEVFORGE_SKIP_EVIDENCE` | `0` | Bypass fallback. Preferito: ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)` (state file piu' affidabile in subprocess hook). Tracked, abuse log a 5/day. |
 | `DEVFORGE_EVIDENCE_ICLOUD_WARN` | `1` | Emit warning se repo in iCloudDocs (atomic rename fragile) |
 | `DEVFORGE_EVIDENCE_COLLECTOR_PATH` | (auto) | Override path al collector.py (default: `lib/review_evidence/collector.py`). Usato in chaos test E41 per inject fake collector + power-user override. |
 | `DEVFORGE_EVIDENCE_ICLOUD_WARNING` | (auto) | Internal env exported dal hook bash quando cwd matcha pattern iCloudDocs; collector legge questa per emit warning in `verdict.warnings`. Non settare manualmente. |
@@ -78,7 +78,7 @@ per test/staging o ambienti dev offline.
 | `DEVFORGE_ACTIVITY_PROJECT` | (auto, derivato da repo root) | Project name per lookup `~/.claude/projects/<X>/devforge-state/activity.jsonl` nel check `skill_adoption` (4-tier fallback signal). Override per test multi-project. |
 
 **Bypass behaviour:**
-- `BLOCK_REGRESSION` (delta sotto hard_block budget) -> overridable via `export DEVFORGE_SKIP_EVIDENCE=1 (breakglass session-scoped)` (tracked, abuse 5/day).
+- `BLOCK_REGRESSION` (delta sotto hard_block budget) -> overridable via ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)` (tracked, abuse 5/day).
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
 
