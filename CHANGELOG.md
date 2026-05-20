@@ -4,6 +4,35 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.2] - 2026-05-20
+
+### Added — Test deterministici anti-allucinazione (3 file, 19 test, 100% PASS)
+
+Implementazione del follow-up identificato dal code-reviewer in PR #263: *"Senza un test deterministico, il drift si ripresenterà alla prossima release"*. Tre test suite che bloccano automaticamente le 3 classi di regressione anti-dilution emerse nella sessione di razionalizzazione.
+
+**`tests/test_count_consistency.py`** (6 test) — chiude la classe "count hallucination" (v1.62.3 dichiarava `30 hook` con count inventato):
+- `test_dual_source_version_sync` — `plugin.json.version == marketplace.json.version` (memoria `project_plugin_version_dual_source`)
+- `test_dual_source_description_sync` — description identiche carattere-per-carattere
+- `test_description_counts_match_empirical` — parsing description + match con `len(glob skills/*/)`, `commands/*.md`, `agents/*.md`, `hooks/` netti (esclusi `lib/`, `*.md`, `*.json`, `run-hook.cmd`, `skill-advisory-helpers.sh`)
+- `test_readme_version_matches_plugin` — README metadata tabella `| Versione | \`X.Y.Z\` |` = `plugin.json.version`
+- 2 test di sanity check (JSON valido)
+
+**`tests/test_backbone_validates_via.py`** (5 test) — chiude la classe "evidence contract incompleto":
+- `test_backbone_skills_all_have_validates_via` — 9/9 backbone hanno il blocco
+- `test_validates_via_has_predicate` — predicate non-vuoto/non-TBD
+- `test_validates_via_has_evidence_type` — in allowlist `{log_event, file_exists, exit_code, state_file, file_pattern, git_state}`
+- `test_validates_via_has_evidence_check` — check non-vuoto, >10 char, no TBD
+- `test_predicate_names_unique_across_backbone` — predicate univoci (evita ambiguita' gate)
+
+**`tests/test_phantom_slash_commands.py`** (3 test) — chiude la classe "slash command fantasma" (v1.62.3 ne aveva rimossi 14):
+- `test_no_phantom_slash_commands_in_skills` — ogni `/forge-X` in SKILL.md esiste come `commands/forge-X.md` (eccezione: `PHANTOM_WHITELIST` per anti-esempi documentati come `/forge-spec-review`)
+- `test_whitelist_entries_actually_referenced` — whitelist non-stale (entry deve essere effettivamente citata in qualche SKILL.md)
+- `test_no_orphan_commands` — ogni `commands/forge-X.md` ha skill backing OR è logic-heavy documentato
+
+**Effetto**: i 4 problemi rilevati durante questa sessione (count drift 30/26/25, version desync 1.62.3/1.62.4, `/forge-spec-review` whitelist, validates_via gap 4/9) sono ora **bloccati automaticamente da CI/pytest** alla prossima recidiva. Promessa = test.
+
+**Allowlist evidence_type estesa**: scoperti `file_pattern` (siae-brainstorming) e `git_state` (siae-git-workflow) in uso ma non documentati; aggiunti all'allowlist.
+
 ## [1.63.1] - 2026-05-20
 
 ### Fixed — Reconcile bot bump 1.63.0 + self-audit fix 3 MAJOR di v1.62.3/v1.62.4
