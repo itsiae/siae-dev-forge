@@ -39,7 +39,10 @@ echo "PASS: commit_sha present"
 export HOME="$(mktemp -d)"
 mkdir -p "${HOME}/.claude"
 # Saved hash diverso da HEAD per forzare il ramo commit_created
-echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash"
+# v1.63.3: LAST_HASH_FILE è per-repo. Computa stessa chiave del hook.
+_TEST_GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
+_TEST_REPO_KEY=$(echo "$_TEST_GIT_ROOT" | shasum 2>/dev/null | awk '{print $1}' | head -c 16)
+echo "0000000000000000000000000000000000000000" > "${HOME}/.claude/.devforge-last-commit-hash-${_TEST_REPO_KEY:-global}"
 
 HOOK_INPUT='{"tool_name":"Bash","command":"git commit -m test","tool_input":{"command":"git commit -m test"}}'
 echo "$HOOK_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-commit-review" >/dev/null 2>&1

@@ -171,7 +171,7 @@ Dopo aver caricato evidence in Step 0.5, controlla `decision`:
 |---|---|---|
 | `AUTO_APPROVE` | Emit **review summary advisory** (no full 6-point review) — score card markdown + 1-line judgment qualitativo. Decision finale: approve. **W2 fix:** anche su AUTO_APPROVE il reviewer genera un comment summary (no buchi naming/intent). | No override needed (already pass) |
 | `BLOCK_HARD_FLOOR` | Emit `{"decision": "block"}` immediatamente. **NON-OVERRIDABLE.** Reviewer NON può approvare. Reviewer **cannot overrule** questa decisione e **can NEVER override** `hard_floor_breaches`. | Solo admin BREAK-GLASS: commit message contains `BREAK-GLASS: <jira-id>` + 2 reviewer approvals + post-mortem entro 48h |
-| `BLOCK_REGRESSION` | Emit `{"decision": "block"}`. Reasons in `regression_verdict.block_dimensions`. | Override via `touch ~/.claude/.devforge-skip-evidence` (tracked, abuse 5/day) |
+| `BLOCK_REGRESSION` | Emit `{"decision": "block"}`. Reasons in `regression_verdict.block_dimensions`. | Override via `export DEVFORGE_SKIP_EVIDENCE=1 (breakglass session-scoped)` (tracked, abuse 5/day) |
 | `REVIEWER_HANDOFF` | Procedi con **review qualitativa full 6-point** (standard SIAE). Verdict finale: `APPROVED` / `REJECTED`. | N/A (reviewer È il gatekeeper qui) |
 | `SEVERELY_DEGRADED` | Tooling parzialmente broken (runner missing, AWS unreachable). **Skip hard floor enforcement** (dev non punito). Procedi con review qualitativa standard + nota in commento PR: "DevForge runners parzialmente non disponibili: <missing_components>". | N/A |
 

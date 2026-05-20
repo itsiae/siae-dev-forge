@@ -29,7 +29,11 @@ echo "hello" > file.txt
 git add file.txt
 git commit -q -m "first commit"
 INITIAL_SHA=$(git rev-parse HEAD)
-echo "$INITIAL_SHA" > "${HOME}/.claude/.devforge-last-commit-hash"
+# v1.63.3: LAST_HASH_FILE è per-repo. Computa stessa chiave del hook.
+_TEST_GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
+_TEST_REPO_KEY=$(echo "$_TEST_GIT_ROOT" | shasum 2>/dev/null | awk '{print $1}' | head -c 16)
+_TEST_LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash-${_TEST_REPO_KEY:-global}"
+echo "$INITIAL_SHA" > "$_TEST_LAST_HASH_FILE"
 
 # Shim gh: scrive response JSON a stdout basandosi su $GH_FIXTURE
 cat > "${GH_SHIM_DIR}/gh" << 'GHEOF'
