@@ -105,6 +105,13 @@ print(f'{d.get(\"total\",0)}\t{d.get(\"output\",0)}\t{d.get(\"cost_eur\",0)}')
     # Cleanup session files
     rm -f "$SESSION_START_NS_FILE" "$SESSION_COMMITS_FILE" "$SESSION_SKILLS_FILE"
     rm -f "${HOME}/.claude/.devforge-session-user" "${HOME}/.claude/.devforge-session-user-source"
+    # v1.63.4 BUG A fix: cleanup session-scoped evidence bypass marker
+    # (creato a runtime da utente via touch <session-dir>/.bypass-evidence
+    # quando env var DEVFORGE_SKIP_EVIDENCE=1 non passa al subprocess hook)
+    _SID_CLEANUP=$(cat "${HOME}/.claude/.devforge-sid" 2>/dev/null || echo "")
+    if [ -n "$_SID_CLEANUP" ]; then
+        rm -f "${HOME}/.claude/devforge-state/${_SID_CLEANUP}/.bypass-evidence" 2>/dev/null || true
+    fi
 }
 
 # --- BLOCCO 3: Verification reminder (F5: skip if stdin empty) ---

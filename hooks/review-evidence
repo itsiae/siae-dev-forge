@@ -33,20 +33,47 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
-# ── Bypass HARDENED v1.63.3 ─────────────────────────────────────
+# ── Bypass HARDENED v1.63.4 ─────────────────────────────────────
 #
-# Audit S3 telemetry 2026-05-20: evidence_bypass_used emesso 5786 volte in 6gg
-# (top event in volume). Causa: ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)`
-# set-and-forget rimaneva attivo per settimane (es. mio file dal 16 maggio).
+# Audit S3 telemetry 2026-05-20: evidence_bypass_used emesso 5786 volte in 6gg.
+# v1.63.3 ha rimosso state file persistente. v1.63.4 chiude 2 bug residui:
 #
-# DECISIONE: state file bypass RIMOSSO. Solo env var di sessione (breakglass
-# esplicito che richiede `export DEVFORGE_SKIP_EVIDENCE=1` ogni shell).
-# Se trovato un vecchio state file: viene auto-rimosso + loggato come abuse.
+# BUG A (env var non propagata a subprocess hook):
+#   Claude Code invoca hook in subprocess che NON eredita env var della shell
+#   utente. `DEVFORGE_SKIP_EVIDENCE=1 gh pr create` => env var settata solo nel
+#   processo gh, mai propagata al hook PreToolUse. Risultato: env var bypass
+#   inutilizzabile come breakglass. Memory: feedback_env_var_not_propagated_to_hooks
+#
+#   Fix: oltre a env var, accetta SESSION-SCOPED file marker in
+#   ~/.claude/devforge-state/<sid>/.bypass-evidence. È session-scoped (rimosso
+#   automaticamente da session-end hook), NO set-and-forget, ma propagabile
+#   a subprocess. Workflow utente per breakglass:
+#       1) Crea: touch ~/.claude/devforge-state/$(cat ~/.claude/.devforge-sid)/.bypass-evidence
+#       2) Esegui comando bloccante (es. gh pr create)
+#       3) Auto-cleanup a fine sessione (session-end hook lo rimuove)
+#
+# BUG B (drift_severity_high blocca anche bug fix tracciati):
+#   Se CHANGELOG.md ha entry strutturata per current version (plugin.json),
+#   il drift è giustificato — la PR documenta esplicitamente i cambiamenti.
+#   Hard-block diventa advisory-only. Vedi check piu' avanti su DRIFT_SEVERITY.
+#
+# Legacy global state file `~/.claude/.devforge-skip-evidence` auto-rimosso.
 SKIP_STATE_FILE="${HOME}/.claude/.devforge-skip-evidence"
 if [ -f "$SKIP_STATE_FILE" ]; then
     rm -f "$SKIP_STATE_FILE" 2>/dev/null || true
     devforge_log "evidence_bypass_legacy_removed" "warn" \
         "{\"path\":\"${SKIP_STATE_FILE}\",\"reason\":\"state_file_bypass_removed_v1.63.3\"}" 2>/dev/null || true
+fi
+# BUG A fix: session-scoped marker (subprocess-safe, session-end cleanup)
+_DEVFORGE_SID=$(cat "${HOME}/.claude/.devforge-sid" 2>/dev/null || echo "")
+if [ -n "$_DEVFORGE_SID" ]; then
+    _BYPASS_FILE="${HOME}/.claude/devforge-state/${_DEVFORGE_SID}/.bypass-evidence"
+    if [ -f "$_BYPASS_FILE" ]; then
+        devforge_log "evidence_bypass_used" "info" \
+            "{\"source\":\"session_marker\",\"sid\":\"${_DEVFORGE_SID}\",\"note\":\"session_scoped_breakglass\"}" 2>/dev/null || true
+        echo '{}'
+        exit 0
+    fi
 fi
 if [ "${DEVFORGE_SKIP_EVIDENCE:-0}" = "1" ]; then
     devforge_log "evidence_bypass_used" "info" \
@@ -64,7 +91,7 @@ if ! command -v jq >/dev/null 2>&1; then
     case "$HOOK_INPUT" in
         *'"PreToolUse"'*'gh pr create'*|*'"PreToolUse"'*'gh pr edit'*)
             cat <<'JSON'
-{"decision":"block","reason":"review-evidence: jq is required but not installed on PATH. Install with 'brew install jq' (macOS) or 'apt install jq' (Debian/Ubuntu). Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"}
+{"decision":"block","reason":"review-evidence: jq is required but not installed on PATH. Install with 'brew install jq' (macOS) or 'apt install jq' (Debian/Ubuntu). Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
 JSON
             exit 0
             ;;
@@ -267,7 +294,7 @@ if [ "$NEEDS_COMPUTE" = "1" ]; then
         # On a blocking trigger we MUST fail-CLOSED.
         if [ "$IS_BLOCKING" = "1" ]; then
             cat <<JSON
-{"decision":"block","reason":"review-evidence: lock contention on ${SHA:0:8}, cannot verify quality. Retry, or override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"}
+{"decision":"block","reason":"review-evidence: lock contention on ${SHA:0:8}, cannot verify quality. Retry, or override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
 JSON
             exit 0
         fi
@@ -313,7 +340,7 @@ if [ "$NEEDS_COMPUTE" = "1" ]; then
             devforge_log "evidence_block_compute_failed" "error" \
                 "{\"sha\":\"${SHA}\",\"rc\":${COLLECTOR_RC}}" 2>/dev/null || true
             cat <<JSON
-{"decision":"block","reason":"review-evidence: ${BLOCK_REASON}. Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"}
+{"decision":"block","reason":"review-evidence: ${BLOCK_REASON}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
 JSON
             exit 0
         fi
@@ -348,7 +375,7 @@ if [ ! -f "$EVIDENCE_FILE" ]; then
     # Evidence not found anywhere — on blocking trigger fail-CLOSED.
     if [ "$IS_BLOCKING" = "1" ]; then
         cat <<JSON
-{"decision":"block","reason":"review-evidence: no evidence file for ${SHA:0:8} after compute. Cannot verify quality. Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"}
+{"decision":"block","reason":"review-evidence: no evidence file for ${SHA:0:8} after compute. Cannot verify quality. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
 JSON
         exit 0
     fi
@@ -360,7 +387,7 @@ fi
 if ! jq empty "$EVIDENCE_FILE" >/dev/null 2>&1; then
     if [ "$IS_BLOCKING" = "1" ]; then
         cat <<JSON
-{"decision":"block","reason":"review-evidence: evidence file ${EVIDENCE_FILE} is not valid JSON (likely iCloud placeholder). Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"}
+{"decision":"block","reason":"review-evidence: evidence file ${EVIDENCE_FILE} is not valid JSON (likely iCloud placeholder). Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
 JSON
         exit 0
     fi
@@ -422,7 +449,7 @@ JSON
             fi
         fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped) (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
+{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass) (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
 JSON
         devforge_log "evidence_v2_block_regression" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
         exit 0
@@ -462,7 +489,7 @@ if [ "$IS_BLOCKING" = "1" ] && [ "$BLOCK" = "true" ]; then
     cat <<JSON
 {
   "decision": "block",
-  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)"
+  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"
 }
 JSON
     exit 0

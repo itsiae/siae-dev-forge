@@ -4,6 +4,31 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.4] - 2026-05-20
+
+### Fixed — Bypass evidence subprocess-safe (BUG A)
+
+In v1.63.3 abbiamo rimosso il state file globale `~/.claude/.devforge-skip-evidence` per stoppare il pattern set-and-forget. Resto solo `DEVFORGE_SKIP_EVIDENCE=1` come breakglass env var. **Bug residuo scoperto subito**: Claude Code NON propaga env var della shell utente ai subprocess hook (memoria `feedback_env_var_not_propagated_to_hooks`). Quindi `DEVFORGE_SKIP_EVIDENCE=1 gh pr create` settava la env var solo nel processo `gh`, mai nel hook PreToolUse → breakglass inutilizzabile.
+
+**Fix**: oltre a env var, il hook `review-evidence` ora accetta un **marker file session-scoped** in `~/.claude/devforge-state/<sid>/.bypass-evidence`:
+- Subprocess-safe (file su disco, leggibile da qualsiasi hook child)
+- Session-scoped (auto-rimosso dal `stop-gate` hook a fine sessione, no set-and-forget)
+- Path determinato dal `sid` corrente in `~/.claude/.devforge-sid`
+
+**Workflow utente breakglass v1.63.4+:**
+```bash
+touch ~/.claude/devforge-state/$(cat ~/.claude/.devforge-sid)/.bypass-evidence
+gh pr create ...      # bypassa review-evidence
+# auto-cleanup a fine sessione
+```
+
+**File modificati:**
+- `hooks/review-evidence:51-60` — check session marker prima di env var
+- `hooks/stop-gate:106-112` — cleanup `.bypass-evidence` a session_end
+- `hooks/ENV_VARS.md:35` — doc workflow workaround
+
+**Note BUG B (drift_severity_high blocca bug fix)**: bug architetturale identificato in iter-review v1.63.3 ma **richiede design doc dedicato** (cambia semantica del gate review-evidence). Tracciato per follow-up: il check `lib/review_evidence/thresholds.py:64` dovrebbe degradare a warning quando `CHANGELOG.md` ha entry strutturata per `plugin.json.version` corrente. Implementazione differita.
+
 ## [1.63.3] - 2026-05-20
 
 ### Fixed — 3 bug critici telemetria S3 (audit 2026-05-20)
