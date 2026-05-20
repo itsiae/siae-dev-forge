@@ -19,7 +19,7 @@
 
 | Metadato | Valore |
 |---|---|
-| Versione | `1.63.2` |
+| Versione | `1.63.3` |
 | Autore | SIAE AI Competence Center · `ai-cc@siae.it` |
 | Licenza | Proprietary |
 | Target | Claude Code CLI ≥ 0.x, Anthropic SDK |
@@ -415,6 +415,7 @@ Tutte le modifiche sono tracciate in [CHANGELOG.md](./CHANGELOG.md) (Keep-a-Chan
 
 | Versione | Data | Highlights |
 |---|---|---|
+| `1.63.3` | 2026-05-20 | **Telemetry bugs (3 critici)**: sid `no-session` fallback (44k eventi orfani), `LAST_HASH_FILE` per-repo (era globale → 103× inflazione commit_created), hardening evidence bypass (state file rimosso, solo env var session-scoped) |
 | `1.63.2` | 2026-05-20 | 3 test deterministici anti-allucinazione (19 PASS): count consistency, validates_via well-formed, phantom slash commands |
 | `1.63.1` | 2026-05-20 | Reconcile bot-bump 1.63.0 (count stale): description verified empirically (43/10/5/25), self-audit fix 3 MAJOR |
 | `1.63.0` | 2026-05-20 | Bot auto-bump (PR #262) |

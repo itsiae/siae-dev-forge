@@ -4,6 +4,39 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.3] - 2026-05-20
+
+### Fixed — 3 bug critici telemetria S3 (audit 2026-05-20)
+
+Audit empirico telemetria DevForge su S3 `siae-devforge-telemetry/devforge-logs/` ha rivelato **103× inflazione** dei `commit_created` events (S3: 20.087 vs GitHub commits reali 6gg: 195). Tre bug indipendenti che inflavano sia il numeratore (signal) che il denominatore (commits) delle metriche di adoption, rendendo i numeri reali artificialmente bassi.
+
+**Bug 1 — `lib/logger.sh:344` sid fallback letterale `"no-session"`**
+
+`devforge_get_sid()` ritornava la stringa letterale `"no-session"` quando il file `$DEVFORGE_SID_FILE` non esisteva. Risultato: **43.808 eventi orfani in 6gg** (53% del totale) collassati su un singolo bucket `sid=no-session`, rendendo impossibile distinguere sessioni Claude reali da invocazioni hook fuori-sessione (es. shell esterna che richiama hook plugin senza session init).
+
+Fix: ora genera un nuovo sid via `devforge_new_sid()` e lo persiste in `$DEVFORGE_SID_FILE`. Eventi orfani spariscono.
+
+**Bug 2 — `hooks/post-commit-review:31` `LAST_HASH_FILE` globale invece di per-repo**
+
+Il file `${HOME}/.claude/.devforge-last-commit-hash` era globale per tutta la macchina. Lavorando su N repo, il check `if [ "$CURRENT_HEAD" != "$SAVED_HASH" ]` riusciva sempre perché ogni `git rev-parse HEAD` in un repo diverso produceva un SHA diverso dal salvato. Risultato: **2.629 commit_created duplicati** per cross-repo switching + lavoro su worktree multipli.
+
+Fix: `LAST_HASH_FILE` ora include hash del `git --show-toplevel`: `~/.claude/.devforge-last-commit-hash-<shasum-repo-path>`. Stato per-repo, no più cross-contamination.
+
+**Bug 3 — `hooks/review-evidence` state file bypass set-and-forget**
+
+`touch ~/.claude/.devforge-skip-evidence` creava un bypass permanente che restava attivo per settimane (mio caso: dal 16 maggio, scoperto il 20). Risultato: **5.786 `evidence_bypass_used` events in 6gg** (top event in volume, più di `commit_created`).
+
+Fix: state file `~/.claude/.devforge-skip-evidence` **completamente rimosso**. Se trovato (legacy), viene auto-cancellato + loggato come `evidence_bypass_legacy_removed`. Resta solo `DEVFORGE_SKIP_EVIDENCE=1` env var di sessione (breakglass esplicito che richiede `export` ogni shell, no persistenza). Suggerimenti `touch` in 8 messaggi `decision:block` sostituiti con `export DEVFORGE_SKIP_EVIDENCE=1`.
+
+**Impatto sui dati pre-fix:**
+- Commits S3 (6gg): `3.209 → 580 dopo dedup` (-82%, ora coerente con 195 GitHub firmati)
+- Events totali: `13.726 → 11.041` (-19%, no-session droppati)
+- Adoption brainstorming (session-based): metrica ora calcolabile = **21.5%**
+- Adoption TDD: **40.5%**
+- Adoption verification: **3.5%**
+
+**Telemetria pre-fix non recuperabile**: i log su S3 prima di v1.63.3 restano inflazionati. La dashboard locale `~/Library/Mobile Documents/com~apple~CloudDocs/devforge-dashboard/` applica dedup retroattivo on-the-fly in `build_data.py` per ricostruire metriche pulite anche dai vecchi log (chiave dedup: `(commit_sha, repo)` + drop `sid=no-session`).
+
 ## [1.63.2] - 2026-05-20
 
 ### Added — Test deterministici anti-allucinazione (3 file, 19 test, 100% PASS)
