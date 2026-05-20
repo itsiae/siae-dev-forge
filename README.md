@@ -15,11 +15,11 @@
 
 > **Plugin Claude Code per lo sviluppo software conforme agli standard SIAE.**
 > Copre l'intero SDLC (Software Development Life Cycle) con un backbone deterministico
-> a 4 fasi e un catalog specialistico di **43 skill, 10 comandi, 5 agent, 30 hook**.
+> a 4 fasi e un catalog specialistico di **43 skill, 10 comandi, 5 agent, 25 hook**.
 
 | Metadato | Valore |
 |---|---|
-| Versione | `1.62.3` |
+| Versione | `1.63.1` |
 | Autore | SIAE AI Competence Center · `ai-cc@siae.it` |
 | Licenza | Proprietary |
 | Target | Claude Code CLI ≥ 0.x, Anthropic SDK |
@@ -44,7 +44,7 @@ design esplicito, test scritti prima del codice, e verifica evidence-based.
 3. [Catalog skill (43)](#catalog-skill-43)
 4. [Slash command (10)](#slash-command-10)
 5. [Agent (5)](#agent-5)
-6. [Hook (30)](#hook-30)
+6. [Hook (25)](#hook-25)
 7. [Architettura del plugin](#architettura-del-plugin)
 8. [Telemetria & enforcement evidence-based](#telemetria--enforcement-evidence-based)
 9. [Integrazione MCP](#integrazione-mcp)
@@ -83,7 +83,7 @@ Saltare un anello produce regressioni che le skill specialistiche non possono re
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. BRAINSTORMING   →  7-step design intake → opzioni → ADR │
+│  1. BRAINSTORMING   →  7-step design intake → opzioni → doc │
 │  2. WRITING-PLANS   →  piano bite-sized in docs/plans/<X>/  │
 │  3. TDD             →  RED → GREEN → REFACTOR (test first)  │
 │  4. VERIFICATION    →  evidence-based completion gate       │
@@ -244,7 +244,7 @@ ristretto e tool whitelist; ritornano blocchi markdown standardizzati al chiaman
 
 ---
 
-## Hook (30)
+## Hook (25)
 
 Gli hook implementano l'**enforcement deterministico** del backbone. Sono organizzati
 in 4 categorie:
@@ -415,7 +415,10 @@ Tutte le modifiche sono tracciate in [CHANGELOG.md](./CHANGELOG.md) (Keep-a-Chan
 
 | Versione | Data | Highlights |
 |---|---|---|
-| `1.62.3` | 2026-05-20 | Allineamento catalog: rimossi 14 `/forge-X` fantasma da SKILL.md, fix count drift hook (25→30) |
+| `1.63.1` | 2026-05-20 | Reconcile bot-bump 1.63.0 (count stale): description verified empirically (43/10/5/25), self-audit fix 3 MAJOR |
+| `1.63.0` | 2026-05-20 | Bot auto-bump (PR #262) |
+| `1.62.4` | 2026-05-20 | Anti-dilution backbone: `validates_via` 5/9→9/9, rimosse 5 ADR fantasma dal README, README rewrite -64% |
+| `1.62.3` | 2026-05-20 | Allineamento catalog: rimossi 14 `/forge-X` fantasma da SKILL.md |
 | `1.62.2` | 2026-05-20 | Rimossi 8 thin-wrapper command (forge-automate/cost/doc/finops/flows/jasper/test + forge-mcp-snapshot) |
 | `1.62.1` | 2026-05-20 | Aggiunto `/forge-execute` per `siae-executing-plans` (pendant di `/forge-implement`) |
 | `1.62.0` | 2026-05-19 | Tiered CLAUDE.md generation (L1+L2+L3 on-demand) + anti-bloat lint |

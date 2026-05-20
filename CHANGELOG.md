@@ -4,6 +4,45 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.1] - 2026-05-20
+
+### Fixed — Reconcile bot bump 1.63.0 + self-audit fix 3 MAJOR di v1.62.3/v1.62.4
+
+**Context**: durante l'apertura PR #263 (rationalization v1.62.4), il bot
+`chore/bump-version-1.63.0` ha mergiato un auto-bump a 1.63.0 (PR #262) con
+`marketplace.json` description stale (`39 skill, 8 comandi, 3 agent, 20 hook`)
+e `plugin.json` description con count `17 comandi` (pre-cleanup v1.62.2). Il
+rebase ha richiesto reconciliation: tengo i count empirici corretti e bumpo
+a 1.63.1.
+
+**Description finale empirica:**
+- 43 skill (immutato dalle release recenti)
+- 10 comandi (post-cleanup v1.62.2)
+- 5 agent (immutato)
+- 25 hook (count empirico verificato)
+
+### Fixed — Self-audit: 3 MAJOR introdotte da v1.62.3/v1.62.4 chiuse
+
+Code review della PR #263 ha identificato che la PR stessa (mentre razionalizzava il catalog e chiudeva gap anti-dilution) ha introdotto **3 nuove regressioni anti-dilution**: count drift, version drift e file tree incoerenza. Il code-reviewer ha sintetizzato il pattern: *"l'auditor non audita se stesso"*.
+
+**Fix MAJOR-1 — Count hook drift revert.** v1.62.3 dichiarava di fixare drift `25 → 30 hook` perché aveva contato male (`ls hooks/* | grep -v '\.md$'` includeva `lib/`, `run-hook.cmd`, `skill-advisory-helpers.sh`, `hooks.json`). Count empirico corretto: **25 hook file netti** (`ls hooks/` escludendo `.md`, `.json`, `lib/`, `run-hook.cmd`, `skill-advisory-helpers`). Revert in 4 punti:
+- `plugin.json` description: `30 hook` → `25 hook`
+- `marketplace.json` description: idem
+- `README.md:18` (TL;DR header)
+- `README.md:251` (sezione "Hook (30)" → "Hook (25)") + indice + ancora link
+
+**Fix MAJOR-2 — README version sync.** v1.62.4 ha bumped `plugin.json`/`marketplace.json`/`CHANGELOG` a `1.62.4` ma ha lasciato `README.md:22` metadata tabella su `1.62.3`. Aggiunto inoltre row mancante `| 1.62.4 |` nella tabella "Release recenti" del README.
+
+**Fix MAJOR-3 — File tree README incoerenza.** File tree dichiarava `25 trigger script` mentre testo poco sopra dichiarava `30 hook`. Ora entrambi `25` (count empirico).
+
+**Fix MINOR-1 — SDLC diagram ADR removal.** Diagramma backbone `1. BRAINSTORMING → 7-step design intake → opzioni → ADR` aveva ancora `ADR` come output, ma `docs/adr/` non esiste. Sostituito con `→ doc` (design doc `docs/plans/<topic>-design.md`).
+
+**Lezione (memoria candidata):** quando una release dichiara di chiudere drift di promesse non verificabili, l'auditor stesso deve sottoporsi a verifica empirica prima del merge. Pattern follow-up identificato dal code-reviewer: aggiungere `tests/test_count_consistency.py` deterministico che verifica `plugin.json` count == `len(glob hooks/*)` empirico, `marketplace.json` count == `plugin.json` count, skill count == `len(glob skills/*/SKILL.md)`, command count == `len(glob commands/*.md)`. Senza test, il drift si ripresenterà alla prossima release.
+
+**Verdetti review PR #263:**
+- code-reviewer: CHANGES REQUESTED → tutti i 3 MAJOR chiusi in questo commit, verdetto atteso APPROVED
+- spec-reviewer: PASS (28/28 claim CONFIRMED, 2 low-severity discrepancies cosmetiche tracciate)
+
 ## [1.62.4] - 2026-05-20
 
 ### Added/Fixed — Anti-dilution gap closure
