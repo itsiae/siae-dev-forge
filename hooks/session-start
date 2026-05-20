@@ -338,7 +338,17 @@ echo "$CURRENT_PID" > "$SESSION_LOCK_FILE"
 # session_end telemetry from firing.
 echo "0" > "${HOME}/.claude/.devforge-session-commits"
 # F2: Init last commit hash for commit_created detection
-git rev-parse HEAD > "${HOME}/.claude/.devforge-last-commit-hash" 2>/dev/null || echo "" > "${HOME}/.claude/.devforge-last-commit-hash"
+# v1.63.3: LAST_HASH_FILE è per-repo (era globale → inflazione cross-repo).
+# Allinea path al fix di hooks/post-commit-review:36.
+_SS_GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$_SS_GIT_ROOT" ]; then
+    _SS_REPO_KEY=$(echo "$_SS_GIT_ROOT" | shasum 2>/dev/null | awk '{print $1}' | head -c 16)
+    _SS_LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash-${_SS_REPO_KEY:-global}"
+else
+    _SS_LAST_HASH_FILE="${HOME}/.claude/.devforge-last-commit-hash-nogit"
+fi
+git rev-parse HEAD > "$_SS_LAST_HASH_FILE" 2>/dev/null || echo "" > "$_SS_LAST_HASH_FILE"
+unset _SS_GIT_ROOT _SS_REPO_KEY _SS_LAST_HASH_FILE
 
 # Preserve session-skills on resume|clear|compact (logical same session).
 # Read source from stdin payload (Claude Code sends JSON with `source` field).

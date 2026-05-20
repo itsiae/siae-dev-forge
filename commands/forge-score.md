@@ -104,7 +104,7 @@ review-evidence v2 — SHA abc12345
 
 Decision: BLOCK_REGRESSION
 Reason: coverage regressed -5pp (hard_block budget: -5).
-Override: touch ~/.claude/.devforge-skip-evidence (tracked, abuse 5/day).
+Override: export DEVFORGE_SKIP_EVIDENCE=1 (breakglass session-scoped) (tracked, abuse 5/day).
 ```
 
 Hard floor block:
@@ -128,7 +128,7 @@ Override: admin only — commit message must contain `BREAK-GLASS: SDLC-NNNN`
 
 ```bash
 # Reviewer agent advisory override (NON funziona su BLOCK_HARD_FLOOR)
-touch ~/.claude/.devforge-skip-evidence
+export DEVFORGE_SKIP_EVIDENCE=1 (breakglass session-scoped)
 
 # Admin break-glass (commit message)
 git commit -m "fix: emergency rollback
