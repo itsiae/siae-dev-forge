@@ -3,7 +3,7 @@ name: siae-codebase-map
 description: >
   Use when mapping a single-repo codebase structure and generating
   CODEBASE_MAP.md for onboarding. Mappa la struttura di un codebase. Trigger:
-  mappa codebase, struttura progetto, CODEBASE_MAP.md, /forge-map, analizza
+  mappa codebase, struttura progetto, CODEBASE_MAP.md, analizza
   architettura repo, onboarding su repo, come e organizzato il codice.
 ---
 
@@ -211,7 +211,7 @@ stack: [java|ts-frontend|ts-backend|python|iac]
 
 ## Step 7a — Tiered mode (opt-in)
 
-Se l'utente ha invocato `/forge-map --tiered` o ha richiesto esplicitamente
+Se l'utente ha chiesto "mappa codebase --tiered" o esplicitamente
 CLAUDE.md gerarchici (L1 root + L2 package + L3 child on-demand):
 
 ```

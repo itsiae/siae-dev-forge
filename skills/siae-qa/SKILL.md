@@ -5,7 +5,7 @@ last_modified: 2026-05-11
 description: >
   Genera documentazione test formale per Xray a completamento implementazione.
   Trigger: completamento brainstorming (Phase 2), completamento ciclo TDD (Phase 5),
-  /forge-qa.
+  "genera test plan Xray", "export Test Case Xray".
 changelog: |
   2.2.0 (2026-05-11): Full closure 25 gap residui post 5-case simulation.
     - ADR-008: cross-temporal/cross-event composite (Matrix B temporal sequences).
@@ -100,7 +100,7 @@ Questa skill si attiva in due momenti del ciclo SDLC:
 
 - **Fine Fase 2 (brainstorming):** design approvato → generare bozza Test Plan con i Test Case corrispondenti agli AC
 - **Fine Fase 5 (TDD):** test automatizzati scritti → creare/sincronizzare i Test Case Xray con lo stato di automazione corretto
-- **Su `/forge-qa`:** invocazione manuale per export, riesecuzione o aggiornamento
+- **Invocazione manuale via trigger sentence** (es. "genera test plan Xray"): per export, riesecuzione o aggiornamento
 
 ---
 

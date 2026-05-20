@@ -6,6 +6,10 @@ description: >
   security policy SIAE.
   Trigger: codice security-sensitive, gestione credenziali, IAM policy, encryption,
   dati personali autori/artisti, codici ISWC/ISRC.
+validates_via:
+  predicate: security_review_run
+  evidence_type: log_event
+  evidence_check: "DEVFORGE_LOG_FILE contains security_check event for current task_id"
 ---
 
 ```

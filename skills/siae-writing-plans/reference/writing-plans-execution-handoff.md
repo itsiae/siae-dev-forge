@@ -58,12 +58,31 @@ REQUIRED SUB-SKILL: siae-executing-plans
 
 **Comportamento:**
 1. Guida l'utente ad aprire una nuova sessione Claude Code nella directory del
-   progetto
-2. Istruisci: "Carica il piano con: `cat docs/plans/<topic>/overview.md` e
-   inizia l'implementazione seguendo la skill `siae-executing-plans`"
-3. Il piano ha l'header `REQUIRED SUB-SKILL: siae-subagent-development` (per
-   subagent dispatch dentro la nuova sessione) embedded nell'`overview.md` —
-   il nuovo Claude lo trovera' automaticamente
+   progetto (`cd <project-path>` + `claude`)
+2. Emetti il blocco prompt nella forma esatta sotto. **NON inventare slash
+   command alternativi** (es. `/forge-execute` esiste, `/forge-run` no): se non
+   sei sicuro di un comando, usa il trigger sentence.
+3. Il piano ha l'header `REQUIRED SUB-SKILL: siae-executing-plans` embedded
+   nell'`overview.md` — il nuovo Claude lo trovera' automaticamente.
+
+**Blocco prompt da emettere all'utente (template):**
+
+````
+Apri una nuova sessione Claude Code nella directory del progetto e incolla:
+
+```
+/forge-execute docs/plans/<topic>/overview.md
+```
+
+In alternativa (se preferisci trigger sentence): "Esegui il piano in
+docs/plans/<topic>/overview.md seguendo la skill siae-executing-plans".
+
+La nuova sessione caricherà il piano, lo rivedrà criticamente e procederà a
+batch di 3 task con checkpoint umano fra un batch e l'altro.
+````
+
+**NON dire all'utente "incolla il prompt qui sopra fino a Procedi"** — quel
+pattern è ambiguo e genera frustrazione. Emetti il comando esatto.
 
 ---
 

@@ -14,7 +14,7 @@ def test_command_has_frontmatter():
     content = COMMAND.read_text()
     assert content.startswith("---")
     # Frontmatter must contain BOTH name AND description (repo convention,
-    # cfr. commands/forge-test.md and other forge-*.md)
+    # cfr. commands/forge-*.md)
     assert re.search(r"^name:\s*forge-evidence\s*$", content, re.MULTILINE)
     assert re.search(r"^description:\s*.+", content, re.MULTILINE)
 

@@ -6,7 +6,7 @@ description: >
   Mappa un sistema a microservizi.
   Trigger: "mappa sistema", "sistema a microservizi", "topologia distribuita",
   "dipendenze tra servizi", "chi chiama chi", "topologia sistema",
-  /forge-sysmap, onboarding su sistema distribuito.
+  onboarding su sistema distribuito.
 ---
 
 # SIAE Microservices Map — Mappa Sistemi Distribuiti Senza Allucinare
@@ -122,7 +122,7 @@ Prima di dichiarare la mappa "completa" o "pronta", invoca `siae-verification`.
 - Mapping di un sistema a microservizi con 2+ repository
 - Onboarding su sistema distribuito sconosciuto
 - Necessita' di capire chi chiama chi, quali eventi circolano, quali DB esistono
-- Richiesta `/forge-sysmap`
+- Richiesta esplicita di mappare un sistema distribuito (trigger sentence "mappa sistema", "topologia distribuita")
 
 **Eccezioni (chiedi esplicitamente):**
 - Un solo repo → usa `siae-codebase-map`

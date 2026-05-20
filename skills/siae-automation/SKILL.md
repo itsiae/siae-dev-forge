@@ -5,7 +5,7 @@ description: >
   pipelines. Configura test automation E2E, setup Playwright/Cypress e pipeline
   CI/CD test. Trigger: automatizza test, setup Playwright, setup Cypress, test
   E2E, test di regressione automatici, CI/CD pipeline test, GitHub Actions
-  test, /forge-automate.
+  test.
 ---
 
 # SIAE Automation — E2E Test Generation & Xray Sync
@@ -53,7 +53,7 @@ FERMATI. Una TL potrebbe esistere da un sprint precedente. Non sovrascrivere lav
 ## QUANDO SI APPLICA
 
 - **Dopo siae-qa**: la skill ha prodotto la Test List — questa skill decide quali TC automatizzare e genera i test E2E
-- **Su `/forge-automate`**: invocazione manuale, anche su TL già esistenti in Xray
+- **Invocazione manuale via trigger sentence**: anche su TL già esistenti in Xray
 - **Su TL pre-esistente**: se in Xray esiste già una Test List per la Story, la skill la legge e propone cosa aggiungere o automatizzare
 
 ---

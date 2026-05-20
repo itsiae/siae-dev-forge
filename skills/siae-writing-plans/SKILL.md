@@ -6,6 +6,10 @@ description: >
   + task-NN files. Examples: "scrivi piano implementativo", "decomponi design in
   task", "trasforma design in piano", "piano bite-sized", "aggiorna piano",
   "task implementativi", "docs/plans/".
+validates_via:
+  predicate: plan_produced
+  evidence_type: file_exists
+  evidence_check: "docs/plans/<topic>/overview.md exists with task-NN files AND [PENDING]/[DONE] markers"
 ---
 
 # SIAE Writing Plans — Da Design a Piano Implementativo

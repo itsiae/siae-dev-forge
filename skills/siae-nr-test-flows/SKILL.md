@@ -4,7 +4,7 @@ description: >
   Use when QA needs to analyze a frontend/mobile repo (Vue/React/Angular/Ionic/Flutter)
   and generate a deterministic NRT flow map + Xray test list for regression coverage.
   Analizza repository frontend/mobile e genera NRT flow map + test list.
-  Trigger: no-regression test flows, NRT suite, /forge-flows,
+  Trigger: no-regression test flows, NRT suite,
   repo Vue/React/Angular/Ionic/Flutter, team QA deve mappare flussi per regressione.
 ---
 
@@ -75,7 +75,7 @@ VIETATO   README, commenti liberi, nomi di file senza averli letti, memoria
 
 - Repo frontend (Vue, React, Angular, Ionic, Flutter, Nuxt, Drupal, Strapi) senza test list QA
 - Team QA deve mappare i flussi utente prima di scrivere i test case
-- Invocazione `/forge-flows`
+- Invocazione via trigger sentence (es. "mappa flussi NRT del repo")
 - Input: path locale (cwd) oppure GitHub URL / `org/repo` (via gh CLI, GitHub REST API, o clone manuale)
 
 **NON usare quando:**
@@ -87,11 +87,11 @@ VIETATO   README, commenti liberi, nomi di file senza averli letti, memoria
 ## Input Accettati
 
 ```
-/forge-flows                           → analizza cwd
-/forge-flows ./path/to/repo            → path locale relativo
-/forge-flows /absolute/path/to/repo    → path locale assoluto
-/forge-flows https://github.com/org/repo  → GitHub URL via MCP
-/forge-flows org/repo                  → shorthand GitHub via MCP
+(nessun argomento)                      → analizza cwd
+./path/to/repo                          → path locale relativo
+/absolute/path/to/repo                  → path locale assoluto
+https://github.com/org/repo             → GitHub URL via MCP
+org/repo                                → shorthand GitHub via MCP
 ```
 
 ---
@@ -776,7 +776,7 @@ Import manuale: Xray → Test → Import → CSV → seleziona file
 
 [Se prevedi automazione]
 Per generare test automatizzati dai TC con Automazione=Y:
-  Usa: siae-automation (/forge-automate)
+  Usa: siae-automation (via trigger sentence)
   Prerequisito: raccogliere le chiavi Xray assegnate ai TC
 ```
 
@@ -786,12 +786,12 @@ Per generare test automatizzati dai TC con Automazione=Y:
 
 ```
 siae-brainstorming (design feature frontend)
-    └── siae-nr-test-flows (/forge-flows)
+    └── siae-nr-test-flows
         ├── Step 1-3: INGEST + MAP + PRIORITIZE → flow map YAML
         ├── Step 4:   GENERATE → test list per sezione
         ├── Step 5:   REVIEW → HARD GATE approvazione utente
         └── Step 6:   EXPORT → Tier 1 MCP | Tier 3 CSV
-            └── siae-automation (/forge-automate)
+            └── siae-automation
                 → genera test Cypress (web) o Appium (mobile)
                 → per TC con Automazione=Y
 ```

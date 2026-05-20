@@ -205,7 +205,7 @@ Dopo la detection, mostra il seguente messaggio di benvenuto:
 - Se non esiste **e** il repo ha > 50 file sorgente → aggiungi al welcome:
   ```
   💡 Questo progetto non ha una mappa architetturale.
-     Esegui /forge-map per generarla (subagent Sonnet, ~5 min).
+     Chiedi a Claude "mappa il codebase" per generarla (skill siae-codebase-map, subagent Sonnet, ~5 min).
   ```
 - Se non esiste e il repo e' piccolo (≤ 50 file) → nessun suggerimento
 

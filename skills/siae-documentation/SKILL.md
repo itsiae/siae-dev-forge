@@ -3,7 +3,7 @@ name: siae-documentation
 description: >
   Use when generating technical documentation for SIAE components and APIs.
   Genera documentazione tecnica per componenti e API SIAE. Trigger: richiesta
-  documentazione, /forge-doc, design review, pre-release.
+  documentazione, design review, pre-release.
 ---
 
 ```
