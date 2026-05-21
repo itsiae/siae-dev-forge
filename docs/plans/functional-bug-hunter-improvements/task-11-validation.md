@@ -23,6 +23,8 @@ entry che riferisce a audit-report e design doc.
    - `python3 scripts/run_lock.py dispatch interactive STOP_AMBIGUOUS_SCOPE`
      stampa `PAUSE`, exit 0.
    - `python3 scripts/run_lock.py dispatch report-only STOP_AMBIGUOUS_SCOPE`
+     stampa `CONTINUE`, exit 0.
+   - `python3 scripts/run_lock.py dispatch report-only STOP_DEPENDENCY_CLOSURE`
      stampa `DEGRADE`, exit 0.
    - `wc -l skills/siae-functional-bug-hunter/SKILL.md` ≤220 LOC.
    - Description char count ≤1024.

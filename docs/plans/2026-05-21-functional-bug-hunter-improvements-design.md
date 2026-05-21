@@ -72,8 +72,10 @@ skill name (semantica equivalente, basta il file).
 3. `scripts/path_feasibility.py --help` esce 0, smoke test su 2 fixture
    (positive + negative) passa.
 4. `scripts/run_lock.py dispatch strict STOP_AMBIGUOUS_SCOPE` ritorna
-   `CONTINUE`; idem `interactive` ritorna `PAUSE`; `report-only` ritorna
-   `DEGRADE`.
+   `CONTINUE`; idem `interactive STOP_AMBIGUOUS_SCOPE` ritorna `PAUSE`;
+   `report-only STOP_DEPENDENCY_CLOSURE` ritorna `DEGRADE`. Matrix completa
+   in `references/runtime_modes.md` — single source of truth allineata con
+   `_DISPATCH_TABLE` in `run_lock.py`.
 5. `commands/siae-functional-bug-hunter.md` esiste e segue pattern
    `forge-*.md` (frontmatter `description:` + body con invocation example).
 6. `references/typescript-javascript.md` contiene 2 nuovi BP esplicitamente
