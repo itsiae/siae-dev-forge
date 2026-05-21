@@ -56,10 +56,12 @@ log_skip()  { echo "${C_DIM}[SKIP]${C_RESET}  $*"; }
 STACK="all"
 CHECK_ONLY=0
 DRY_RUN=0
+ENSURE_TOOL=""
+ENSURE_TIMEOUT="${DEVFORGE_RUNNER_ENSURE_TIMEOUT:-90}"
 
 usage() {
     cat <<'EOF'
-Usage: devforge-install-runners.sh [--stack <name>] [--check] [--dry-run] [-h|--help]
+Usage: devforge-install-runners.sh [--stack <name>] [--check] [--dry-run] [--ensure <tool>] [-h|--help]
 
 Stacks: java | python | ios | android | aws | cross | all  (default: all)
 
@@ -68,12 +70,16 @@ Examples:
   bash scripts/devforge-install-runners.sh --check
   bash scripts/devforge-install-runners.sh --dry-run --stack python
   bash scripts/devforge-install-runners.sh --stack cross
+  bash scripts/devforge-install-runners.sh --ensure semgrep    # lazy install + warning rosso non-blocking
 
 Flags:
-  --stack <name>   Limit install to one stack (java/python/ios/android/aws/cross/all)
-  --check          Report INSTALLED/MISSING table only — no install
-  --dry-run        Print install commands without executing
-  -h, --help       Show this help
+  --stack <name>     Limit install to one stack (java/python/ios/android/aws/cross/all)
+  --check            Report INSTALLED/MISSING table only — no install
+  --dry-run          Print install commands without executing
+  --ensure <tool>    Lazy auto-install per singolo tool, NON-BLOCCANTE. Se missing
+                     dopo install: WARNING ROSSO su stderr, exit 0. Default
+                     timeout 90s, override via DEVFORGE_RUNNER_ENSURE_TIMEOUT.
+  -h, --help         Show this help
 
 The installer is user-space only (no sudo). Pinned Linux GitHub-release
 versions live at the top of the script (DETEKT_VERSION, KTLINT_VERSION,
@@ -95,6 +101,12 @@ while [[ $# -gt 0 ]]; do
         --dry-run)
             DRY_RUN=1; shift
             ;;
+        --ensure)
+            ENSURE_TOOL="${2:-}"; shift 2 || { log_err "--ensure requires a tool name"; exit 2; }
+            ;;
+        --ensure=*)
+            ENSURE_TOOL="${1#*=}"; shift
+            ;;
         -h|--help)
             usage; exit 0
             ;;
@@ -113,6 +125,67 @@ case "$STACK" in
         exit 2
         ;;
 esac
+
+# -----------------------------------------------------------------------------
+# --ensure mode (v1.63.5): lazy auto-install per singolo tool, non-bloccante
+#
+# Workflow:
+#   1. Check if $ENSURE_TOOL is already in PATH -> exit 0 silently
+#   2. Tenta install (timeout DEVFORGE_RUNNER_ENSURE_TIMEOUT secondi)
+#   3. Re-check. Se OK -> exit 0
+#   4. Se ancora missing -> stampa WARNING ROSSO su stderr, exit 0 (NO BLOCK)
+#
+# Uso: bash scripts/devforge-install-runners.sh --ensure semgrep
+# -----------------------------------------------------------------------------
+if [ -n "$ENSURE_TOOL" ]; then
+    # Step 1: già installato?
+    if command -v "$ENSURE_TOOL" >/dev/null 2>&1; then
+        exit 0
+    fi
+    # Determina stack del tool (mappa inline — le funzioni cross_stack_tools/etc
+    # sono definite piu' avanti nel file, quindi non disponibili qui)
+    case "$ENSURE_TOOL" in
+        semgrep|gitleaks|eslint|ts-unused-exports) _ensure_stack="cross" ;;
+        mvn|spotbugs)                              _ensure_stack="java" ;;
+        bandit|pip-audit|vulture|pyright)          _ensure_stack="python" ;;
+        swiftlint)                                  _ensure_stack="ios" ;;
+        detekt|ktlint)                              _ensure_stack="android" ;;
+        tflint|tfsec|checkov|cfn-lint)              _ensure_stack="aws" ;;
+        *)                                          _ensure_stack="" ;;
+    esac
+    if [ -z "$_ensure_stack" ]; then
+        printf '\033[1;31m[DEVFORGE WARN]\033[0m runner unknown: %s (not in any stack registry) — security scan limited\n' "$ENSURE_TOOL" >&2
+        exit 0
+    fi
+    # Step 2: tenta install con timeout (background con kill se eccede)
+    log_info "ensure: $ENSURE_TOOL missing — attempting install (stack=$_ensure_stack, timeout=${ENSURE_TIMEOUT}s)..." >&2
+    _ensure_log="/tmp/devforge-ensure-${ENSURE_TOOL}.log"
+    (
+        STACK="$_ensure_stack" CHECK_ONLY=0 ENSURE_TOOL="" \
+            bash "$0" --stack "$_ensure_stack" > "$_ensure_log" 2>&1
+    ) &
+    _ensure_pid=$!
+    _elapsed=0
+    while kill -0 $_ensure_pid 2>/dev/null; do
+        if [ "$_elapsed" -ge "$ENSURE_TIMEOUT" ]; then
+            kill $_ensure_pid 2>/dev/null || true
+            break
+        fi
+        sleep 2
+        _elapsed=$((_elapsed + 2))
+    done
+    wait $_ensure_pid 2>/dev/null || true
+    # Step 3: re-check
+    if command -v "$ENSURE_TOOL" >/dev/null 2>&1; then
+        log_ok "ensure: $ENSURE_TOOL installed successfully" >&2
+        exit 0
+    fi
+    # Step 4: WARNING ROSSO, exit 0 (NO BLOCK — security degraded ma non blocca workflow)
+    printf '\033[1;31m[DEVFORGE WARN]\033[0m runner missing: %s (stack=%s) — security scan degraded.\n' "$ENSURE_TOOL" "$_ensure_stack" >&2
+    printf '\033[1;31m[DEVFORGE WARN]\033[0m install manuale: bash scripts/devforge-install-runners.sh --stack %s\n' "$_ensure_stack" >&2
+    printf '\033[1;31m[DEVFORGE WARN]\033[0m log auto-install: %s\n' "$_ensure_log" >&2
+    exit 0
+fi
 
 # -----------------------------------------------------------------------------
 # OS / arch detection

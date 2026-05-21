@@ -4,6 +4,57 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.5] - 2026-05-21
+
+### Added — Runner lazy auto-install non-blocking (`--ensure <tool>`)
+
+Verifica empirica security stack DevForge: 17 runner OSS dichiarati (semgrep, gitleaks, bandit, pip-audit, vulture, pyright, eslint, ts-unused-exports, mvn, spotbugs, swiftlint, detekt, ktlint, tflint, tfsec, checkov, cfn-lint) ma **0 installati** sulla mia macchina al primo check (eccetto `mvn`). PR Gate scattava 125 volte in 6gg con `security_scan_clean` ma solo via regex inline — i runner SAST/secrets veri non scattavano per assenza CLI tool.
+
+**Comportamento desiderato (richiesta utente)**: se runner missing → prova auto-install. Se install fallisce → **warning rosso in console, NON bloccare** workflow utente.
+
+**Implementazione**: nuovo flag `--ensure <tool>` per `scripts/devforge-install-runners.sh`:
+- Step 1: `command -v <tool>` → se presente, exit 0 silent
+- Step 2: tenta `bash $0 --stack <auto-detected-stack>` con timeout `$DEVFORGE_RUNNER_ENSURE_TIMEOUT` (default 90s)
+- Step 3: re-check. Se OK → log success, exit 0
+- Step 4: se ancora missing → stampa **WARNING ROSSO ANSI** (`\033[1;31m[DEVFORGE WARN]\033[0m`) su stderr con:
+  - tool name + stack identificato
+  - comando di install manuale
+  - path log auto-install
+- **Exit 0 sempre** (non-blocking)
+
+**Mappa tool→stack inline** (no dipendenza da definizioni funzioni piu' avanti nel file):
+- `cross`: semgrep, gitleaks, eslint, ts-unused-exports
+- `java`: mvn, spotbugs
+- `python`: bandit, pip-audit, vulture, pyright
+- `ios`: swiftlint
+- `android`: detekt, ktlint
+- `aws`: tflint, tfsec, checkov, cfn-lint
+
+**Test edge case (4/4 PASS):**
+1. Tool unknown (`mythical-tool`): warning "runner unknown", exit 0
+2. Tool gia' installato (`semgrep`): silent, exit 0
+3. Tool missing, install timeout (`eslint`, timeout 20s): warning rosso, exit 0
+4. Tool missing, install timeout breve (`swiftlint`, timeout 5s): warning rosso, exit 0
+
+**Stato install locale post-audit** (12/17 runner OSS installati):
+- ✅ cross: semgrep, gitleaks
+- ✅ java: mvn, spotbugs
+- ✅ python: bandit, pip-audit, vulture, pyright
+- ✅ android: detekt
+- ✅ aws: tfsec, checkov, cfn-lint
+- ❌ swiftlint, ktlint, tflint, eslint, ts-unused-exports (warning rosso emesso quando invocati)
+
+**Follow-up tracciato**: `brew install tflint` fallisce (formula rimossa da homebrew core). Script install dovrebbe fall-back a GitHub release `terraform-linters/tflint` o tap `terraform-linters/tap`.
+
+**Workflow utente per nuovo dev SIAE:**
+```bash
+# Lazy: ogni runner si auto-installa al primo uso
+bash scripts/devforge-install-runners.sh --ensure semgrep
+
+# Eager: tutto subito
+bash scripts/devforge-install-runners.sh --stack all
+```
+
 ## [1.63.4] - 2026-05-20
 
 ### Fixed — Bypass evidence subprocess-safe (BUG A)
