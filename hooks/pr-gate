@@ -32,6 +32,22 @@ devforge_init_session 2>/dev/null || true
 SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
 devforge_log "pr_gate" "success" "{\"check\":\"pr_security_activated\",\"command\":\"${SAFE_TOOL_COMMAND}\"}"
 
+# ── Runner auto-bootstrap SYNC v1.63.8 ─────────────────────────
+# All'apertura PR (gh pr create/edit) garantiamo i 16 runner OSS installati
+# PRIMA del security scan. Modalita' --sync per coerenza: i runner DEVONO
+# essere pronti quando la PR parte.
+#
+# Cooldown 1h gestito da runner-bootstrap.sh: se gia' eseguito di recente,
+# la chiamata e' silent immediate. Cold-start (3-15min) capita SOLO al
+# primissimo gh pr create di una macchina fresca.
+#
+# Non-blocking: warning rossi se install fallisce, ma il scan prosegue.
+if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
+    devforge_log "pr_gate" "info" "{\"check\":\"runner_bootstrap_start\"}"
+    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" --sync 2>&1 || true
+    devforge_log "pr_gate" "success" "{\"check\":\"runner_bootstrap_done\"}"
+fi
+
 # JSON escaping is centralized in lib/logger.sh :: devforge_sanitize_json_str.
 # Local alias for readability in this file.
 escape_for_json() { devforge_sanitize_json_str "$1"; }

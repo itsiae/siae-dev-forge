@@ -4,6 +4,39 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.8] - 2026-05-21
+
+### Added — Bootstrap SYNC su apertura PR (`gh pr create`/edit)
+
+Richiesta utente: *"Sta roba deve partire quando si apre PR"* — non lazy in background, ma garantire i runner installati al momento della PR.
+
+**Integrazione `hooks/pr-gate` (PreToolUse Bash `gh pr create|edit`):**
+
+```bash
+# Prima del security scan, garantisce runner installati (SYNC)
+if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
+    devforge_log "pr_gate" "info" "{\"check\":\"runner_bootstrap_start\"}"
+    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" --sync 2>&1 || true
+    devforge_log "pr_gate" "success" "{\"check\":\"runner_bootstrap_done\"}"
+fi
+```
+
+**Differenza vs v1.63.6/7:**
+- v1.63.6/7: bootstrap in `review-evidence` **background async** (commit, push, gh pr create)
+- v1.63.8: bootstrap in `pr-gate` **SYNC bloccante** SOLO su `gh pr create|edit`
+
+Doppia copertura:
+1. Hook `review-evidence` lancia bootstrap async — copre commit/push
+2. Hook `pr-gate` lancia bootstrap **SYNC** — garantisce installazione PRIMA del security scan PR
+
+**Cooldown 1h** evita re-bootstrap: se review-evidence l'ha già fatto pochi minuti fa, pr-gate skippa silent. Se cold-start (prima session macchina), pr-gate attende install completo prima di procedere col scan.
+
+**Non-blocking sempre**: warning rossi se install fallisce, scan procede con tool disponibili. `|| true` garantisce exit 0 anche se bootstrap fail.
+
+**Eventi telemetria emessi:**
+- `pr_gate` con `check: runner_bootstrap_start` — momento avvio
+- `pr_gate` con `check: runner_bootstrap_done` — momento completamento (anche se warning rossi)
+
 ## [1.63.7] - 2026-05-21
 
 ### Changed — Bootstrap esteso a TUTTI i 16 runner OSS (default)
