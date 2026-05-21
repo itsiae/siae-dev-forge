@@ -95,3 +95,68 @@ def test_cli_missing_file():
     out = json.loads(result.stdout)
     assert out["category"] is None
     assert "error" in out
+
+
+# ─── C2 fix: normalize uses first 3 non-empty lines, not just line-1 ─────────
+
+
+def test_normalize_uses_first_three_non_empty_lines():
+    """C2: signature must include lines 2+ so Vitest/Jest headers don't mask
+    the actual assertion arriving on later non-empty lines."""
+    vitest_like = (
+        "\n"
+        "❯ src/foo.test.ts (3 tests | 2 failed)\n"
+        "\n"
+        "  FAIL src/foo.test.ts > computes total\n"
+        "    AssertionError: expected 7 to equal 42\n"
+        "      at src/foo.test.ts:8:5\n"
+    )
+    sig = cf.normalize(vitest_like)
+    assert "AssertionError" in sig, (
+        f"normalize() must surface assertion from line >1, got: {sig!r}"
+    )
+
+
+def test_normalize_caps_at_three_non_empty_lines():
+    """C2: stop accumulating at 3 non-empty lines; subsequent stack frames
+    must NOT bleed into signature (signature stability across runs)."""
+    err = (
+        "line 1 header\n"
+        "line 2 assertion\n"
+        "line 3 location\n"
+        "line 4 stack frame should be excluded uuid=abc-123\n"
+        "line 5 stack frame should be excluded\n"
+    )
+    sig = cf.normalize(err)
+    assert "line 4" not in sig
+    assert "line 5" not in sig
+    assert "line 1" in sig
+    assert "line 2" in sig
+    assert "line 3" in sig
+
+
+def test_normalize_single_line_behavior_unchanged():
+    """C2 regression: single-line input must still produce a single-line sig."""
+    err = "AssertionError: expected foo to be bar"
+    sig = cf.normalize(err)
+    assert sig == "AssertionError: expected foo to be bar"
+
+
+def test_normalize_deterministic_multiline():
+    """C2: two stderr blocks with same assertion shape but different
+    paths/timestamps/line:col must produce IDENTICAL signature (grouping key).
+    NOTE: normalize_regex strips paths/lines but NOT counters like
+    "(3 tests | 1 failed)" — header text must be invariant across the pair."""
+    err1 = (
+        "FAIL src/foo.test.ts > sum\n"
+        "AssertionError: expected 7 to equal 42\n"
+        "  at /tmp/a/foo.ts:12:5\n"
+    )
+    err2 = (
+        "FAIL src/foo.test.ts > sum\n"
+        "AssertionError: expected 7 to equal 42\n"
+        "  at /home/x/foo.ts:99:1\n"
+    )
+    sig1 = cf.normalize(err1)
+    sig2 = cf.normalize(err2)
+    assert sig1 == sig2, f"multiline normalize non deterministico:\n{sig1!r}\n!=\n{sig2!r}"

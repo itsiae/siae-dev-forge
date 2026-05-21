@@ -11,12 +11,23 @@ Use this template for: FastAPI, Flask, Django, Celery, boto3, generic Python ser
 Requires: pytest, pytest-cov, pytest-asyncio, pytest-mock.
 
 Replace all {{PLACEHOLDER}} tokens before use.
+
+C1 fix — Placeholder cleanup (HIGH severity)
+====================================================================
+La riga `from {{MODULE_IMPORT_PATH}} import {{ClassName}}, {{function_name}}`
+produce sintassi invalida se uno dei due placeholder è vuoto. Dopo la
+sostituzione, eseguire `clean_template_placeholders` di
+`lib/template-cache.sh` che:
+  - splitta la import list su `,`, scarta simboli vuoti
+  - rimuove la riga intera se la import list resta vuota
+====================================================================
 """
 
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
 
+# IMPORT_VARIANT: cleanup_template_placeholders normalizza simboli vuoti.
 from {{MODULE_IMPORT_PATH}} import {{ClassName}}, {{function_name}}
 
 

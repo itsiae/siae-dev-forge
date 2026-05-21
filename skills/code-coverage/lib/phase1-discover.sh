@@ -75,3 +75,80 @@ for pid in "${PIDS[@]}"; do
 done
 
 echo "[phase1] discovery complete: stack.json size.json env.json"
+
+# ─── C3 fix: Phase 5b probe trigger (idempotent, bash-side) ────────────────
+# Sposta la decisione "serve coverage probe" da LLM-side a bash-side per
+# eliminare 1 round-trip Phase 5b. Idempotente: skip se coverage-report.json
+# è già presente.
+PROBE_STATE="not_needed"
+if [ -f "$REPO/.code-coverage/coverage-report.json" ]; then
+  echo "[phase1] phase5b probe skipped: coverage-report.json already present"
+  PROBE_STATE="skipped"
+else
+  NEED_PROBE=$(python3 -c "
+import json
+try:
+    d = json.load(open('$REPO/.code-coverage/stack.json'))
+except Exception:
+    print('no')
+else:
+    efs = d.get('existing_test_frameworks', [])
+    tfc = d.get('test_infrastructure', {}).get('test_files_count', 0)
+    mc = d.get('module_coverage', [])
+    print('yes' if (efs and tfc > 0 and not mc) else 'no')
+")
+  if [ "$NEED_PROBE" = "yes" ]; then
+    echo "[phase1] phase5b probe auto-triggered"
+    if bash "$SKILL_DIR/lib/phase6-coverage.sh" "$REPO" --probe; then
+      PROBE_STATE="ran"
+    else
+      echo "[phase1] phase5b probe failed (non-fatal)"
+      PROBE_STATE="ran"
+    fi
+  fi
+fi
+
+# ─── C4b fix: emit discovery-summary.json (≤2k tok) ────────────────────────
+# Compatta i 3 JSON discovery in 1 summary essenziale per LLM decision-making.
+python3 - "$REPO" "$PROBE_STATE" <<'PYEOF' > "$REPO/.code-coverage/discovery-summary.json"
+import json, sys
+from pathlib import Path
+repo = Path(sys.argv[1])
+probe_state = sys.argv[2]
+cov_dir = repo / ".code-coverage"
+
+def safe_load(name):
+    p = cov_dir / name
+    if not p.exists():
+        return {}
+    try:
+        return json.load(open(p))
+    except Exception:
+        return {}
+
+stack = safe_load("stack.json")
+size = safe_load("size.json")
+env = safe_load("env.json")
+
+summary = {
+    "stack": {
+        "languages": stack.get("languages", []),
+        "primary": stack.get("primary_language") or (stack.get("languages") or [None])[0],
+        "monorepo": stack.get("monorepo", False),
+        "monorepo_workspaces": stack.get("monorepo_workspaces", []),
+    },
+    "size": {
+        "class": size.get("class") or size.get("size_class"),
+        "loc_total": size.get("loc") or size.get("loc_total"),
+        "file_count_test_target": size.get("file_count") or size.get("file_count_test_target"),
+    },
+    "env": {
+        "missing_frameworks": env.get("missing", env.get("missing_frameworks", [])),
+        "install_required": bool(env.get("blocking", env.get("install_required", False))),
+    },
+    "phase5b_probe": probe_state,
+}
+print(json.dumps(summary, indent=2))
+PYEOF
+
+echo "[phase1] discovery-summary.json emitted (phase5b_probe=$PROBE_STATE)"

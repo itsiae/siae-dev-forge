@@ -58,6 +58,8 @@ Before generating any test, classify each target file by testability tier. Withi
 
 ## Batch Generation Rule
 
+**PARALLEL TOOL CALLS REQUIRED.** When batching N files (T1=3, T2=2), emit all N Write tool calls in the **same assistant turn** (parallel tool use). Do NOT chain them across turns — sequential turns multiply cache prefix replay cost ~5-10k tok per extra turn. If `placeholder-check.sh` fails for any file pre-emit, drop that file from the batch but keep the others.
+
 When the next N files in the queue share all three preconditions, generate their tests in a single LLM call:
 - (a) Same testing framework target
 - (b) Similar export shape: ≤ 3 public functions OR one class with ≤ 5 methods each

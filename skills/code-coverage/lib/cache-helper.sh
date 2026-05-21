@@ -37,6 +37,17 @@ init_workdir() {
   mkdir -p "$repo/.code-coverage" || return 1
   ensure_gitignore "$repo"
   local log="$repo/.code-coverage/decisions.log"
+  local sentinel="$repo/.code-coverage/last_run_state"
+
+  # C4a fix: archivia decisions.log se il run precedente è "completed".
+  # Mantiene il sentinel (Phase 6 lo riscrive a fine successo). Evita crescita
+  # unbounded del log → resume legge solo il run corrente.
+  if [ -f "$log" ] && [ -f "$sentinel" ] && grep -q "^completed$" "$sentinel" 2>/dev/null; then
+    local archive_ts
+    archive_ts=$(date -u +%Y%m%dT%H%M%SZ)
+    mv "$log" "${log}.archive.${archive_ts}" 2>/dev/null || true
+  fi
+
   if [ ! -f "$log" ]; then
     echo "# /code-coverage decisions log — $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$log"
   fi
