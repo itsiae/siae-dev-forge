@@ -1,0 +1,53 @@
+{
+  "entry_points": [
+    {
+      "id": "uploads.chunked.start",
+      "boundary_id": "POST /v1/uploads",
+      "kind": "http-route",
+      "unit_id": "api-service",
+      "trigger": "POST /v1/uploads",
+      "actor": "api-caller",
+      "inputs": [
+        {"name": "filename", "type": "string"},
+        {"name": "total_chunks", "type": "integer"}
+      ],
+      "downstream_calls": [
+        "auth.can_user_upload(user_id)",
+        "db.uploads.insert({...})"
+      ],
+      "side_effects": ["row in uploads table"],
+      "source_ref": {
+        "file": "api/uploads/start.py",
+        "line_start": 18,
+        "line_end": 42,
+        "sha": "a1b2c3d",
+        "dirty_flag": false
+      }
+    },
+    {
+      "id": "uploads.chunked.chunk",
+      "boundary_id": "PUT /v1/uploads/{id}/chunk/{n}",
+      "kind": "http-route",
+      "unit_id": "api-service",
+      "trigger": "PUT /v1/uploads/{id}/chunk/{n}",
+      "actor": "api-caller",
+      "inputs": [
+        {"name": "id", "type": "string"},
+        {"name": "n", "type": "integer"},
+        {"name": "body", "type": "bytes"}
+      ],
+      "downstream_calls": [
+        "db.uploads.append_chunk(id, n, body)"
+      ],
+      "side_effects": ["bytes appended to S3"],
+      "source_ref": {
+        "file": "api/uploads/chunk.py",
+        "line_start": 11,
+        "line_end": 33,
+        "sha": "a1b2c3d",
+        "dirty_flag": false
+      }
+    }
+  ],
+  "stack_context": "python+fastapi+s3; auth via JWT; auth check is in start.py only; chunk.py does not re-check permissions"
+}

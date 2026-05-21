@@ -1,0 +1,21 @@
+{
+  "dedup_key": "51f7e4e855f05794",
+  "title": "Stripe webhook handler processes replayed events without idempotency key",
+  "severity": "SEV-1",
+  "category": "webhook-replay",
+  "entry_point_id": "payments.webhook",
+  "preconditions": [
+    "Stripe redelivers a charge.captured event for pi_ABC because the original 200 response was lost in transit.",
+    "Order pi_ABC was already marked PAID and the receipt was sent."
+  ],
+  "steps": [
+    "(event-publisher) POST /v1/payments/webhook with body.type=charge.captured, body.data.object.id=pi_ABC, valid Stripe-Signature",
+    "(event-publisher) Repeat the same POST 60 seconds later (Stripe redelivery)",
+    "(observer) Inspect mail queue and report the count of receipt emails for pi_ABC",
+    "(observer) Inspect orders table and report whether status was rolled forward / reset"
+  ],
+  "expected": "The second POST is ignored (idempotent on event.id) and exactly one receipt email is in the queue.",
+  "actual": "The second POST re-runs the handler; the customer receives the receipt email twice and an audit row is duplicated.",
+  "suggested_fix_direction": "Store event.id in a unique-indexed table (Postgres INSERT ON CONFLICT DO NOTHING, or Redis SET NX with TTL ≥ 24h) and short-circuit on hit. Additionally verify the causal predecessor (payment_intent.succeeded) is already in the store before applying charge.captured.",
+  "reproduction_rate_target": "deterministic"
+}

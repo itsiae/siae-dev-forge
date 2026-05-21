@@ -1,0 +1,22 @@
+{
+  "dedup_key": "cb22fe62c7708e1b",
+  "title": "Chunked upload accepts chunks after user permission is revoked",
+  "severity": "SEV-2",
+  "category": "toctou",
+  "entry_point_id": "uploads.chunked.start",
+  "preconditions": [
+    "User U has uploaded chunks 1..3 of a 10-chunk upload.",
+    "Admin revokes user U's token between chunk 3 and chunk 4."
+  ],
+  "steps": [
+    "(api-caller) POST /v1/uploads with filename=large.bin, total_chunks=10",
+    "(api-caller) PUT /v1/uploads/<id>/chunk/1 .. /chunk/3 with valid token",
+    "(observer) Admin revokes user U's token",
+    "(api-caller) PUT /v1/uploads/<id>/chunk/4 .. /chunk/10 with the now-revoked token",
+    "(observer) Inspect S3 object size and report whether chunks 4..10 are present"
+  ],
+  "expected": "After token revocation, PUT /chunk/4 returns 401 and S3 object stops at chunk 3.",
+  "actual": "PUT /chunk/4..10 return 200 and S3 object contains all 10 chunks because chunk.py never re-validates the token.",
+  "suggested_fix_direction": "Re-run auth.can_user_upload(user_id) at the start of every PUT /chunk/N handler, OR short JWT TTL + revocation propagation via Redis blacklist.",
+  "reproduction_rate_target": "deterministic"
+}

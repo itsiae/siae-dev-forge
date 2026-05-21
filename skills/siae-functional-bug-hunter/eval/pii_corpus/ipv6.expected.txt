@@ -1,0 +1,1 @@
+Connection attempt to <REDACTED:IPV6> timed out after 30 seconds.

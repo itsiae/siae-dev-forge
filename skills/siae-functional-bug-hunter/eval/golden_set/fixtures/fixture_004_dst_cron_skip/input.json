@@ -1,0 +1,29 @@
+{
+  "entry_points": [
+    {
+      "id": "reconcile.daily",
+      "boundary_id": "cron-daily-2am",
+      "kind": "scheduled-job",
+      "unit_id": "batch-runner",
+      "trigger": "cron \"0 0 2 * * *\" zone=Europe/Rome",
+      "actor": "scheduler",
+      "inputs": [],
+      "downstream_calls": [
+        "reconcile.run_for_yesterday()",
+        "alerting.send_summary_if_diff_gt_0()"
+      ],
+      "side_effects": [
+        "reconciled rows persisted",
+        "summary email to finance@"
+      ],
+      "source_ref": {
+        "file": "jobs/reconcile.py",
+        "line_start": 8,
+        "line_end": 22,
+        "sha": "d4e5f6a",
+        "dirty_flag": false
+      }
+    }
+  ],
+  "stack_context": "python+APScheduler; CronTrigger(hour=2, minute=0, timezone='Europe/Rome'); the spring-forward Sunday in Europe/Rome jumps from 01:59 to 03:00 local time, so 02:00 does not exist on that day"
+}
