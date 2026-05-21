@@ -4,6 +4,59 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.65.0] - 2026-05-21
+
+### Changed — Skill `siae-functional-bug-hunter` v1.1.0 -> v1.2.0
+
+Audit a 4 agenti paralleli + implementation plan via 3-blind-agent consensus
+(Round 1 Independent + Round 2 Cross-pollination + Round 3 fact-check empirico
++ Round 4 sintesi). Vedi `audit-reports/functional-bug-hunter-audit-2026-05-21.md`
+e `docs/plans/2026-05-21-functional-bug-hunter-improvements-design.md`.
+
+**Score impact** (atteso): 6.75/10 -> ~8.5/10 sui 4 assi audit (scope
+coherence, Anthropic best practice, token efficiency, bug-finding effectiveness).
+
+#### Added
+
+- `scripts/path_feasibility.py` — Phase 6 filter codificato (glob + keyword,
+  no AST, stdlib only). 5 test pytest. Chiude gap A1 #2 audit ("capability
+  dichiarata ma non codificata").
+- `scripts/run_lock.py dispatch` sub-command — Mode enum
+  (interactive/strict/report-only) x 5 STOP events -> Action
+  (PAUSE/CONTINUE/DEGRADE). 17 test pytest. Chiude gap A1 #3.
+- `commands/siae-functional-bug-hunter.md` — slash command file registrato
+  (pattern allineato a `commands/forge-*.md`). Chiude gap A1 #4.
+- `references/pipeline_internals.md` — Phase 0..8 narrative estratta
+  on-demand (-1600 tok eager). Chiude gap A3 #5.
+- `references/hallucination_guard.md` — HG-01..05 contract + grounding
+  policy estratti (-520 tok eager). Chiude gap A3 #9.
+- `references/README.md` — load-matrix progressive disclosure
+  Phase->Reference->Load-condition. Chiude gap A2 #6.
+- `references/runtime_modes.md` — single source of truth per dispatch
+  matrix (sincronizzata con `run_lock.py::_DISPATCH_TABLE`).
+- `references/stacks/typescript-javascript.md` — BP-024 react-lifecycle-race
+  e BP-025 set-state-after-unmount. Chiude gap A4 #1.
+- `references/stacks/data-platform.md` — BP-026 nullable-join-key-loss e
+  BP-027 window-missing-partition-by. Chiude gap A4 #2.
+- `tests/test_path_feasibility.py` (5 test) e
+  `tests/test_run_lock_dispatch.py` (17 test). Coverage: 32/32 PASS.
+
+#### Changed
+
+- `SKILL.md` description ridotta da 1209 a 854 char (conformita' Anthropic
+  Agent Skills frontmatter ≤1024). Chiude gap A2 #1.
+- `SKILL.md` body compresso da 422 LOC / 4059 token a 228 LOC / 2314 token
+  (-43%) via estrazione Phase narrative + dedup hallucination guard.
+- `SKILL.md` aggiunte sezioni `## When to use` e `## Supported stacks`
+  (recupero stack list rimossa dalla description).
+- `skill_semver` 1.1.0 -> 1.2.0.
+
+#### Out of scope (rimandato a v1.3.0)
+
+Vedi design doc, sezione "Out of scope". Notabili: split `bug_patterns.md`
+(5290 tok, on-demand soft cap), `@file:` imports formali, BP-028/029,
+test suite pytest completa per ogni script.
+
 ## [1.64.0] - 2026-05-21
 
 ### Added — Skill `siae-functional-bug-hunter` (manual-only)

@@ -1,25 +1,22 @@
 ---
 name: siae-functional-bug-hunter
 description: >
-  Static, multi-repo, cross-stack functional bug hunter. Ingests one or more
-  repository roots, detects when additional repos must be pulled in to close
-  the dependency graph, generates bug hypotheses from a stack-aware pattern
-  matrix, filters them by path feasibility, and emits a deterministic
-  qa_report.md grouped by user-journey with minimally-flaky reproduction
-  recipes voiced for a human manual QA tester (ISTQB Foundation + 2 years
-  experience). Supports Java, TypeScript/JavaScript, Python, Go, Rust, Kotlin,
-  Swift, Ruby, .NET/C#, Scala, Flutter/Dart, Terraform/HCL, AWS serverless
-  (SAM/CDK/SFN/EventBridge), and data platforms (dbt/Airflow/Spark/SQL), with
-  a generic-fallback profile for everything else. Invocation is manual only,
-  via the explicit slash command /siae-functional-bug-hunter. No automatic
-  hooks, no session-start activation, no natural-language auto-trigger.
-  Runtime supports three modes: interactive (TTY, may pause for missing
-  scope), strict (CI, never pauses), and report-only (low-confidence partial
-  allowed). Excludes SAST-only findings unless they pass the functional
-  manifestation test, and excludes generation of automated test code.
+  Static, multi-repo, cross-stack functional bug hunter. Ingests repository
+  roots, detects missing dependencies, generates bug hypotheses from a
+  stack-aware pattern matrix, filters by path feasibility, and emits a
+  deterministic qa_report.md grouped by user-journey with minimally-flaky
+  reproduction recipes voiced for a manual QA tester (ISTQB Foundation +
+  2 years). Supports JVM, JS/TS, Python, Go, Rust, mobile, IaC, AWS
+  serverless, data platforms (see references/stacks/INDEX.md), plus a
+  generic fallback. Invocation is manual only via slash command
+  /siae-functional-bug-hunter — no auto hooks, no session-start, no NL
+  trigger. Three runtime modes dispatched: interactive (TTY may pause),
+  strict (CI never pauses), report-only (low-confidence partial allowed).
+  Excludes SAST-only findings without functional manifestation; excludes
+  test-code generation.
 allowed-tools: Read, Grep, Glob, Bash, Task
 min_model: claude-opus-4-7
-skill_semver: 1.1.0
+skill_semver: 1.2.0
 ---
 
 # functional-bug-hunter
@@ -34,6 +31,26 @@ dispatched through `references/stacks/INDEX.md`. The report is grounded:
 every claim cites a file, a line range, a commit SHA, and a dirty flag.
 Ungroundable hypotheses are quarantined in `hypotheses.json` and never
 promoted to the primary `qa_report.md`.
+
+## When to use
+
+Use this skill when you need a deterministic, evidence-grounded QA report
+of functional bugs reproducible by a human tester (ISTQB Foundation + 2y)
+against a codebase you can read statically. Typical triggers: pre-release
+regression scoping on a new feature branch, exploratory audit of an
+unfamiliar repository, post-incident root-cause investigation when the
+runtime is unavailable, cross-repo functional review where the bug may
+emerge at the boundary.
+
+## Supported stacks
+
+Tier-1 stacks (full pattern matrix): Java, Kotlin, Scala, TypeScript /
+JavaScript, Python, Go, Rust, Swift, Ruby, .NET / C#, Flutter / Dart,
+Terraform / HCL, AWS serverless (SAM, CDK, SFN, EventBridge), and data
+platforms (dbt, Airflow, Spark, SQL). Tier-2 fallback (`_generic-fallback.md`)
+covers Elixir, Clojure, PHP, Perl, Lua, Haskell, OCaml, and anything else
+the dispatcher does not recognise. See `references/stacks/INDEX.md` for the
+authoritative list and per-stack manifest fingerprints.
 
 ## How to invoke
 
@@ -105,223 +122,38 @@ against distinct `output_dir` are safe.
 
 ## Pipeline overview
 
-The pipeline has nine ordered phases. Each phase has canonical artifacts in
-the output directory, a closed set of stop triggers, and an explicit
-empty-input branch.
+Nine ordered phases (plus sub-phases 2.5 and 7.5). Each emits canonical
+artifacts under `output_dir`, has a closed stop-trigger set, and an
+empty-input branch. Full per-phase implementation detail is in
+`references/pipeline_internals.md` (load on demand).
 
-### Phase 0 — Preflight and mode detection
+| Phase | Purpose | Canonical artifacts | Empty-input branch |
+|---|---|---|---|
+| 0 — Preflight | Env probe, mode detect, run-lock acquire | `audit_log.jsonl`, `.fbh/run.lock` | abort if `preflight.sh overall_ok=false` |
+| 1 — Inventory | Walk roots, detect stacks via manifest fingerprints | `inventory.json` | fail-fast with manifest-hint suggestion |
+| 2 — Dep closure | Flag cross-repo / external dependencies | `boundary_identifier_registry.json`, `dependency_closure.md` | STOP per mode (see Stop conditions) |
+| 2.5 — Oracle inventory | Classify oracles (rank A/B/C); tag hypotheses | `oracle_inventory.md`; `oracle_status` + `oracle_ref` on each hypothesis | emit empty oracle list with warning |
+| 3 — Entry points | Stack-dispatched extraction, fan-out to ≤8 parallel subagents (`subagent_contract.md`) | `entry_points.json` | emit `qa_report.md status=no_entry_points` |
+| 4 — Flow | Build call & data flow per entry-point (bounded AST + grep budget 20) | `flow_graphs/<unit>.json` | record degraded in `coverage.md` |
+| 5 — Hypothesis gen | Apply `bug_patterns.md` matrix (rows × stacks) | `hypotheses.json` (pre-feasibility) | n/a (always emits at least empty list) |
+| 6 — Feasibility filter | `scripts/path_feasibility.py` verdicts each hypothesis | hypothesis verdict on `hypotheses.json` | emit `qa_report.md status=all_hypotheses_filtered` |
+| 7 — Repro synthesis | Canonical QA case via `severity_rubric.md` + `repro_voice_guide.md` | finding records (in-memory) | n/a |
+| 7.5 — Journey clustering | Deterministic cluster by (actor, entry-kind, top-resource); stable `J-NNN` | journey ids on findings | findings → `J-000-misc` |
+| 8 — Report assembly | `qa_report.json` (canonical) + `qa_report.md` (rendered) | `qa_report.json`, `qa_report.md`, `qa_report_overflow.md`, `coverage.md`, `open_questions.md`, `run_manifest.json` | n/a |
 
-Runs `scripts/preflight.sh` to confirm Bash 4 or POSIX fallback, Python 3.9,
-and either jq 1.6 or the bundled Python helper in `scripts/_json_helpers.py`.
-Detects whether `.git` is present (otherwise the grounding policy uses a
-content hash and sets `vcs: "none"`), whether the working tree is dirty
-(captured per file), and whether the clone is shallow (captured as a
-warning). Detects mode and writes the first entry of `audit_log.jsonl`.
+### Oracle rank (Phase 2.5)
 
-The phase acquires the run lock via `scripts/run_lock.py acquire <output_dir>`.
-A non-zero exit code from `run_lock.py acquire` MUST abort the run: rc=1
-means another live process holds the lock for the same output_dir; rc=2
-means an IO error. The orchestrator MUST also wire `scripts/run_lock.py
-release <output_dir>` on the EXIT / SIGINT / SIGTERM trap of its driver
-shell so the lock is removed on both normal termination and aborts. Stale
-locks (JSON `pid` no longer alive on the same host) are auto-removed by
-`acquire` with a stderr warning.
+| Rank | Oracle type | Examples | Reliability |
+|---|---|---|---|
+| A | Formal spec | OpenAPI/Swagger, Protobuf, JSON Schema, SQL schema with constraints | High — source of truth |
+| B | Test / contract | Unit, integration, acceptance criteria in commit/PR, Pact | Medium-high — reveals intent |
+| C | Informal docs | README, comments, Javadoc, repo-linked wikis | Medium — must be cross-checked |
 
-### Phase 1 — Inventory and stack detection
+Each entry in `hypotheses.json` carries `oracle_status` (`VERIFIED` / `PARTIAL` / `HYPOTHESIS`) and `oracle_ref` (file:line of the oracle, or `null`). `HYPOTHESIS`-status entries are persisted as weak signal, never discarded.
 
-Walks each root, applies the default and operator-supplied exclusions, and
-identifies analysis units. Stack detection consults the manifest
-fingerprints listed in `references/stacks/INDEX.md`: among them `pom.xml`,
-`build.gradle[.kts]`, `package.json`, `pyproject.toml`, `go.mod`,
-`Cargo.toml`, `pubspec.yaml`, Terraform sources, SAM and CDK templates,
-serverless framework files, Step Functions definitions, dbt and Airflow
-manifests, Helm charts, Kubernetes manifests, OpenAPI and GraphQL schemas,
-Gemfile, `.csproj`, `build.sbt`, and `mix.exs`. The `max_files_per_unit`
-cap of ten thousand applies; over-cap files are listed in `coverage.md`
-with reason `file_count_cap`. The phase emits `inventory.json`. Empty input
-branch: when no manifest is detected, the phase emits `inventory.json` with
-an empty unit list and the runtime fails fast with a suggestion to pass an
-explicit manifest hint.
+### Hallucination guard (between Phase 8 emission and rendering)
 
-### Phase 2 — Dependency graph and closure check
-
-Resolves internal versus external dependencies and flags every reference to
-a sibling repository, service, or module that is not in `args.roots`.
-Examples include Terraform remote state and module sources pointing to
-external buckets, Step Functions task ARNs targeting lambdas not in the
-roots, gRPC and REST clients with base URLs that match internal naming,
-shared protobuf schemas, internal-scope npm and Maven packages, and dbt
-`ref()` or `source()` references across projects. The phase builds
-`boundary_identifier_registry.json` keyed by (kind, identifier) and emits
-`dependency_closure.md` describing what is missing, why it matters for
-functional analysis, and which extra roots would close the graph. The STOP
-decision runs before subagent dispatch: in interactive mode the runtime
-pauses on a closure gap that touches a critical-path entry point; in strict
-mode it flags low confidence and continues; in report-only mode it records
-the gap and continues.
-
-### Phase 2.5 — Oracle Inventory
-
-Before any pattern matching, enumerate and classify the oracles
-available in the repository.
-
-#### Oracle Rank
-
-| Rank | Oracle type                  | Examples                                              | Reliability |
-|------|------------------------------|-------------------------------------------------------|-------------|
-| A    | Formal specification         | OpenAPI/Swagger YAML, Protobuf .proto, JSON Schema, SQL schema with constraints | High — source of truth |
-| B    | Test and contract            | Unit tests, integration tests, acceptance criteria in commit/PR, contract tests (Pact) | Medium-high — reveals intent |
-| C    | Informal documentation       | README, comments, Javadoc, wikis linked from the repo  | Medium — must be cross-checked against code |
-
-#### Output: oracle_inventory.md
-
-The phase emits `oracle_inventory.md` containing:
-- a table of discovered oracles (file path, rank, estimated coverage);
-- a list of oracles expected but absent (e.g. "no OpenAPI spec found for
-  the gateway").
-
-#### Impact on hypotheses.json
-
-Each entry in `hypotheses.json` MUST include two additional fields:
-- `oracle_status`: one of `VERIFIED` (oracle rank A/B seen during this
-  session), `PARTIAL` (oracle rank C), or `HYPOTHESIS` (no oracle, inferred
-  from code).
-- `oracle_ref`: file path plus line of the oracle used, or `null` when
-  `oracle_status` is `HYPOTHESIS`.
-
-Hypotheses with `oracle_status: HYPOTHESIS` are NOT discarded — they are
-persisted in `hypotheses.json` as a weak signal for subsequent runs.
-
-### Phase 3 — Entry point cartography
-
-Stack-dispatched extraction populates a canonical record per entry point
-containing identifier, unit, kind, actor primitive, trigger, inputs,
-downstream calls, side effects, and source ref with file, line range, SHA,
-and dirty flag. Entry-point kinds are enumerated and stable.
-
-The phase fans out to per-boundary subagents through the Task tool. The
-full contract — prompt template, JSON Schema (`SubagentResult` v1.0),
-dedup-key strategy, and merge algorithm — lives in
-`references/subagent_contract.md` and is the single source of truth.
-
-Every subagent MUST receive `schema_version: "1.0"` in its prompt and
-return JSON validated against the `SubagentResult` schema before merge.
-The orchestrator does not re-read unit code; it merges subagent return
-payloads via the deterministic `dedup_key` defined in the contract and
-reconciles cross-unit findings via shared boundary identifiers.
-
-The hard cap is **8 subagents in parallel**. When the runtime does not
-support parallel `Task` invocations, the orchestrator falls back to
-**sequential dispatch** with the identical prompt, schema, and merge —
-trading wall-clock time for compliance. The `max_entry_points_per_unit`
-cap applies; overflow is recorded in `open_questions.md` ranked by
-descending complexity score. The phase emits `entry_points.json`. Empty
-input branch: when no entry points exist, downstream phases are skipped
-and the runtime emits a `qa_report.md` whose status is `no_entry_points`.
-
-Cross-stack payloads consumed by Phase 3 subagents are produced by
-`scripts/generate_payloads.py` (see contract section "Payloads dir —
-producer"). When the payloads dir is absent or empty,
-`scripts/list_entry_points.py` prints a warning on stderr and continues
-with an empty array; it MUST NOT fail silently.
-
-### Phase 4 — Functional call and data flow reconstruction
-
-For each entry point the runtime builds a directed functional flow from
-input through validations, branches, external calls, persisted state, and
-response or side effect. Cross-unit hops are resolved via the boundary
-registry and the cross-stack bridge table in
-`references/cross_stack_bridges.md`, which governs language-agnostic
-identifier resolution (for example a TypeScript `fetch("/v1/x")` matched
-against a Python `@app.post("/v1/x")`). The analyzer uses bounded AST (tree
-sitter depth at most five) where a grammar exists, otherwise a regex
-fallback, augmented by at most twenty Grep round trips per entry point.
-Beyond that budget the analyzer degrades to grep-only context and notes
-the degradation in `coverage.md`. Per-unit graphs are written to
-`flow_graphs/<unit>.json`.
-
-### Phase 5 — Bug hypothesis generation
-
-Applies the stacked pattern matrix in `references/bug_patterns.md`. Rows
-are patterns, columns are stacks, cells are `MUST-if-applicable` or `N/A`.
-A pattern fires for a stack only when the precondition is surfaced by that
-stack. Mandatory categories include input validation gaps, authentication
-and authorization inversions that pass the functional manifestation test,
-state inconsistency and race windows, idempotency failures, retry and
-timeout pathologies, partial failure handling, off-by-one and pagination,
-timezone and locale, money and rounding, null and empty edge inputs,
-concurrent mutation, missing transactional boundaries, broken back-button,
-double-submit, error-message leakage, optimistic-UI desync, feature flag
-collisions, and IaC misconfigurations that drift the runtime functional
-contract. Hypotheses are persisted to `hypotheses.json` regardless of
-feasibility outcome.
-
-### Phase 6 — Path feasibility filter
-
-Each hypothesis is challenged against the actual code paths discovered in
-phase 4. The filter identifies the shared mutable state touched by the
-hypothesis, extracts the minimal code slice from entry point to that
-state, enumerates the path predicates encountered on the slice, and
-verdicts the hypothesis feasible only when an input exists that satisfies
-all predicates and at least one actor primitive can reach the entry point.
-Discarded hypotheses remain in `hypotheses.json` with the verdict reason.
-Empty input branch: when all hypotheses are filtered out, the runtime
-emits a `qa_report.md` whose status is `all_hypotheses_filtered`.
-
-### Phase 7 — QA-style reproduction synthesis
-
-For each surviving hypothesis the runtime emits a canonical QA test case
-with finding id, back-link to the entry-point id from phase 3, title,
-severity assigned through `references/severity_rubric.md` with mandatory
-citation of the matched rubric row, preconditions, steps (one actor
-primitive per step from the eight allowed primitives documented in
-`references/repro_voice_guide.md`), expected and actual result, redacted
-evidence excerpt, a one-sentence fix direction, a reproduction-rate
-target (eighty percent for race-window categories, ninety-five percent
-for the rest), and any cross-unit boundary observations. The schema
-mapping from canonical record to QA case is fixed in
-`references/qa_report_json_schema.md`.
-
-### Phase 7.5 — User-journey clustering
-
-Findings are clustered into deterministic user journeys keyed by the
-tuple (primary actor primitive, entry point kind, top resource id). Each
-journey receives a stable ordinal of the form `J-NNN`. Findings without
-enough signal land in journey `J-000-misc`. Clustering is performed only
-on findings retained from phase 7; the algorithm is deterministic and
-re-runnable.
-
-### Phase 8 — Report assembly
-
-The runtime assembles two artifacts side-by-side:
-
-1. **`qa_report.json`** — schema-stable output emitted directly by the
-   runtime. This is the canonical, diff-able artifact. The schema is
-   declared in `references/qa_report_json_schema.md` (aggregate of the
-   per-subagent `SubagentResult` schema plus report-level metadata).
-2. **`qa_report.md`** — markdown rendering of `qa_report.json` produced by
-   `scripts/render_qa_report.py`. The rendering is deterministic given the
-   same JSON: header timestamp is taken from `qa_report.json:generated_at`,
-   never from `datetime.now()`. The `.md` MUST NOT be used for byte-a-byte
-   diff in CI because free-text fields (title, preconditions, steps,
-   suggested_fix_direction) vary across LLM runs.
-
-The hallucination guard (`scripts/hallucination_guard.py`) MUST run on
-`qa_report.json` between emission and rendering; a non-zero exit code
-blocks the pipeline. Findings are grouped by journey then severity,
-capped at the configured maximum (default fifty). Overflow goes to
-`qa_report_overflow.md` and the primary report carries an index page
-listing all findings with link. `coverage.md` declares which entry
-points were analyzed and which were skipped, with skip reason drawn from
-a closed enumeration (time-budget, dead-code, generated-code,
-third-party, no-source-access, unparseable, out-of-scope, file-count-cap,
-ep-count-cap). `open_questions.md` lists items that need runtime
-evidence. `run_manifest.json` records semantic version, model id, mode,
-scope hash, phase durations, finding counts by severity, exit status,
-and the network-call counter (which must be zero). The lock is released.
-Output language is the value of `args.lang`, defaulting to English; when
-`it` is selected the narrative content is translated while schema field
-names remain English.
+`scripts/hallucination_guard.py qa_report.json` MUST exit 0 before `render_qa_report.py` runs. See `references/hallucination_guard.md` for the 5-check contract and grounding policy.
 
 ## Stop conditions
 
@@ -387,36 +219,10 @@ are allowed but mark the report header with `confidence: low_model_tier`.
 Versioning, bump rules, and the false-positive feedback loop are governed
 by `references/lifecycle_playbook.md`.
 
-## Hallucination Guard (machine-enforced)
+## Hallucination guard
 
-After generating `qa_report.json`, run:
-
-    python scripts/hallucination_guard.py qa_report.json
-
-A non-zero exit code MUST block the pipeline. Do not proceed to
-`render_qa_report.py` until `hallucination_guard.py` exits 0.
-
-The script enforces five deterministic checks against the JSON report:
-
-| Check | Rule |
-|---|---|
-| HG-01 | every finding has a non-empty `preconditions` array (≥1 item) |
-| HG-02 | every finding has a `steps` array with ≥2 items |
-| HG-03 | `dedup_key` is unique across the report (no duplicates) |
-| HG-04 | `reproduction_rate_target` is one of `deterministic` / `95%` / `80%` / `<80%-needs-harness` |
-| HG-05 | no two findings share an identical `title` (case-insensitive) |
-
-Violations are printed as one line per offender in the format
-`FINDING:<dedup_key>:HG-0N:<description>` so they are grep-able by CI.
-The script supersedes the prose 5-checkbox guard from previous versions,
-which degraded on reports with 30+ findings.
-
-### Grounding policy (Phase 3 / Phase 4)
-
-The machine-enforced HG above sits AFTER finding emission. The earlier
-grounding policy still applies during finding *construction*: never cite
-a line that was not seen in a grep/Read output; never assume framework
-from package naming when a manifest is available; never promote a
-hypothesis to a finding without a citable evidence excerpt. These are
-operator obligations the LLM must respect when populating the JSON;
-hallucination_guard.py only catches the structural symptoms.
+Phase 8 gates emission of `qa_report.md` behind
+`scripts/hallucination_guard.py qa_report.json` (exit 0 required). The
+guard runs five deterministic checks (HG-01..05) and enforces a grounding
+policy on hypothesis construction. Full contract in
+`references/hallucination_guard.md`.

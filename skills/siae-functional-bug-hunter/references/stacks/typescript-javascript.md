@@ -76,6 +76,64 @@ dependency arrays, error swallowing in `try/catch` without rethrow,
 timezone bugs from `new Date()` without TZ, money rounding from `Number`
 vs `BigInt`/`Decimal.js`.
 
+## Stack-specific patterns (additive on-demand)
+
+These patterns extend `bug_patterns.md` for React/TS lifecycle bugs that
+a manual QA tester would catch but generic patterns miss. They are
+applied when the unit imports `react` / `react-dom` (Phase 5).
+
+### BP-024 — react-lifecycle-race
+
+- **Actor primitive**: end_user
+- **Trigger** (regex, ANY of):
+  - `useEffect\s*\(\s*async`
+  - `useEffect\([^,]*fetch\(` AND no `AbortController` in the same body
+  - `useEffect\([^,]+,\s*\[\s*\]\s*\)` with closure capture of mutable
+    state (stale-closure red flag)
+- **Functional manifestation**: user opens screen A, navigates away before
+  fetch resolves, returns to screen A → stale data rendered OR `setState`
+  warning OR last-write-wins bug on tab switch.
+- **Severity hint**: MEDIUM (HIGH if `setState` is followed by side-effect
+  visible to a second user, e.g. notification dispatch).
+- **Evidence template**: `src/.../*.{tsx,jsx}:L#-L# — useEffect captures
+  <variable> in stale closure (deps array excludes it).`
+- **Reproduction-rate target**: `80%` (race-window category).
+- **Repro steps (ISTQB voice)**:
+  1. user opens screen A;
+  2. user observes initial fetch result rendered;
+  3. user navigates to screen B before fetch latency completes;
+  4. user observes screen B for at least the fetch latency;
+  5. user navigates back to screen A;
+  6. user observes that the rendered value is stale (last fetch from
+     the previous mount was applied to the new mount).
+
+### BP-025 — set-state-after-unmount
+
+- **Actor primitive**: end_user
+- **Trigger** (regex):
+  - `useEffect` body containing `\bfetch\(|\.then\(` AND no cleanup
+    function returned, AND the resolved callback calls
+    `set[A-Z]\w*\(` (any `useState` setter).
+  - `setTimeout`/`setInterval` inside `useEffect` without `clearTimeout`/
+    `clearInterval` in the cleanup.
+- **Functional manifestation**: user navigates away during pending
+  request; on resolve React logs *Can't perform a state update on an
+  unmounted component*; if the next mount uses the same store, stale
+  data leaks into the new screen.
+- **Severity hint**: MEDIUM.
+- **Evidence template**: `src/.../*.{tsx,jsx}:L# — useEffect lacks
+  cleanup; <setter> may fire after unmount.`
+- **Reproduction-rate target**: `80%`.
+- **Repro steps (ISTQB voice)**:
+  1. user opens screen A (component mounts; fetch starts);
+  2. user clicks back / nav to screen B before fetch resolves;
+  3. user observes browser console;
+  4. user observes the React warning *Can't perform a state update on
+     an unmounted component* — or, if the warning is suppressed, a
+     subsequent visit to screen A renders the stale value;
+  5. user re-opens screen A and confirms stale value or duplicate
+     fetch.
+
 ## Empty-input branch
 
 If a unit is detected as `typescript-javascript` (manifest present) but

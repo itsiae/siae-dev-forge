@@ -72,6 +72,70 @@ causing reprocessing, dbt source freshness threshold missing leading to
 silent stale data, SQL `MERGE` with non-unique join keys producing
 non-deterministic results.
 
+## Stack-specific patterns (additive on-demand)
+
+These patterns extend `bug_patterns.md` for PySpark / SparkSQL join and
+window correctness bugs that a manual QA tester would catch (duplicate
+rows visible in BI, partial reports, regression on segmented metrics)
+and that generic patterns miss.
+
+### BP-026 — nullable-join-key-loss
+
+- **Actor primitive**: report_consumer (or downstream_service for
+  materialised tables)
+- **Trigger** (regex, ALL of):
+  - `\.join\(\s*\w+\s*,\s*(?:on\s*=\s*)?["'][\w,]+["']` (DataFrame join
+    by column name)
+  - AND no upstream `\.filter\(\s*(F\.)?col\("\w+"\)\.isNotNull\(\)\)`
+    or `\.dropna\(subset=` on the join key
+  - AND no `\.fillna\(\{"\w+":` on the join key
+- **Functional manifestation**: when the join key column contains nulls,
+  Spark SQL semantics drop those rows for inner joins (data loss visible
+  as "missing" entities in the report) OR multiplies them on outer joins
+  if the other side also has nulls in that key (duplicate rows). End user
+  observes count mismatch between input row count and report row count.
+- **Severity hint**: HIGH for revenue / royalty reports, MEDIUM for
+  exploratory data.
+- **Evidence template**: `src/.../*.py:L# — join on "<col>" without
+  upstream null guard; <col> nullable per source schema (see
+  <source.parquet>).`
+- **Reproduction-rate target**: `deterministic`.
+- **Repro steps (ISTQB voice)**:
+  1. data engineer prepares the source partition for date D with at least
+     one row where `<col>` IS NULL;
+  2. data engineer runs the job on date D;
+  3. report consumer opens the downstream BI dashboard;
+  4. report consumer compares the count of source rows for date D against
+     the count in the dashboard;
+  5. report consumer observes a count mismatch (rows dropped from inner
+     join, OR rows duplicated from outer join).
+
+### BP-027 — window-missing-partition-by
+
+- **Actor primitive**: report_consumer
+- **Trigger** (regex):
+  - `Window(?:Spec)?\.orderBy\(` OR `Window(?:Spec)?\(\)\.orderBy\(`
+  - AND no `\.partitionBy\(` on the same `Window` builder chain
+  - AND the window is used by `row_number\(\)|rank\(\)|dense_rank\(\)|lag\(|lead\(|sum\(|avg\(|count\(`
+- **Functional manifestation**: the analytic function is computed across
+  the entire dataset instead of per group → ranks / running totals leak
+  across segments, top-N per category becomes top-N global. End user sees
+  the same entity appearing in multiple groups OR a single group hogging
+  the entire top-N.
+- **Severity hint**: HIGH (silently wrong numbers in BI).
+- **Evidence template**: `src/.../*.py:L# — Window.orderBy(...) without
+  partitionBy; intended grouping by "<expected_col>" inferred from
+  surrounding column refs.`
+- **Reproduction-rate target**: `deterministic`.
+- **Repro steps (ISTQB voice)**:
+  1. data engineer ingests a dataset with at least two distinct values of
+     the intended grouping column (e.g. two `genre` values);
+  2. data engineer runs the job;
+  3. report consumer opens the "top N by group" report;
+  4. report consumer observes that the ranks are continuous across groups
+     (e.g. genre A has positions 1, 3, 5 and genre B has positions 2, 4,
+     6) instead of restarting per group.
+
 ## Empty-input branch
 
 If a unit is detected as `data-platform` but contains no models, DAGs,

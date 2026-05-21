@@ -163,21 +163,82 @@ def release(output_dir: Path) -> int:
     return 0
 
 
+# Runtime mode dispatcher (Phase 0 → emit Action for STOP events).
+# Single source of truth: references/runtime_modes.md.
+class DispatchError(ValueError):
+    """Raised when dispatch receives an unknown mode or event."""
+
+
+_MODES = ("interactive", "strict", "report-only")
+_EVENTS = (
+    "STOP_DEPENDENCY_CLOSURE",
+    "STOP_FINDING_THRESHOLD",
+    "STOP_WALLCLOCK_EXCEEDED",
+    "STOP_DIRTY_WORKING_TREE",
+    "STOP_AMBIGUOUS_SCOPE",
+)
+_DISPATCH_TABLE = {
+    "interactive": {ev: "PAUSE" for ev in _EVENTS},
+    "strict": {ev: "CONTINUE" for ev in _EVENTS},
+    "report-only": {
+        "STOP_DEPENDENCY_CLOSURE": "DEGRADE",
+        "STOP_FINDING_THRESHOLD": "CONTINUE",
+        "STOP_WALLCLOCK_EXCEEDED": "CONTINUE",
+        "STOP_DIRTY_WORKING_TREE": "CONTINUE",
+        "STOP_AMBIGUOUS_SCOPE": "CONTINUE",
+    },
+}
+
+
+def dispatch(mode: str, event: str) -> str:
+    if mode not in _DISPATCH_TABLE:
+        raise DispatchError(
+            f"unknown mode '{mode}' (expected one of {_MODES})"
+        )
+    if event not in _EVENTS:
+        raise DispatchError(
+            f"unknown event '{event}' (expected one of {_EVENTS})"
+        )
+    return _DISPATCH_TABLE[mode][event]
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("action", choices=["acquire", "release"])
-    p.add_argument("output_dir", type=Path)
-    p.add_argument(
-        "--pid",
-        type=int,
-        default=os.getppid(),
-        help="PID to record as lock owner (default: parent shell pid).",
+    sub = p.add_subparsers(dest="action", required=True)
+
+    for action in ("acquire", "release"):
+        sp = sub.add_parser(action)
+        sp.add_argument("output_dir", type=Path)
+        if action == "acquire":
+            sp.add_argument(
+                "--pid",
+                type=int,
+                default=os.getppid(),
+                help="PID to record as lock owner (default: parent shell pid).",
+            )
+
+    sp_dispatch = sub.add_parser(
+        "dispatch",
+        help="Resolve (mode, event) -> Action per runtime_modes.md matrix.",
     )
+    sp_dispatch.add_argument("mode", choices=list(_MODES))
+    sp_dispatch.add_argument("event", choices=list(_EVENTS))
+
     args = p.parse_args(argv)
 
     if args.action == "acquire":
         return acquire(args.output_dir, args.pid)
-    return release(args.output_dir)
+    if args.action == "release":
+        return release(args.output_dir)
+    if args.action == "dispatch":
+        try:
+            action = dispatch(args.mode, args.event)
+        except DispatchError as e:
+            sys.stderr.write(f"[run_lock] {e}\n")
+            return 2
+        sys.stdout.write(action + "\n")
+        return 0
+    return 2
 
 
 if __name__ == "__main__":
