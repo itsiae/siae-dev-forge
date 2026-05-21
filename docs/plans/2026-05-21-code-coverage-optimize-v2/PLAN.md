@@ -34,7 +34,7 @@ Reduce iterations / wall-time / token spend of `/code-coverage` without losing e
 | B1 | `parse_coverage.py --view repair` flag (returns aggregates only) | `scripts/parse_coverage.py` add CLI arg | HIGH |
 | B2 | Fix glob→regex unanchored in `assign_priority_and_threshold` (use `last_2_segments` anchor like estimate_size.py) | `scripts/parse_coverage.py:395-451` | HIGH (breaking, version bump) |
 | B3 | `parse_go_cover` correct line% from `coverage.out` (weighted by numStmt) | `scripts/parse_coverage.py:154-176` | MEDIUM (breaking, no longer over-reports) |
-| B4 | `detect_monorepo` Maven reactor (`<modules>`) + Gradle (`settings.gradle[.kts]` include()) + Bazel WORKSPACE | `scripts/detect_stack.py:362-379` | HIGH (unblocks Java repos) |
+| B4 | `detect_monorepo` Maven reactor (`<modules>`) + Gradle (`settings.gradle[.kts]` include()) | `scripts/detect_stack.py:362-379` | HIGH (unblocks Java repos) |
 
 ### Agent C — templates + categorize + phase1 + cache (no overlap with A/B)
 
@@ -50,6 +50,7 @@ Reduce iterations / wall-time / token spend of `/code-coverage` without losing e
 - Sub-agent dispatch for VERY_LARGE (RT-F6) — conditional optimization, deferred.
 - Missing frameworks (Mocha, TestNG, Bun, Clover XML, lcov BRDA) — separate PR.
 - Phase 7 reduce to 2 iter (FS-6) — needs empirical validation first.
+- Bazel `MODULE.bazel` / `WORKSPACE` monorepo detection (B4 follow-up) — deferred: Maven + Gradle cover the dominant SIAE Java repos (10+ multi-module). Bazel is rare in the org footprint; add when first Bazel repo lands.
 
 ## Risk + mitigation
 
