@@ -85,10 +85,11 @@ if [ -f "$REPO/.code-coverage/coverage-report.json" ]; then
   echo "[phase1] phase5b probe skipped: coverage-report.json already present"
   PROBE_STATE="skipped"
 else
-  NEED_PROBE=$(python3 -c "
-import json
+  NEED_PROBE=$(python3 - "$REPO" <<'PYEOF'
+import json, sys
+repo = sys.argv[1]
 try:
-    d = json.load(open('$REPO/.code-coverage/stack.json'))
+    d = json.load(open(f"{repo}/.code-coverage/stack.json"))
 except Exception:
     print('no')
 else:
@@ -96,7 +97,8 @@ else:
     tfc = d.get('test_infrastructure', {}).get('test_files_count', 0)
     mc = d.get('module_coverage', [])
     print('yes' if (efs and tfc > 0 and not mc) else 'no')
-")
+PYEOF
+)
   if [ "$NEED_PROBE" = "yes" ]; then
     echo "[phase1] phase5b probe auto-triggered"
     if bash "$SKILL_DIR/lib/phase6-coverage.sh" "$REPO" --probe; then
