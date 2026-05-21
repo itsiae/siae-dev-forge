@@ -1,0 +1,16 @@
+{
+  "wrong_finding": {
+    "dedup_key": "0000000000000005",
+    "title": "Profile update does not invalidate Redis cache; reads serve stale data for up to 5 minutes",
+    "severity": "SEV-1",
+    "category": "data-race",
+    "entry_point_id": "profile.update",
+    "preconditions": ["any"],
+    "steps": ["any", "any"],
+    "expected": "...",
+    "actual": "...",
+    "suggested_fix_direction": "...",
+    "reproduction_rate_target": "deterministic"
+  },
+  "why_wrong": "Two errors. (1) Category 'data-race' implies concurrent mutation: there is no race here, just a missing invalidation step. Correct: 'cache-staleness'. (2) SEV-1 escalates a 5-minute bounded staleness on non-sensitive data to a release-blocker; that misuses the rubric. The escalator to SEV-2/SEV-1 requires the staleness window > 5 minutes AND auth/financial/PII data; neither condition holds here. Correct: SEV-3 / R-SEV3-09."
+}

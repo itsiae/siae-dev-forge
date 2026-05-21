@@ -1,0 +1,16 @@
+{
+  "wrong_finding": {
+    "dedup_key": "0000000000000001",
+    "title": "Chunked upload accepts chunks after user permission is revoked",
+    "severity": "SEV-1",
+    "category": "auth-bypass",
+    "entry_point_id": "uploads.chunked.start",
+    "preconditions": ["any"],
+    "steps": ["any", "any"],
+    "expected": "...",
+    "actual": "...",
+    "suggested_fix_direction": "...",
+    "reproduction_rate_target": "deterministic"
+  },
+  "why_wrong": "Auth was correctly enforced at the start of the flow — the user originally had the right to upload. A privilege grant that LATER becomes invalid is TOCTOU, not auth-bypass. SEV-1 / category auth-bypass would be appropriate only if the user could initiate the upload without ever having been authorized; here the user was authorized and then revoked. Correct: SEV-2 / category toctou per R-SEV2-07."
+}

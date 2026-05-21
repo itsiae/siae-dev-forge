@@ -1,0 +1,1 @@
+Using credentials <REDACTED:AWS_ACCESS_KEY_ID> for the upload step.

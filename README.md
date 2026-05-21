@@ -15,11 +15,11 @@
 
 > **Plugin Claude Code per lo sviluppo software conforme agli standard SIAE.**
 > Copre l'intero SDLC (Software Development Life Cycle) con un backbone deterministico
-> a 4 fasi e un catalog specialistico di **43 skill, 10 comandi, 5 agent, 25 hook**.
+> a 4 fasi e un catalog specialistico di **44 skill, 10 comandi, 5 agent, 25 hook**.
 
 | Metadato | Valore |
 |---|---|
-| Versione | `1.63.4` |
+| Versione | `1.64.0` |
 | Autore | SIAE AI Competence Center · `ai-cc@siae.it` |
 | Licenza | Proprietary |
 | Target | Claude Code CLI ≥ 0.x, Anthropic SDK |
@@ -318,7 +318,7 @@ siae-dev-forge/
 ├── reports/                     # Output report (analytics, release-risk, evidence)
 ├── rules/                       # Semgrep custom rules (PII, presigned URL, XSS supplement)
 ├── scripts/                     # CLI utility (emit-claude-md.py, anti-bloat-lint.py, …)
-├── skills/                      # 43 skill (1 dir per skill, SKILL.md + reference/)
+├── skills/                      # 44 skill (1 dir per skill, SKILL.md + reference/)
 ├── statusline/                  # Custom statusline Claude Code (skill count, commits)
 ├── tests/                       # pytest suite (test_*.py)
 ├── tools/                       # CLI tools (forge-score CLI, …)
@@ -415,6 +415,7 @@ Tutte le modifiche sono tracciate in [CHANGELOG.md](./CHANGELOG.md) (Keep-a-Chan
 
 | Versione | Data | Highlights |
 |---|---|---|
+| `1.64.0` | 2026-05-21 | **siae-functional-bug-hunter** (manual-only, skill_semver 1.1.0): static multi-repo cross-stack functional bug hunter, 15 stack support + fallback, output qa_report.md deterministico per tester manuale |
 | `1.63.4` | 2026-05-20 | **Bypass evidence subprocess-safe (BUG A)**: marker file session-scoped `~/.claude/devforge-state/<sid>/.bypass-evidence` (env var non propagata a subprocess hook); cleanup auto a session-end |
 | `1.63.3` | 2026-05-20 | **Telemetry bugs (3 critici)**: sid `no-session` fallback (44k eventi orfani), `LAST_HASH_FILE` per-repo (era globale → 103× inflazione commit_created), hardening evidence bypass (state file rimosso, solo env var session-scoped) |
 | `1.63.2` | 2026-05-20 | 3 test deterministici anti-allucinazione (19 PASS): count consistency, validates_via well-formed, phantom slash commands |

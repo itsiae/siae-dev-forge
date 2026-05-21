@@ -4,6 +4,25 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.64.0] - 2026-05-21
+
+### Added — Skill `siae-functional-bug-hunter` (manual-only)
+
+Integrata nel marketplace la skill `siae-functional-bug-hunter` (skill_semver 1.1.0): static, multi-repo, cross-stack functional bug hunter. Ingerisce uno o piu' root di repository, rileva quando occorre estendere la dependency closure, genera ipotesi di bug da una matrice di pattern stack-aware, le filtra per path feasibility ed emette un `qa_report.md` deterministico raggruppato per user-journey con recipe di riproduzione minimally-flaky scritte per un tester manuale (profilo ISTQB Foundation + 2 anni di esperienza).
+
+Stack supportati: Java, TypeScript/JavaScript, Python, Go, Rust, Kotlin, Swift, Ruby, .NET/C#, Scala, Flutter/Dart, Terraform/HCL, AWS serverless (SAM/CDK/SFN/EventBridge), data platforms (dbt/Airflow/Spark/SQL), piu' un profilo di fallback generico.
+
+**Invocazione manual-only**: la skill parte solo via slash command esplicito `/siae-functional-bug-hunter` con JSON conforme al contratto Inputs. Nessun hook automatico, nessun session-start activation, nessun auto-trigger natural-language. Tre runtime mode: `interactive` (TTY, pausa su scope mancante), `strict` (CI, mai pausa), `report-only` (low-confidence partial ammesso).
+
+**Esclusioni**: findings SAST-only che non passano il functional manifestation test; generazione di codice di test automatizzato.
+
+**File aggiunti:** `skills/siae-functional-bug-hunter/` (88 file, 580K) — SKILL.md, `scripts/` (preflight, dependency_closure, list_entry_points, render_qa_report, hallucination_guard, redact_pii, generate_payloads, run_lock), `references/` (bug_patterns, cross_stack_bridges, lifecycle_playbook, severity_rubric, repro_voice_guide, qa_inclusion_tree, qa_report_json_schema, repo_granularity, subagent_contract, stacks/INDEX.md), `tools/` (check_pluggability, repro_voice_lint, triggerlint, wordcount), `tests/`, `eval/`, `assets/`.
+
+**File modificati:**
+- `.claude-plugin/plugin.json` — version 1.63.4 -> 1.64.0, count 43 skill -> 44 skill
+- `.claude-plugin/marketplace.json` — version 1.63.4 -> 1.64.0, count 43 skill -> 44 skill
+- `README.md` — count 43 skill -> 44 skill (header + tree)
+
 ## [1.63.4] - 2026-05-20
 
 ### Fixed — Bypass evidence subprocess-safe (BUG A)

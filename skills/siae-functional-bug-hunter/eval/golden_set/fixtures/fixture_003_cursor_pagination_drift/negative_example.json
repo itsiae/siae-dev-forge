@@ -1,0 +1,16 @@
+{
+  "wrong_finding": {
+    "dedup_key": "0000000000000003",
+    "title": "Orders pagination returns wrong data",
+    "severity": "SEV-2",
+    "category": "input-validation",
+    "entry_point_id": "orders.list",
+    "preconditions": ["any"],
+    "steps": ["any", "any"],
+    "expected": "...",
+    "actual": "...",
+    "suggested_fix_direction": "Add input validation for the cursor parameter.",
+    "reproduction_rate_target": "deterministic"
+  },
+  "why_wrong": "Three errors. (1) Category 'input-validation' is wrong: the cursor format IS validated (ISO-8601 timestamp); the bug is in the SQL ordering, not the input parsing. Correct: 'cursor-drift'. (2) SEV-2 over-rates a recoverable inconsistency on infrequent paths; SEV-3 is the right tier per R-SEV3-01. (3) The fix direction is misleading — adding input validation does nothing for an order-by-non-unique-column problem; the fix is a composite cursor."
+}
