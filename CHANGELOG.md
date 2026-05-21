@@ -4,6 +4,36 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.7] - 2026-05-21
+
+### Changed — Bootstrap esteso a TUTTI i 16 runner OSS (default)
+
+Richiesta utente: *"Devono partire di default con autoinstallati sempre"* — non solo i 6 core security primary.
+
+`scripts/runner-bootstrap.sh CORE_RUNNERS` esteso da 6 a 16 tool (tutti i runner OSS DevForge eccetto `mvn` che è build tool, non SAST):
+
+| Stack | Runner |
+|---|---|
+| cross | semgrep, gitleaks, eslint, ts-unused-exports |
+| java | spotbugs |
+| python | bandit, pip-audit, vulture, pyright |
+| ios | swiftlint |
+| android | detekt, ktlint |
+| aws | tflint, tfsec, checkov, cfn-lint |
+
+**Cold-start vs steady-state:**
+- Prima session (cold): brew + pip + npm install di 16 tool. Latency 3-15 min in background (asincrono, no-blocking workflow).
+- Sessioni successive: cooldown 1h evita re-bootstrap. Tool già in PATH = silent exit 0.
+- Cache brew/pip rende le ri-install successive (es. dopo cache eviction) sotto 30s.
+
+**Throttling**: max 4 install paralleli per evitare brew lock contention.
+
+**Warning rossi** (`\033[1;31m[DEVFORGE WARN]\033[0m`) emessi su stderr per ogni tool che fallisce install. Non bloccano. L'utente vede chiaramente cosa è degradato.
+
+**Override env vars** (memoria `feedback_session_start_hook_invariants`):
+- `DEVFORGE_BOOTSTRAP_COOLDOWN=0` — force re-bootstrap (debug)
+- `DEVFORGE_RUNNER_ENSURE_TIMEOUT=N` — timeout per singolo runner install (default 60s)
+
 ## [1.63.6] - 2026-05-21
 
 ### Added — Runner auto-bootstrap automatico (zero setup per nuovi dev)

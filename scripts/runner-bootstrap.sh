@@ -13,14 +13,17 @@
 #     evita ri-esecuzione entro 1h dall'ultima.
 #   * Logged: warning rossi ANSI emessi da --ensure su stderr (TTY-aware).
 #
-# Tool core (security primary):
-#   cross:  semgrep, gitleaks
-#   python: bandit, pip-audit
-#   aws:    tfsec, checkov
+# Tool TUTTI (17 runner OSS DevForge) — v1.63.7+:
+#   cross:   semgrep, gitleaks, eslint, ts-unused-exports
+#   java:    mvn, spotbugs
+#   python:  bandit, pip-audit, vulture, pyright
+#   ios:     swiftlint
+#   android: detekt, ktlint
+#   aws:     tflint, tfsec, checkov, cfn-lint
 #
-# I tool meno critici (eslint, ts-unused-exports, swiftlint, ktlint, tflint,
-# vulture, pyright, detekt, cfn-lint, spotbugs) NON sono in bootstrap auto
-# per non saturare cold-start. Vengono installati su `--ensure` esplicito.
+# v1.63.6 limitava il bootstrap ai 6 core "security primary"; v1.63.7+ installa
+# tutti i 17 runner di default. Cooldown 1h, parallel throttled (max 4) — overhead
+# significativo SOLO al primo run (cold start), poi cache brew/pip → secondi.
 #
 # Uso:
 #   bash scripts/runner-bootstrap.sh           # background ensure
@@ -67,8 +70,22 @@ if [ ! -x "$INSTALLER" ] && [ ! -f "$INSTALLER" ]; then
     exit 0  # silent, no installer = no bootstrap
 fi
 
-# Runner core (priorità security)
-CORE_RUNNERS=(semgrep gitleaks bandit pip-audit tfsec checkov)
+# Runner ALL (v1.63.7+: tutti i 17 OSS auto-installati di default)
+CORE_RUNNERS=(
+    # cross-stack (SAST + secrets)
+    semgrep gitleaks eslint ts-unused-exports
+    # java
+    spotbugs
+    # python
+    bandit pip-audit vulture pyright
+    # ios
+    swiftlint
+    # android
+    detekt ktlint
+    # aws / IaC
+    tflint tfsec checkov cfn-lint
+)
+# Nota: mvn escluso (build tool, non runner SAST — installato via brew direttamente)
 
 # Mode: sync (blocking) o async (default)
 MODE="async"
