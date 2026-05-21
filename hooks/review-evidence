@@ -33,6 +33,14 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
+# ── Runner auto-bootstrap v1.63.5 ──────────────────────────────
+# Ensure runner OSS security (semgrep, gitleaks, bandit, pip-audit, tfsec, checkov)
+# disponibili. Lancia in background con cooldown 1h. Non-blocking: i runner
+# missing emettono warning ROSSO su stderr ma il scan continua.
+if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
+    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" >/dev/null 2>&1 &
+fi
+
 # ── Bypass HARDENED v1.63.4 ─────────────────────────────────────
 #
 # Audit S3 telemetry 2026-05-20: evidence_bypass_used emesso 5786 volte in 6gg.

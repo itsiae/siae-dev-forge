@@ -4,6 +4,44 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.63.6] - 2026-05-21
+
+### Added — Runner auto-bootstrap automatico (zero setup per nuovi dev)
+
+Richiesta utente: *"Lo deve fare in automatico DevForge"* — non manualmente. Estensione di v1.63.5 `--ensure`: ora il bootstrap è invocato dal hook `review-evidence` ad ogni esecuzione, non più solo on-demand.
+
+**Nuovo `scripts/runner-bootstrap.sh`:**
+- 6 runner core security: `semgrep, gitleaks, bandit, pip-audit, tfsec, checkov`
+- Esecuzione in background (no-blocking), max 4 parallel via job control
+- Cooldown 1h via sentinel `~/.claude/.devforge-runner-bootstrap-last` (override `DEVFORGE_BOOTSTRAP_COOLDOWN`)
+- PATH esteso a `/opt/homebrew/bin`, `~/.local/bin`, `~/Library/Python/3.*/bin`, `~/.npm-global/bin` (subshell hook non eredita PATH utente)
+- Modes: default `async` (background parallel), `--sync` (per test/CI)
+- Idempotent: runner già installati = exit silent
+- Output: warning rossi ANSI da `--ensure` su stderr (TTY-aware)
+
+**Integrazione `hooks/review-evidence`:**
+```bash
+# Lancio bootstrap in background subito dopo session init
+if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
+    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" >/dev/null 2>&1 &
+fi
+```
+
+**Flusso end-to-end per nuovo dev SIAE:**
+1. `claude` (apre sessione)
+2. Hook `session-start` → `siae-onboarding`
+3. Primo `git commit`/`gh pr create` → `review-evidence` scatta
+4. **`runner-bootstrap.sh` lancia in background** install dei 6 runner core
+5. Cooldown 1h: prossimi commit non re-bootstrappano
+6. Warning rossi ANSI su stderr per ogni runner che fallisce install
+
+**Test empirico:**
+- Cooldown clear + tutti installati → silent ✓
+- Cooldown attivo → skip silent ✓
+- Subshell PATH ora vede `~/Library/Python/3.9/bin` ✓ (bandit/pip-audit visti correttamente)
+
+**Tool non in bootstrap auto** (su `--ensure` esplicito): eslint, ts-unused-exports, swiftlint, ktlint, tflint, vulture, pyright, detekt, cfn-lint, spotbugs, mvn. Motivazione: ridurre cold-start latency e brew lock contention.
+
 ## [1.63.5] - 2026-05-21
 
 ### Added — Runner lazy auto-install non-blocking (`--ensure <tool>`)

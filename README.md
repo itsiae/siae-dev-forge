@@ -19,7 +19,7 @@
 
 | Metadato | Valore |
 |---|---|
-| Versione | `1.63.5` |
+| Versione | `1.63.6` |
 | Autore | SIAE AI Competence Center · `ai-cc@siae.it` |
 | Licenza | Proprietary |
 | Target | Claude Code CLI ≥ 0.x, Anthropic SDK |
@@ -415,6 +415,7 @@ Tutte le modifiche sono tracciate in [CHANGELOG.md](./CHANGELOG.md) (Keep-a-Chan
 
 | Versione | Data | Highlights |
 |---|---|---|
+| `1.63.6` | 2026-05-21 | **Runner auto-bootstrap automatico**: `scripts/runner-bootstrap.sh` invocato automaticamente da `hooks/review-evidence` in background (cooldown 1h). Auto-install dei 6 runner security primari, warning rossi non-blocking se fail. Niente più setup manuale per nuovi dev SIAE. |
 | `1.63.5` | 2026-05-21 | **Runner lazy auto-install non-blocking**: `--ensure <tool>` con timeout, warning rosso ANSI su stderr se install fail, exit 0 (no block). 12/17 runner OSS installati locale (semgrep, gitleaks, bandit, ecc.). |
 | `1.63.4` | 2026-05-20 | **Bypass evidence subprocess-safe (BUG A)**: marker file session-scoped `~/.claude/devforge-state/<sid>/.bypass-evidence` (env var non propagata a subprocess hook); cleanup auto a session-end |
 | `1.63.3` | 2026-05-20 | **Telemetry bugs (3 critici)**: sid `no-session` fallback (44k eventi orfani), `LAST_HASH_FILE` per-repo (era globale → 103× inflazione commit_created), hardening evidence bypass (state file rimosso, solo env var session-scoped) |
