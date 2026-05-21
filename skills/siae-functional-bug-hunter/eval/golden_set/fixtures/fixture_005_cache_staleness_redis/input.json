@@ -1,0 +1,55 @@
+{
+  "entry_points": [
+    {
+      "id": "profile.update",
+      "boundary_id": "PUT /v1/profile",
+      "kind": "http-route",
+      "unit_id": "profile-service",
+      "trigger": "PUT /v1/profile",
+      "actor": "api-caller",
+      "inputs": [
+        {"name": "display_name", "type": "string"},
+        {"name": "avatar_url", "type": "string"}
+      ],
+      "downstream_calls": [
+        "db.profiles.update(user_id, ...)"
+      ],
+      "side_effects": [
+        "profile row updated"
+      ],
+      "source_ref": {
+        "file": "profile/handlers.py",
+        "line_start": 41,
+        "line_end": 65,
+        "sha": "e5f6a7b",
+        "dirty_flag": false
+      }
+    },
+    {
+      "id": "profile.read",
+      "boundary_id": "GET /v1/profile/{user_id}",
+      "kind": "http-route",
+      "unit_id": "profile-service",
+      "trigger": "GET /v1/profile/{user_id}",
+      "actor": "api-caller",
+      "inputs": [
+        {"name": "user_id", "type": "string"}
+      ],
+      "downstream_calls": [
+        "redis.get(profile:{user_id})",
+        "db.profiles.select(user_id) -- only on cache miss"
+      ],
+      "side_effects": [
+        "redis SETEX profile:{user_id} 300 ..."
+      ],
+      "source_ref": {
+        "file": "profile/handlers.py",
+        "line_start": 12,
+        "line_end": 38,
+        "sha": "e5f6a7b",
+        "dirty_flag": false
+      }
+    }
+  ],
+  "stack_context": "python+flask+redis cache-aside; PUT /v1/profile writes db.profiles but never deletes the redis key profile:{user_id}; TTL 300s; reads check redis first"
+}

@@ -1,0 +1,1 @@
+Server at <REDACTED:IPV4> returned a 502 error during health-check.

@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0",
+  "run_id": "example-ts-frontend",
+  "scope_hash": "4f1c8a9d",
+  "generated_at": "2026-05-21T00:00:00Z",
+  "skill_semver": "1.1.0",
+  "model_id": "claude-opus-4-7",
+  "mode": "report-only",
+  "confidence": "medium",
+  "lang": "en",
+  "findings": [
+    {
+      "dedup_key": "0a1b2c3d4e5f6071",
+      "finding_id": "F-0001",
+      "entry_point_id": "nx:web/components/checkout/PayButton.tsx",
+      "journey": "J-001",
+      "title": "Pay button accepts double click within request window",
+      "severity": "SEV-2",
+      "severity_rubric_row": "R-SEV2-03",
+      "pattern_id": "BP-014",
+      "category": "data-race",
+      "preconditions": [
+        "The user has a populated cart and a valid stored payment method.",
+        "The user is on the page /checkout."
+      ],
+      "steps": [
+        "(ui-user) Click the button labeled \"Pay\"",
+        "(ui-user) Click the button labeled \"Pay\" within 100 ms",
+        "(observer) Open the table \"payments\" on database \"siae-checkout-prod\" and report the row count for the user's order_id"
+      ],
+      "expected": "Exactly one row is inserted in the table \"payments\" for the order_id.",
+      "actual": "Two rows are inserted in the table \"payments\" for the same order_id; the second row is reconciled only by a nightly job.",
+      "evidence": [
+        {
+          "file": "components/checkout/PayButton.tsx",
+          "line_start": 22,
+          "line_end": 34,
+          "sha": "c1a4f8d",
+          "dirty_flag": false,
+          "excerpt": "const onClick = async () => { await api.pay(orderId); };"
+        },
+        {
+          "file": "app/api/pay/route.ts",
+          "line_start": 11,
+          "line_end": 19,
+          "sha": "c1a4f8d",
+          "dirty_flag": false,
+          "excerpt": "await db.payments.insert({ orderId, ts: Date.now() });"
+        }
+      ],
+      "suggested_fix_direction": "Disable the button after the first click until the response settles, and add a server-side dedupe key on (user_id, order_id, minute).",
+      "reproduction_rate_target": "95%",
+      "confidence": "medium"
+    },
+    {
+      "dedup_key": "1f2e3d4c5b6a7980",
+      "finding_id": "F-0002",
+      "entry_point_id": "nx:web/app/signup/page.tsx",
+      "journey": "J-002",
+      "title": "Signup form clears on browser back navigation",
+      "severity": "SEV-3",
+      "severity_rubric_row": "R-SEV3-07",
+      "pattern_id": "BP-013",
+      "category": "business-logic",
+      "preconditions": [
+        "Public access to the application; the user is not yet authenticated.",
+        "Browser history is enabled (standard Chrome / Firefox / Safari)."
+      ],
+      "steps": [
+        "(ui-user) Open the page /signup",
+        "(ui-user) Type \"mario.rossi@example.com\" in the field \"email\"",
+        "(ui-user) Type \"Pa$$w0rd1!\" in the field \"password\"",
+        "(ui-user) Click the button labeled \"Continue\"",
+        "(ui-user) Press the browser back arrow once",
+        "(observer) Inspect the page /signup and report the value of the field \"email\""
+      ],
+      "expected": "The field \"email\" still contains \"mario.rossi@example.com\" after the back navigation.",
+      "actual": "The field \"email\" is empty; the user must re-enter the address.",
+      "evidence": [
+        {
+          "file": "app/signup/page.tsx",
+          "line_start": 38,
+          "line_end": 52,
+          "sha": "c1a4f8d",
+          "dirty_flag": false,
+          "excerpt": "const [email, setEmail] = useState(\"\");"
+        },
+        {
+          "file": "app/signup/page.tsx",
+          "line_start": 71,
+          "line_end": 78,
+          "sha": "c1a4f8d",
+          "dirty_flag": false,
+          "excerpt": "router.push(\"/signup/confirm\");"
+        }
+      ],
+      "suggested_fix_direction": "Persist the form state in sessionStorage keyed by route, or wire the form to a route-level loader that rehydrates state on popstate.",
+      "reproduction_rate_target": "95%",
+      "confidence": "medium"
+    }
+  ],
+  "stats": {
+    "SEV-1": 0,
+    "SEV-2": 1,
+    "SEV-3": 1,
+    "SEV-4": 0
+  }
+}

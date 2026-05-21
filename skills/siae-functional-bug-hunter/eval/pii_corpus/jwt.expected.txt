@@ -1,0 +1,1 @@
+Header Authorization: Bearer <REDACTED:JWT> rejected by the gateway.
