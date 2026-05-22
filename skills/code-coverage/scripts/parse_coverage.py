@@ -151,17 +151,87 @@ def parse_jacoco_xml(content: str) -> tuple[float, float, list[dict]]:
     return global_pct, global_branch_pct, modules
 
 
+# coverage.out format (raw): "file:start.line.col,end.line.col numStmt count"
+# Esempio: "github.com/foo/pkg/file.go:10.1,15.2 10 1"
+_GO_COVER_OUT_LINE_RE = re.compile(
+    r"^([^:]+\.go):\d+\.\d+,\d+\.\d+\s+(\d+)\s+(\d+)$"
+)
+# Legacy "go tool cover -func" format: "file:line:\tFunc\tpct%"
+_GO_COVER_FUNC_LINE_RE = re.compile(r"^([^:]+\.go):\d+:\s+\S+\s+(\d+\.?\d*)%")
+
+
 def parse_go_cover(content: str) -> tuple[float, float, list[dict]]:
+    """Parser per Go coverage.
+
+    Due formati supportati:
+      1. ``coverage.out`` raw (preferito, da ``go test -coverprofile``): header
+         ``mode: <set|count|atomic>`` + linee
+         ``file:start.line.col,end.line.col numStmt count``. line_pct
+         calcolato come ``sum(numStmt where count>0) / sum(numStmt) * 100``
+         per file e globalmente — pesato sul numero di statement, NON sulla
+         media aritmetica per-func (che e' biased quando le func hanno
+         numStmt molto disuguali).
+      2. ``go tool cover -func`` output (back-compat): linee
+         ``file:line:\\tFunc\\tpct%`` + ``total:\\t(statements)\\tpct%``.
+         line_pct = media aritmetica delle func% (back-compat, biased ma
+         compatibile).
+
+    Auto-detection: presenza dell'header ``mode:`` → coverage.out raw;
+    altrimenti → -func output (con warning su stderr).
+    """
+    lines = content.splitlines()
+
+    # Detect coverage.out raw format via "mode:" header
+    is_cover_out = any(line.startswith("mode:") for line in lines[:3])
+
+    if is_cover_out:
+        # Weighted parsing: per file sum numStmt + sum numStmt where count>0
+        per_file_total: dict[str, int] = {}
+        per_file_covered: dict[str, int] = {}
+        total_stmts = 0
+        covered_stmts = 0
+        for line in lines:
+            m = _GO_COVER_OUT_LINE_RE.match(line)
+            if not m:
+                continue
+            path = m.group(1)
+            num_stmt = int(m.group(2))
+            count = int(m.group(3))
+            per_file_total[path] = per_file_total.get(path, 0) + num_stmt
+            if count > 0:
+                per_file_covered[path] = per_file_covered.get(path, 0) + num_stmt
+            total_stmts += num_stmt
+            if count > 0:
+                covered_stmts += num_stmt
+        global_pct = (covered_stmts / total_stmts * 100) if total_stmts else 0.0
+        module_list = []
+        for path, total in per_file_total.items():
+            cov = per_file_covered.get(path, 0)
+            module_list.append({
+                "path": path,
+                "lines_pct": (cov / total * 100) if total else 0.0,
+                "branch_pct": 0.0,
+                "has_testable_branches": False,
+            })
+        return global_pct, 0.0, module_list
+
+    # Back-compat: -func output (no mode: header)
+    print(
+        "[warn] go-cover: func-level parsing produces biased per-file % when "
+        "functions have unequal statement counts. Pass coverage.out file path "
+        "for accurate result.",
+        file=sys.stderr,
+    )
     modules: dict[str, list[float]] = {}
     global_pct = 0.0
-    for line in content.splitlines():
-        m = re.match(r'^([^:]+\.go):\d+:\s+\S+\s+(\d+\.?\d*)%', line)
+    for line in lines:
+        m = _GO_COVER_FUNC_LINE_RE.match(line)
         if m:
             path = m.group(1)
             pct = float(m.group(2))
             modules.setdefault(path, []).append(pct)
             continue
-        total_m = re.search(r'^total:\s+\(statements\)\s+(\d+\.?\d*)%', line)
+        total_m = re.search(r"^total:\s+\(statements\)\s+(\d+\.?\d*)%", line)
         if total_m:
             global_pct = float(total_m.group(1))
     module_list = [
@@ -417,9 +487,14 @@ def assign_priority_and_threshold(
     branch_threshold viene letto da `min_branch_pct` con fallback a `min_coverage_pct - 10`
     per backward-compat con priority-rules.json senza il nuovo campo.
 
-    Classification: prima match diretto su ``parent_dirs`` (basename del dir
-    contenitore, niente glob → niente false-positive su dir intermedie di
-    package layout), poi fallback a ``path_patterns`` glob per backward-compat.
+    Classification:
+      Pass 1 — match diretto su ``parent_dirs`` (basename del dir contenitore,
+        niente glob → niente false-positive su dir intermedie di package layout).
+      Pass 2 — fallback ANCORATO su ``path_patterns`` glob ristretto agli ultimi
+        2 segment del path. Parità di comportamento con
+        ``estimate_size._classify_priority`` (ADR-3): senza anchor,
+        ``**/service/**`` matcha namespace ancestor ``it/siae/services/foo/bar.java``
+        classificando 90% file come P1 → floor enforcement loop esplode.
     """
     default_line = DEFAULT_THRESHOLDS["default"]
     default_branch = max(0.0, default_line - 10.0)
@@ -439,13 +514,17 @@ def assign_priority_and_threshold(
                 line_thr = float(level.get("min_coverage_pct", default_line))
                 branch_thr = float(level.get("min_branch_pct", max(0.0, line_thr - 10.0)))
                 return level_name, line_thr, branch_thr
-    # Pass 2: path_patterns fallback (backward-compat)
+    # Pass 2: path_patterns fallback ANCORATO agli ultimi 2 segment.
+    # "modules/service/lambda/src/api/uptime.ts" -> window = "api/uptime.ts"
+    # cosi' "**/service/**" NON triggera P1 su file con penultimate ancestor != "service".
+    segments = path.split("/")
+    anchor_window = "/".join(segments[-2:]) if len(segments) >= 2 else path
     for level_name in ("P1", "P2", "P3"):
         level = levels.get(level_name, {})
         patterns = level.get("path_patterns", [])
         for pattern in patterns:
             regex = _glob_to_regex(pattern)
-            if re.search(regex, path):
+            if re.search(regex, anchor_window):
                 line_thr = float(level.get("min_coverage_pct", default_line))
                 branch_thr = float(level.get("min_branch_pct", max(0.0, line_thr - 10.0)))
                 return level_name, line_thr, branch_thr
@@ -592,6 +671,87 @@ def parse(framework: str, input_path: Path, priority_rules: dict | None) -> dict
     }
 
 
+_REPAIR_MODULE_KEEP_KEYS = (
+    "path", "lines_pct", "branch_pct", "priority", "threshold",
+    "status", "fail_reason",
+)
+
+
+def _trim_module_for_repair(m: dict) -> dict:
+    """Mantiene solo i campi necessari a Phase 7 (gap + path + reason)."""
+    return {k: m[k] for k in _REPAIR_MODULE_KEEP_KEYS if k in m}
+
+
+def _build_view_repair(full: dict) -> dict:
+    """Riduce il payload full a aggregati per Phase 7 (repair loop).
+
+    Schema:
+      {
+        "global": {"lines_pct", "branches_pct", "threshold_met"},
+        "sub_threshold_modules": [...]  # MAX 20 non-P1, ma TUTTI i P1 sub-threshold inclusi
+        "failing_test_files": [],  # placeholder (Phase 7 popola da run_tests output)
+        "p1_floor_violators": [...]  # MAX 20 modules priority=P1 e lines_pct<80
+      }
+    """
+    modules = full.get("modules", [])
+    global_pct = full.get("global_pct", 0.0)
+    branch_pct = full.get("global_branch_pct", 0.0)
+
+    # threshold_met: il modulo aggregato passa (lines>=70, default)
+    threshold_met = global_pct >= DEFAULT_THRESHOLDS["default"]
+
+    # Sub-threshold modules: status=FAIL
+    sub_threshold = [m for m in modules if m.get("status") == "FAIL"]
+    # Sort by gap DESC (threshold - actual)
+    sub_threshold.sort(
+        key=lambda m: float(m.get("threshold", 0.0)) - float(m.get("lines_pct", 0.0)),
+        reverse=True,
+    )
+
+    # Split P1 vs non-P1: include ALL P1 (uncapped), cap non-P1 a 20
+    p1_sub = [m for m in sub_threshold if m.get("priority") == "P1"]
+    non_p1_sub = [m for m in sub_threshold if m.get("priority") != "P1"]
+    final_sub = [_trim_module_for_repair(m) for m in p1_sub + non_p1_sub[:20]]
+
+    # P1 floor violators (line < 80)
+    p1_violators = [
+        m for m in modules
+        if m.get("priority") == "P1" and float(m.get("lines_pct", 100.0)) < 80.0
+    ]
+    p1_violators.sort(key=lambda m: float(m.get("lines_pct", 0.0)))
+    p1_violators = [_trim_module_for_repair(m) for m in p1_violators[:20]]
+
+    return {
+        "global": {
+            "lines_pct": round(global_pct, 2),
+            "branches_pct": round(branch_pct, 2),
+            "threshold_met": threshold_met,
+        },
+        "sub_threshold_modules": final_sub,
+        "failing_test_files": full.get("failing_test_files", []),
+        "p1_floor_violators": p1_violators,
+        "framework": full.get("framework"),
+        "error": full.get("error"),
+    }
+
+
+def _build_view_summary(full: dict) -> dict:
+    """Payload ultra-ridotto (~200 tok): solo global + counts."""
+    modules = full.get("modules", [])
+    count_sub_thr = sum(1 for m in modules if m.get("status") == "FAIL")
+    return {
+        "global": {
+            "lines_pct": round(full.get("global_pct", 0.0), 2),
+            "branches_pct": round(full.get("global_branch_pct", 0.0), 2),
+            "threshold_met": full.get("global_pct", 0.0) >= DEFAULT_THRESHOLDS["default"],
+        },
+        "count_modules": len(modules),
+        "count_sub_threshold": count_sub_thr,
+        "framework": full.get("framework"),
+        "error": full.get("error"),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -622,10 +782,26 @@ def main() -> int:
         default=Path(__file__).resolve().parent.parent,
         help="Path skill root (per priority-rules.json)",
     )
+    parser.add_argument(
+        "--view",
+        choices=["full", "repair", "summary"],
+        default="full",
+        help=(
+            "Output shape: 'full' (default, modules[] complete), "
+            "'repair' (aggregati + sub-threshold capped 20 + ALL P1 sub-thr) per Phase 7, "
+            "'summary' (~200 tok, solo global+counts) per pre-check"
+        ),
+    )
     args = parser.parse_args()
 
     priority_rules = load_priority_rules(args.skill_root)
     result = parse(args.framework, args.input, priority_rules)
+
+    if args.view == "repair":
+        result = _build_view_repair(result)
+    elif args.view == "summary":
+        result = _build_view_summary(result)
+
     print(json.dumps(result, indent=2))
     return 0
 

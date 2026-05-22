@@ -4,6 +4,54 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.66.0] - 2026-05-21
+
+### Changed — code-coverage skill v2 optimization (10 fixes consolidated)
+
+Three parallel expert audits (best-practice, runtime, full-stack) converged on
+10 high-ROI fixes to reduce iterations / wall-time / token spend without losing
+efficacy (>=70% global, P1>=80%).
+
+**Expected impact on LARGE repo runs:** tokens ~280-400k → ~180-220k (-35%);
+round-trips 12-18 → 7-9; Phase 5 batch from sequential turns to parallel.
+
+**SKILL.md + references:** description frontmatter trim, HARD READ POLICY
+anti-eager-load, inlined `phase-2-strategy.md` + `phase-4-environment.md`
+into `SKILL.md` (refs deleted), explicit parallel-Write directive, Phase 5b
+note moved.
+
+**Python scripts (`parse_coverage.py`, `detect_stack.py`):** new
+`--view {full,repair,summary}` flag on parse_coverage; `detect_monorepo_workspaces`
+adds Maven `<modules>` + Gradle `include()` parsing.
+
+**Templates + categorize + phase1 + cache:** idempotent `clean_template_placeholders`
+helper, `categorize_failure` normalize multi-line, Phase 5b probe inside
+`phase1-discover.sh`, `decisions.log` archive on completion + `discovery-summary.json`
+emit.
+
+### Fixed — auto-review iter findings
+
+- `phase1-discover.sh:88-99` — Python heredoc injection (`$REPO` interpolated
+  in `python3 -c "..."`). Converted to `python3 - "$REPO" <<'PYEOF'` + `sys.argv[1]`.
+- `cache-helper.sh:42-50` — archive race condition: `archive_ts` now includes
+  `_$$` (PID) + `rm -f "$sentinel"` post-archive.
+
+### Breaking — semantics fix
+
+- **`priority-rules.json` v1.0 → v1.1**: priority assignment via `path_patterns`
+  now anchored to `last_2_segments` (parity with `estimate_size.py`). Paths
+  like `src/api/restore.ts` no longer match `**/store/**`. Existing baselines
+  may shift module priority assignment.
+- **`parse_go_cover`**: returns line% weighted by `numStmt` from `coverage.out`
+  raw format. Previously over-reported on funcs with unequal statement counts.
+  Go repos that passed spuriously may now report accurate (lower) coverage.
+
+### Test coverage
+
+142/142 passed (was 103 baseline, +39 new tests). Coverage gate bypass
+(`DEVFORGE_SKIP_GIT_GATE=1`) tracked: pre-existing gap on `estimate_size.py`,
+`select_command.py`, `validate_env.py` (not touched by this PR).
+
 ## [1.65.0] - 2026-05-21
 
 ### Changed — Skill `siae-functional-bug-hunter` v1.1.0 -> v1.2.0

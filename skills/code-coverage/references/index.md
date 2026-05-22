@@ -7,11 +7,11 @@ script/asset/lib/template citato in `SKILL.md`.
 
 | Path | Phase | Purpose |
 |------|-------|---------|
-| `references/phase-2-strategy.md` | 2 | Vitest-first decision tree + stack-matrix lookup + monorepo handling |
 | `references/phase-3-sizing.md` | 3 | Batch plan resume protocol per LARGE/VERY_LARGE |
-| `references/phase-4-environment.md` | 4 | Auto-install policy + Blocking Check Handler |
 | `references/phase-5-generation.md` | 5 | Pre-write gate, ordering tree, AAA pattern, batch ceilings, few-shot trigger |
 | `references/phase-7-repair.md` | 7 | Categorize → group → fix → progress guard → early-abort |
+
+> Phase 2 (Strategy) and Phase 4 (Environment) are inlined in `SKILL.md` — small enough that a ref round-trip was net-negative.
 
 ## Lib (bash helpers)
 

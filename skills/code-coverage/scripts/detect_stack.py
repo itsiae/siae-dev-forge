@@ -359,11 +359,80 @@ def detect_build_systems(root: Path) -> list[str]:
     return bs
 
 
+_MAVEN_MODULES_BLOCK_RE = re.compile(r"<modules>(.*?)</modules>", re.DOTALL)
+_MAVEN_MODULE_ENTRY_RE = re.compile(r"<module>([^<]+)</module>")
+_GRADLE_INCLUDE_KOTLIN_RE = re.compile(r"include\(([^)]*)\)")
+_GRADLE_QUOTED_RE = re.compile(r"['\"]([^'\"]+)['\"]")
+_GRADLE_INCLUDE_GROOVY_BLOCK_RE = re.compile(
+    r"include\s+(['\"][^'\"]+['\"](?:\s*,\s*['\"][^'\"]+['\"])*)"
+)
+
+
+def detect_monorepo_workspaces(root: Path) -> list[str]:
+    """Estrae i workspace path Maven (pom.xml ``<modules>``) e Gradle
+    (settings.gradle[.kts] ``include``).
+
+    Maven: parse ``<modules><module>name</module>...</modules>`` (top-level pom).
+    Gradle: parse ``include 'a'``, ``include "a", "b:c"``, ``include('a', 'b:c')``.
+    Path Gradle ``a:b:c`` viene normalizzato a ``a/b/c``.
+
+    Ritorna lista deduplicata in ordine di scoperta (Maven prima, poi Gradle).
+    """
+    workspaces: list[str] = []
+    seen: set[str] = set()
+
+    # Maven reactor (top-level pom)
+    pom_path = root / "pom.xml"
+    if pom_path.is_file():
+        content = _read_text_safe(pom_path)
+        for block in _MAVEN_MODULES_BLOCK_RE.findall(content):
+            for module in _MAVEN_MODULE_ENTRY_RE.findall(block):
+                module = module.strip()
+                if module and module not in seen:
+                    workspaces.append(module)
+                    seen.add(module)
+
+    # Gradle multi-module (top-level settings.gradle[.kts])
+    for fname in ("settings.gradle", "settings.gradle.kts"):
+        spath = root / fname
+        if not spath.is_file():
+            continue
+        content = _read_text_safe(spath)
+        # Strip line comments (// ...) per evitare match dentro a commenti
+        sanitized_lines = []
+        for line in content.splitlines():
+            idx = line.find("//")
+            sanitized_lines.append(line[:idx] if idx != -1 else line)
+        sanitized = "\n".join(sanitized_lines)
+
+        raw_modules: list[str] = []
+        if fname.endswith(".kts"):
+            # Kotlin DSL: include("a", "b:c") — extract args, then all quoted strings
+            for args in _GRADLE_INCLUDE_KOTLIN_RE.findall(sanitized):
+                raw_modules.extend(_GRADLE_QUOTED_RE.findall(args))
+        else:
+            # Groovy DSL: include 'a', 'b:c'
+            for m in _GRADLE_INCLUDE_GROOVY_BLOCK_RE.finditer(sanitized):
+                raw_modules.extend(_GRADLE_QUOTED_RE.findall(m.group(1)))
+
+        for raw in raw_modules:
+            # Gradle usa ':' come separator: ':services:api' o 'services:api' -> 'services/api'
+            normalized = raw.strip().lstrip(":").replace(":", "/")
+            if normalized and normalized not in seen:
+                workspaces.append(normalized)
+                seen.add(normalized)
+
+    return workspaces
+
+
 def detect_monorepo(root: Path) -> bool:
     if _find(root, {"turbo.json", "nx.json", "lerna.json", "pnpm-workspace.yaml", "rush.json"}):
         return True
     pkg = _read_json_safe(root / "package.json")
     if "workspaces" in pkg:
+        return True
+    # Maven reactor / Gradle multi-module
+    if detect_monorepo_workspaces(root):
         return True
     child_count = 0
     for d in ["packages", "apps", "services", "modules"]:
@@ -628,6 +697,7 @@ _OUTPUT_SCHEMA_DEFAULTS: dict = {
     "package_managers": [],
     "build_systems": [],
     "monorepo": False,
+    "monorepo_workspaces": [],
     "ci_cd": [],
     "architecture_style": "unknown",
     "existing_test_frameworks": [],
@@ -709,6 +779,7 @@ def main() -> None:
         "package_managers": detect_package_managers(root),
         "build_systems": detect_build_systems(root),
         "monorepo": detect_monorepo(root),
+        "monorepo_workspaces": detect_monorepo_workspaces(root),
         "ci_cd": detect_ci_cd(root),
         "architecture_style": detect_architecture(root, frameworks),
         "existing_test_frameworks": existing_tf,
