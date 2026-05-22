@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "descrizione": "Pool di nomi e cognomi italiani comuni, separati per genere",
+    "fonte": "ISTAT - nomi e cognomi piu diffusi in Italia"
+  },
+  "nomi_maschili": [
+    "Mario", "Luca", "Marco", "Giovanni", "Giuseppe", "Antonio", "Francesco", "Alessandro",
+    "Andrea", "Matteo", "Lorenzo", "Davide", "Stefano", "Simone", "Roberto", "Paolo",
+    "Riccardo", "Federico", "Daniele", "Gianluca", "Vincenzo", "Salvatore", "Pietro",
+    "Carlo", "Massimo", "Claudio", "Maurizio", "Filippo", "Tommaso", "Emanuele", "Alessio"
+  ],
+  "nomi_femminili": [
+    "Giulia", "Maria", "Laura", "Anna", "Francesca", "Elena", "Sara", "Chiara",
+    "Martina", "Alessia", "Valentina", "Federica", "Silvia", "Roberta", "Paola",
+    "Cristina", "Simona", "Monica", "Stefania", "Antonella", "Daniela", "Lucia",
+    "Elisa", "Camilla", "Beatrice", "Sofia", "Aurora", "Greta", "Arianna", "Eleonora"
+  ],
+  "cognomi": [
+    "Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci",
+    "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca", "Mancini", "Costa",
+    "Giordano", "Rizzo", "Lombardi", "Moretti", "Barbieri", "Fontana", "Santoro",
+    "Mariani", "Rinaldi", "Caruso", "Ferrara", "Galli", "Martini", "Leone",
+    "Longo", "Gentile", "Martinelli", "Vitale", "Lombardo", "Serra", "Coppola",
+    "De Santis", "D'Angelo", "Marchetti", "Parisi", "Villa", "Conte", "Verdi",
+    "Bianco", "Pellegrini", "Morelli", "Sanna", "Riva", "Monti", "Cattaneo"
+  ]
+}
