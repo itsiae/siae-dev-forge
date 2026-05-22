@@ -1,12 +1,35 @@
 ---
 name: siae-qa
-version: 2.2.0
-last_modified: 2026-05-11
+version: 2.3.0
+last_modified: 2026-05-22
 description: >
   Genera documentazione test formale per Xray a completamento implementazione.
   Trigger: completamento brainstorming (Phase 2), completamento ciclo TDD (Phase 5),
   "genera test plan Xray", "export Test Case Xray".
 changelog: |
+  2.3.0 (2026-05-22): Guardrail TC Negativi (R1-R5) — fix RTD-108 (54% NEG non eseguibili).
+    - ADR-013: classificazione `executability_class` (manual/automated-only/eliminated)
+      su righe NEG/EDGE in Matrix A e Matrix B (Phase 1.5).
+    - Phase 4b: routing pre-generazione — manual genera TC, automated-only produce
+      entry `automated_only_note`, eliminated viene rimossa.
+    - Phase 4c Gate #2: J6 NegativeExecutability Check (parallelo a J3+J4) — bloccante
+      al 100% per TC NEG/EDGE manuali; bypass solo con consenso esplicito developer.
+    - Nuova sezione "Guardrail TC Negativi (R1-R5)" prima di Phase 4b: rules R1
+      (no system mutation), R2 (no DB direct action), R3 (no fault injection),
+      R4 (no mirror negativo), R5 (checklist precondizione).
+    - Schema m_final esteso con executability_class/rule_violated/automation_suggestion/eliminated_reason.
+    - Schema tc_draft esteso con discriminator `kind` (test_case | automated_only_note).
+    - Vincolo non negoziabile #20 (executability) e #21 (CSV pulito).
+    - Phase 5 produce 2 file separati: `RTD-XXX_TC.csv` (solo TC eseguibili,
+      importabile Xray senza errori) e `automated_only_notes.md` (note developer,
+      raggruppate per regola R1/R2/R3). Le righe `eliminated` finiscono solo in
+      `coverage_certificate.json.eliminated_rows[]`. Nessuna riga commento `#` nel CSV.
+    - Schema coverage_certificate esteso con `j6`, `eliminated_rows[]`, `automated_only_count`.
+    - Description = solo descrizione semantica (40-400 char). VIETATO `matrix_row_id`,
+      `entity:`, `field:` nel testo. Tracciabilita' via campi schema separati. J3 legge
+      `tc.matrix_row_id` come campo, non fa parsing testo. J4 aggiunge check
+      "description_non_semantica" e "description_con_metadata".
+    - Vincolo non negoziabile #1 aggiornato di conseguenza.
   2.2.0 (2026-05-11): Full closure 25 gap residui post 5-case simulation.
     - ADR-008: cross-temporal/cross-event composite (Matrix B temporal sequences).
     - ADR-009: ETL stateful pipeline rules (idempotency MERGE, threshold composito, async side-effect, pipeline ordering, DLQ schema, timezone).
@@ -63,6 +86,13 @@ coprono solo cio' che e' scritto negli AC, non cio' che puo' rompersi.
 Stai per scrivere TC senza aver costruito la Coverage Matrix (Phase 1.5)?
 FERMATI. M_FINAL deve esistere PRIMA di generare qualsiasi TC.
 Ogni TC deve essere tracciabile a una riga di M_FINAL — nessun TC orfano, nessuna riga orfana.
+
+Stai per generare un TC `[NEG]` la cui precondizione richiede di modificare template,
+config, SMTP, DB direct INSERT/UPDATE, fault injection (servizio down, race, retry)?
+FERMATI. Quel TC NON e' eseguibile da QA manuale — vedi sezione "Guardrail TC Negativi (R1-R5)".
+La precondizione corretta classifica la riga come `automated-only` (nota commento, no TC)
+o `eliminated` (mirror di un POS gia' coperto). Una TL piena di TC non eseguibili e'
+un fallimento di workflow, non un compromise accettabile.
 </EXTREMELY-IMPORTANT>
 
 > **Tipo:** Rigid | **Fase SDLC:** 5. Testing / QA
@@ -417,7 +447,26 @@ Per ogni campo di ogni entità, applica le regole di esplosione:
     * `> 0` decimal → EDGE `0.01`; `> 0` integer → EDGE `1`; `> '2020-01-01'` date → EDGE `2020-01-02`
     * Se tipo non specificato in spec: default `integer`, segnala WARNING `source_ref="type_inferred_default_integer"`
   - Valore fisso business → POS(= costante) + NEG(≠ costante)
-Produci: tabella M_A con colonne matrix_row_id, entity, field, condition, test_type, source_ref
+
+**Classificazione executability per righe NEG/EDGE (OBBLIGATORIA, ADR-013):**
+Per ogni riga NEG/EDGE che produci, assegna `executability_class` con uno dei 3 valori,
+applicando l'albero decisionale R1-R4 dalla sezione "Guardrail TC Negativi" della SKILL.md:
+
+  - `manual` → la precondizione e' producibile dal QA via browser/email-client/Postman/curl,
+    senza modificare codice/template/config/DB. Esempi: URL manipolato, header mancante,
+    form con campo vuoto, payload con valore fuori lookup, token scaduto via attesa, replay
+    del link gia' consumato.
+  - `automated-only` → la precondizione richiede system mutation (template/SMTP/CDN/sender),
+    DB direct INSERT/UPDATE come azione, fault injection (DB down, SMTP timeout, race,
+    rollback parziale), o comunque uno stub/mock non disponibile al QA. La riga NON
+    generera' un TC manuale: in Phase 4b produrra' solo una nota `[AUTOMATED-ONLY]` con motivo.
+  - `eliminated` → la riga e' un "mirror negativo" di un campo statico di configurazione
+    gia' coperto dal POS corrispondente (es. NEG "subject template errato" mentre POS verifica
+    "subject template corretto" — stesso campo, nessun input path autonomo). La riga viene
+    rimossa da M_FINAL prima del salvataggio; conserva la motivazione nel campo
+    `eliminated_reason` (es. "mirror di A-001: copertura garantita dal POS, no input path autonomo").
+
+Le righe POS e ROLE hanno `executability_class = "manual"` per default (non si applicano R1-R4).
 ```
 
 **Matrix Agent B — Rule Composer:**
@@ -442,6 +491,19 @@ Per ogni sequenza identificata:
   - 1 EDGE per out-of-order (eventi B applicato prima di A nella catena)
   - 1 NEG per stato finale inconsistente (es. rollback dopo write con dati persistenti)
 Marca le righe con `source_ref="temporal_composite"`.
+
+**Classificazione executability per righe NEG/EDGE (OBBLIGATORIA, ADR-013):**
+Applica lo stesso albero decisionale R1-R4 documentato per Matrix Agent A. Attenzione
+particolare per Matrix B:
+  - Cross-temporal "rollback dopo write" / "fail a meta' transazione" → `automated-only`
+    (richiede stub applicativo, non producibile dal QA).
+  - "Replay event id duplicato" su sistema reale con idempotency-key passato dal client →
+    `manual` (basta riinviare lo stesso payload via Postman).
+  - "Replay" che richiede INSERT DB duplicato di chiave primaria → `automated-only`.
+  - "Out-of-order eventi" via Kafka/SQS con accesso al broker da parte del QA → `manual`;
+    senza accesso al broker → `automated-only`.
+  - Pipeline "DB offline / SMTP down" → `automated-only` (fault injection).
+  - Volume threshold drift su ambiente condiviso → `automated-only` (non controllabile in QA).
 ```
 
 **Matrix Agent C — Role/Permission Mapper:**
@@ -575,6 +637,154 @@ Non è più una fase di elicitazione scenari astratti. La matrice guida la gener
 
 ---
 
+#### Guardrail TC Negativi (R1-R5) [BLOCCANTE — applicato in Phase 4b, verificato in Gate #2]
+
+<EXTREMELY-IMPORTANT>
+Un TC negativo che il QA manuale non puo' eseguire NON e' un test: e' uno script di sabotaggio.
+Tutti i TC con prefisso `[NEG]` (e `[EDGE]` quando la precondizione e' avversa) DEVONO
+soddisfare le 5 regole R1-R5. Senza questi guardrail la skill produce TL non eseguibili
+in QA manuale standard — bug analizzato su RTD-108 (54% dei NEG non eseguibili).
+</EXTREMELY-IMPORTANT>
+
+##### Razionale
+
+Un QA manuale standard ha accesso a: browser, client email, Postman/curl, applicazioni
+client del sistema. NON ha accesso a: codice sorgente, template engine, SMTP/CDN config,
+DB con privilegi di scrittura, mock/stub framework, broker Kafka/SQS interni, switch di
+fault injection. Generare TC che presuppongono questi accessi produce TL eseguibili solo
+da chi sta scrivendo il codice — cioe' nessuno, perche' il QA non puo' fare il lavoro e
+lo sviluppatore non rileggera' la TL.
+
+##### Le 5 regole
+
+```
+[R1 — NO SYSTEM MUTATION]
+Non generare TC negativi la cui PRECONDIZIONE richiede di modificare:
+  - template email / template engine (subject, body, CTA, sender, locale)
+  - configurazione SMTP, CDN, sender, SES, deploy, feature flag
+  - record nel DB con INSERT/UPDATE diretto come setup
+  - configurazione applicativa, properties, environment variables
+  - implementazione errata (es. "differenzia messaggi di errore")
+Routing: executability_class = "automated-only" — nessun TC manuale, nessuna riga nel CSV Xray.
+Output destinato a `docs/qa/{STORY_ID}/automated_only_notes.md` (file di reportistica
+per lo sviluppatore, NON importato in Xray): blocco con `matrix_row_id`, `rule_violated`,
+`reason`, `automation_suggestion` (snapshot test, unit test, contract test, golden file).
+
+[R2 — NO DB DIRECT ACTION]
+Le ACTION di un TC manuale devono essere eseguibili tramite:
+  - browser (navigazione, click, form input)
+  - client email (apertura, ispezione header)
+  - tool HTTP (Postman, curl) per chiamate API
+  - shell client del prodotto (CLI utente-facing)
+Query SQL (SELECT/INSERT/UPDATE/DELETE) NON sono Action valide per QA manuale.
+Routing:
+  - SELECT diagnostica come EXPECTED RESULT → spostarla nella verifica, marcata
+    "verifica su tool monitoring/log" — il TC resta manuale.
+  - SELECT/INSERT/UPDATE come ACTION o PRECONDIZIONE di setup-dati → executability_class
+    = "automated-only" (richiede DBA, fuori scope QA standard).
+  - Eccezione: se l'ambiente QA documenta esplicitamente un tool SQL nel kit standard
+    del tester (es. read-only DBeaver con utenza ro), allora SELECT in expected_result
+    e' manuale; INSERT/UPDATE restano automated-only.
+
+[R3 — NO FAULT INJECTION]
+Scenari non generabili dall'esterno tramite input legittimo:
+  - servizi down (DB, SMTP, queue, broker)
+  - retry simulati / mock stub applicativi
+  - race condition / timing arbitrariamente preciso
+  - rollback parziale di transazione DB
+  - fallimento orchestrato di N-esimo tentativo
+Routing: executability_class = "automated-only" — label aggiuntivo `chaos-test` o
+`integration-test` nel suggerimento di copertura.
+
+[R4 — NO MIRROR NEGATIVO]
+Un TC NEG e' "mirror" quando soddisfa TUTTE queste condizioni:
+  (a) il campo testato e' un campo statico di configurazione/template (NON un input utente)
+  (b) il POS corrispondente verifica lo stesso campo con il valore corretto
+  (c) l'unico modo per produrre il NEG e' alterare il sistema corretto
+Routing: executability_class = "eliminated" — riga rimossa da M_FINAL. La nota di
+eliminazione in coverage_certificate.json: "mirror di {POS_matrix_row_id}: copertura
+del valore corretto garantita dal POS; nessun input path autonomo per produrre il
+negativo sul sistema corretto".
+
+[R5 — CHECKLIST PRECONDIZIONE]
+Prima di emettere un [NEG] TC manuale, rispondi SI a tutte e 3:
+  1. Il QA puo' produrre lo scenario con browser / Postman / email client?
+  2. La precondizione e' impostabile senza modificare il sistema (codice/template/config/DB)?
+  3. L'Action e' un'operazione UI/API/email-client, non una query SQL diretta?
+Se anche una sola risposta e' NO → il TC NON viene generato come manuale.
+```
+
+##### Decision matrix sintetica
+
+| Sintomo del TC candidato                                    | Routing        | Output destinato a            |
+|--------------------------------------------------------------|----------------|--------------------------------|
+| Input producibile da browser/Postman (URL, form, header)     | manual         | CSV Xray (riga TC `[NEG]`)     |
+| Token scaduto via attesa temporale                           | manual         | CSV Xray (riga TC `[NEG]`)     |
+| Replay link gia' consumato                                   | manual         | CSV Xray (riga TC `[NEG]`)     |
+| Modifica template/subject/sender                             | automated-only | `automated_only_notes.md` (R1) |
+| INSERT/UPDATE DB come setup                                  | automated-only | `automated_only_notes.md` (R2) |
+| SMTP/DB down, retry exhausted, race                          | automated-only | `automated_only_notes.md` (R3) |
+| Mirror inverso di campo statico gia' verificato dal POS      | eliminated     | `coverage_certificate.json`    |
+
+**IMPORTANTE — separazione output:** il CSV Xray contiene SOLO TC manuali eseguibili
+(prefisso `[POS]/[NEG]/[EDGE]/[ROLE]`). Note `[AUTOMATED-ONLY]` ed `[ELIMINATED]` NON
+vanno mai nel CSV (l'importer Xray non gestisce in modo affidabile righe commento e
+puo' importarle come TC vuoti o errori). Vanno in file separati di reportistica.
+
+##### Esempi di riscrittura (dal bug RTD-108)
+
+```
+INPUT (riga M_FINAL):
+  matrix_row_id: A-002 | entity: EmailTemplate | field: subject
+  condition: subject = "Benvenuto" (non conforme) | test_type: NEG
+
+OUTPUT R1 (automated-only):
+  Riga eliminata da TC_DRAFT.md. Aggiunta in coverage_certificate.json:
+  {
+    "matrix_row_id": "A-002",
+    "decision": "automated-only",
+    "rule": "R1",
+    "reason": "Subject template modificato come precondizione = system mutation.
+               Coprire con snapshot test del template engine."
+  }
+  Entry in `docs/qa/RTD-108/automated_only_notes.md` (NON nel CSV):
+  ## A-002 — [AUTOMATED-ONLY] Subject non conforme
+  - rule_violated: R1 (system mutation)
+  - reason: precondizione richiede modifica template, fuori scope QA manuale
+  - automation_suggestion: snapshot test del template engine + golden file
+  - original_condition: subject = "Benvenuto" non conforme
+```
+
+```
+INPUT (riga M_FINAL):
+  matrix_row_id: A-022 | entity: MagicLinkToken | field: generated_at
+  condition: generated_at = "2026-13-45T99:99:99" (malformato) | test_type: NEG
+
+OUTPUT R2 (automated-only):
+  Entry in `docs/qa/RTD-108/automated_only_notes.md` (NON nel CSV):
+  ## A-022 — [AUTOMATED-ONLY] generated_at malformato in DB
+  - rule_violated: R2 (DB direct action)
+  - reason: richiede INSERT SQL diretto con dato corrotto come precondizione
+  - automation_suggestion: unit test sul parser timestamp con input fuzzato (property-based)
+  - original_condition: generated_at = "2026-13-45T99:99:99"
+```
+
+```
+INPUT (riga M_FINAL):
+  matrix_row_id: A-061 | entity: MagicLinkToken | field: expires_at
+  condition: now > generated_at + 5min → expired | test_type: NEG
+
+OUTPUT R5 PASS (manual):
+  TC-XX | [NEG] Token scaduto dopo 5 minuti
+  Precondizione: Token generato a T0 via POST /magic-link/request
+  Step 1 Action: Attendere 5 minuti e 1 secondo dopo T0
+  Step 1 Expected: Trascorso il TTL atteso
+  Step 2 Action: Visitare URL del magic link nel browser
+  Step 2 Expected: Pagina errore "link scaduto" (HTTP 410 o redirect con messaggio)
+```
+
+---
+
 #### 4b — Generazione Test Case da M_FINAL
 
 **Prima di iniziare:**
@@ -589,7 +799,29 @@ Non è più una fase di elicitazione scenari astratti. La matrice guida la gener
    Step 1 - Expected Result: {risultato verificabile e non generico}
    ```
 
-Per ogni riga di M_FINAL genera **esattamente 1 TC** step-based.
+**Routing pre-generazione per executability_class (R1-R5):**
+
+Prima di generare il TC, leggi `executability_class` dalla riga M_FINAL:
+
+- `manual` → genera 1 TC step-based completo (flusso normale, vedi sotto), finira' nel
+  CSV Xray in Phase 5.
+- `automated-only` → **NON generare TC manuale e NON inserire nel CSV Xray**. Registra
+  in `TC_DRAFT.md` una entry speciale con `kind="automated_only_note"`, `matrix_row_id`,
+  `rule_violated` (R1/R2/R3), `reason`, `automation_suggestion`. Nessun campo step.
+  In Phase 5 verra' esportata in `docs/qa/{STORY_ID}/automated_only_notes.md` (file
+  separato per lo sviluppatore, NON nel CSV).
+- `eliminated` → **NON generare nulla**. La riga e' gia' stata rimossa da M_FINAL in
+  Phase 1.5; verifica solo che non sia rientrata per errore. Se presente: produci una
+  nota in `coverage_certificate.json` con `decision="eliminated"`, `rule="R4"`,
+  `reason=<motivazione mirror>`. Nessun output nel CSV.
+
+Per ogni riga di M_FINAL **con `executability_class = "manual"`** genera **esattamente 1 TC** step-based.
+
+**Sanity check R5 in-line (per ogni TC `[NEG]` o `[EDGE]` con condition avversa):**
+Prima di scrivere il TC, applica la checklist R5 (3 domande). Se una risposta e' NO,
+riclassifica la riga (aggiorna M_FINAL: `executability_class = "automated-only"` e
+`rule_violated`) e produci la nota commento invece del TC. Questo cattura righe
+mal-classificate da Matrix A/B.
 
 **Vincolo di specificità (obbligatorio):** ogni TC deve contenere nei passi/precondizioni i valori concreti dalla colonna `condition` della riga matrice:
 - ❌ "Inserire una categoria valida"
@@ -638,12 +870,30 @@ Trigger: `pg_locks`, `sessione parallela`, `concurrent`, `lock-free`, `CONCURREN
 
 Marca i TC multi-session con `source_ref="multi_session"`.
 
-**Tracciabilità obbligatoria:** ogni TC deve riportare il `matrix_row_id` corrispondente nel campo `Description` (non nel titolo).
+**Tracciabilità obbligatoria:** ogni TC deve avere il `matrix_row_id` come **campo schema separato** dell'oggetto TC (in `TC_DRAFT.md`/`TC_DRAFT.json`), **non** dentro il testo della Description. J3 legge il campo schema, non fa parsing del testo.
+
+**Description = SOLO testo semantico (40-400 char, 1-3 frasi parlanti).**
+Una persona QA che apre il TC in Xray legge la Description per capire **cosa fa il test**, non per leggere metadata di tracciabilità. Vietato includere `matrix_row_id`, `entity:`, `field:`, ID di matrice, prefissi tipo "matrix_row_id: A-001" nel testo della Description.
+
+La Description risponde a: "cosa verifica questo TC, in linguaggio comprensibile?".
+Esempi validi:
+- `"Verifica che il subject dell'email di accesso corrisponda alla stringa approvata dal copy SIAE."`
+- `"Visitando un URL del magic link con token in formato non-UUID il sistema mostra la pagina di errore standard e non crea sessione."`
+- `"Una seconda POST per lo stesso utente deve invalidare i token precedenti (rotation) e generare un nuovo token consumabile."`
+
+Esempi invalidi:
+- ❌ `"matrix_row_id: A-001 | entity: MAGIC_LINK_EMAIL | field: subject"` (solo metadata, non semantica)
+- ❌ `"Test per A-001"` (no contesto)
+- ❌ `"Verifica subject"` (troppo generico)
 
 Esempio di struttura TC corretta:
 ```
 Titolo:        [POS] CATEGORY = "F" → migrazione come feature
-Description:   matrix_row_id: A-001 | entity: GENERAL_DATA | field: CATEGORY
+matrix_row_id: A-001                                      ← campo schema separato
+entity:        GENERAL_DATA                               ← campo schema separato
+field:         CATEGORY                                   ← campo schema separato
+Description:   "Verifica che un record con CATEGORY 'F' venga migrato come tipo
+                feature nel nuovo sistema, conservando i campi correlati."
 Precondizioni: CSV GENERAL_DATA contiene riga con CATEGORY = "F"
 Step 1 Action: Esegui la migrazione del record
 Step 1 Expected Result: Il record viene creato come tipo "feature" nel nuovo sistema
@@ -662,7 +912,7 @@ Esempio: `importo > 1000 AND valuta IN (EUR, USD)` → TC con `importo=1001, val
 **[CHECKPOINT OBBLIGATORIO — salva TC su file prima di Gate #2]**
 
 Usa Write tool per salvare i TC generati su `docs/qa/{STORY_ID}/TC_DRAFT.md`. Schema JSON formale in `reference/schemas/tc_draft.schema.json`. Stessa policy di backup di MFINAL.md.
-Gate #2 (J3+J4) leggera' da `docs/qa/{STORY_ID}/TC_DRAFT.md` — garantisce dati integri anche dopo compattazione.
+Gate #2 (J3+J4+J6) leggera' da `docs/qa/{STORY_ID}/TC_DRAFT.md` — garantisce dati integri anche dopo compattazione.
 
 **Default deterministico per ogni TC generato (Phase 4b):**
 - `Automazione = N` (no test automatizzato esistente — il developer aggiorna a `Y` solo se conferma esistenza di test JUnit/vitest/pytest che coprono esattamente questo TC)
@@ -674,20 +924,22 @@ Gate #2 (J3+J4) leggera' da `docs/qa/{STORY_ID}/TC_DRAFT.md` — garantisce dati
 
 ### Phase 4c — Gate #2: TC vs Matrix Verification [bloccante — post-generazione]
 
-Dopo la generazione (Phase 4b), lancia **J3 e J4 in parallelo** con Agent tool.
-Verificano la bijection TC↔M_FINAL e la specificità dei TC.
+Dopo la generazione (Phase 4b), lancia **J3 + J4 + J6 in parallelo** con Agent tool.
+Verificano la bijection TC↔M_FINAL, la specificità dei TC e l'**executability dei TC negativi**.
 
 <EXTREMELY-IMPORTANT>
 FERMATI. Stai per procedere a Phase 4d senza Gate #2?
 
-J3 e J4 operano QUI sui TC prodotti — verificano che ogni riga di M_FINAL sia diventata
-un TC concreto e che ogni TC abbia dati di test specifici (non generici).
-Invoca J3 e J4 con Agent tool nello STESSO turno. Non sequenzialmente.
+J3, J4 e J6 operano QUI sui TC prodotti:
+  - J3 verifica che ogni riga `manual` di M_FINAL sia diventata un TC concreto
+  - J4 verifica che ogni TC abbia dati di test specifici (non generici)
+  - J6 verifica che ogni TC `[NEG]` (e `[EDGE]` avverso) sia eseguibile da QA manuale (R1-R5)
+Invoca J3, J4 e J6 con Agent tool nello STESSO turno. Non sequenzialmente.
 Un'autovalutazione interna di Claude NON è Gate #2.
 
-**Criterio verificabile:** l'esecuzione di Gate #2 deve produrre 2 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #2 non è stato eseguito — è stato simulato.
+**Criterio verificabile:** l'esecuzione di Gate #2 deve produrre 3 tool call result di Agent tool visibili nella conversazione. Se non puoi mostrare questi tool call result, Gate #2 non è stato eseguito — è stato simulato.
 
-**Input per J3 e J4:** leggi M_FINAL da `docs/qa/{STORY_ID}/MFINAL.md` e i TC da `docs/qa/{STORY_ID}/TC_DRAFT.md` tramite Read tool — non usare il context direttamente, i file garantiscono dati integri dopo eventuale compattazione.
+**Input per J3, J4 e J6:** leggi M_FINAL da `docs/qa/{STORY_ID}/MFINAL.md` e i TC da `docs/qa/{STORY_ID}/TC_DRAFT.md` tramite Read tool — non usare il context direttamente, i file garantiscono dati integri dopo eventuale compattazione.
 </EXTREMELY-IMPORTANT>
 
 #### Serializzazione input (OBBLIGATORIA prima del lancio)
@@ -709,13 +961,18 @@ TC-01 | [POS] {titolo} | {matrix_row_id} | POS
 ```
 Sei un QA Judge specializzato in tracciabilità TC↔matrice.
 Input: M_FINAL + TC GENERATI (serializzati sopra)
-Verifica:
-  1. Ogni riga di M_FINAL ha esattamente 1 TC con matrix_row_id corrispondente
-     (righe orfane = righe senza TC)
-  2. Ogni TC ha un matrix_row_id valido che esiste in M_FINAL
+Verifica leggendo i CAMPI SCHEMA dei TC (matrix_row_id, entity, field, test_type) — NON
+fare parsing del testo della Description (Description e' testo semantico libero, non
+metadata).
+  1. Ogni riga di M_FINAL con executability_class='manual' ha esattamente 1 TC con
+     tc.matrix_row_id corrispondente
+     (righe orfane = righe manual senza TC)
+  2. Ogni TC ha un tc.matrix_row_id valido che esiste in M_FINAL
      (TC orfani = TC senza riga matrice)
-Elenca righe orfane e TC orfani. Soglia: 100% bijection.
-Output: GIUDICE J3 | PASS/FAIL | RIGHE_ORFANE: [lista] | TC_ORFANI: [lista]
+  3. Per ogni TC: tc.entity == M_FINAL[matrix_row_id].entity e
+     tc.field == M_FINAL[matrix_row_id].field (consistenza campi schema)
+Elenca righe orfane, TC orfani e inconsistenze entity/field. Soglia: 100% bijection.
+Output: GIUDICE J3 | PASS/FAIL | RIGHE_ORFANE: [lista] | TC_ORFANI: [lista] | INCONSISTENZE: [lista]
 ```
 
 #### J4 — Specificity Check
@@ -723,33 +980,88 @@ Output: GIUDICE J3 | PASS/FAIL | RIGHE_ORFANE: [lista] | TC_ORFANI: [lista]
 ```
 Sei un QA Judge specializzato in qualità e specificità dei TC.
 Input: M_FINAL + TC GENERATI (serializzati sopra)
-Per ogni TC, recupera la riga M_FINAL corrispondente e verifica:
+Per ogni TC, recupera la riga M_FINAL corrispondente (via tc.matrix_row_id) e verifica:
   1. Passi/precondizioni contengono i valori concreti dalla colonna "condition"
      (es. se condition = "'F'→feature" il TC deve menzionare il valore "F")
   2. Expected result è verificabile e non generico (non "dovrebbe funzionare")
   3. Precondizioni sono sufficienti per eseguire il test senza ambiguità
-Elenca TC con specificità insufficiente. Soglia: 75%.
-Output: GIUDICE J4 | PERCENTUALE: XX% | PASS/FAIL | TC_GENERICI: [lista con motivazione]
+  4. **Description e' SEMANTICA E PARLANTE**: 40-400 char, 1-3 frasi che descrivono
+     il comportamento testato in linguaggio comprensibile. FAIL se la Description:
+       - contiene metadata di tracciabilita' (`matrix_row_id`, `entity:`, `field:`)
+       - e' troppo generica ("verifica il campo", "test sul subject")
+       - duplica il titolo senza aggiungere informazione
+       - e' vuota o sotto 40 char
+Elenca TC con specificità insufficiente o description non semantica. Soglia: 75%.
+Output: GIUDICE J4 | PERCENTUALE: XX% | PASS/FAIL | TC_GENERICI: [lista con motivazione e categoria: "valori_assenti" | "expected_generico" | "description_non_semantica" | "description_con_metadata"]
+```
+
+#### J6 — Negative Executability Check (R1-R5)
+
+```
+Sei un QA Judge specializzato in executability dei TC negativi per QA manuale.
+Input: M_FINAL + TC GENERATI (serializzati sopra) + sezione "Guardrail TC Negativi (R1-R5)" dalla SKILL.md
+Atteggiamento: scettico — assumi che ogni [NEG] sia non-eseguibile finche' non passa R5.
+
+Per ogni TC con prefisso `[NEG]` (e ogni `[EDGE]` con condition avversa che presuppone
+input fuori dominio normale), applica le 5 regole R1-R5:
+
+R1 (no system mutation): la PRECONDIZIONE include modifiche a:
+   template / SMTP / CDN / sender / DB INSERT-UPDATE / config / feature flag /
+   implementazione errata? Se SI → FAIL R1.
+
+R2 (no DB direct action): le ACTION (non expected) contengono SELECT/INSERT/UPDATE/DELETE
+   SQL? Se SI → FAIL R2. Eccezione: SELECT in expected_result e' permessa se l'ambiente
+   QA documenta un tool SQL read-only (in dubbio = FAIL R2).
+
+R3 (no fault injection): la precondizione richiede servizio down, mock/stub, race condition
+   precisa, rollback transazione parziale, retry orchestrato? Se SI → FAIL R3.
+
+R4 (no mirror negativo): il NEG e' "campo statico di configurazione gia' coperto dal
+   POS, nessun input path autonomo"? Se SI → FAIL R4 con riferimento al POS matrix_row_id.
+
+R5 (checklist precondizione): rispondi SI a tutte e 3:
+   (a) producibile con browser/Postman/email-client?
+   (b) precondizione impostabile senza modificare sistema?
+   (c) action e' UI/API/email, non SQL diretto?
+   Se anche una NO → FAIL R5.
+
+Output per ciascun TC NEG/EDGE: verdict PASS / FAIL_R<n> con motivazione 1 riga.
+
+Soglia: 100% dei TC manuali NEG/EDGE devono passare R1-R5.
+Output: GIUDICE J6 | TC_VALUTATI: N | PASS: N | FAIL: N | LISTA_FAIL: [
+  {tc_id, matrix_row_id, rule_violated, motivazione, routing_suggerito (automated-only|eliminated)}
+]
 ```
 
 #### Comportamento Gate #2
 
 ```
-1. Lancia J3 e J4 in parallelo (Agent tool, stesso turno)
+1. Lancia J3, J4 e J6 in parallelo (Agent tool, stesso turno — 3 tool_use visibili)
 2. Valuta:
-   - J3 FAIL → rigenerazione selettiva solo per righe orfane (Phase 4b parziale)
+   - J3 FAIL → rigenerazione selettiva solo per righe `manual` orfane (Phase 4b parziale)
    - J4 < 75% → riformulazione selettiva dei TC generici identificati
+   - J6 FAIL → per ogni TC fallito: applica il routing_suggerito da J6
+     * automated-only → riclassifica la riga M_FINAL (executability_class = "automated-only",
+       rule_violated = "Rn"), elimina il TC manuale da TC_DRAFT, aggiungi entry
+       "automated_only_note" in TC_DRAFT.md
+     * eliminated → rimuovi la riga da M_FINAL (con backup .bak), elimina il TC,
+       registra eliminazione in coverage_certificate.json
 3. Rilancia SOLO i judge falliti con:
    "Nel run precedente hai trovato questi problemi: [lista].
    Valuta i TC aggiornati: [lista TC nuovi]."
-4. Max 2 iterazioni per gate, poi escalation all'utente
+4. Max 2 iterazioni per gate, poi escalation all'utente.
+   Per J6 specificamente: se dopo 2 iterazioni esistono ancora TC FAIL, NON si esporta —
+   l'export di TL non eseguibili e' un fallimento di workflow, non un compromise.
 
-Escalation asimmetrica: se un solo judge (J3 o J4) supera il max di iterazioni mentre
-l'altro è già PASS, l'escalation riguarda solo il judge fallito. Mostra il GATE #2
-REPORT parziale e chiedi: "J3/J4 non converge dopo 2 iterazioni — vuoi procedere
+Escalation asimmetrica: se un solo judge (J3, J4 o J6) supera il max di iterazioni mentre
+gli altri sono già PASS, l'escalation riguarda solo il judge fallito. Mostra il GATE #2
+REPORT parziale e chiedi: "J<n> non converge dopo 2 iterazioni — vuoi procedere
 con questo gap o rifai la generazione da zero per le righe coinvolte?"
+Per J6 (executability): il default e' BLOCK, non procedere — chiedi esplicita conferma
+del developer che accetta TL con TC non eseguibili (registralo nel certificate come
+`developer_overrides[].field = "j6_bypass"`).
 
-Se J3 PASS e J4 PASS: procedi a Phase 4d (J5 Final Audit)
+Se J3 PASS, J4 PASS e J6 PASS: procedi a Phase 4d (J5 Final Audit)
 ```
 
 #### Formato GATE #2 REPORT
@@ -757,12 +1069,19 @@ Se J3 PASS e J4 PASS: procedi a Phase 4d (J5 Final Audit)
 ```
 GATE #2 REPORT
 ──────────────
-J3 Bijection:   N/N righe coperte (100%) | N TC orfani   [PASS ✅ / FAIL ❌]
-J4 Specificità: XX% TC con dati concreti                  [PASS ✅ / FAIL ❌]
+J3 Bijection:      N/N righe `manual` coperte (100%) | N TC orfani   [PASS ✅ / FAIL ❌]
+J4 Specificità:    XX% TC con dati concreti                          [PASS ✅ / FAIL ❌]
+J6 Executability:  N/N TC [NEG]/[EDGE] eseguibili da QA manuale      [PASS ✅ / FAIL ❌]
 
-Righe orfane (senza TC): [lista]
+Righe `manual` orfane (senza TC): [lista]
 TC orfani (senza riga matrice): [lista]
 TC generici da riformulare: [lista con motivazione]
+TC non eseguibili (R1-R5 violati): [
+  {tc_id, matrix_row_id, rule_violated, routing_suggerito}
+]
+Routing post-J6 applicato:
+  - automated-only riclassificati: N
+  - eliminated rimossi: N
 ──────────────────────────────────────────────────
 ```
 
@@ -859,13 +1178,32 @@ Procedi a Phase 5 (export) con il certificate allegato.
 
 **Pre-export step:** verifica che `docs/qa/{STORY_ID}/coverage_certificate.json` sia stato scritto in Phase 4d. Senza certificate, non procedere all'export.
 
+**Artefatti prodotti in Phase 5:**
+
+1. **`docs/qa/{STORY_ID}/RTD-XXX_TC.csv`** — CSV Xray pulito. Contiene SOLO TC manuali
+   eseguibili (entry con `kind=test_case` in TC_DRAFT). Nessun commento, nessuna riga
+   `[AUTOMATED-ONLY]`, nessuna riga `[ELIMINATED]`. Importabile direttamente in Xray
+   senza errori di parsing.
+2. **`docs/qa/{STORY_ID}/automated_only_notes.md`** — file di reportistica per lo
+   sviluppatore. Contiene le entry `kind=automated_only_note` di TC_DRAFT, raggruppate
+   per regola violata (R1/R2/R3) e per entita'. Ogni entry indica `matrix_row_id`,
+   motivo, `automation_suggestion`, `original_condition`. Non importato in Xray.
+3. **`docs/qa/{STORY_ID}/coverage_certificate.json`** — gia' scritto in Phase 4d.
+   Include la sezione `eliminated_rows` con le righe R4 rimosse e la motivazione.
+
+**Anti-pattern (BLOCCATO):** non concatenare le 3 sezioni in un unico CSV con righe
+commento `#`. L'importer Xray non gestisce in modo affidabile le righe commento e
+puo' importarle come TC vuoti, generando errori o TC malformati nel progetto Jira.
+
 **Tier 1 (MCP):**
-1. Crea ogni Test Case in Xray via MCP
+1. Crea ogni TC `kind=test_case` in Xray via MCP — le `automated_only_note` NON vengono
+   create in Xray, restano solo nel file `.md`
 2. Ogni TC creato ottiene automaticamente una chiave Jira (es. `PROJ-456`) — registrala nella mappatura (vedi Passo post-export)
 3. Dopo l'esecuzione dei test, aggiorna il Test Execution con i risultati
 
 **Tier 2 (Documento):**
-- Output sempre CSV semicolon-separated in formato Xray-importabile — indipendentemente dalla disponibilità MCP
+- Output `RTD-XXX_TC.csv` semicolon-separated, solo TC eseguibili — indipendentemente dalla disponibilità MCP
+- `automated_only_notes.md` come file separato per il developer
 - Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Tier 3 CSV Export" per formato e istruzioni
 
 **Tier 3 (Conversazione):**
@@ -916,6 +1254,14 @@ Invoca `siae-verification` prima di dichiarare il piano QA completato.
 | "coverage_certificate.json e' un nice-to-have, esporto e basta" | Senza certificate il collaudo non puo' validare la chiusura del ciclo QA e siae-automation non ha l'input previsto. L'export non parte senza certificate (FULL_PASS o CONDITIONAL_PASS). |
 | "Lo step 2 'verify response code' basta per i POST" | No. Per mutating 2xx serve read-back (GET/SELECT) o assert body fields. Response code da solo conferma che la chiamata e' arrivata, non che il record esista nello stato atteso. |
 | "I lookup li espando tutti, e' piu' rigoroso" | Esplosione completa solo per spec con mapping esplicito campo→valore→esito. Per lookup senza esiti distinti documentati, una POS rappresentativa basta — risparmia 2-5 righe per campo senza perdere copertura semantica. |
+| "Il NEG e' il POS al contrario, basta cambiare il valore atteso" | Spesso il "contrario" del POS richiede di modificare il sistema (template/config/DB). Quel NEG NON e' eseguibile dal QA manuale — e' un mirror, e va eliminato o convertito in automated-only. Vedi R4 nei Guardrail TC Negativi. |
+| "Per generare il NEG basta che il QA modifichi il template/config" | Il QA manuale NON ha accesso a template engine, SMTP config, deploy properties, feature flag. Modificare il sistema come precondizione = R1 violata. Routing corretto: automated-only con suggerimento snapshot/unit test. |
+| "Il NEG sul DB lo faccio mettere un dato corrotto con SELECT/INSERT" | SELECT/INSERT/UPDATE come Action o Precondizione non sono passi eseguibili da QA manuale (R2). Spostare SELECT in expected (verifica su monitoring tool) o riclassificare automated-only se serve setup DB. |
+| "Per testare il timeout SMTP gli faccio spegnere il servizio" | Fault injection (R3): servizi down, mock stub, race condition arbitraria non sono producibili dal QA manuale. Coprire con chaos-test o integration-test. |
+| "J6 e' troppo rigoroso, esporto con qualche TC non eseguibile" | Una TL con TC non eseguibili e' la causa identificata dall'analisi RTD-108: 54% dei NEG non eseguibili dal QA. Esportare TL non eseguibili significa che il QA non puo' fare il lavoro e i bug passano in produzione. Default J6: BLOCK. Per bypass serve consenso esplicito del developer registrato come `j6_bypass` in `developer_overrides`. |
+| "Faccio Matrix A/B senza executability_class, poi vediamo in Phase 4b" | Senza classificazione upfront, Phase 4b genera TC che J6 rigettera' — costo doppio (rigenerazione + cleanup). La classificazione in Matrix A/B costa pochi token e azzera il rework. |
+| "Metto matrix_row_id in Description, cosi' J3 lo trova subito" | J3 legge il campo schema `tc.matrix_row_id`, non fa parsing del testo. La Description e' visibile al QA in Xray: deve essere semantica, non metadata. Metadata in Description = J4 FAIL "description_con_metadata". |
+| "Description = 'matrix_row_id: A-001 \| entity: X \| field: y' basta per tracciabilita'" | No: il QA che apre il TC in Xray legge la Description per capire COSA testa. "matrix_row_id: A-001" gli dice nulla. La tracciabilita' vive nei campi schema separati; la Description e' linguaggio naturale 40-400 char. |
 
 ---
 
@@ -929,7 +1275,7 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 ## VINCOLI NON NEGOZIABILI
 
 0. **Phase 0 e' sempre la prima phase** — nessun AC viene letto senza aver prima inferito il tipo e lanciato le domande del tree contestuale; la Req Profile Card deve essere prodotta prima di Phase 1
-1. **Nessun Test Case senza riga M_FINAL corrispondente** — ogni TC è tracciabile a una riga della Coverage Matrix (matrix_row_id obbligatorio nel campo Description)
+1. **Nessun Test Case senza riga M_FINAL corrispondente** — ogni TC è tracciabile a una riga della Coverage Matrix (matrix_row_id obbligatorio come **campo schema separato** dell'oggetto TC; **vietato** nel testo della Description, che e' riservata alla descrizione semantica del comportamento testato)
 2. **M_FINAL deve esistere PRIMA di generare qualsiasi TC** — Phase 1.5 e Gate #1 sono bloccanti; non si genera senza M_FINAL approvata da J1_MATRIX + J2_MATRIX
 3. **La generazione TC è 1:1 con M_FINAL** — ogni riga di M_FINAL produce esattamente 1 TC; nessun TC senza riga, nessuna riga senza TC
 4. **I TC devono contenere i valori concreti dalla colonna "condition" di M_FINAL** — nessuna formulazione generica ("inserire un valore valido")
@@ -948,6 +1294,8 @@ Vedi [XRAY-TEMPLATES.md](XRAY-TEMPLATES.md) sezione "Checklist di Verifica" per 
 17. **Cross-temporal/cross-event rules generano almeno 1 EDGE per replay E 1 EDGE per out-of-order** — se la spec menziona idempotency/sequenza, Matrix B deve esplodere su entrambi (no shortcut "tanto è idempotente").
 18. **Multi-session TC usano tag espliciti `[SESSION A]/[SESSION B]`** — un TC concurrent senza tag e' un TC sequenziale travestito.
 19. **Priorita' regole su conflitto e' deterministica** — boolean+valore_fisso → priorità valore_fisso, no doppio TC su POS(false)/NEG(false).
+20. **Ogni TC `[NEG]` (e ogni `[EDGE]` con condition avversa) deve passare R1-R5** — no system mutation, no DB direct action, no fault injection, no mirror negativo, checklist precondizione PASS. Le righe M_FINAL che violano R1/R2/R3 hanno `executability_class="automated-only"` (nessun TC manuale, output in `automated_only_notes.md` SEPARATO dal CSV); R4 produce `executability_class="eliminated"` (riga rimossa, nota in `coverage_certificate.json`). J6 in Gate #2 e' bloccante: senza J6 PASS l'export non parte (TL non eseguibile e' un fallimento di workflow). Vedi sezione "Guardrail TC Negativi (R1-R5)" e ADR-013.
+21. **Il CSV Xray contiene SOLO TC eseguibili** — nessuna riga commento `#`, nessuna entry `[AUTOMATED-ONLY]`, nessuna entry `[ELIMINATED]`. Le note tecniche vivono in `automated_only_notes.md` e `coverage_certificate.json`. L'importer Xray puo' creare TC malformati o errori se trova righe commento.
 
 ---
 
@@ -990,7 +1338,7 @@ Simulare un giudice senza Agent tool invalida l'intero meccanismo di verifica in
 
 **Phase completabili senza permessi:** Phase 1 (conversazionale — lettura AC/requisiti, elicitazione scenari)
 **Phase che richiedono Agent tool:** Phase 1.5 (Matrix A/B/C, J1_MATRIX/J2_MATRIX), Phase 4c (J3/J4), Phase 4d (J5)
-**Phase che richiedono Write tool:** Phase 1.5 (`docs/qa/{STORY_ID}/MFINAL.md`), Phase 4b (`docs/qa/{STORY_ID}/TC_DRAFT.md`), Phase 4d (`docs/qa/{STORY_ID}/coverage_certificate.json`), Phase 5 (`docs/qa/{STORY_ID}/xray_id_mapping.json`).
+**Phase che richiedono Write tool:** Phase 1.5 (`docs/qa/{STORY_ID}/MFINAL.md`), Phase 4b (`docs/qa/{STORY_ID}/TC_DRAFT.md`), Phase 4d (`docs/qa/{STORY_ID}/coverage_certificate.json`), Phase 5 (`docs/qa/{STORY_ID}/RTD-XXX_TC.csv`, `docs/qa/{STORY_ID}/automated_only_notes.md`, `docs/qa/{STORY_ID}/xray_id_mapping.json`).
 **Phase che richiedono MCP:** Phase 5 (Xray — solo Tier 1)
 
 Se i permessi sono negati:

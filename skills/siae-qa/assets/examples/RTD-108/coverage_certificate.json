@@ -1,0 +1,92 @@
+{
+  "stato": "FULL_PASS",
+  "story_id": "RTD-108",
+  "timestamp": "2026-05-22T14:30:00Z",
+  "m_final_rows": 71,
+  "j5_gap_rows": 0,
+  "tc_generated": 42,
+  "tc_added_post_j5": 0,
+  "coverage_score": 100,
+  "automated_only_count": 21,
+  "gate_1": {
+    "status": "PASS",
+    "j1_matrix": { "percentage": 100, "status": "PASS", "gap": [] },
+    "j2_matrix": { "duplicates": 0 }
+  },
+  "gate_2": {
+    "status": "PASS",
+    "rerun_post_j5": false,
+    "j3": { "status": "PASS", "orphan_rows": [], "orphan_tc": [] },
+    "j4": { "percentage": 94, "status": "PASS", "generic_tc": [] },
+    "j6": {
+      "status": "PASS",
+      "evaluated_tc": 23,
+      "pass_tc": 23,
+      "fail_tc": 0,
+      "failures": []
+    }
+  },
+  "j5_gaps": {
+    "high_resolved": 0,
+    "high_open": 0,
+    "medium_open": 1,
+    "low_open": 0,
+    "accepted_gaps": [
+      {
+        "priority": "MEDIUM",
+        "description": "Policy SMTP retry-failed-alert non definita nello spec (gia' documentato come automated-only A-047 con suggerimento chaos test). Sollevare al PO."
+      }
+    ]
+  },
+  "developer_overrides": [],
+  "eliminated_rows": [
+    {
+      "matrix_row_id": "A-002",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-001 (subject 'Benvenuto' non producibile senza modifica template; copertura del valore corretto garantita dal POS)",
+      "mirror_of_pos_matrix_row_id": "A-001"
+    },
+    {
+      "matrix_row_id": "A-004",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-003 (sender_name 'Siae Spa' non producibile senza modifica config)",
+      "mirror_of_pos_matrix_row_id": "A-003"
+    },
+    {
+      "matrix_row_id": "A-008",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-007 (CTA 'clicca qui' non producibile senza modifica template)",
+      "mirror_of_pos_matrix_row_id": "A-007"
+    },
+    {
+      "matrix_row_id": "A-012",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-011 (body con condizioni omesse non producibile senza modifica template)",
+      "mirror_of_pos_matrix_row_id": "A-011"
+    },
+    {
+      "matrix_row_id": "A-024",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-023 (expires_at = generated_at+5min, valore derivato non manipolabile direttamente)",
+      "mirror_of_pos_matrix_row_id": "A-023"
+    },
+    {
+      "matrix_row_id": "A-031",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-030 (sender deliverability statica; copertura via POS)",
+      "mirror_of_pos_matrix_row_id": "A-030"
+    },
+    {
+      "matrix_row_id": "A-032",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-013 (body format HTML statico; copertura via POS)",
+      "mirror_of_pos_matrix_row_id": "A-013"
+    },
+    {
+      "matrix_row_id": "A-058b",
+      "rule_violated": "R4",
+      "reason": "Mirror del POS A-009 (URL path statico /it/magicLink/; copertura via POS)",
+      "mirror_of_pos_matrix_row_id": "A-009"
+    }
+  ]
+}

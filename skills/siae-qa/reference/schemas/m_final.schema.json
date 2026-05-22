@@ -27,7 +27,7 @@
     "matrixRow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["matrix_row_id", "entity", "field", "condition", "test_type", "source_ref"],
+      "required": ["matrix_row_id", "entity", "field", "condition", "test_type", "source_ref", "executability_class"],
       "properties": {
         "matrix_row_id": {
           "type": "string",
@@ -65,8 +65,56 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Valori associati ai combo_fields (opzionale, stesso ordine)."
+        },
+        "executability_class": {
+          "type": "string",
+          "enum": ["manual", "automated-only", "eliminated"],
+          "description": "Routing per Phase 4b in base ai guardrail R1-R5 (ADR-013). POS/ROLE = sempre 'manual'. NEG/EDGE classificati upfront da Matrix A/B e validati da J6 in Gate #2."
+        },
+        "rule_violated": {
+          "type": "string",
+          "enum": ["R1", "R2", "R3", "R4", "R5"],
+          "description": "Regola violata quando executability_class != 'manual'. R1=system_mutation, R2=db_direct_action, R3=fault_injection, R4=mirror_negative, R5=checklist_fail."
+        },
+        "automation_suggestion": {
+          "type": "string",
+          "description": "Suggerimento di copertura automatica per righe automated-only (es. 'snapshot test template', 'unit test parser timestamp', 'integration test SMTP retry')."
+        },
+        "eliminated_reason": {
+          "type": "string",
+          "description": "Motivazione per righe eliminated (R4) — riferimento al POS matrix_row_id corrispondente."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "executability_class": { "const": "automated-only" } },
+            "required": ["executability_class"]
+          },
+          "then": {
+            "required": ["rule_violated", "automation_suggestion"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "executability_class": { "const": "eliminated" } },
+            "required": ["executability_class"]
+          },
+          "then": {
+            "required": ["rule_violated", "eliminated_reason"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "test_type": { "enum": ["POS", "ROLE"] } }
+          },
+          "then": {
+            "properties": {
+              "executability_class": { "const": "manual" }
+            }
+          }
+        }
+      ]
     }
   }
 }
