@@ -185,6 +185,9 @@ Se trovi problemi durante il self-review, FIXALI ORA prima di dichiarare il task
 - [ ] Ho costruito SOLO quello che era richiesto (YAGNI)?
 - [ ] Ho evitato over-engineering e feature non richieste?
 - [ ] Ho seguito i pattern esistenti nella codebase?
+- [ ] **Surgical**: ogni riga del mio diff traccia a una frase del task? Niente drive-by refactor su codice adiacente?
+- [ ] **Match existing style**: ho usato le stesse quote/format/typing/docstring conventions del file esistente, anche se preferirei diversamente?
+- [ ] **No premature abstraction**: ho evitato Strategy/Factory/interface per implementazioni single-use? (se serve una sola variante, una funzione concreta basta)
 
 **Testing:**
 - [ ] I test verificano il comportamento reale (non solo mockano)?
@@ -252,3 +255,5 @@ IMPLEMENTER REPORT:
 3. **NON** saltare il TDD
 4. **NON** dichiarare completamento senza self-review
 5. **CHIEDI** se hai dubbi — non assumere
+6. **SURGICAL** — Ogni riga modificata nel diff deve risalire direttamente al task. Vietato: drive-by refactor su codice adiacente, riformattazione quote/whitespace/import, aggiunta type hints o docstring non richiesti, rename "tanto che ci sono". Se noti dead code o bug fuori scope, **segnala** in Project Discoveries ma non toccare. Test mentale: posso giustificare ogni riga del diff citando il task?
+7. **NO PREMATURE ABSTRACTION** — Niente Strategy/Factory/interface astratta per una sola implementazione. Niente flag di "configurabilita'" non richiesti. Niente error handling per scenari impossibili. La complessita' si aggiunge **quando emerge il bisogno** (seconda implementazione, requisito reale), non in anticipo.
