@@ -356,6 +356,37 @@ def _build_install_commands(framework: str, repo_path: Path) -> list[str]:
 
 
 _ASSERTJ_RE = re.compile(r"<artifactId>\s*assertj-core\s*</artifactId>")
+_JACOCO_SKIP_RE = re.compile(
+    r"<jacoco\.skip>\s*true\s*</jacoco\.skip>", re.IGNORECASE
+)
+
+
+def detect_jacoco_skipped_modules(aggregator_base: Path, modules: list) -> list:
+    """Task 06: identifica moduli con ``<jacoco.skip>true</jacoco.skip>``.
+
+    Phase 8 filtra questi moduli dal bundle coverage (evita falsi 0% LINE su
+    moduli by-design senza source Java o senza tests — es. siae-pae-bollettino-service
+    è solo aggregator).
+
+    Args:
+        aggregator_base: dir base contenente i moduli (manifest_root).
+        modules: lista nomi modulo da stack.json.maven_aggregator.modules.
+
+    Returns:
+        list di nomi modulo con jacoco.skip=true (ordinato per stabilità).
+    """
+    skipped: list = []
+    for mod in modules:
+        mod_pom = Path(aggregator_base) / str(mod) / "pom.xml"
+        if not mod_pom.is_file():
+            continue
+        try:
+            content = mod_pom.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if _JACOCO_SKIP_RE.search(content):
+            skipped.append(mod)
+    return skipped
 
 
 def detect_assertion_lib(pom_paths: list) -> str:
@@ -535,6 +566,23 @@ def main() -> None:
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
 
+    # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
+    skipped_modules: list = []
+    if framework in ("junit5", "junit5+mockk"):
+        try:
+            stack_data = json.loads(
+                (repo_path / ".code-coverage" / "stack.json").read_text(
+                    encoding="utf-8", errors="ignore"
+                )
+            )
+            agg = stack_data.get("maven_aggregator") or {}
+            modules = agg.get("modules") or []
+            if modules:
+                agg_base = repo_path / agg.get("manifest_root", ".")
+                skipped_modules = detect_jacoco_skipped_modules(agg_base, modules)
+        except (json.JSONDecodeError, OSError, FileNotFoundError):
+            pass
+
     raw_install_commands = _build_install_commands(framework, repo_path)
     # ADR-2: prefix install commands con `cd <manifest_root_rel> &&` se nested.
     # Commenti (linee che iniziano con "#") restano invariati per leggibilità.
@@ -558,6 +606,7 @@ def main() -> None:
         "install_commands": install_commands,
         "blocking": blocking,
         "assertion_lib": assertion_lib,
+        "skipped_modules": skipped_modules,
     }, indent=2))
 
 

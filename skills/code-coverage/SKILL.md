@@ -147,6 +147,20 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Jacoco-skipped modules (Task 06)
+
+Moduli SIAE legacy hanno spesso ``<jacoco.skip>true</jacoco.skip>`` per design (es. ``siae-pae-bollettino-service`` è aggregator senza source Java). Phase 4 detecta queste proprietà e popola ``env.json.skipped_modules``.
+
+Phase 8 (reporting) DEVE filtrare ``skipped_modules`` dal calcolo bundle coverage:
+
+```python
+skipped = set(env_json.get("skipped_modules", []))
+covered_modules = [m for m in all_modules if m not in skipped]
+# bundle coverage = aggregate(covered_modules) — esclude i SKIPPED
+```
+
+I moduli SKIPPED compaiono nel report finale in sezione "Moduli skipped" con ragione ``jacoco.skip=true by-design`` — non contano come FAIL.
+
 ## Assertion library — NO auto-add deps (Task 04)
 
 Phase 4 (validate_env.py) rileva la libreria di assertion presente nel pom Java:
