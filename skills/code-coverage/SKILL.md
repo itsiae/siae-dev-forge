@@ -147,6 +147,29 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Surefire includes/excludes handling (Task 05)
+
+Phase 4 estrae la configurazione di ``maven-surefire-plugin`` da ogni pom e popola ``env.json.surefire_config``:
+
+```json
+{
+  "surefire_config": {
+    "includes": ["**/BollettinoMusicaServiceImplTest.java"],
+    "excludes": [],
+    "restrictive": true
+  }
+}
+```
+
+``restrictive=true`` significa che gli ``<includes>`` configurati NON matchano i pattern surefire standard (``**/*Test.java``, ``**/Test*.java``, ``**/*Tests.java``). Risultato: i nuovi test generati da Phase 5 verrebbero ignorati silenziosamente → coverage falsa 0% sui nuovi test → Phase 7 entra in repair loop su problema fantasma.
+
+**Phase 5 behaviour quando restrictive=true:**
+
+1. **Opzione A — Match existing pattern:** nominare i nuovi test come gli esistenti se semanticamente coerente
+2. **Opzione B — Proposed pom patch:** emettere ``.code-coverage/proposed-pom-patches.diff`` con il patch ai ``<includes>`` da approvare. NON applicare automaticamente (Principle 1).
+
+Excludes (``**/IT*.java``, etc.) sono rispettati come da spec surefire — il naming dei test generati evita i pattern excluded.
+
 ## Maven placeholder handling (Task 02)
 
 Pom SIAE usano ``${appVersion}``, ``${revision}`` iniettati dalla pipeline CI/CD ma non definiti nel pom. Phase 4 scansiona i pom, rileva i placeholder non risolti, e popola ``env.json.maven_placeholders``:

@@ -438,6 +438,51 @@ def scan_maven_placeholders(pom_paths: list, overrides: dict | None = None) -> d
             value = ov_placeholders.get(token, _MAVEN_PLACEHOLDER_DEFAULT)
             found[token] = value
     return found
+# Task 05: regex per estrarre include/exclude da blocco surefire-plugin
+_SUREFIRE_PLUGIN_BLOCK_RE = re.compile(
+    r"<plugin>\s*(?:<groupId>[^<]+</groupId>\s*)?<artifactId>\s*maven-surefire-plugin\s*</artifactId>(.*?)</plugin>",
+    re.DOTALL,
+)
+_SUREFIRE_INCLUDE_RE = re.compile(r"<include>([^<]+)</include>")
+_SUREFIRE_EXCLUDE_RE = re.compile(r"<exclude>([^<]+)</exclude>")
+# Pattern surefire "standard" considerati NON restrittivi (default behavior)
+_SUREFIRE_DEFAULT_PATTERNS = {
+    "**/*Test.java", "**/Test*.java", "**/*Tests.java", "**/*TestCase.java",
+}
+
+
+def detect_surefire_config(pom_path) -> dict:
+    """Task 05: estrae <includes>/<excludes> di maven-surefire-plugin da un pom.
+
+    Ritorna ``{'includes': [...], 'excludes': [...], 'restrictive': bool}``.
+
+    ``restrictive=True`` se:
+    - include list non vuota
+    - AND nessun include matcha pattern standard (``**/*Test.java`` etc.)
+
+    Su pom con configurazione restrittiva, Phase 5 deve allineare naming dei
+    test generati (Opzione A) o generare proposed-pom-patches.diff (Opzione B).
+    Skill NON modifica autonomamente il pom (Principle 1).
+    """
+    default = {"includes": [], "excludes": [], "restrictive": False}
+    try:
+        content = Path(pom_path).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return default
+
+    block_match = _SUREFIRE_PLUGIN_BLOCK_RE.search(content)
+    if not block_match:
+        return default
+
+    plugin_block = block_match.group(1)
+    includes = [m.strip() for m in _SUREFIRE_INCLUDE_RE.findall(plugin_block) if m.strip()]
+    excludes = [m.strip() for m in _SUREFIRE_EXCLUDE_RE.findall(plugin_block) if m.strip()]
+    restrictive = bool(includes) and not any(
+        inc in _SUREFIRE_DEFAULT_PATTERNS for inc in includes
+    )
+    return {"includes": includes, "excludes": excludes, "restrictive": restrictive}
+
+
 _JACOCO_SKIP_RE = re.compile(
     r"<jacoco\.skip>\s*true\s*</jacoco\.skip>", re.IGNORECASE
 )
@@ -645,12 +690,17 @@ def main() -> None:
     # Per stack non-Java, lascia field a None.
     assertion_lib = None
     maven_placeholders: dict = {}
+    surefire_config: dict = {"includes": [], "excludes": [], "restrictive": False}
     if framework in ("junit5", "junit5+mockk"):
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
         # Task 02: maven-placeholder-inject — scan + emit defaults.
         overrides_data = _read_overrides(repo_path)
         maven_placeholders = scan_maven_placeholders(pom_paths, overrides=overrides_data)
+        # Task 05: surefire-includes-detect — root pom (aggregator); Phase 5
+        # legge anche moduli individuali se Phase 7 entra in loop.
+        if pom_paths:
+            surefire_config = detect_surefire_config(pom_paths[0])
 
     # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
     skipped_modules: list = []
@@ -694,6 +744,7 @@ def main() -> None:
         "assertion_lib": assertion_lib,
         "skipped_modules": skipped_modules,
         "maven_placeholders": maven_placeholders,
+        "surefire_config": surefire_config,
     }, indent=2))
 
 
