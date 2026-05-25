@@ -38,7 +38,22 @@ get_template() {
     jest)           src="$templates_dir/jest.template.ts" ;;
     pytest)         src="$templates_dir/pytest.template.py" ;;
     pyspark)        src="$templates_dir/pyspark.template.py" ;;
-    junit5)         src="$templates_dir/junit5.template.java" ;;
+    junit5)
+      # Task 04: switch to vanilla template if env.json.assertion_lib=junit5_vanilla
+      # (no assertj-core in pom). Backward-compat: default to AssertJ template.
+      local _env_json="$repo/.code-coverage/env.json"
+      local _assertion_lib=""
+      if [ -f "$_env_json" ] && command -v python3 >/dev/null 2>&1; then
+        _assertion_lib=$(python3 -c "import json,sys
+try: print(json.load(open(sys.argv[1])).get('assertion_lib') or '')
+except: pass" "$_env_json" 2>/dev/null)
+      fi
+      if [ "$_assertion_lib" = "junit5_vanilla" ]; then
+        src="$templates_dir/junit5-vanilla.template.java"
+      else
+        src="$templates_dir/junit5.template.java"
+      fi
+      ;;
     mockk)          src="$templates_dir/mockk.template.kt" ;;
     go-test)        src="$templates_dir/go-testing.template.go" ;;
     cargo-test)     src="$templates_dir/cargo-test.template.rs" ;;

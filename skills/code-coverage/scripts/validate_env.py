@@ -355,6 +355,60 @@ def _build_install_commands(framework: str, repo_path: Path) -> list[str]:
     return commands
 
 
+_ASSERTJ_RE = re.compile(r"<artifactId>\s*assertj-core\s*</artifactId>")
+
+
+def detect_assertion_lib(pom_paths: list) -> str:
+    """Task 04: rileva quale assertion library è presente nei pom.
+
+    Ritorna ``"assertj"`` se ``assertj-core`` presente in almeno UN pom,
+    altrimenti ``"junit5_vanilla"`` (fallback: usare ``Assertions.*`` di JUnit5).
+
+    Principle 1: NON modifica autonomamente il pom per aggiungere AssertJ.
+    L'utente decide se vuole upgrade — il template vanilla è equivalente.
+
+    Args:
+        pom_paths: lista pom.xml da scansionare (Path).
+
+    Returns:
+        "assertj" | "junit5_vanilla"
+    """
+    for pom in pom_paths:
+        try:
+            content = Path(pom).read_text(encoding="utf-8", errors="ignore")
+        except (OSError, AttributeError):
+            continue
+        if _ASSERTJ_RE.search(content):
+            return "assertj"
+    return "junit5_vanilla"
+
+
+def _collect_pom_paths(repo_path: Path, manifest_root_rel: str = ".") -> list[Path]:
+    """Raccoglie i pom.xml per detect_assertion_lib: aggregator + tutti i moduli
+    figli (path letti da stack.json.maven_aggregator.modules quando disponibile).
+
+    Solo pom letti da ``manifest_root_rel`` o sotto.
+    """
+    base = repo_path / manifest_root_rel if manifest_root_rel not in (".", "") else repo_path
+    poms: list[Path] = []
+    root_pom = base / "pom.xml"
+    if root_pom.is_file():
+        poms.append(root_pom)
+    # Carica moduli da stack.json se disponibile
+    stack_path = repo_path / ".code-coverage" / "stack.json"
+    if stack_path.is_file():
+        try:
+            stack = json.loads(stack_path.read_text(encoding="utf-8", errors="ignore"))
+            agg = stack.get("maven_aggregator") or {}
+            for mod in agg.get("modules", []):
+                mod_pom = base / str(mod) / "pom.xml"
+                if mod_pom.is_file():
+                    poms.append(mod_pom)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return poms
+
+
 def _is_safe_gradlew(gradlew_path: Path, repo_root: Path) -> bool:
     """Return True only if gradlew is inside repo_root and has no unsafe permission bits.
 
@@ -474,6 +528,13 @@ def main() -> None:
     if required_runtime and any(t.get("tool") == required_runtime for t in missing):
         blocking = True
 
+    # Task 04: assertion-lib-probe per Java (junit5/junit5+mockk).
+    # Per stack non-Java, lascia field a None.
+    assertion_lib = None
+    if framework in ("junit5", "junit5+mockk"):
+        pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
+        assertion_lib = detect_assertion_lib(pom_paths)
+
     raw_install_commands = _build_install_commands(framework, repo_path)
     # ADR-2: prefix install commands con `cd <manifest_root_rel> &&` se nested.
     # Commenti (linee che iniziano con "#") restano invariati per leggibilità.
@@ -496,6 +557,7 @@ def main() -> None:
         "missing": missing,
         "install_commands": install_commands,
         "blocking": blocking,
+        "assertion_lib": assertion_lib,
     }, indent=2))
 
 

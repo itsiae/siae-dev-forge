@@ -147,6 +147,23 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Assertion library — NO auto-add deps (Task 04)
+
+Phase 4 (validate_env.py) rileva la libreria di assertion presente nel pom Java:
+
+- ``assertj-core`` in deps → ``env.json.assertion_lib = "assertj"`` → template
+  ``junit5.template.java`` (AssertJ style: ``assertThat(x).isEqualTo(y)``)
+- Solo JUnit5 vanilla (no AssertJ) → ``env.json.assertion_lib = "junit5_vanilla"``
+  → template ``junit5-vanilla.template.java`` (``assertEquals(expected, actual)``)
+
+**Principle 1 enforcement:** la skill NON modifica autonomamente il pom per
+aggiungere AssertJ. È responsabilità dell'utente decidere l'upgrade. Il template
+vanilla è funzionalmente equivalente per le assertion comuni.
+
+**Detection scope:** scansiona aggregator pom + tutti i moduli figli (path
+letti da ``stack.json.maven_aggregator.modules`` quando rilevato in Task 01).
+AssertJ presente in UN qualsiasi modulo → template AssertJ globale.
+
 ## SUPPORTING FILES
 
 See `references/index.md` for the full map of lib/, scripts/, assets/, templates/, and references/.
