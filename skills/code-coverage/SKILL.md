@@ -147,6 +147,33 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Maven placeholder handling (Task 02)
+
+Pom SIAE usano ``${appVersion}``, ``${revision}`` iniettati dalla pipeline CI/CD ma non definiti nel pom. Phase 4 scansiona i pom, rileva i placeholder non risolti, e popola ``env.json.maven_placeholders``:
+
+```json
+{
+  "maven_placeholders": {
+    "appVersion": "1.0.0-SNAPSHOT",
+    "revision": "1.0.0-SNAPSHOT"
+  }
+}
+```
+
+`select_command.py` propaga ``-D<token>=<value>`` nel mvn cmd Phase 6. Default = ``1.0.0-SNAPSHOT`` (override via ``overrides.json.maven_placeholders``).
+
+**Esclusi:** built-in Maven (``${project.version}``, ``${pom.basedir}``, ...) e placeholder definiti localmente nel ``<properties>`` del pom.
+
+**Override esempio:**
+```json
+{
+  "maven_placeholders": {
+    "appVersion": "2.0.0-RELEASE",
+    "revision": "1.2.3"
+  }
+}
+```
+
 ## Jacoco-skipped modules (Task 06)
 
 Moduli SIAE legacy hanno spesso ``<jacoco.skip>true</jacoco.skip>`` per design (es. ``siae-pae-bollettino-service`` è aggregator senza source Java). Phase 4 detecta queste proprietà e popola ``env.json.skipped_modules``.

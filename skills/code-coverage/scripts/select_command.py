@@ -308,7 +308,16 @@ def main():
     # Task 01: legge aggregator info da stack.json (può essere None per repo
     # mono-pom o non-Maven).
     aggregator = _read_maven_aggregator(repo_root)
+    # Task 02: legge maven_placeholders da env.json e li aggiunge come -D
+    placeholders = env.get("maven_placeholders") or {}
     cmd, path, fmt, err = select_fields(stack_key, stack_def, repo_root, detect_os(), aggregator=aggregator)
+    # Inject -D<token>=<value> per ogni placeholder maven non risolto.
+    # Idempotente: skip se cmd già contiene il -D specifico.
+    if cmd and stack_key == "java" and isinstance(placeholders, dict) and placeholders:
+        for token, value in placeholders.items():
+            flag = f"-D{token}="
+            if flag not in cmd:
+                cmd = cmd.replace("mvn ", f"mvn {flag}{value} ", 1)
     if err or not cmd or not path:
         emit(stack=stack_key, cmd=cmd or "", path=path or "", fmt=fmt or "", error=err or "command/path/format resolution failed", manifest_root=manifest_root)
 

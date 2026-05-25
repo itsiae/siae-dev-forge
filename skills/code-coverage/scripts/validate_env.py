@@ -356,6 +356,88 @@ def _build_install_commands(framework: str, repo_path: Path) -> list[str]:
 
 
 _ASSERTJ_RE = re.compile(r"<artifactId>\s*assertj-core\s*</artifactId>")
+
+# Task 02: placeholder Maven not defined in pom — pipeline CI iniettava ${appVersion}, ${revision}
+_MAVEN_PLACEHOLDER_RE = re.compile(
+    r"\$\{(appVersion|revision|sha1|changelist|[a-zA-Z][a-zA-Z0-9_]*\.version)\}"
+)
+_MAVEN_BUILTIN_TOKENS = {
+    "project.version", "pom.version", "project.artifactId", "project.groupId",
+    "project.basedir", "pom.basedir", "project.name", "project.build.directory",
+    "project.build.finalName", "project.build.outputDirectory",
+    "java.version",  # builtin del JVM, non placeholder CI
+}
+_MAVEN_PLACEHOLDER_DEFAULT = "1.0.0-SNAPSHOT"
+
+
+def _pom_defines_property(pom_path: Path, name: str) -> bool:
+    """True se il pom dichiara <properties><name>...</name></properties>.
+
+    Check shallow: solo properties direttamente nel pom (no parent resolution).
+    Task 07 estende con effective-pom risolto.
+    """
+    try:
+        content = Path(pom_path).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+    # Estrai blocco <properties>...</properties> e cerca <name>
+    m = re.search(r"<properties>(.*?)</properties>", content, re.DOTALL)
+    if not m:
+        return False
+    return bool(re.search(rf"<{re.escape(name)}\b[^>]*>", m.group(1)))
+
+
+def _read_overrides(repo_path: Path) -> dict:
+    """Legge ``.code-coverage/overrides.json`` se presente.
+
+    Schema (Task 02 sezione):
+        {"maven_placeholders": {"appVersion": "2.0.0-RELEASE"}}
+    """
+    ov = Path(repo_path) / ".code-coverage" / "overrides.json"
+    if not ov.is_file():
+        return {}
+    try:
+        return json.loads(ov.read_text(encoding="utf-8", errors="ignore"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def scan_maven_placeholders(pom_paths: list, overrides: dict | None = None) -> dict:
+    """Task 02: scansiona pom per placeholder Maven non risolti.
+
+    Esclude:
+    - Built-in Maven (``project.*``, ``pom.*``, ``java.version``)
+    - Placeholder definiti localmente nel ``<properties>`` del pom
+
+    Inietta default ``1.0.0-SNAPSHOT`` per ogni placeholder rilevato; può essere
+    sovrascritto via overrides.json ``maven_placeholders``.
+
+    Args:
+        pom_paths: lista pom.xml (Path).
+        overrides: dict opzionale, di solito ``_read_overrides(repo)``.
+
+    Returns:
+        dict {placeholder_token: default_value}
+    """
+    ov_placeholders = (overrides or {}).get("maven_placeholders", {})
+    if not isinstance(ov_placeholders, dict):
+        ov_placeholders = {}
+
+    found: dict[str, str] = {}
+    for pom in pom_paths:
+        try:
+            content = Path(pom).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for token in _MAVEN_PLACEHOLDER_RE.findall(content):
+            if token in _MAVEN_BUILTIN_TOKENS:
+                continue
+            if _pom_defines_property(pom, token):
+                continue
+            # Override esplicito utente > default
+            value = ov_placeholders.get(token, _MAVEN_PLACEHOLDER_DEFAULT)
+            found[token] = value
+    return found
 _JACOCO_SKIP_RE = re.compile(
     r"<jacoco\.skip>\s*true\s*</jacoco\.skip>", re.IGNORECASE
 )
@@ -562,9 +644,13 @@ def main() -> None:
     # Task 04: assertion-lib-probe per Java (junit5/junit5+mockk).
     # Per stack non-Java, lascia field a None.
     assertion_lib = None
+    maven_placeholders: dict = {}
     if framework in ("junit5", "junit5+mockk"):
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
+        # Task 02: maven-placeholder-inject — scan + emit defaults.
+        overrides_data = _read_overrides(repo_path)
+        maven_placeholders = scan_maven_placeholders(pom_paths, overrides=overrides_data)
 
     # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
     skipped_modules: list = []
@@ -607,6 +693,7 @@ def main() -> None:
         "blocking": blocking,
         "assertion_lib": assertion_lib,
         "skipped_modules": skipped_modules,
+        "maven_placeholders": maven_placeholders,
     }, indent=2))
 
 
