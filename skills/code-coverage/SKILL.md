@@ -147,6 +147,56 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Coverage target — forced choice + estime (Task 10)
+
+L'utente sceglie esplicitamente il target di coverage (40% quick-win vs 70% full) con stima upfront del wall-clock attesa basata su sizing + adjusters.
+
+### Sizing repo (Phase 2.1)
+
+`scripts/estimate_effort.py` classifica:
+
+| size_class | LoC main | classi Java |
+|---|---|---|
+| small  | <5k | <50 |
+| medium | 5k-30k | 50-300 |
+| large  | >30k | >300 |
+
+### Stime baseline (wall-clock minutes)
+
+| size | target 40% p50 | p90 | target 70% p50 | p90 |
+|---|---|---|---|---|
+| small  | 10 | 20 | 25  | 45  |
+| medium | 20 | 40 | 60  | 100 |
+| large  | 45 | 90 | 150 | 240 |
+
+### Adjusters moltiplicativi
+
+| Condizione | Multiplier | Rilevazione |
+|---|---|---|
+| Source <10 (legacy-java) | ×1.30 | Task 07 |
+| Lombok/JDK HARD-WARN | ×1.20 | Task 03 |
+| Spring Boot detected | ×1.25 | Task 09 |
+| AssertJ assente | ×1.05 | Task 04 |
+| Cache .code-coverage valida (<7d) | ×0.85 | timestamp |
+
+### Sentinel handshake
+
+```
+1. estimate_effort.py emette .code-coverage/pending-user-choice.json
+2. Wrapper Claude main intercepta, invoca AskUserQuestion(A=40, B=70)
+3. Wrapper scrive .code-coverage/user-choice.json
+4. Skill prosegue Phase 2.5 con target propagato in strategy
+```
+
+### CLI bypass (non-interactive)
+
+```bash
+python3 scripts/estimate_effort.py <repo> --target=40
+# Scrive direttamente user-choice.json con target=40, NO sentinel
+```
+
+Utile per CI, test automation, run preferenze stabili.
+
 ## mvn invocation strategy (Task 09)
 
 Phase 6 supporta due strategy mvn:
