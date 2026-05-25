@@ -74,7 +74,27 @@ If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run 
 
 ### Phase 4 — Environment
 
-**[Loader]** If `stack.json.language == "java"` (or Maven build system detected), read `references/java-siae-quirks.md` now and apply all applicable quirks for the remainder of this session.
+**[Loader]** Trigger predicate (load `references/java-siae-quirks.md` once if ANY is true):
+
+1. `stack.json.language == "java"`, OR
+2. `stack.json.maven_aggregator` is present (non-null), OR
+3. `find <repo> -maxdepth 3 -name pom.xml -print -quit` returns a non-empty path.
+
+Equivalent bash check (consumer-side, exit 0 = load required):
+```bash
+REPO="${1:-.}"
+if python3 -c "
+import json, pathlib, sys
+sj = pathlib.Path('$REPO/.code-coverage/stack.json')
+if not sj.is_file(): sys.exit(1)
+d = json.loads(sj.read_text())
+sys.exit(0 if d.get('language') == 'java' or d.get('maven_aggregator') else 1)
+" 2>/dev/null || find "$REPO" -maxdepth 3 -name pom.xml -print -quit | grep -q .; then
+    echo "LOAD references/java-siae-quirks.md"
+fi
+```
+
+If triggered, read the file once and apply all applicable quirks for the remainder of the session.
 
 Read `.code-coverage/env.json`. For each framework with `installed: false` and non-null command in `assets/install-snippets.json`:
 1. Snapshot lockfile (`package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` / `poetry.lock`) → `.code-coverage/lockfile.bak`.

@@ -232,3 +232,62 @@ def test_cli_target_flag_bypasses_sentinel(tmp_path):
     assert choice_path.is_file(), "user-choice.json should be written by --target"
     choice = json.loads(choice_path.read_text())
     assert choice["target_line"] == 40
+
+
+# ---------- _interp_baseline extrapolation (MAJOR fix from code review) ----------
+
+def test_interp_baseline_midpoint_between_presets():
+    """target=55 = midpoint tra 40 (p50=20) e 70 (p50=60) per medium → p50=40."""
+    from estimate_effort import _interp_baseline
+    base = _interp_baseline("medium", 55)
+    assert base["p50"] == 40.0, f"expected 40.0, got {base['p50']}"
+    assert base["p90"] == 70.0, f"expected 70.0, got {base['p90']}"
+
+
+def test_interp_baseline_extrapolates_below_40_no_clamp():
+    """target=10 deve produrre stima INFERIORE a target=40 (non clampata)."""
+    from estimate_effort import _interp_baseline
+    base_10 = _interp_baseline("medium", 10)
+    base_40 = _interp_baseline("medium", 40)
+    assert base_10["p50"] < base_40["p50"], \
+        f"target=10 ({base_10['p50']}) deve essere < target=40 ({base_40['p50']})"
+    assert base_10["p50"] >= 1.0, "floor minimo p50 >= 1.0"
+
+
+def test_interp_baseline_extrapolates_above_70_no_clamp():
+    """target=90 deve produrre stima SUPERIORE a target=70 (non clampata)."""
+    from estimate_effort import _interp_baseline
+    base_70 = _interp_baseline("medium", 70)
+    base_90 = _interp_baseline("medium", 90)
+    assert base_90["p50"] > base_70["p50"], \
+        f"target=90 ({base_90['p50']}) deve essere > target=70 ({base_70['p50']})"
+
+
+def test_estimate_effort_emits_warn_for_extrapolation(capsys):
+    """estimate_effort con target fuori [40,70] deve emettere WARN su stderr."""
+    from estimate_effort import estimate_effort
+    estimate_effort("medium", 20)
+    captured = capsys.readouterr()
+    assert "WARN" in captured.err or "warn" in captured.err.lower(), \
+        f"expected WARN on stderr for extrapolated target, got: {captured.err!r}"
+
+
+def test_estimate_effort_no_warn_for_presets(capsys):
+    """target=40 o 70 non deve emettere WARN."""
+    from estimate_effort import estimate_effort
+    estimate_effort("medium", 40)
+    estimate_effort("medium", 70)
+    captured = capsys.readouterr()
+    assert "WARN" not in captured.err, \
+        f"unexpected WARN on stderr for preset: {captured.err!r}"
+
+
+def test_validate_target_rejects_bool():
+    """bool e' subclass di int in Python — deve essere esplicitamente respinto."""
+    from estimate_effort import validate_target
+    for bad in (True, False):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad!r}")
+        except ValueError:
+            pass

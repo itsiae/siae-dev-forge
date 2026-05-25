@@ -62,22 +62,29 @@ def derive_branch_target(target_line):
 def _interp_baseline(size_class: str, target: int) -> dict:
     """Restituisce la baseline (p50, p90) per (size_class, target).
 
-    Per i preset (40, 70) usa la tabella diretta. Per i custom interpola
-    linearmente fra i due preset, clampando agli estremi 40/70.
+    Per i preset (40, 70) usa la tabella diretta. Per i custom estrapola
+    linearmente passando per 40 e 70 — NO clamp — con floor p50/p90 >= 1.0
+    per evitare valori nulli o negativi su target estremi.
     """
     sz = size_class if size_class in _BASELINE else "medium"
     if target in _BASELINE[sz]:
         base = _BASELINE[sz][target]
         return {"p50": float(base["p50"]), "p90": float(base["p90"])}
     low, high = 40, 70
-    t = max(low, min(high, target))
-    ratio = (t - low) / (high - low)
+    ratio = (target - low) / (high - low)
     low_b = _BASELINE[sz][low]
     high_b = _BASELINE[sz][high]
+    p50 = low_b["p50"] + ratio * (high_b["p50"] - low_b["p50"])
+    p90 = low_b["p90"] + ratio * (high_b["p90"] - low_b["p90"])
     return {
-        "p50": low_b["p50"] + ratio * (high_b["p50"] - low_b["p50"]),
-        "p90": low_b["p90"] + ratio * (high_b["p90"] - low_b["p90"]),
+        "p50": max(1.0, p50),
+        "p90": max(1.0, p90),
     }
+
+
+def _is_extrapolated(target: int) -> bool:
+    """True se target richiede estrapolazione fuori dal range preset [40, 70]."""
+    return target < 40 or target > 70
 
 # Moltiplicatori adjusters
 _ADJUSTERS = {
@@ -138,8 +145,18 @@ def estimate_effort(size_class: str, target: int, adjusters: dict | None = None)
 
     Returns:
         {"p50": int, "p90": int}
+
+    Side effects:
+        Emette WARN su stderr quando ``target`` e' fuori dal range preset
+        [40, 70] (custom estrapolato): la stima e' meno calibrata.
     """
     validate_target(target)
+    if _is_extrapolated(target):
+        print(
+            f"[estimate_effort] WARN: target={target} outside preset bracket "
+            "[40, 70] — estimate extrapolated, may differ from real wall-clock.",
+            file=sys.stderr,
+        )
     base = _interp_baseline(size_class, target)
     p50 = base["p50"]
     p90 = base["p90"]
