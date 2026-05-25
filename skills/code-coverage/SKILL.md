@@ -179,14 +179,31 @@ L'utente sceglie esplicitamente il target di coverage (40% quick-win vs 70% full
 | AssertJ assente | ×1.05 | Task 04 |
 | Cache .code-coverage valida (<7d) | ×0.85 | timestamp |
 
-### Sentinel handshake
+### Sentinel handshake (operativo)
 
+Helper `lib/sentinel-handshake.sh` standardizza il consumer pattern:
+
+```bash
+# 1. estimate_effort.py emette .code-coverage/pending-user-choice.json + (opzionale exit 3)
+python3 scripts/estimate_effort.py <repo>
+
+# 2. Consumer (Claude main loop o bash chain) legge il sentinel in formato key=value
+bash skills/code-coverage/lib/sentinel-handshake.sh read <repo>
+# Output: type=forced_choice_coverage_target
+#         option_a_target_line=40
+#         option_a_p50_min=25
+#         option_b_target_line=70
+#         option_b_p50_min=98
+#         ...
+
+# 3. Consumer prompt user (AskUserQuestion lato LLM, o terminal lato bash) → ottiene scelta
+
+# 4. Scrive user-choice.json con la scelta
+bash skills/code-coverage/lib/sentinel-handshake.sh write <repo> 40
+# Scrive user-choice.json con target_line=40, target_branch=30, p50/p90 dalla sentinel, timestamp
 ```
-1. estimate_effort.py emette .code-coverage/pending-user-choice.json
-2. Wrapper Claude main intercepta, invoca AskUserQuestion(A=40, B=70)
-3. Wrapper scrive .code-coverage/user-choice.json
-4. Skill prosegue Phase 2.5 con target propagato in strategy
-```
+
+Lo script forza target ∈ {40, 70} (invalid → exit 1). `target_branch` derivato fissamente (40→30, 70→60).
 
 ### CLI bypass (non-interactive)
 
@@ -327,6 +344,23 @@ Phase 4 confronta JDK runtime + versione Lombok + Java source level contro una m
 
 **Override:** ``--ignore-jdk-mismatch`` (CLI flag a ``validate_env.py``) downgrade HARD-WARN → WARN. Power-user only — la skill avvisa che il primo mvn run probabilmente fallirà.
 
+**Consumer-side gate operativo** — Phase 4 (o qualsiasi consumer della skill) invoca:
+
+```bash
+bash skills/code-coverage/lib/phase4-gate.sh <repo>
+```
+
+Comportamento (exit codes):
+
+| severity | exit | side effect |
+|---|---|---|
+| OK | 0 | silent |
+| WARN | 0 | stderr: `[phase4] WARN: <reason>` |
+| HARD-WARN | 2 | stderr: BLOCKED + suggested_fix + override hint, consumer aborta mvn |
+| env.json mancante/malformato | 0 | fail-open (non blocca run legittimi) |
+
+Sourceable anche come libreria: `source phase4-gate.sh; check_jdk_compat_gate <repo>` ritorna exit code.
+
 ## Surefire includes/excludes handling (Task 05)
 
 Phase 4 estrae la configurazione di ``maven-surefire-plugin`` da ogni pom e popola ``env.json.surefire_config``:
@@ -347,6 +381,14 @@ Phase 4 estrae la configurazione di ``maven-surefire-plugin`` da ogni pom e popo
 
 1. **Opzione A — Match existing pattern:** nominare i nuovi test come gli esistenti se semanticamente coerente
 2. **Opzione B — Proposed pom patch:** emettere ``.code-coverage/proposed-pom-patches.diff`` con il patch ai ``<includes>`` da approvare. NON applicare automaticamente (Principle 1).
+
+```bash
+python3 skills/code-coverage/scripts/generate_pom_patches.py <repo> --package model
+# Scrive .code-coverage/proposed-pom-patches.diff con +<include>**/model/*Test.java</include>
+# Cumulative: invocazioni successive accumulano (più package patch in un singolo file)
+```
+
+Lo script legge ``env.json.surefire_config.restrictive`` — no-op se non restrittivo. Il diff prodotto è in formato unified compatibile con ``git apply``. L'operatore conferma manualmente prima di applicare.
 
 Excludes (``**/IT*.java``, etc.) sono rispettati come da spec surefire — il naming dei test generati evita i pattern excluded.
 
@@ -381,13 +423,18 @@ Pom SIAE usano ``${appVersion}``, ``${revision}`` iniettati dalla pipeline CI/CD
 
 Moduli SIAE legacy hanno spesso ``<jacoco.skip>true</jacoco.skip>`` per design (es. ``siae-pae-bollettino-service`` è aggregator senza source Java). Phase 4 detecta queste proprietà e popola ``env.json.skipped_modules``.
 
-Phase 8 (reporting) DEVE filtrare ``skipped_modules`` dal calcolo bundle coverage:
+Phase 8 reporting USA ``scripts/phase8_filter.py`` per applicare il filtro operativo:
 
-```python
-skipped = set(env_json.get("skipped_modules", []))
-covered_modules = [m for m in all_modules if m not in skipped]
-# bundle coverage = aggregate(covered_modules) — esclude i SKIPPED
+```bash
+python3 skills/code-coverage/scripts/phase8_filter.py <repo>
+# Output JSON: bundle_line_pct, bundle_branch_pct, skipped_modules_excluded, modules_included
 ```
+
+Lo script:
+- Legge ``env.json.skipped_modules`` automaticamente
+- Cerca ``target/site/jacoco-aggregate/jacoco.xml`` (priorità) o ``target/site/jacoco/jacoco.xml``
+- Aggrega counters LINE/BRANCH solo sui `<group>` NOT skipped
+- Bundle coverage calcolato è quello che Phase 8 compara contro il target chosen (Task 10)
 
 I moduli SKIPPED compaiono nel report finale in sezione "Moduli skipped" con ragione ``jacoco.skip=true by-design`` — non contano come FAIL.
 
