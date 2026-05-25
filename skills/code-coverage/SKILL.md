@@ -147,6 +147,38 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Java source level support (Task 07)
+
+Phase 4 deriva ``compat_profile`` dal source level Java (``<maven.compiler.source>`` o ``<java.version>``) e popola ``env.json``:
+
+```json
+{
+  "java_source_level": "1.7",
+  "compat_profile": "legacy-java"
+}
+```
+
+**Profili supportati:**
+
+| source level | compat_profile | template selezionato (con vanilla variant) |
+|---|---|---|
+| < 10 (1.7/1.8/8/9) | ``legacy-java`` | ``junit5-java8.template.java`` (no var, no text-blocks) |
+| 10-13 | ``modern-java-10`` | ``junit5.template.java`` (var ok, no text-blocks) |
+| 14+ | ``modern-java-14`` | ``junit5.template.java`` (full modern) |
+
+**Selezione template (4-way matrix):**
+
+`template-cache.sh` combina ``compat_profile`` + ``assertion_lib`` (Task 04):
+
+| compat_profile | assertion_lib | template |
+|---|---|---|
+| modern-* | assertj | ``junit5.template.java`` (default) |
+| modern-* | junit5_vanilla | ``junit5-vanilla.template.java`` |
+| legacy-java | assertj | ``junit5-java8.template.java`` |
+| legacy-java | junit5_vanilla | ``junit5-java8-vanilla.template.java`` |
+
+I template Java 8 usano placeholder ``{{TypeXxx}}`` per tipi espliciti (no ``var`` keyword) — Phase 5 generation deve risolvere i tipi durante l'interpolazione.
+
 ## JDK / Lombok compatibility (Task 03)
 
 Phase 4 confronta JDK runtime + versione Lombok + Java source level contro una matrice di compatibilità nota. Emette ``env.json.jdk_compat``:

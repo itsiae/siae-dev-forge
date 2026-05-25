@@ -542,6 +542,28 @@ def _lombok_max_jdk(lombok_version: str) -> int:
     return 25
 
 
+def derive_compat_profile(source_level: str | None) -> str:
+    """Task 07: deriva compat_profile dalla source level Java.
+
+    - source < 10 (1.7/1.8/8) → ``legacy-java`` (no var, no text-blocks)
+    - source 10-13 → ``modern-java-10`` (var ok, no text-blocks)
+    - source >= 14 → ``modern-java-14`` (full modern, text-blocks ok)
+
+    Default ``legacy-java`` se source non rilevato — assunzione sicura su
+    repo SIAE dove la convenzione è source 1.7/1.8.
+    """
+    if not source_level:
+        return "legacy-java"
+    major = _parse_jdk_major(source_level)
+    if major is None:
+        return "legacy-java"
+    if major < 10:
+        return "legacy-java"
+    if major < 14:
+        return "modern-java-10"
+    return "modern-java-14"
+
+
 def evaluate_jdk_lombok_compat(jdk_major: int | None, lombok_version: str | None,
                                 source_level: str | None) -> dict:
     """Task 03: confronta JDK runtime + Lombok + source level contro matrice compat.
@@ -850,6 +872,8 @@ def main() -> None:
     surefire_config: dict = {"includes": [], "excludes": [], "restrictive": False}
     jdk_compat: dict = {"severity": "OK", "reason": "", "suggested_fix": "",
                         "jdk_major": None, "lombok_version": None, "source_level": None}
+    java_source_level: str | None = None
+    compat_profile: str = "legacy-java"
     if framework in ("junit5", "junit5+mockk"):
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
@@ -878,6 +902,9 @@ def main() -> None:
             if "--ignore-jdk-mismatch" in sys.argv and jdk_compat["severity"] != "OK":
                 jdk_compat["severity"] = "WARN"  # downgrade
                 jdk_compat["reason"] += " (downgraded by --ignore-jdk-mismatch)"
+            # Task 07: source level + compat_profile per template selection
+            java_source_level = source_lvl
+            compat_profile = derive_compat_profile(source_lvl)
 
     # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
     skipped_modules: list = []
@@ -923,6 +950,8 @@ def main() -> None:
         "maven_placeholders": maven_placeholders,
         "surefire_config": surefire_config,
         "jdk_compat": jdk_compat,
+        "java_source_level": java_source_level,
+        "compat_profile": compat_profile,
     }, indent=2))
 
 
