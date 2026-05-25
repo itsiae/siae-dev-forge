@@ -78,13 +78,18 @@ Other stacks (Python/Java/Kotlin/Go/Rust/C#/Flutter) → direct lookup in `asset
 After `lib/sentinel-handshake.sh` writes `.code-coverage/user-choice.json` with the chosen `target_line`, re-evaluate the coverage gate using the actual target the user selected. The Phase 1 default gate (`>= 70`) catches projects with already maximum coverage; this Phase 2.5 gate catches projects whose existing coverage already satisfies a less ambitious custom target (e.g., user picks 45, pre-existing is 50 → skip the workflow).
 
 ```bash
-USER_TARGET=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['target_line'])" "$REPO/.code-coverage/user-choice.json")
-PRE_COV=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('pre_existing_coverage_pct',0))" "$REPO/.code-coverage/stack.json")
-python3 -c "import sys; sys.exit(0 if $PRE_COV >= $USER_TARGET else 1)" && {
+# Inputs are read from JSON files; values are passed via argv to avoid shell
+# interpolation in the python -c body (no injection surface even if the JSON
+# values are malformed — float() raises ValueError, gate stays closed).
+USER_TARGET=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['target_line'])" "$REPO/.code-coverage/user-choice.json") || exit 0
+PRE_COV=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('pre_existing_coverage_pct',0))" "$REPO/.code-coverage/stack.json") || exit 0
+if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) >= float(sys.argv[2]) else 1)" "$PRE_COV" "$USER_TARGET"; then
     echo "[phase2.5] pre_existing_coverage_pct=$PRE_COV >= user_target_line=$USER_TARGET → Block 8 + END"
-    # Emit Block 8 then exit workflow
-}
+    # NOTE: pseudo-code — replace with the actual Block 8 emitter wired in the consumer
+fi
 ```
+
+Snippet contract: missing/malformed `user-choice.json` or `stack.json` → silent no-op (`|| exit 0`); the workflow proceeds and Phase 1 default gate has already enforced the upper bound.
 
 If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
 
