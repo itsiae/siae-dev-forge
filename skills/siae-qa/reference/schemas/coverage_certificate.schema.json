@@ -96,6 +96,32 @@
             "status": { "type": "string", "enum": ["PASS", "FAIL"] },
             "generic_tc": { "type": "array", "items": { "type": "string" } }
           }
+        },
+        "j6": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "evaluated_tc", "pass_tc", "fail_tc"],
+          "description": "J6 NegativeExecutability Check (R1-R5). Aggiunto in v2.3.0 (ADR-013).",
+          "properties": {
+            "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+            "evaluated_tc": { "type": "integer", "minimum": 0 },
+            "pass_tc": { "type": "integer", "minimum": 0 },
+            "fail_tc": { "type": "integer", "minimum": 0 },
+            "failures": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["tc_id", "matrix_row_id", "rule_violated"],
+                "properties": {
+                  "tc_id": { "type": "string" },
+                  "matrix_row_id": { "type": "string" },
+                  "rule_violated": { "type": "string", "enum": ["R1", "R2", "R3", "R4", "R5"] },
+                  "routing_suggerito": { "type": "string", "enum": ["automated-only", "eliminated"] }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -130,11 +156,31 @@
         "required": ["tc_id", "field", "old_value", "new_value"],
         "properties": {
           "tc_id": { "type": "integer", "minimum": 1 },
-          "field": { "type": "string", "enum": ["automazione", "nrt"] },
+          "field": { "type": "string", "enum": ["automazione", "nrt", "j6_bypass"] },
           "old_value": { "type": "string" },
           "new_value": { "type": "string" }
         }
       }
+    },
+    "eliminated_rows": {
+      "type": "array",
+      "description": "Righe M_FINAL rimosse perche' classificate executability_class='eliminated' (R4 mirror negativo).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["matrix_row_id", "rule_violated", "reason"],
+        "properties": {
+          "matrix_row_id": { "type": "string" },
+          "rule_violated": { "type": "string", "const": "R4" },
+          "reason": { "type": "string", "minLength": 1 },
+          "mirror_of_pos_matrix_row_id": { "type": "string" }
+        }
+      }
+    },
+    "automated_only_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Numero di righe M_FINAL classificate automated-only (output in automated_only_notes.md, non nel CSV)."
     }
   }
 }

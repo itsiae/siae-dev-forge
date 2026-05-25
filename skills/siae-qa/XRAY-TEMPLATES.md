@@ -77,14 +77,31 @@ Per ogni scenario della matrice (4a), genera 1+ Test Case con questo formato:
 | Test Type | `Manual` |
 | Team Competenza | `QA` |
 | ID JIRA Story | `{PROJ-XXX}` — **obbligatorio** |
-| User Story Description | Summary della Story Jira |
-| Scenario (descrizione) | Titolo del Test Case — prefisso obbligatorio: `[POS]`, `[NEG]`, `[EDGE]`, `[ROLE]` — derivato dal `test_type` della riga M_FINAL |
+| Summary | Titolo del Test Case — prefisso obbligatorio: `[POS]`, `[NEG]`, `[EDGE]`, `[ROLE]` — derivato dal `test_type` della riga M_FINAL |
+| Description | **Descrizione SEMANTICA e PARLANTE del comportamento testato (40-400 char, 1-3 frasi).** Una persona QA che apre il TC in Xray legge qui per capire COSA verifica il TC. **VIETATO** includere metadata di tracciabilita' (`matrix_row_id`, `entity:`, `field:`, ID di matrice). La tracciabilita' a M_FINAL avviene tramite campi schema separati (non in CSV). |
 | Step scenario | Numero step (1, 2, 3...) |
 | Action | Cosa fa l'utente/sistema in questo step |
 | Expected Result | Risultato atteso per questo step — **nel CSV il nome colonna e' `Expceted Result`** (typo storico del template importatore Xray SIAE) |
 | Data | Dati di test specifici (vuoto se non necessario) |
 | Automazione | `Y` se esiste test automatizzato per questo TC, `N` altrimenti |
 | NRT | `Y` (default — il TC e' un Non-Regression Test) |
+
+**Esempi di Description valida:**
+
+| Titolo (Summary) | Description (parlante) |
+|---|---|
+| `[POS] Subject email = "Accedi alla tua area privata"` | Verifica che il subject dell'email di magic link corrisponda esattamente alla stringa approvata dal copy SIAE per l'accesso utente. |
+| `[NEG] URL con token non-UUID -> pagina errore` | Visitando un URL del magic link con token in formato non-UUID il sistema deve mostrare la pagina errore standard "link scaduto" e non creare alcuna sessione. |
+| `[POS] Rotation: nuova POST invalida token precedenti` | Una seconda POST /magic-link/request per lo stesso utente deve invalidare i token precedenti (status=rotated) e generare un nuovo token consumabile. |
+
+**Esempi di Description INVALIDA (J4 FAIL):**
+
+| Description | Motivo FAIL |
+|---|---|
+| `matrix_row_id: A-001 \| entity: MAGIC_LINK_EMAIL \| field: subject` | Solo metadata, nessuna semantica |
+| `Verifica subject` | Troppo generica (< 40 char, no contesto) |
+| `Test per A-001` | Riferimento opaco alla matrice, nessuna semantica |
+| `[POS] Subject email = "Accedi alla tua area privata"` | Duplica il titolo senza aggiungere info |
 
 ---
 
@@ -98,6 +115,15 @@ Ogni TC ha prefisso esplicito derivato da `test_type` della riga M_FINAL:
 - `[ROLE]` = scenario di ruolo/permesso (utente con visibilita' o azione distinta)
 
 **Non sono ammessi TC senza prefisso.** Un TC senza prefisso fallisce J3/J4.
+
+**Esclusi dal CSV Xray** (vivono in file separati di reportistica):
+
+- `automated-only` → entry in `docs/qa/{STORY_ID}/automated_only_notes.md` (markdown
+  per developer, NON nel CSV). Prodotta in Phase 4b quando la matrix row ha
+  `executability_class = "automated-only"`. Contiene `matrix_row_id`, `rule_violated`
+  (R1/R2/R3), `reason`, `automation_suggestion`, `original_condition`.
+- `eliminated` → nota in `docs/qa/{STORY_ID}/coverage_certificate.json` campo
+  `eliminated_rows[]`. Prodotta in Phase 1.5 quando R4 (mirror negativo) si applica.
 
 ---
 
@@ -223,7 +249,40 @@ Salva la mappatura come file persistente: `docs/qa/{STORY_ID}/xray_id_mapping.js
 - Genera il file CSV con separatore `;` (semicolon) — **mai virgola**
 - Formato esatto: vedi `reference/xray-csv-template.md`
 - Header obbligatorio in prima riga
+- **Solo TC eseguibili** (entry con `kind=test_case` in TC_DRAFT). Nessun commento `#`,
+  nessuna riga `[AUTOMATED-ONLY]`, nessuna riga `[ELIMINATED]`. Le note tecniche
+  vivono in `automated_only_notes.md` e `coverage_certificate.json` come file separati.
 - Mostra il CSV all'utente e spiega come importarlo: Xray → Test → Import CSV
+- Mostra anche `automated_only_notes.md` con l'elenco delle aree da coprire con test
+  automatici (snapshot, unit, integration, chaos, contract)
+
+### Formato `automated_only_notes.md`
+
+```
+# Automated-Only Coverage Notes — {STORY_ID}
+
+> {N} righe M_FINAL non eseguibili da QA manuale (R1-R5). Coprire con i test
+> automatici suggeriti.
+
+## Raggruppato per regola violata
+
+### R1 — System Mutation (template, config, SMTP, CDN, feature flag)
+
+#### {matrix_row_id} — {breve titolo}
+- entita': {entity}
+- campo: {field}
+- condizione originale: `{original_condition}`
+- motivo: {reason}
+- coprire con: {automation_suggestion}
+
+### R2 — DB Direct Action (SELECT/INSERT/UPDATE/DELETE come Action o setup)
+
+...
+
+### R3 — Fault Injection (servizio down, mock stub, race, rollback parziale)
+
+...
+```
 
 ---
 
@@ -330,12 +389,15 @@ Prima di dichiarare la skill completata, tutte le caselle devono essere spuntate
 
 ### Phase 4 — Test Case
 - [ ] Phase 4a: M_FINAL mostrata; distribuzione `N POS / N NEG / N EDGE / N ROLE`
-- [ ] Phase 4b: 1 TC step-based per ogni riga M_FINAL; prefisso titolo `[POS]/[NEG]/[EDGE]/[ROLE]`
+- [ ] Phase 4a: ogni riga M_FINAL ha `executability_class` valorizzato (manual / automated-only / eliminated) — guardrail R1-R5
+- [ ] Phase 4b: 1 TC step-based per ogni riga M_FINAL **manual**; prefisso titolo `[POS]/[NEG]/[EDGE]/[ROLE]`
+- [ ] Phase 4b: righe `automated-only` producono entry `automated_only_note` (no step), esportate come riga commento `[AUTOMATED-ONLY]`
+- [ ] Phase 4b: righe `eliminated` non producono nulla; motivazione in `coverage_certificate.json`
 - [ ] Phase 4b: `matrix_row_id` presente nel campo `Description` di ogni TC
 - [ ] `docs/qa/{STORY_ID}/TC_DRAFT.md` scritto su filesystem (Write tool)
-- [ ] Phase 4c Gate #2: J3 bijection PASS (100% bijection); J4 specificity PASS (>= 75%)
+- [ ] Phase 4c Gate #2: J3 bijection PASS (100% bijection sulle righe manual); J4 specificity PASS (>= 75%); J6 executability PASS (100% TC NEG/EDGE eseguibili R1-R5)
 - [ ] Phase 4d J5 eseguito (run-once); coverage_score calcolato
-- [ ] Se TC aggiunti post-J5: Gate #2 RILANCIATO sui TC aggiornati
+- [ ] Se TC aggiunti post-J5: Gate #2 RILANCIATO sui TC aggiornati (incluso J6)
 
 ### Phase 5 — Export
 - [ ] `docs/qa/{STORY_ID}/coverage_certificate.json` scritto (schema `reference/schemas/coverage_certificate.schema.json`)
