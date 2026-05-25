@@ -1,7 +1,6 @@
 """Test per compute_kpis.py — 11 KPI + z-score + ROI."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import math
 import pytest
 import pandas as pd

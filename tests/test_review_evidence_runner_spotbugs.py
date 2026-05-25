@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from subprocess import CompletedProcess
 from unittest.mock import patch
 
 from lib.review_evidence.runners.spotbugs import SpotbugsRunner

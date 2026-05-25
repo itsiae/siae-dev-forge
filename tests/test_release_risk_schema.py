@@ -1,6 +1,4 @@
 """Unit test per lib/release_risk/schema.py."""
-import json
-import pytest
 from lib.release_risk.schema import (
     CriterionResult, ScoreCard, GenesisInfo, ReleaseRiskReport, SCHEMA_VERSION,
 )

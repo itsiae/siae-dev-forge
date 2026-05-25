@@ -4,7 +4,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-import pytest
 
 from lib.review_evidence.collectors.java import JavaCollector
 from lib.review_evidence.collectors._jacoco import parse_jacoco_xml

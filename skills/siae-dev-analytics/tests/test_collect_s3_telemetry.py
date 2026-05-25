@@ -1,9 +1,7 @@
 """Test per collect_s3_telemetry.py."""
 from __future__ import annotations
 
-from datetime import datetime
 from unittest.mock import patch, MagicMock
-import pytest
 
 import collect_s3_telemetry as ct
 

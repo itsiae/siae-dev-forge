@@ -29,7 +29,6 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from cf_calculator import (
-    EXCEL_EPOCH,
     calcola_cf_persona_fisica,
     carica_belfiore_comuni,
     carica_belfiore_esteri,

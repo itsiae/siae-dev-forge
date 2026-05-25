@@ -71,11 +71,11 @@ def write_report(report: dict, label: str, out_path: Path) -> None:
     lines = [
         f"# Skill Activation Report — {label}",
         f"\nDate: {date.today().isoformat()}",
-        f"\n## KPI\n",
+        "\n## KPI\n",
         f"- **activation_accuracy**: {kpi['activation_accuracy']:.1%} ({kpi['pass']}/{kpi['total']})",
         f"- **forbidden_rate**: {kpi['forbidden_rate']:.1%}",
         f"- **chain_completeness**: {kpi['chain_completeness']:.1%}",
-        f"\n## Per-case results\n",
+        "\n## Per-case results\n",
         "| ID | Status | Expected | Got | Forbidden | Chain |",
         "|---|---|---|---|---|---|",
     ]

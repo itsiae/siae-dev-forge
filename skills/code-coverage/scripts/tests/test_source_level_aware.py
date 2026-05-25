@@ -6,7 +6,6 @@ seleziona la variante template corretta (java8 vs modern).
 TDD: scritti PRIMA dell'implementazione.
 """
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path

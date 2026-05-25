@@ -1,7 +1,6 @@
 """Render ReleaseRiskReport → markdown via template fill."""
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from lib.release_risk.schema import ReleaseRiskReport, CriterionResult
 

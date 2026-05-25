@@ -56,7 +56,6 @@ def test_view_repair_strips_modules_and_keeps_aggregates(tmp_path):
         }
     fixt = tmp_path / "summary.json"
     fixt.write_text(json.dumps(data))
-    rules_path = tmp_path / "priority-rules.json"
     skill_assets = tmp_path / "assets"
     skill_assets.mkdir()
     (skill_assets / "priority-rules.json").write_text(json.dumps(rules))
@@ -69,7 +68,6 @@ def test_view_repair_strips_modules_and_keeps_aggregates(tmp_path):
         ["python3", str(SCRIPT), "vitest", str(fixt), "--skill-root", str(tmp_path), "--view", "repair"],
         capture_output=True, text=True, check=True,
     )
-    full_payload = json.loads(full_proc.stdout)
     repair_payload = json.loads(repair_proc.stdout)
 
     # Aggregates preserved

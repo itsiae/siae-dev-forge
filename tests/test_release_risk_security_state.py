@@ -1,7 +1,4 @@
-import os
 from unittest.mock import MagicMock
-from pathlib import Path
-import pytest
 from lib.release_risk.security_state import evaluate_criterion_17
 
 

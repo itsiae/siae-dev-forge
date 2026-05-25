@@ -1,4 +1,3 @@
-import pytest
 from lib.release_risk.renderer import render_scorecard, _criterion_emoji
 from lib.release_risk.schema import (
     ReleaseRiskReport, ScoreCard, GenesisInfo, CriterionResult,
