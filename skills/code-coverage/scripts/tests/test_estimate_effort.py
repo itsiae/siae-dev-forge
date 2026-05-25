@@ -92,14 +92,92 @@ def test_estimate_unknown_size_default_medium():
     assert "p50" in result and "p90" in result
 
 
-def test_estimate_invalid_target_raises():
-    """target diverso da 40 o 70 → ValueError."""
+def test_estimate_invalid_target_below_range_raises():
+    """target < 1 → ValueError (new contract: integer in [1, 95])."""
     from estimate_effort import estimate_effort
     try:
-        estimate_effort("medium", 55)
-        raise AssertionError("expected ValueError")
+        estimate_effort("medium", 0)
+        raise AssertionError("expected ValueError for target=0")
     except ValueError:
         pass
+
+
+def test_estimate_invalid_target_above_range_raises():
+    """target > 95 → ValueError (new contract: integer in [1, 95])."""
+    from estimate_effort import estimate_effort
+    try:
+        estimate_effort("medium", 96)
+        raise AssertionError("expected ValueError for target=96")
+    except ValueError:
+        pass
+
+
+# ---------- validate_target + derive_branch_target (GAP-1) ----------
+
+def test_validate_target_accepts_presets():
+    from estimate_effort import validate_target
+    assert validate_target(40) == 40
+    assert validate_target(70) == 70
+
+
+def test_validate_target_accepts_custom_in_range():
+    """Qualsiasi intero 1..95 e' valido (no whitelist)."""
+    from estimate_effort import validate_target
+    assert validate_target(1) == 1
+    assert validate_target(55) == 55
+    assert validate_target(95) == 95
+
+
+def test_validate_target_rejects_out_of_range():
+    from estimate_effort import validate_target
+    for bad in (0, -1, 96, 100, 1000):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad}")
+        except ValueError:
+            pass
+
+
+def test_validate_target_rejects_non_integer():
+    from estimate_effort import validate_target
+    for bad in (40.5, "40", None, [40]):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad!r}")
+        except ValueError:
+            pass
+
+
+def test_derive_branch_target_preset_quick_win():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(40) == 30
+
+
+def test_derive_branch_target_preset_full_bundle():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(70) == 60
+
+
+def test_derive_branch_target_custom():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(55) == 45
+    assert derive_branch_target(80) == 70
+
+
+def test_derive_branch_target_floor_at_one():
+    """target_line <= 10 deve produrre target_branch >= 1 (floor a 1)."""
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(1) == 1
+    assert derive_branch_target(5) == 1
+    assert derive_branch_target(10) == 1
+
+
+def test_estimate_custom_target_no_longer_raises():
+    """target=55 (custom) deve essere accettato e produrre stime."""
+    from estimate_effort import estimate_effort
+    result = estimate_effort("medium", 55)
+    assert "p50" in result and "p90" in result
+    assert result["p50"] > 0 and result["p90"] > 0
 
 
 # ---------- CLI sentinel emission ----------
