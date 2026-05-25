@@ -4,6 +4,34 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.68.0] - 2026-05-25
+
+### Added — siae-premortem skill + pr-premortem-gate hook
+
+Klein premortem method (HBR 2007 "Performing a Project Premortem") integrato come
+gate pre-PR su itsiae/*. Cattura failure mode che la code review missa per
+hindsight bias (Klein: +30% identificazione cause fallimento usando hindsight
+prospettico vs. domanda "cosa puo' andare storto?").
+
+**Skill `siae-premortem`** — metodo a 5 step adattato per LLM single-agent:
+1. Set the premise ("3 mesi dopo merge, fallimento conclamato")
+2. Brainstorm 5-10 cause concrete e specifiche
+3. Categorizzazione (Tecnica / Operativa / Adozione / Esterna)
+4. Top-3 con mitigazioni concrete (no wishful thinking)
+5. Decisione: PROCEDI / RIVISITA / REJECT
+
+**Hook `pr-premortem-gate`** — PreToolUse Bash matcher, blocca `gh pr create|edit`
+senza evidenza siae-premortem in session-skills o task-scoped. Pattern speculare a
+`pr-blind-review-gate`. Scope: itsiae/* only. Bypass tracciato 5/giorno:
+`DEVFORGE_SKIP_PREMORTEM=1` (solo hotfix/bump/revert).
+
+**Anti-pattern guard nella skill:**
+- "Bias da implementer" se cause solo Tecniche → forza Adozione/Operativa/Esterna
+- "Wishful mitigation" ("faremo attenzione") esplicitamente rigettata
+- "PR piccola, niente puo' andare storto" → le PR piccole rompono produzione quanto le grandi
+
+Reference: https://hbr.org/2007/09/performing-a-project-premortem
+
 ## [1.66.0] - 2026-05-21
 
 ### Changed — code-coverage skill v2 optimization (10 fixes consolidated)
