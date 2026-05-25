@@ -1,6 +1,4 @@
 from unittest.mock import patch
-from pathlib import Path
-import pytest
 from lib.release_risk.genesis import (
     extract_merge_commits, evaluate_criterion_18, build_genesis_info,
     FEATURE_BRANCH_PATTERN,

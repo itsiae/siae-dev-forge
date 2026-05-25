@@ -2,11 +2,9 @@
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-import pytest
 
 from lib.review_evidence.collector import orchestrate
-from lib.review_evidence.registry import Collector, register, registry
+from lib.review_evidence.registry import register, registry
 
 
 def _init_git_repo(path: Path) -> None:

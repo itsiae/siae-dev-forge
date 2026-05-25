@@ -17,7 +17,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from lib.review_evidence.atomic_io import DiskFullError, write_evidence_atomic
-from lib.review_evidence.registry import applicable, register, registry
+from lib.review_evidence.registry import applicable
 from lib.review_evidence.schema import SCHEMA_VERSION
 from lib.review_evidence.thresholds import compute_verdict, load_thresholds
 

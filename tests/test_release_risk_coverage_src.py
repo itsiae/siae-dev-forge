@@ -1,7 +1,6 @@
 import json
-from pathlib import Path
 import pytest
-from lib.release_risk.coverage_src import get_coverage, COVERAGE_THRESHOLD_PCT
+from lib.release_risk.coverage_src import get_coverage
 
 
 @pytest.fixture

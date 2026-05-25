@@ -610,7 +610,7 @@ def evaluate_jdk_lombok_compat(jdk_major: int | None, lombok_version: str | None
             f"possibly incompatibili"
         )
         result["suggested_fix"] = (
-            f"export JAVA_HOME=$(/usr/libexec/java_home -v 17)"
+            "export JAVA_HOME=$(/usr/libexec/java_home -v 17)"
         )
         return result
 

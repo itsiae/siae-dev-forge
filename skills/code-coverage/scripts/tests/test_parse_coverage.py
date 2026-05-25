@@ -20,7 +20,7 @@ def _load_fixture(name: str) -> dict:
 
 
 def test_vitest_json_summary_parsing():
-    data = _load_fixture("vitest-summary.json")
+    _load_fixture("vitest-summary.json")  # verifies fixture is well-formed
     result = pc.parse("vitest", FIXTURES / "vitest-summary.json", priority_rules=None)
     assert result["framework"] == "vitest"
     assert result["error"] is None
@@ -598,7 +598,7 @@ def test_priority_path_patterns_fallback_works():
 
 def test_priority_path_patterns_anchor_matches_with_subdir():
     """Pattern ancorato matcha quando handler/ ha un subdir terminale."""
-    rules = {
+    _rules = {  # noqa: F841 — kept as documentation of expected priority-rules shape
         "priority_levels": {
             "P1": {"path_patterns": ["**/handler/**"], "min_coverage_pct": 80, "min_branch_pct": 70},
         }

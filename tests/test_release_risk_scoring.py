@@ -1,4 +1,3 @@
-import pytest
 from lib.release_risk.scoring import compute_score, MAX_SCORE
 from lib.release_risk.schema import CriterionResult
 

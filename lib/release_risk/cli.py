@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from lib.release_risk.schema import ReleaseRiskReport, GenesisInfo
+from lib.release_risk.schema import ReleaseRiskReport
 from lib.release_risk.detector import (
     criterion_1_db_change, criterion_2_ocp_config, criterion_3_breaking_api,
     criterion_4_ext_deps, criterion_5_critical_service_stub, criterion_6_first_release,

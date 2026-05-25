@@ -1,9 +1,7 @@
 from unittest.mock import MagicMock, patch
-from pathlib import Path
 import pytest
 from lib.release_risk.regression_delta import (
-    evaluate_criterion_16, resolve_prev_release_main_sha, count_test_disabled_deleted,
-    COVERAGE_DELTA_THRESHOLD_PP,
+    evaluate_criterion_16, resolve_prev_release_main_sha,
 )
 
 

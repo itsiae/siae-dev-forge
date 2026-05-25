@@ -1,6 +1,5 @@
 import subprocess
 import json
-from pathlib import Path
 import pytest
 
 
@@ -90,7 +89,7 @@ def test_cli_cache_idempotent_second_run(fake_git_repo, diff_fixtures):
             "--service", "test-service",
             "--diff-files", diff_files_path,
             "--diff-content", diff_content_path]
-    r1 = subprocess.run(args, capture_output=True, text=True, check=True)
+    subprocess.run(args, capture_output=True, text=True, check=True)
     r2 = subprocess.run(args, capture_output=True, text=True, check=True)
     out2 = json.loads(r2.stdout.strip().split("\n")[-1])
     assert out2.get("cached") is True

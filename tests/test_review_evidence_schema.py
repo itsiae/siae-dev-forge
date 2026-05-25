@@ -5,13 +5,6 @@ from pathlib import Path
 import pytest
 
 from lib.review_evidence.schema import (
-    Evidence,
-    CoverageMetric,
-    LintMetric,
-    ComplexityMetric,
-    CiQualityMetric,
-    SpecDrift,
-    Verdict,
     SCHEMA_VERSION,
     evidence_from_json,
     evidence_to_json,

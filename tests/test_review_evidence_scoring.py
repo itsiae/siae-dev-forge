@@ -1,5 +1,4 @@
 """Tests for scoring algorithm — 5 score functions + compute_overall."""
-import pytest
 
 from lib.review_evidence.scoring import (
     score_security,

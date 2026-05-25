@@ -11,14 +11,12 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 # Side-effect register() at import time.
-from lib.review_evidence.runners import mutmut as mutmut_module  # noqa: E402
 from lib.review_evidence.runners._registry import registry  # noqa: E402
 from lib.review_evidence.runners.mutmut import MutmutRunner  # noqa: E402
 

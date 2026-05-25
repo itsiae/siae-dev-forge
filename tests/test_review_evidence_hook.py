@@ -19,7 +19,6 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 HOOK = REPO_ROOT / "hooks" / "review-evidence"

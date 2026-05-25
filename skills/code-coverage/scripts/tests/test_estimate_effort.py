@@ -120,7 +120,7 @@ def test_cli_emits_sentinel_pending_choice(tmp_path):
     }))
     (cov / "stack.json").write_text(json.dumps({"manifest_root": "."}))
 
-    result = subprocess.run(
+    subprocess.run(
         ["python3", str(SCRIPT_DIR / "estimate_effort.py"), str(repo)],
         capture_output=True, text=True, check=True,
     )
@@ -144,7 +144,7 @@ def test_cli_target_flag_bypasses_sentinel(tmp_path):
     (cov / "env.json").write_text(json.dumps({"required_framework": "junit5"}))
     (cov / "stack.json").write_text(json.dumps({"manifest_root": "."}))
 
-    result = subprocess.run(
+    subprocess.run(
         ["python3", str(SCRIPT_DIR / "estimate_effort.py"), str(repo), "--target=40"],
         capture_output=True, text=True, check=True,
     )

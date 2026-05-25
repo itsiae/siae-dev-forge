@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 # Import module directly: __init__.py auto-register integration is a
 # separate task. We rely on side-effect register() at import time.
@@ -22,7 +21,7 @@ ALL_KILLED_XML = '''<?xml version="1.0"?>
 <mutations>
 {rows}
 </mutations>'''.format(rows="\n".join(
-    f'  <mutation detected="true" status="KILLED"><sourceFile>x.java</sourceFile></mutation>'
+    '  <mutation detected="true" status="KILLED"><sourceFile>x.java</sourceFile></mutation>'
     for _ in range(10)
 ))
 
@@ -30,7 +29,7 @@ ALL_SURVIVED_XML = '''<?xml version="1.0"?>
 <mutations>
 {rows}
 </mutations>'''.format(rows="\n".join(
-    f'  <mutation detected="false" status="SURVIVED"><sourceFile>x.java</sourceFile></mutation>'
+    '  <mutation detected="false" status="SURVIVED"><sourceFile>x.java</sourceFile></mutation>'
     for _ in range(5)
 ))
 
