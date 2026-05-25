@@ -99,6 +99,20 @@ def _read_manifest_root(repo_root):
     return mr if isinstance(mr, str) and mr else "."
 
 
+def _read_maven_aggregator(repo_root):
+    """Legge ``maven_aggregator`` da ``stack.json`` (Task 01). Ritorna None se assente.
+
+    Resiliente a stack.json mancante / malformato. Contiene aggregator_pom,
+    modules, selection_reason.
+    """
+    try:
+        data = json.loads((repo_root / ".code-coverage" / "stack.json").read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+    agg = data.get("maven_aggregator")
+    return agg if isinstance(agg, dict) and agg.get("aggregator_pom") else None
+
+
 def detect_os():
     s = platform.system()
     return "macos" if s == "Darwin" else "windows" if s == "Windows" else "linux"
@@ -143,8 +157,13 @@ def _is_maven_multi_module(pom_path):
     return bool(_re.search(r"<module>\s*[\w\-./]+\s*</module>", m.group(1)))
 
 
-def _resolve_jacoco_report_path(repo_root, stack_def, has_pom):
+def _resolve_jacoco_report_path(repo_root, stack_def, has_pom, aggregator=None):
     """Risolve coverage_report_path per Java/JaCoCo con supporto multi-module.
+
+    Args:
+        aggregator: dict ``maven_aggregator`` (Task 01). Se presente, il pom
+            "root logico" è ``aggregator['aggregator_pom']`` (subdir), non
+            ``repo_root/pom.xml``.
 
     Preferenze in ordine:
     1. jacoco-aggregate report esistente (single XML certificato dal plugin aggregate)
@@ -162,9 +181,16 @@ def _resolve_jacoco_report_path(repo_root, stack_def, has_pom):
     single_path = stack_def.get(single_key)
 
     # 2. Maven single-module noto (pom senza <modules>) -> emit canonical path
+    # Task 01: con aggregator rilevato, controlla il pom in subdir
     if has_pom and single_path:
-        pom = repo_root / "pom.xml"
+        if aggregator is not None:
+            pom = repo_root / aggregator["aggregator_pom"]
+        else:
+            pom = repo_root / "pom.xml"
         if pom.is_file() and not _is_maven_multi_module(pom):
+            # Path rilativo all'aggregator dir, non al repo root
+            if aggregator is not None:
+                return f"{aggregator['manifest_root']}/{single_path}"
             return single_path
 
     # 3. Path single-module file esistente (eventuale pre-build leftover)
@@ -175,21 +201,37 @@ def _resolve_jacoco_report_path(repo_root, stack_def, has_pom):
     return "."
 
 
-def select_fields(stack_key, stack_def, repo_root, os_name):
-    """Ritorna (cov_cmd, report_path, fmt, error). Dispatch unificato per java/kotlin/rust."""
-    has_pom = (repo_root / "pom.xml").is_file()
+def select_fields(stack_key, stack_def, repo_root, os_name, aggregator=None):
+    """Ritorna (cov_cmd, report_path, fmt, error). Dispatch unificato per java/kotlin/rust.
+
+    Args:
+        aggregator: dict da ``stack.json.maven_aggregator`` (Task 01). Se non
+            None, il pom Maven vive in ``aggregator['aggregator_pom']`` (subdir).
+            Il comando viene esteso con ``-f <aggregator_pom>``.
+    """
+    has_root_pom = (repo_root / "pom.xml").is_file()
+    has_pom = has_root_pom or aggregator is not None
     has_gradle = (repo_root / "build.gradle.kts").is_file() or (repo_root / "build.gradle").is_file()
 
     if stack_key == "java":
         if has_pom:
-            pom = repo_root / "pom.xml"
+            # Task 01: prioritizza aggregator pom rilevato in subdir.
+            if aggregator is not None:
+                pom = repo_root / aggregator["aggregator_pom"]
+            else:
+                pom = repo_root / "pom.xml"
             if not _pom_has_jacoco_plugin(pom):
                 err = (
-                    "jacoco-maven-plugin not configured in pom.xml. "
+                    f"jacoco-maven-plugin not configured in {pom.relative_to(repo_root)}. "
                     "Add this to <build><plugins> section:\n" + _JACOCO_PLUGIN_SNIPPET
                 )
                 return None, None, None, err
             cmd = stack_def.get("coverage_command_maven")
+            # Task 01: se aggregator in subdir, inject -f <aggregator_pom>.
+            # Pattern: "mvn test jacoco:report" → "mvn -f <pom> test jacoco:report".
+            # Idempotent: skip se cmd già contiene -f.
+            if aggregator is not None and cmd and " -f " not in cmd:
+                cmd = cmd.replace("mvn ", f"mvn -f {aggregator['aggregator_pom']} ", 1)
         elif has_gradle:
             cmd_key = "coverage_command_gradle_windows" if os_name == "windows" else "coverage_command_gradle"
             cmd = stack_def.get(cmd_key) or stack_def.get("coverage_command_gradle")
@@ -197,7 +239,7 @@ def select_fields(stack_key, stack_def, repo_root, os_name):
             return None, None, None, "java stack detected but no pom.xml/build.gradle(.kts) found"
         # Multi-module support: prefer jacoco-aggregate report se presente, altrimenti
         # ritorna repo root come directory (parse_coverage.py jacoco multi via rglob).
-        path = _resolve_jacoco_report_path(repo_root, stack_def, has_pom)
+        path = _resolve_jacoco_report_path(repo_root, stack_def, has_pom, aggregator=aggregator)
         fmt = stack_def.get("coverage_report_format", "jacoco")
         return cmd, path, fmt, None
 
@@ -263,7 +305,10 @@ def main():
     if stack_def is None:
         emit(stack=stack_key, error=f"stack '{stack_key}' not in stack-matrix.json", manifest_root=manifest_root)
 
-    cmd, path, fmt, err = select_fields(stack_key, stack_def, repo_root, detect_os())
+    # Task 01: legge aggregator info da stack.json (può essere None per repo
+    # mono-pom o non-Maven).
+    aggregator = _read_maven_aggregator(repo_root)
+    cmd, path, fmt, err = select_fields(stack_key, stack_def, repo_root, detect_os(), aggregator=aggregator)
     if err or not cmd or not path:
         emit(stack=stack_key, cmd=cmd or "", path=path or "", fmt=fmt or "", error=err or "command/path/format resolution failed", manifest_root=manifest_root)
 

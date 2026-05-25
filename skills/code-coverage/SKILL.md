@@ -115,6 +115,38 @@ Conditional (programmatic, NEVER prompt):
 - Block 6 (`Dependency Install Commands`): only if `validate_env.py.install_commands` non-empty.
 - Block 9 (`Next Actions`): if any module sub-threshold OR follow-up batch active OR PRESERVE_EXISTING entries OR manual tests suggested.
 
+## Multi-module Maven repos (SIAE legacy)
+
+`detect_stack.py` cerca automaticamente un pom aggregator (`<packaging>pom</packaging>` + `<modules>` non vuoto) fino a 4 livelli di profondità (override via `CC_POM_MAXDEPTH`).
+
+Quando rilevato, `stack.json` contiene:
+```json
+{
+  "manifest_root": "pae-deposito-musica",
+  "maven_aggregator": {
+    "manifest_root": "pae-deposito-musica",
+    "aggregator_pom": "pae-deposito-musica/pom.xml",
+    "modules": ["mod-a", "mod-b"],
+    "selection_reason": "packaging-pom-with-modules"
+  }
+}
+```
+
+`select_command.py` inietta `-f <aggregator_pom>` nel `cov_cmd` Maven. Phase 6 esegue da repo root con il pom aggregator esplicito.
+
+**Selection priority:**
+1. Pom con `<packaging>pom</packaging>` + `<modules>` non vuoto (aggregator vero). PIU' SHALLOW vince.
+2. Fallback: pom con `jacoco-maven-plugin` + `junit-jupiter` deps. PIU' SHALLOW vince.
+3. None se nessun pom matcha.
+
+**Override manuale:** se la detection sbaglia (es. aggregator > maxdepth=4), creare `.code-coverage/overrides.json`:
+```json
+{
+  "manifest_root": "custom/path",
+  "aggregator_pom": "custom/path/pom.xml"
+}
+```
+
 ## SUPPORTING FILES
 
 See `references/index.md` for the full map of lib/, scripts/, assets/, templates/, and references/.
