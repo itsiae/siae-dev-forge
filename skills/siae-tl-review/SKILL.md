@@ -1,5 +1,5 @@
 ---
-name: siae-siae-tl-review
+name: siae-tl-review
 version: 1.0.0
 last_modified: 2026-05-25
 description: >
