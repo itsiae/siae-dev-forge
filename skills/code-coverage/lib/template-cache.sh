@@ -38,7 +38,39 @@ get_template() {
     jest)           src="$templates_dir/jest.template.ts" ;;
     pytest)         src="$templates_dir/pytest.template.py" ;;
     pyspark)        src="$templates_dir/pyspark.template.py" ;;
-    junit5)         src="$templates_dir/junit5.template.java" ;;
+    junit5)
+      # Task 04 + Task 07: switch template basato su (assertion_lib, compat_profile)
+      # da env.json. Matrix 4-way:
+      #   modern + assertj   → junit5.template.java          (default)
+      #   modern + vanilla   → junit5-vanilla.template.java
+      #   legacy + assertj   → junit5-java8.template.java
+      #   legacy + vanilla   → junit5-java8-vanilla.template.java
+      # Backward-compat: assenza env.json → modern+assertj.
+      local _env_json="$repo/.code-coverage/env.json"
+      local _assertion_lib=""
+      local _compat_profile=""
+      if [ -f "$_env_json" ] && command -v python3 >/dev/null 2>&1; then
+        _assertion_lib=$(python3 -c "import json,sys
+try: print(json.load(open(sys.argv[1])).get('assertion_lib') or '')
+except: pass" "$_env_json" 2>/dev/null)
+        _compat_profile=$(python3 -c "import json,sys
+try: print(json.load(open(sys.argv[1])).get('compat_profile') or '')
+except: pass" "$_env_json" 2>/dev/null)
+      fi
+      if [ "$_compat_profile" = "legacy-java" ]; then
+        if [ "$_assertion_lib" = "junit5_vanilla" ]; then
+          src="$templates_dir/junit5-java8-vanilla.template.java"
+        else
+          src="$templates_dir/junit5-java8.template.java"
+        fi
+      else
+        if [ "$_assertion_lib" = "junit5_vanilla" ]; then
+          src="$templates_dir/junit5-vanilla.template.java"
+        else
+          src="$templates_dir/junit5.template.java"
+        fi
+      fi
+      ;;
     mockk)          src="$templates_dir/mockk.template.kt" ;;
     go-test)        src="$templates_dir/go-testing.template.go" ;;
     cargo-test)     src="$templates_dir/cargo-test.template.rs" ;;

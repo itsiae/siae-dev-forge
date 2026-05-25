@@ -361,6 +361,10 @@ def detect_build_systems(root: Path) -> list[str]:
 
 _MAVEN_MODULES_BLOCK_RE = re.compile(r"<modules>(.*?)</modules>", re.DOTALL)
 _MAVEN_MODULE_ENTRY_RE = re.compile(r"<module>([^<]+)</module>")
+_MAVEN_PACKAGING_POM_RE = re.compile(r"<packaging>\s*pom\s*</packaging>", re.IGNORECASE)
+_MAVEN_JACOCO_PLUGIN_RE = re.compile(r"<artifactId>\s*jacoco-maven-plugin\s*</artifactId>")
+_MAVEN_JUNIT5_RE = re.compile(r"<artifactId>\s*junit-jupiter(?:-api)?\s*</artifactId>")
+_POM_MAXDEPTH_DEFAULT = 4
 _GRADLE_INCLUDE_KOTLIN_RE = re.compile(r"include\(([^)]*)\)")
 _GRADLE_QUOTED_RE = re.compile(r"['\"]([^'\"]+)['\"]")
 _GRADLE_INCLUDE_GROOVY_BLOCK_RE = re.compile(
@@ -423,6 +427,124 @@ def detect_monorepo_workspaces(root: Path) -> list[str]:
                 seen.add(normalized)
 
     return workspaces
+
+
+def _find_pom_files(root: Path, max_depth: int = _POM_MAXDEPTH_DEFAULT) -> list[Path]:
+    """Lista pom.xml fino a max_depth, esclude node_modules/target/.code-coverage."""
+    result: list[Path] = []
+    for dirpath, filenames in _walk(root, max_depth=max_depth):
+        depth = len(dirpath.relative_to(root).parts)
+        if depth > max_depth:
+            continue
+        if "pom.xml" in filenames:
+            result.append(dirpath / "pom.xml")
+    return result
+
+
+def detect_maven_aggregator(root: Path, max_depth: int | None = None) -> dict | None:
+    """Cerca un pom aggregator Maven (Task 01) in `root` con walk depth-limited.
+
+    Selezione deterministica in priorità:
+    1. Pom con ``<packaging>pom</packaging>`` AND ``<modules>`` non vuoto
+       (aggregator vero). In caso di multipli match, vince il PIU' SHALLOW
+       (depth minore = aggregator radice). A parità di depth, ordine
+       lessicografico.
+    2. Fallback: pom con ``jacoco-maven-plugin`` AND ``junit-jupiter`` deps
+       (modulo con tooling unit-test coerente).
+
+    Args:
+        root: repo root path.
+        max_depth: profondità walk. Default 4 (configurabile via env var
+            ``CC_POM_MAXDEPTH``).
+
+    Returns:
+        dict con chiavi ``manifest_root``, ``aggregator_pom``, ``modules``,
+        ``selection_reason``, oppure None se non trovato.
+    """
+    if max_depth is None:
+        env_val = os.environ.get("CC_POM_MAXDEPTH")
+        try:
+            max_depth = int(env_val) if env_val else _POM_MAXDEPTH_DEFAULT
+        except ValueError:
+            max_depth = _POM_MAXDEPTH_DEFAULT
+
+    # Override esplicito utente via .code-coverage/overrides.json (AC 4)
+    overrides_path = root / ".code-coverage" / "overrides.json"
+    if overrides_path.is_file():
+        try:
+            ov = json.loads(overrides_path.read_text(encoding="utf-8", errors="ignore"))
+            if isinstance(ov, dict) and ov.get("aggregator_pom"):
+                agg_rel = str(ov["aggregator_pom"])
+                manifest_rel = str(ov.get("manifest_root") or str(Path(agg_rel).parent))
+                pom_abs = root / agg_rel
+                modules: list[str] = []
+                if pom_abs.is_file():
+                    try:
+                        content = pom_abs.read_text(encoding="utf-8", errors="ignore")
+                        modules = [m.strip() for m in _MAVEN_MODULE_ENTRY_RE.findall(content) if m.strip()]
+                    except OSError:
+                        pass
+                return {
+                    "manifest_root": manifest_rel,
+                    "aggregator_pom": agg_rel,
+                    "modules": modules,
+                    "selection_reason": "user-override",
+                }
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    poms = _find_pom_files(root, max_depth=max_depth)
+    if not poms:
+        return None
+
+    aggregator_candidates: list[tuple[int, str, Path, list[str]]] = []
+    fallback_candidates: list[tuple[int, str, Path]] = []
+
+    for pom_path in poms:
+        try:
+            content = pom_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        depth = len(pom_path.relative_to(root).parts) - 1  # parent dir depth
+        rel_parent = pom_path.parent.relative_to(root)
+        rel_parent_str = "." if str(rel_parent) == "." else str(rel_parent)
+
+        # Priorità 1: packaging-pom + modules non vuoti
+        if _MAVEN_PACKAGING_POM_RE.search(content):
+            mods = [m.strip() for m in _MAVEN_MODULE_ENTRY_RE.findall(content) if m.strip()]
+            if mods:
+                aggregator_candidates.append((depth, rel_parent_str, pom_path, mods))
+                continue
+
+        # Priorità 2: fallback jacoco + junit5
+        if _MAVEN_JACOCO_PLUGIN_RE.search(content) and _MAVEN_JUNIT5_RE.search(content):
+            fallback_candidates.append((depth, rel_parent_str, pom_path))
+
+    if aggregator_candidates:
+        # PIU' SHALLOW vince; tiebreak ordine lessicografico
+        aggregator_candidates.sort(key=lambda t: (t[0], t[1]))
+        depth, rel_parent_str, pom_path, mods = aggregator_candidates[0]
+        agg_rel = str(pom_path.relative_to(root))
+        return {
+            "manifest_root": rel_parent_str,
+            "aggregator_pom": agg_rel,
+            "modules": mods,
+            "selection_reason": "packaging-pom-with-modules",
+        }
+
+    if fallback_candidates:
+        # PIU' SHALLOW vince; tiebreak ordine lessicografico
+        fallback_candidates.sort(key=lambda t: (t[0], t[1]))
+        depth, rel_parent_str, pom_path = fallback_candidates[0]
+        agg_rel = str(pom_path.relative_to(root))
+        return {
+            "manifest_root": rel_parent_str,
+            "aggregator_pom": agg_rel,
+            "modules": [],
+            "selection_reason": "jacoco-junit5-fallback",
+        }
+
+    return None
 
 
 def detect_monorepo(root: Path) -> bool:
@@ -708,6 +830,7 @@ _OUTPUT_SCHEMA_DEFAULTS: dict = {
     "module_coverage": [],
     "coverage_exclude": [],
     "manifest_root": ".",
+    "maven_aggregator": None,
     "orchestration_only": False,
     "orchestration_reason": None,
 }
@@ -772,6 +895,13 @@ def main() -> None:
         print(json.dumps(payload, indent=2))
         return
 
+    # Task 01: detect aggregator pom (SIAE multi-module layout)
+    maven_agg = detect_maven_aggregator(root)
+    manifest_root_default = detect_manifest_root(root)
+    # Aggregator override: se rilevato un pom aggregator vero, manifest_root
+    # punta alla sua directory (Phase 4/6 fa cd su questo path).
+    manifest_root_final = maven_agg["manifest_root"] if maven_agg else manifest_root_default
+
     print(json.dumps({
         "repo_path": str(root),
         "languages": languages,
@@ -789,7 +919,8 @@ def main() -> None:
         "pre_existing_coverage_hint": gh_hint,
         "module_coverage": module_cov,
         "coverage_exclude": coverage_exclude,
-        "manifest_root": detect_manifest_root(root),
+        "manifest_root": manifest_root_final,
+        "maven_aggregator": maven_agg,
         "orchestration_only": False,
         "orchestration_reason": None,
         "error": None,
