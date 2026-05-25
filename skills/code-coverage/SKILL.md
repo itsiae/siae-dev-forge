@@ -147,6 +147,46 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## Entity setter detection (Task 08)
+
+Entity Hibernate SIAE legacy hanno setter con logica nascosta (normalizer, escape, conditional). Round-trip naive (``set("Foo"); get() == "Foo"``) fallisce silenziosamente → Phase 7 repair loop su pattern ricorrente.
+
+`scripts/setter_scanner.py` pre-scansiona i `.java` del repo e classifica:
+
+```json
+{
+  "BollettinoMusica": {
+    "setTitolo": {
+      "kind": "non_trivial",
+      "transforms": ["lowercase", "unescape_html"],
+      "has_conditional": false
+    },
+    "setClasseStampa": {
+      "kind": "non_trivial",
+      "transforms": ["lowercase"],
+      "has_conditional": false
+    },
+    "setId": {"kind": "trivial", "transforms": [], "has_conditional": false}
+  }
+}
+```
+
+Usage CLI:
+```bash
+python3 skills/code-coverage/scripts/setter_scanner.py <repo> --write
+# Scrive .code-coverage/setter-scan.json
+```
+
+**Phase 5 generation pattern:**
+
+| Classificazione | Test generato |
+|---|---|
+| ``trivial`` (``this.x = x;``) | Round-trip naive |
+| ``non_trivial`` + transforms (es. ``lowercase``) | Assertion adapted (``assertEquals("foo", entity.getX())`` per input ``"FOO"``) + branch null/empty |
+| ``has_conditional=true`` | Smoke test only (assert non-null) + WARN ``decisions.log`` |
+
+Transforms native risolte da ``apply_transforms()``: ``trim``, ``lowercase``, ``uppercase``. Altre (``escape_html``, ``replace``) sono pass-through con WARN.
+
 ## Java source level support (Task 07)
 
 Phase 4 deriva ``compat_profile`` dal source level Java (``<maven.compiler.source>`` o ``<java.version>``) e popola ``env.json``:
