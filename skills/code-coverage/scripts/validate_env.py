@@ -874,6 +874,9 @@ def main() -> None:
                         "jdk_major": None, "lombok_version": None, "source_level": None}
     java_source_level: str | None = None
     compat_profile: str = "legacy-java"
+    is_spring_boot: bool = False
+    # Task 09: default single-shot (più veloce, raramente peggio). Opt-out con --verify-each.
+    mvn_strategy: str = "verify-each" if "--verify-each" in sys.argv else "single-shot"
     if framework in ("junit5", "junit5+mockk"):
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
@@ -905,6 +908,15 @@ def main() -> None:
             # Task 07: source level + compat_profile per template selection
             java_source_level = source_lvl
             compat_profile = derive_compat_profile(source_lvl)
+            # Task 09: Spring Boot detection (parent OR starter dep)
+            for p in pom_paths:
+                try:
+                    pcontent = Path(p).read_text(encoding="utf-8", errors="ignore")
+                    if "spring-boot-starter" in pcontent or "spring-boot-parent" in pcontent:
+                        is_spring_boot = True
+                        break
+                except OSError:
+                    continue
 
     # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
     skipped_modules: list = []
@@ -952,6 +964,8 @@ def main() -> None:
         "jdk_compat": jdk_compat,
         "java_source_level": java_source_level,
         "compat_profile": compat_profile,
+        "is_spring_boot": is_spring_boot,
+        "mvn_strategy": mvn_strategy,
     }, indent=2))
 
 

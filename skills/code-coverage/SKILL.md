@@ -147,6 +147,31 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## mvn invocation strategy (Task 09)
+
+Phase 6 supporta due strategy mvn:
+
+| Strategy | Comportamento | Quando |
+|---|---|---|
+| ``single-shot`` (default) | 1 mvn finale con tutti i test, parse surefire-reports per fail, Phase 7 ri-esegue solo i Class#method falliti | Default + Spring Boot detected |
+| ``verify-each`` (opt-in legacy) | mvn separato per ogni batch generato | ``--verify-each`` CLI flag |
+
+`env.json.mvn_strategy` + `env.json.is_spring_boot` informano Phase 6.
+
+**Wall-clock benefit:** su Spring Boot 2.5 (boot context ~20-30s × 3 batch) il single-shot porta da ~12 min a ~4-5 min (60% saved).
+
+**Phase 7 skinny invocation:**
+```bash
+mvn test -Dtest=ClassName#methodName -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+`scripts/surefire_parser.py` estrae `Class#method` da `target/surefire-reports/TEST-*.xml`:
+```bash
+python3 skills/code-coverage/scripts/surefire_parser.py target/surefire-reports
+# Output: it.siae.FooTest#testFail
+#         it.siae.BarTest#testNPE
+```
+
 ## Entity setter detection (Task 08)
 
 Entity Hibernate SIAE legacy hanno setter con logica nascosta (normalizer, escape, conditional). Round-trip naive (``set("Foo"); get() == "Foo"``) fallisce silenziosamente → Phase 7 repair loop su pattern ricorrente.
