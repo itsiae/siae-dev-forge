@@ -147,6 +147,39 @@ Quando rilevato, `stack.json` contiene:
 }
 ```
 
+## JDK / Lombok compatibility (Task 03)
+
+Phase 4 confronta JDK runtime + versione Lombok + Java source level contro una matrice di compatibilità nota. Emette ``env.json.jdk_compat``:
+
+```json
+{
+  "jdk_compat": {
+    "severity": "HARD-WARN",
+    "reason": "Lombok 1.18.16 max_jdk=17, runtime is 25 → TypeTag UNKNOWN expected",
+    "suggested_fix": "export JAVA_HOME=$(/usr/libexec/java_home -v 17)",
+    "jdk_major": 25,
+    "lombok_version": "1.18.16",
+    "source_level": "1.7"
+  }
+}
+```
+
+**Severity levels:**
+
+- ``OK`` — combinazione compatibile, run procede
+- ``WARN`` — combinazione subottimale (es. source 1.7 + JDK 25 senza Lombok): plugin Maven legacy possibly incompatibili
+- ``HARD-WARN`` — combinazione che causerà BUILD ERROR (es. Lombok 1.18.16 + JDK 25): la skill consumer DEVE bloccare il primo run e suggerire ``suggested_fix`` prima di tentare ``mvn``
+
+**Matrice Lombok → max JDK:**
+
+| Lombok version    | Max JDK | Reason |
+|-------------------|---------|--------|
+| 1.18.0 — 1.18.22  | 17      | TypeTag UNKNOWN su JDK ≥ 18 (lombok issue #3247) |
+| 1.18.23 — 1.18.29 | 20      | javac internals breaking JDK ≥ 21 |
+| 1.18.30+          | 25      | Modern |
+
+**Override:** ``--ignore-jdk-mismatch`` (CLI flag a ``validate_env.py``) downgrade HARD-WARN → WARN. Power-user only — la skill avvisa che il primo mvn run probabilmente fallirà.
+
 ## Surefire includes/excludes handling (Task 05)
 
 Phase 4 estrae la configurazione di ``maven-surefire-plugin`` da ogni pom e popola ``env.json.surefire_config``:

@@ -438,6 +438,163 @@ def scan_maven_placeholders(pom_paths: list, overrides: dict | None = None) -> d
             value = ov_placeholders.get(token, _MAVEN_PLACEHOLDER_DEFAULT)
             found[token] = value
     return found
+# ─── Task 03: JDK / Lombok compat detection ──────────────────────────────
+_LOMBOK_PROPERTY_RE = re.compile(r"<lombok\.version>\s*([^<\s]+)\s*</lombok\.version>")
+_LOMBOK_DEPENDENCY_BLOCK_RE = re.compile(
+    r"<dependency>(?:[^<]|<(?!/dependency>))*?<artifactId>\s*lombok\s*</artifactId>(?:[^<]|<(?!/dependency>))*?</dependency>",
+    re.DOTALL,
+)
+_VERSION_TAG_RE = re.compile(r"<version>\s*([^<\s]+)\s*</version>")
+_SOURCE_PROPERTY_NAMES = (
+    "maven.compiler.source", "maven.compiler.release", "java.version", "source"
+)
+_COMPILER_PLUGIN_SOURCE_RE = re.compile(
+    r"<artifactId>\s*maven-compiler-plugin\s*</artifactId>.*?<source>\s*([^<\s]+)\s*</source>",
+    re.DOTALL,
+)
+
+
+def extract_lombok_version(pom_path) -> str | None:
+    """Task 03: estrae versione Lombok dal pom (property o dependency block)."""
+    try:
+        content = Path(pom_path).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    m = _LOMBOK_PROPERTY_RE.search(content)
+    if m:
+        v = m.group(1).strip()
+        # Salta placeholder ${...} non risolti (richiederebbero effective-pom)
+        if v and not v.startswith("${"):
+            return v
+    # Fallback: cerca <version> dentro al dependency block lombok
+    dep_match = _LOMBOK_DEPENDENCY_BLOCK_RE.search(content)
+    if dep_match:
+        ver = _VERSION_TAG_RE.search(dep_match.group(0))
+        if ver:
+            v = ver.group(1).strip()
+            if v and not v.startswith("${"):
+                return v
+    # Lombok dependency presente ma senza version specifico (managed) → return marker
+    if dep_match:
+        return "managed"
+    return None
+
+
+def extract_source_level(pom_path) -> str | None:
+    """Task 03: estrae Java source level dal pom (proprietà o compiler plugin)."""
+    try:
+        content = Path(pom_path).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    # Cerca property block
+    prop_block = re.search(r"<properties>(.*?)</properties>", content, re.DOTALL)
+    if prop_block:
+        for name in _SOURCE_PROPERTY_NAMES:
+            m = re.search(rf"<{re.escape(name)}>\s*([^<\s]+)\s*</{re.escape(name)}>", prop_block.group(1))
+            if m:
+                v = m.group(1).strip()
+                if v and not v.startswith("${"):
+                    return v
+    # Fallback: maven-compiler-plugin source
+    m = _COMPILER_PLUGIN_SOURCE_RE.search(content)
+    if m:
+        v = m.group(1).strip()
+        if v and not v.startswith("${"):
+            return v
+    return None
+
+
+def _parse_jdk_major(version_str: str | None) -> int | None:
+    """Estrae il major version JDK (es. ``25.0.2`` → 25, ``1.8.0`` → 8)."""
+    if not version_str:
+        return None
+    nums = re.findall(r"\d+", version_str)
+    if not nums:
+        return None
+    try:
+        first = int(nums[0])
+    except ValueError:
+        return None
+    # JDK <= 8 segnalato come 1.X.Y, normalizza a major X
+    if first == 1 and len(nums) >= 2:
+        try:
+            return int(nums[1])
+        except ValueError:
+            return first
+    return first
+
+
+def _lombok_max_jdk(lombok_version: str) -> int:
+    """Matrice Lombok → max JDK compatibile (semplificata)."""
+    if lombok_version == "managed":
+        # Versione gestita ma sconosciuta → assumi vecchia, max JDK 17
+        return 17
+    parts = lombok_version.split(".")
+    try:
+        patch = int(parts[2]) if len(parts) >= 3 else 0
+    except ValueError:
+        return 17
+    # 1.18.0-22 → max 17; 1.18.23-29 → max 20; 1.18.30+ → max 25 (JDK 26 atteso)
+    if patch <= 22:
+        return 17
+    if patch <= 29:
+        return 20
+    return 25
+
+
+def evaluate_jdk_lombok_compat(jdk_major: int | None, lombok_version: str | None,
+                                source_level: str | None) -> dict:
+    """Task 03: confronta JDK runtime + Lombok + source level contro matrice compat.
+
+    Returns:
+        dict con ``severity`` ('OK' | 'WARN' | 'HARD-WARN'), ``reason``,
+        ``suggested_fix``, e i 3 valori detected.
+    """
+    result = {
+        "severity": "OK",
+        "reason": "",
+        "suggested_fix": "",
+        "jdk_major": jdk_major,
+        "lombok_version": lombok_version,
+        "source_level": source_level,
+    }
+
+    if jdk_major is None:
+        result["severity"] = "WARN"
+        result["reason"] = "JDK runtime non rilevato"
+        return result
+
+    # Check 1: Lombok vs JDK runtime (più critico)
+    if lombok_version is not None:
+        max_jdk = _lombok_max_jdk(lombok_version)
+        if jdk_major > max_jdk:
+            result["severity"] = "HARD-WARN"
+            result["reason"] = (
+                f"Lombok {lombok_version} max_jdk={max_jdk}, runtime is {jdk_major} "
+                f"→ TypeTag UNKNOWN / javac internals breaking expected"
+            )
+            result["suggested_fix"] = (
+                f"export JAVA_HOME=$(/usr/libexec/java_home -v {max_jdk}) "
+                f"# o equivalente Linux/Windows"
+            )
+            return result
+
+    # Check 2: source level vs JDK
+    src_major = _parse_jdk_major(source_level)
+    if src_major is not None and src_major <= 7 and jdk_major > 17:
+        result["severity"] = "WARN"
+        result["reason"] = (
+            f"source {source_level} + JDK {jdk_major}: vecchi plugin Maven "
+            f"possibly incompatibili"
+        )
+        result["suggested_fix"] = (
+            f"export JAVA_HOME=$(/usr/libexec/java_home -v 17)"
+        )
+        return result
+
+    return result
+
+
 # Task 05: regex per estrarre include/exclude da blocco surefire-plugin
 _SUREFIRE_PLUGIN_BLOCK_RE = re.compile(
     r"<plugin>\s*(?:<groupId>[^<]+</groupId>\s*)?<artifactId>\s*maven-surefire-plugin\s*</artifactId>(.*?)</plugin>",
@@ -691,6 +848,8 @@ def main() -> None:
     assertion_lib = None
     maven_placeholders: dict = {}
     surefire_config: dict = {"includes": [], "excludes": [], "restrictive": False}
+    jdk_compat: dict = {"severity": "OK", "reason": "", "suggested_fix": "",
+                        "jdk_major": None, "lombok_version": None, "source_level": None}
     if framework in ("junit5", "junit5+mockk"):
         pom_paths = _collect_pom_paths(repo_path, manifest_root_rel)
         assertion_lib = detect_assertion_lib(pom_paths)
@@ -701,6 +860,24 @@ def main() -> None:
         # legge anche moduli individuali se Phase 7 entra in loop.
         if pom_paths:
             surefire_config = detect_surefire_config(pom_paths[0])
+        # Task 03: jdk-lombok-compat-check — JDK runtime + Lombok + source level
+        if pom_paths:
+            # JDK runtime già rilevato sopra nei runtime_checks (entry java)
+            jdk_entry = next((e for e in available if e.get("tool") == "java"), None)
+            jdk_major_val = _parse_jdk_major(jdk_entry.get("version", "")) if jdk_entry else None
+            lombok_ver = extract_lombok_version(pom_paths[0])
+            source_lvl = extract_source_level(pom_paths[0])
+            # Cerca anche nei moduli (Lombok può essere in submodule)
+            if lombok_ver is None and len(pom_paths) > 1:
+                for p in pom_paths[1:]:
+                    lombok_ver = extract_lombok_version(p)
+                    if lombok_ver:
+                        break
+            jdk_compat = evaluate_jdk_lombok_compat(jdk_major_val, lombok_ver, source_lvl)
+            # Opt-out con --ignore-jdk-mismatch
+            if "--ignore-jdk-mismatch" in sys.argv and jdk_compat["severity"] != "OK":
+                jdk_compat["severity"] = "WARN"  # downgrade
+                jdk_compat["reason"] += " (downgraded by --ignore-jdk-mismatch)"
 
     # Task 06: jacoco-skip-detect — filtra moduli by-design (no source / no tests).
     skipped_modules: list = []
@@ -745,6 +922,7 @@ def main() -> None:
         "skipped_modules": skipped_modules,
         "maven_placeholders": maven_placeholders,
         "surefire_config": surefire_config,
+        "jdk_compat": jdk_compat,
     }, indent=2))
 
 
