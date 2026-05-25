@@ -48,7 +48,11 @@ init_workdir "<repo>"
 ```bash
 bash skills/code-coverage/lib/phase1-discover.sh "<repo>"
 ```
-Gates: `stack.json.pre_existing_coverage_pct >= user_target_line` → Block 8 (coverage already sufficient) + END; `env.json.required_framework == "unknown"` → Block 4 + END.
+Gates:
+- `stack.json.pre_existing_coverage_pct >= 70` (preset full-bundle default) → Block 8 "coverage already sufficient" + END. This is the early fast-exit before the user picks a target — uses the most ambitious preset as the gate so a project with very high pre-existing coverage skips the workflow without prompting.
+- `env.json.required_framework == "unknown"` → Block 4 + END.
+
+The chosen-target gate (`>= user_target_line`) is applied later in Phase 2.5 once the sentinel handshake has populated `user-choice.json` (see Phase 2.5 below).
 
 ### Phase 2 — Strategy
 
@@ -68,6 +72,21 @@ Other stacks (Python/Java/Kotlin/Go/Rust/C#/Flutter) → direct lookup in `asset
 **Monorepo:** iterate `stack.json.workspaces[]`, apply tree per workspace. Workspaces with `framework == "unknown"` are logged as `skipped reason=unsupported-language` and listed in Block 4.
 
 **Gate:** if ALL workspaces resolve to `unknown` → emit Block 4 + END.
+
+### Phase 2.5 — Target-aware coverage re-check (after sentinel handshake)
+
+After `lib/sentinel-handshake.sh` writes `.code-coverage/user-choice.json` with the chosen `target_line`, re-evaluate the coverage gate using the actual target the user selected. The Phase 1 default gate (`>= 70`) catches projects with already maximum coverage; this Phase 2.5 gate catches projects whose existing coverage already satisfies a less ambitious custom target (e.g., user picks 45, pre-existing is 50 → skip the workflow).
+
+```bash
+USER_TARGET=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['target_line'])" "$REPO/.code-coverage/user-choice.json")
+PRE_COV=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('pre_existing_coverage_pct',0))" "$REPO/.code-coverage/stack.json")
+python3 -c "import sys; sys.exit(0 if $PRE_COV >= $USER_TARGET else 1)" && {
+    echo "[phase2.5] pre_existing_coverage_pct=$PRE_COV >= user_target_line=$USER_TARGET → Block 8 + END"
+    # Emit Block 8 then exit workflow
+}
+```
+
+If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
 
 ### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
 If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
