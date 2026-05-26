@@ -1,7 +1,6 @@
 """Test per export_excel.py."""
 from __future__ import annotations
 
-from pathlib import Path
 import pandas as pd
 import pytest
 from openpyxl import load_workbook
@@ -249,7 +248,6 @@ def test_anonymize_replaces_logins(tmp_path, sample_kpis_df, sample_prs_df, samp
 
 def test_reproducibility_same_input_same_checksum(tmp_path, sample_kpis_df, sample_prs_df, sample_source_report):
     """Stesso input → stesso file (escludendo metadata timestamp)."""
-    import hashlib
     out1 = tmp_path / "r1.xlsx"
     out2 = tmp_path / "r2.xlsx"
     ee.export(sample_kpis_df, sample_prs_df, sample_source_report,

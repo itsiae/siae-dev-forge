@@ -15,7 +15,6 @@ import subprocess
 from unittest.mock import patch
 
 import boto3
-import pytest
 from moto import mock_aws
 
 from lib.review_evidence.baseline_cache import (

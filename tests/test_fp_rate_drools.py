@@ -4,19 +4,15 @@
 """
 from __future__ import annotations
 
-from pathlib import Path
 
-import pytest
 
 from lib.review_evidence.tools.fp_rate import (
-    FpRateReport,
     is_false_positive_marker,
     measure_fp_rate,
     threshold_decision,
 )
 from lib.review_evidence.drools_check import (
     DROOLS_REVIEW_LABEL,
-    DroolsReviewResult,
     check_drools_review,
 )
 

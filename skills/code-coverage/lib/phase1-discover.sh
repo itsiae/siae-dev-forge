@@ -138,7 +138,9 @@ summary = {
         "primary": stack.get("primary_language") or (stack.get("languages") or [None])[0],
         "monorepo": stack.get("monorepo", False),
         "monorepo_workspaces": stack.get("monorepo_workspaces", []),
+        "manifest_root": stack.get("manifest_root", "."),
     },
+    "maven_aggregator": stack.get("maven_aggregator"),  # Task 01
     "size": {
         "class": size.get("class") or size.get("size_class"),
         "loc_total": size.get("loc") or size.get("loc_total"),
@@ -154,3 +156,13 @@ print(json.dumps(summary, indent=2))
 PYEOF
 
 echo "[phase1] discovery-summary.json emitted (phase5b_probe=$PROBE_STATE)"
+
+# ─── Task 01: WARN se Java stack ma nessun aggregator pom rilevato ─────────
+# Lasciare che il phase 4 gate gestisca required_framework=unknown; questo è
+# advisory per troubleshooting (l'operatore può creare overrides.json).
+if grep -q '"primary": "java"' "$REPO/.code-coverage/discovery-summary.json" 2>/dev/null \
+   && grep -q '"maven_aggregator": null' "$REPO/.code-coverage/discovery-summary.json" 2>/dev/null; then
+    echo "[phase1] WARN: Java stack but no aggregator pom found within CC_POM_MAXDEPTH (default 4)." >&2
+    echo "[phase1] WARN: Create .code-coverage/overrides.json with {\"manifest_root\": \"...\", \"aggregator_pom\": \"...\"} to override." >&2
+fi
+

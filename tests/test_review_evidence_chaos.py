@@ -270,7 +270,7 @@ def test_Q03M1_envelope_cwd_must_be_git_worktree(tmp_path):
     home_dir.mkdir()
     env["HOME"] = str(home_dir)
 
-    proc = subprocess.run(
+    subprocess.run(
         ["bash", str(HOOK)],
         input=json.dumps({
             "hook_event_name": "PreToolUse",

@@ -2,7 +2,6 @@ import subprocess
 import json
 import os
 from pathlib import Path
-import pytest
 
 HOOK_PATH = Path(__file__).parent.parent / "hooks" / "pr-release-gate"
 

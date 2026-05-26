@@ -1,5 +1,3 @@
-from unittest.mock import patch
-from pathlib import Path
 import pytest
 from lib.release_risk.cache import (
     compute_diff_hash, cache_key, get, put,

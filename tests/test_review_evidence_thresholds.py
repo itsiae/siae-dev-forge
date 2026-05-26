@@ -1,5 +1,4 @@
 """Tests for lib/review_evidence/thresholds.py — env-driven hard-block thresholds."""
-import pytest
 from lib.review_evidence.thresholds import (
     load_thresholds,
     compute_verdict,

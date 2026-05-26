@@ -233,7 +233,7 @@ def analyze_session(filepath: str) -> None:
         sub_cost = totals["cost"] - main_cost
         sub_pct = (sub_cost / totals["cost"] * 100) if totals["cost"] > 0 else 0
 
-        print(f"💡 Insights:")
+        print("💡 Insights:")
         print(f"   Subagent cost: ${sub_cost:.2f} ({sub_pct:.0f}% del totale)")
         print(f"   Subagent più costoso: {most_expensive[0]} (${most_expensive[1]['cost']:.2f})")
 

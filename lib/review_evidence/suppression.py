@@ -8,7 +8,7 @@ Expiring <14gg: drop ma WARNING re-validate emitted.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date
 from enum import Enum
 from fnmatch import fnmatch
 from pathlib import Path

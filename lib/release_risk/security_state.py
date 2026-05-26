@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 from lib.release_risk.schema import CriterionResult
 
 CRITICAL_TRIGGER = 0  # > this → trigger
