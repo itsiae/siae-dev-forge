@@ -9,8 +9,16 @@
 # (key=value su stdout) e output strutturato per il follow-up (user-choice.json).
 #
 # Usage:
-#   bash sentinel-handshake.sh read <repo>           # → key=value su stdout
-#   bash sentinel-handshake.sh write <repo> <40|70>  # → user-choice.json
+#   bash sentinel-handshake.sh read   <repo>            # → key=value su stdout
+#   bash sentinel-handshake.sh prompt <repo>            # → interactive 3-option
+#                                                        prompt, exports
+#                                                        TARGET_LINE/TARGET_BRANCH
+#                                                        and writes user-choice.json
+#   bash sentinel-handshake.sh write  <repo> <N>        # → user-choice.json
+#                                                        N integer in [1, 95]
+#                                                        (40 = quick-win,
+#                                                         70 = full-bundle,
+#                                                         altri = custom)
 #
 # Exit codes:
 #   0 = success
@@ -22,12 +30,44 @@ set -o pipefail
 usage() {
     cat <<'EOF' >&2
 Usage:
-  sentinel-handshake.sh read <repo>
-  sentinel-handshake.sh write <repo> <target_line>
+  sentinel-handshake.sh read   <repo>
+  sentinel-handshake.sh prompt <repo>
+  sentinel-handshake.sh write  <repo> <target_line>
 
-  read:  legge .code-coverage/pending-user-choice.json + emit key=value su stdout
-  write: target_line ∈ {40, 70} → scrive .code-coverage/user-choice.json
+  read:   legge .code-coverage/pending-user-choice.json + emit key=value su stdout
+  prompt: 3-option interactive prompt (Quick / Full / Custom); exports
+          TARGET_LINE + TARGET_BRANCH e scrive .code-coverage/user-choice.json
+  write:  target_line ∈ [1, 95] (40=quick-win, 70=full-bundle, altri=custom) →
+          scrive .code-coverage/user-choice.json
 EOF
+}
+
+# Validate integer target in [1, 95]. Echoes target on success, exits 1 on failure.
+_validate_target_line() {
+    local target="${1:-}"
+    if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+        echo "[sentinel-handshake] ERROR: target_line must be an integer (got: '$target')" >&2
+        return 1
+    fi
+    if [ "$target" -lt 1 ] || [ "$target" -gt 95 ]; then
+        echo "[sentinel-handshake] ERROR: target_line must be between 1 and 95 (got: $target). Presets: 40 (quick-win), 70 (full-bundle)." >&2
+        return 1
+    fi
+    return 0
+}
+
+# Derive branch target: 40→30, 70→60, custom N → max(1, N-10).
+_derive_branch_target() {
+    local line="$1"
+    case "$line" in
+        40) echo 30 ;;
+        70) echo 60 ;;
+        *)
+            local b=$((line - 10))
+            [ "$b" -lt 1 ] && b=1
+            echo "$b"
+            ;;
+    esac
 }
 
 cmd_read() {
@@ -103,10 +143,7 @@ cmd_write() {
     local repo="${1:?usage: write <repo> <target_line>}"
     local target="${2:?usage: write <repo> <target_line>}"
 
-    if [ "$target" != "40" ] && [ "$target" != "70" ]; then
-        echo "[sentinel-handshake] ERROR: target_line must be 40 or 70 (got: $target)" >&2
-        return 1
-    fi
+    _validate_target_line "$target" || return 1
 
     local sentinel="$repo/.code-coverage/pending-user-choice.json"
     if [ ! -f "$sentinel" ]; then
@@ -134,14 +171,30 @@ except (OSError, json.JSONDecodeError) as exc:
 
 ctx = data.get("context") or {}
 opts = data.get("options") or {}
-chosen_key = "A" if target == 40 else "B"
-chosen = opts.get(chosen_key) or {}
+
+# Preset paths use the pre-computed p50/p90 from the sentinel.
+# Custom paths fall back to the closest preset bucket (A=40 for <55, B=70 otherwise).
+if target == 40:
+    chosen = opts.get("A") or {}
+    preset = "quick-win"
+elif target == 70:
+    chosen = opts.get("B") or {}
+    preset = "full-bundle"
+else:
+    chosen = opts.get("A") if target < 55 else opts.get("B")
+    chosen = chosen or {}
+    preset = "custom"
 
 p50 = chosen.get("estimated_wallclock_min_p50")
 p90 = chosen.get("estimated_wallclock_min_p90")
 
-# target_branch: regola fissa (30 per 40, 60 per 70)
-target_branch = 30 if target == 40 else 60
+# target_branch: 40→30, 70→60, custom N → max(1, N-10)
+if target == 40:
+    target_branch = 30
+elif target == 70:
+    target_branch = 60
+else:
+    target_branch = max(1, target - 10)
 
 payload = {
     "target_line": target,
@@ -151,6 +204,7 @@ payload = {
     "estimated_wallclock_min_p90": p90,
     "user_choice_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "source": "sentinel_handshake",
+    "preset": preset,
 }
 
 try:
@@ -167,6 +221,61 @@ print(f"[sentinel-handshake] wrote {out_path} (target_line={target}, "
 PY
 }
 
+# cmd_prompt: 3-option interactive prompt.
+# Exports TARGET_LINE and TARGET_BRANCH for downstream scripts (when sourced),
+# then delegates to cmd_write which materialises user-choice.json.
+cmd_prompt() {
+    local repo="${1:?usage: prompt <repo>}"
+    local choice=""
+    local custom=""
+
+    while true; do
+        echo "Choose a coverage target:" >&2
+        echo "  1) Quick Win  — 40% line / 30% branch" >&2
+        echo "  2) Full Bundle — 70% line / 60% branch" >&2
+        echo "  3) Custom     — enter your own line target (1–95)" >&2
+        printf "Selection [1/2/3]: " >&2
+        read -r choice </dev/tty || {
+            echo "[sentinel-handshake] ERROR: stdin closed (cannot prompt)" >&2
+            return 1
+        }
+        case "$choice" in
+            1)
+                TARGET_LINE=40
+                TARGET_BRANCH=30
+                break
+                ;;
+            2)
+                TARGET_LINE=70
+                TARGET_BRANCH=60
+                break
+                ;;
+            3)
+                while true; do
+                    printf "Custom target line (1-95): " >&2
+                    read -r custom </dev/tty || {
+                        echo "[sentinel-handshake] ERROR: stdin closed" >&2
+                        return 1
+                    }
+                    if _validate_target_line "$custom" 2>/dev/null; then
+                        TARGET_LINE="$custom"
+                        TARGET_BRANCH="$(_derive_branch_target "$custom")"
+                        break 2
+                    fi
+                    echo "Invalid value. Enter integer between 1 and 95." >&2
+                done
+                ;;
+            *)
+                echo "Invalid choice. Pick 1, 2, or 3." >&2
+                ;;
+        esac
+    done
+
+    export TARGET_LINE TARGET_BRANCH
+    echo "[sentinel-handshake] selected TARGET_LINE=$TARGET_LINE TARGET_BRANCH=$TARGET_BRANCH" >&2
+    cmd_write "$repo" "$TARGET_LINE"
+}
+
 main() {
     local sub="${1:-}"
     if [ -z "$sub" ]; then
@@ -178,6 +287,9 @@ main() {
     case "$sub" in
         read)
             cmd_read "$@"
+            ;;
+        prompt)
+            cmd_prompt "$@"
             ;;
         write)
             cmd_write "$@"

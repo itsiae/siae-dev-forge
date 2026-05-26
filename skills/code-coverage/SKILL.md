@@ -48,7 +48,11 @@ init_workdir "<repo>"
 ```bash
 bash skills/code-coverage/lib/phase1-discover.sh "<repo>"
 ```
-Gates: `stack.json.pre_existing_coverage_pct >= 70` → Block 8 + END; `env.json.required_framework == "unknown"` → Block 4 + END.
+Gates:
+- `stack.json.pre_existing_coverage_pct >= 70` (preset full-bundle default) → Block 8 "coverage already sufficient" + END. This is the early fast-exit before the user picks a target — uses the most ambitious preset as the gate so a project with very high pre-existing coverage skips the workflow without prompting.
+- `env.json.required_framework == "unknown"` → Block 4 + END.
+
+The chosen-target gate (`>= user_target_line`) is applied later in Phase 2.5 once the sentinel handshake has populated `user-choice.json` (see Phase 2.5 below).
 
 ### Phase 2 — Strategy
 
@@ -69,10 +73,52 @@ Other stacks (Python/Java/Kotlin/Go/Rust/C#/Flutter) → direct lookup in `asset
 
 **Gate:** if ALL workspaces resolve to `unknown` → emit Block 4 + END.
 
+### Phase 2.5 — Target-aware coverage re-check (after sentinel handshake)
+
+After `lib/sentinel-handshake.sh` writes `.code-coverage/user-choice.json` with the chosen `target_line`, re-evaluate the coverage gate using the actual target the user selected. The Phase 1 default gate (`>= 70`) catches projects with already maximum coverage; this Phase 2.5 gate catches projects whose existing coverage already satisfies a less ambitious custom target (e.g., user picks 45, pre-existing is 50 → skip the workflow).
+
+```bash
+# Inputs are read from JSON files; values are passed via argv to avoid shell
+# interpolation in the python -c body (no injection surface even if the JSON
+# values are malformed — float() raises ValueError, gate stays closed).
+USER_TARGET=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['target_line'])" "$REPO/.code-coverage/user-choice.json") || exit 0
+PRE_COV=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('pre_existing_coverage_pct',0))" "$REPO/.code-coverage/stack.json") || exit 0
+if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) >= float(sys.argv[2]) else 1)" "$PRE_COV" "$USER_TARGET"; then
+    echo "[phase2.5] pre_existing_coverage_pct=$PRE_COV >= user_target_line=$USER_TARGET → Block 8 + END"
+    # NOTE: pseudo-code — replace with the actual Block 8 emitter wired in the consumer
+fi
+```
+
+Snippet contract: missing/malformed `user-choice.json` or `stack.json` → silent no-op (`|| exit 0`); the workflow proceeds and Phase 1 default gate has already enforced the upper bound.
+
+If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
+
 ### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
 If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
 
 ### Phase 4 — Environment
+
+**[Loader]** Trigger predicate (load `references/java-siae-quirks.md` once if ANY is true):
+
+1. `stack.json.language == "java"`, OR
+2. `stack.json.maven_aggregator` is present (non-null), OR
+3. `find <repo> -maxdepth 3 -name pom.xml -print -quit` returns a non-empty path.
+
+Equivalent bash check (consumer-side, exit 0 = load required):
+```bash
+REPO="${1:-.}"
+if python3 -c "
+import json, pathlib, sys
+sj = pathlib.Path('$REPO/.code-coverage/stack.json')
+if not sj.is_file(): sys.exit(1)
+d = json.loads(sj.read_text())
+sys.exit(0 if d.get('language') == 'java' or d.get('maven_aggregator') else 1)
+" 2>/dev/null || find "$REPO" -maxdepth 3 -name pom.xml -print -quit | grep -q .; then
+    echo "LOAD references/java-siae-quirks.md"
+fi
+```
+
+If triggered, read the file once and apply all applicable quirks for the remainder of the session.
 
 Read `.code-coverage/env.json`. For each framework with `installed: false` and non-null command in `assets/install-snippets.json`:
 1. Snapshot lockfile (`package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` / `poetry.lock`) → `.code-coverage/lockfile.bak`.
@@ -115,37 +161,21 @@ Conditional (programmatic, NEVER prompt):
 - Block 6 (`Dependency Install Commands`): only if `validate_env.py.install_commands` non-empty.
 - Block 9 (`Next Actions`): if any module sub-threshold OR follow-up batch active OR PRESERVE_EXISTING entries OR manual tests suggested.
 
-## Multi-module Maven repos (SIAE legacy)
+## Java/Maven/SIAE quirks (progressive disclosure)
 
-`detect_stack.py` cerca automaticamente un pom aggregator (`<packaging>pom</packaging>` + `<modules>` non vuoto) fino a 4 livelli di profondità (override via `CC_POM_MAXDEPTH`).
+> **Java/Maven users**: stack-specific quirks loaded from
+> `references/java-siae-quirks.md` at Phase 4 entry (progressive disclosure).
+> Covers multi-module aggregator detection, Maven placeholders, JDK/Lombok
+> compatibility matrix, Surefire includes/excludes, Jacoco-skipped modules,
+> entity setter detection, Java source-level matrix, mvn invocation strategy,
+> and assertion library rationale.
 
-Quando rilevato, `stack.json` contiene:
-```json
-{
-  "manifest_root": "pae-deposito-musica",
-  "maven_aggregator": {
-    "manifest_root": "pae-deposito-musica",
-    "aggregator_pom": "pae-deposito-musica/pom.xml",
-    "modules": ["mod-a", "mod-b"],
-    "selection_reason": "packaging-pom-with-modules"
-  }
-}
-```
+## Assertion library — NO auto-add deps
 
-`select_command.py` inietta `-f <aggregator_pom>` nel `cov_cmd` Maven. Phase 6 esegue da repo root con il pom aggregator esplicito.
-
-**Selection priority:**
-1. Pom con `<packaging>pom</packaging>` + `<modules>` non vuoto (aggregator vero). PIU' SHALLOW vince.
-2. Fallback: pom con `jacoco-maven-plugin` + `junit-jupiter` deps. PIU' SHALLOW vince.
-3. None se nessun pom matcha.
-
-**Override manuale:** se la detection sbaglia (es. aggregator > maxdepth=4), creare `.code-coverage/overrides.json`:
-```json
-{
-  "manifest_root": "custom/path",
-  "aggregator_pom": "custom/path/pom.xml"
-}
-```
+**Principle:** Never add assertion library deps automatically. Skill detects
+``assertion_lib`` from the pom and selects the matching template (AssertJ or
+JUnit5 vanilla) — it does NOT modify the pom to add AssertJ. Rationale and
+detection scope are in `references/java-siae-quirks.md`.
 
 ## Coverage target — forced choice + estime (Task 10)
 
@@ -203,257 +233,29 @@ bash skills/code-coverage/lib/sentinel-handshake.sh write <repo> 40
 # Scrive user-choice.json con target_line=40, target_branch=30, p50/p90 dalla sentinel, timestamp
 ```
 
-Lo script forza target ∈ {40, 70} (invalid → exit 1). `target_branch` derivato fissamente (40→30, 70→60).
+Lo script accetta target_line come intero in `[1, 95]` (invalid → exit 1). I preset `40` (quick-win) e `70` (full-bundle) usano `target_branch` fisso (30, 60); per i custom `target_branch = max(1, N - 10)`.
+
+### Interactive prompt
+
+```bash
+bash skills/code-coverage/lib/sentinel-handshake.sh prompt <repo>
+# Mostra 3 opzioni:
+#   1) Quick Win   — 40% line / 30% branch
+#   2) Full Bundle — 70% line / 60% branch
+#   3) Custom      — enter your own line target (1–95)
+# Esporta TARGET_LINE/TARGET_BRANCH e scrive user-choice.json.
+```
 
 ### CLI bypass (non-interactive)
 
 ```bash
-python3 scripts/estimate_effort.py <repo> --target=40
-# Scrive direttamente user-choice.json con target=40, NO sentinel
+python3 scripts/estimate_effort.py <repo> --target=40   # preset quick-win
+python3 scripts/estimate_effort.py <repo> --target=70   # preset full-bundle
+python3 scripts/estimate_effort.py <repo> --target=55   # custom
+# Scrive direttamente user-choice.json, NO sentinel
 ```
 
 Utile per CI, test automation, run preferenze stabili.
-
-## mvn invocation strategy (Task 09)
-
-Phase 6 supporta due strategy mvn:
-
-| Strategy | Comportamento | Quando |
-|---|---|---|
-| ``single-shot`` (default) | 1 mvn finale con tutti i test, parse surefire-reports per fail, Phase 7 ri-esegue solo i Class#method falliti | Default + Spring Boot detected |
-| ``verify-each`` (opt-in legacy) | mvn separato per ogni batch generato | ``--verify-each`` CLI flag |
-
-`env.json.mvn_strategy` + `env.json.is_spring_boot` informano Phase 6.
-
-**Wall-clock benefit:** su Spring Boot 2.5 (boot context ~20-30s × 3 batch) il single-shot porta da ~12 min a ~4-5 min (60% saved).
-
-**Phase 7 skinny invocation:**
-```bash
-mvn test -Dtest=ClassName#methodName -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-`scripts/surefire_parser.py` estrae `Class#method` da `target/surefire-reports/TEST-*.xml`:
-```bash
-python3 skills/code-coverage/scripts/surefire_parser.py target/surefire-reports
-# Output: it.siae.FooTest#testFail
-#         it.siae.BarTest#testNPE
-```
-
-## Entity setter detection (Task 08)
-
-Entity Hibernate SIAE legacy hanno setter con logica nascosta (normalizer, escape, conditional). Round-trip naive (``set("Foo"); get() == "Foo"``) fallisce silenziosamente → Phase 7 repair loop su pattern ricorrente.
-
-`scripts/setter_scanner.py` pre-scansiona i `.java` del repo e classifica:
-
-```json
-{
-  "BollettinoMusica": {
-    "setTitolo": {
-      "kind": "non_trivial",
-      "transforms": ["lowercase", "unescape_html"],
-      "has_conditional": false
-    },
-    "setClasseStampa": {
-      "kind": "non_trivial",
-      "transforms": ["lowercase"],
-      "has_conditional": false
-    },
-    "setId": {"kind": "trivial", "transforms": [], "has_conditional": false}
-  }
-}
-```
-
-Usage CLI:
-```bash
-python3 skills/code-coverage/scripts/setter_scanner.py <repo> --write
-# Scrive .code-coverage/setter-scan.json
-```
-
-**Phase 5 generation pattern:**
-
-| Classificazione | Test generato |
-|---|---|
-| ``trivial`` (``this.x = x;``) | Round-trip naive |
-| ``non_trivial`` + transforms (es. ``lowercase``) | Assertion adapted (``assertEquals("foo", entity.getX())`` per input ``"FOO"``) + branch null/empty |
-| ``has_conditional=true`` | Smoke test only (assert non-null) + WARN ``decisions.log`` |
-
-Transforms native risolte da ``apply_transforms()``: ``trim``, ``lowercase``, ``uppercase``. Altre (``escape_html``, ``replace``) sono pass-through con WARN.
-
-## Java source level support (Task 07)
-
-Phase 4 deriva ``compat_profile`` dal source level Java (``<maven.compiler.source>`` o ``<java.version>``) e popola ``env.json``:
-
-```json
-{
-  "java_source_level": "1.7",
-  "compat_profile": "legacy-java"
-}
-```
-
-**Profili supportati:**
-
-| source level | compat_profile | template selezionato (con vanilla variant) |
-|---|---|---|
-| < 10 (1.7/1.8/8/9) | ``legacy-java`` | ``junit5-java8.template.java`` (no var, no text-blocks) |
-| 10-13 | ``modern-java-10`` | ``junit5.template.java`` (var ok, no text-blocks) |
-| 14+ | ``modern-java-14`` | ``junit5.template.java`` (full modern) |
-
-**Selezione template (4-way matrix):**
-
-`template-cache.sh` combina ``compat_profile`` + ``assertion_lib`` (Task 04):
-
-| compat_profile | assertion_lib | template |
-|---|---|---|
-| modern-* | assertj | ``junit5.template.java`` (default) |
-| modern-* | junit5_vanilla | ``junit5-vanilla.template.java`` |
-| legacy-java | assertj | ``junit5-java8.template.java`` |
-| legacy-java | junit5_vanilla | ``junit5-java8-vanilla.template.java`` |
-
-I template Java 8 usano placeholder ``{{TypeXxx}}`` per tipi espliciti (no ``var`` keyword) — Phase 5 generation deve risolvere i tipi durante l'interpolazione.
-
-## JDK / Lombok compatibility (Task 03)
-
-Phase 4 confronta JDK runtime + versione Lombok + Java source level contro una matrice di compatibilità nota. Emette ``env.json.jdk_compat``:
-
-```json
-{
-  "jdk_compat": {
-    "severity": "HARD-WARN",
-    "reason": "Lombok 1.18.16 max_jdk=17, runtime is 25 → TypeTag UNKNOWN expected",
-    "suggested_fix": "export JAVA_HOME=$(/usr/libexec/java_home -v 17)",
-    "jdk_major": 25,
-    "lombok_version": "1.18.16",
-    "source_level": "1.7"
-  }
-}
-```
-
-**Severity levels:**
-
-- ``OK`` — combinazione compatibile, run procede
-- ``WARN`` — combinazione subottimale (es. source 1.7 + JDK 25 senza Lombok): plugin Maven legacy possibly incompatibili
-- ``HARD-WARN`` — combinazione che causerà BUILD ERROR (es. Lombok 1.18.16 + JDK 25): la skill consumer DEVE bloccare il primo run e suggerire ``suggested_fix`` prima di tentare ``mvn``
-
-**Matrice Lombok → max JDK:**
-
-| Lombok version    | Max JDK | Reason |
-|-------------------|---------|--------|
-| 1.18.0 — 1.18.22  | 17      | TypeTag UNKNOWN su JDK ≥ 18 (lombok issue #3247) |
-| 1.18.23 — 1.18.29 | 20      | javac internals breaking JDK ≥ 21 |
-| 1.18.30+          | 25      | Modern |
-
-**Override:** ``--ignore-jdk-mismatch`` (CLI flag a ``validate_env.py``) downgrade HARD-WARN → WARN. Power-user only — la skill avvisa che il primo mvn run probabilmente fallirà.
-
-**Consumer-side gate operativo** — Phase 4 (o qualsiasi consumer della skill) invoca:
-
-```bash
-bash skills/code-coverage/lib/phase4-gate.sh <repo>
-```
-
-Comportamento (exit codes):
-
-| severity | exit | side effect |
-|---|---|---|
-| OK | 0 | silent |
-| WARN | 0 | stderr: `[phase4] WARN: <reason>` |
-| HARD-WARN | 2 | stderr: BLOCKED + suggested_fix + override hint, consumer aborta mvn |
-| env.json mancante/malformato | 0 | fail-open (non blocca run legittimi) |
-
-Sourceable anche come libreria: `source phase4-gate.sh; check_jdk_compat_gate <repo>` ritorna exit code.
-
-## Surefire includes/excludes handling (Task 05)
-
-Phase 4 estrae la configurazione di ``maven-surefire-plugin`` da ogni pom e popola ``env.json.surefire_config``:
-
-```json
-{
-  "surefire_config": {
-    "includes": ["**/BollettinoMusicaServiceImplTest.java"],
-    "excludes": [],
-    "restrictive": true
-  }
-}
-```
-
-``restrictive=true`` significa che gli ``<includes>`` configurati NON matchano i pattern surefire standard (``**/*Test.java``, ``**/Test*.java``, ``**/*Tests.java``). Risultato: i nuovi test generati da Phase 5 verrebbero ignorati silenziosamente → coverage falsa 0% sui nuovi test → Phase 7 entra in repair loop su problema fantasma.
-
-**Phase 5 behaviour quando restrictive=true:**
-
-1. **Opzione A — Match existing pattern:** nominare i nuovi test come gli esistenti se semanticamente coerente
-2. **Opzione B — Proposed pom patch:** emettere ``.code-coverage/proposed-pom-patches.diff`` con il patch ai ``<includes>`` da approvare. NON applicare automaticamente (Principle 1).
-
-```bash
-python3 skills/code-coverage/scripts/generate_pom_patches.py <repo> --package model
-# Scrive .code-coverage/proposed-pom-patches.diff con +<include>**/model/*Test.java</include>
-# Cumulative: invocazioni successive accumulano (più package patch in un singolo file)
-```
-
-Lo script legge ``env.json.surefire_config.restrictive`` — no-op se non restrittivo. Il diff prodotto è in formato unified compatibile con ``git apply``. L'operatore conferma manualmente prima di applicare.
-
-Excludes (``**/IT*.java``, etc.) sono rispettati come da spec surefire — il naming dei test generati evita i pattern excluded.
-
-## Maven placeholder handling (Task 02)
-
-Pom SIAE usano ``${appVersion}``, ``${revision}`` iniettati dalla pipeline CI/CD ma non definiti nel pom. Phase 4 scansiona i pom, rileva i placeholder non risolti, e popola ``env.json.maven_placeholders``:
-
-```json
-{
-  "maven_placeholders": {
-    "appVersion": "1.0.0-SNAPSHOT",
-    "revision": "1.0.0-SNAPSHOT"
-  }
-}
-```
-
-`select_command.py` propaga ``-D<token>=<value>`` nel mvn cmd Phase 6. Default = ``1.0.0-SNAPSHOT`` (override via ``overrides.json.maven_placeholders``).
-
-**Esclusi:** built-in Maven (``${project.version}``, ``${pom.basedir}``, ...) e placeholder definiti localmente nel ``<properties>`` del pom.
-
-**Override esempio:**
-```json
-{
-  "maven_placeholders": {
-    "appVersion": "2.0.0-RELEASE",
-    "revision": "1.2.3"
-  }
-}
-```
-
-## Jacoco-skipped modules (Task 06)
-
-Moduli SIAE legacy hanno spesso ``<jacoco.skip>true</jacoco.skip>`` per design (es. ``siae-pae-bollettino-service`` è aggregator senza source Java). Phase 4 detecta queste proprietà e popola ``env.json.skipped_modules``.
-
-Phase 8 reporting USA ``scripts/phase8_filter.py`` per applicare il filtro operativo:
-
-```bash
-python3 skills/code-coverage/scripts/phase8_filter.py <repo>
-# Output JSON: bundle_line_pct, bundle_branch_pct, skipped_modules_excluded, modules_included
-```
-
-Lo script:
-- Legge ``env.json.skipped_modules`` automaticamente
-- Cerca ``target/site/jacoco-aggregate/jacoco.xml`` (priorità) o ``target/site/jacoco/jacoco.xml``
-- Aggrega counters LINE/BRANCH solo sui `<group>` NOT skipped
-- Bundle coverage calcolato è quello che Phase 8 compara contro il target chosen (Task 10)
-
-I moduli SKIPPED compaiono nel report finale in sezione "Moduli skipped" con ragione ``jacoco.skip=true by-design`` — non contano come FAIL.
-
-## Assertion library — NO auto-add deps (Task 04)
-
-Phase 4 (validate_env.py) rileva la libreria di assertion presente nel pom Java:
-
-- ``assertj-core`` in deps → ``env.json.assertion_lib = "assertj"`` → template
-  ``junit5.template.java`` (AssertJ style: ``assertThat(x).isEqualTo(y)``)
-- Solo JUnit5 vanilla (no AssertJ) → ``env.json.assertion_lib = "junit5_vanilla"``
-  → template ``junit5-vanilla.template.java`` (``assertEquals(expected, actual)``)
-
-**Principle 1 enforcement:** la skill NON modifica autonomamente il pom per
-aggiungere AssertJ. È responsabilità dell'utente decidere l'upgrade. Il template
-vanilla è funzionalmente equivalente per le assertion comuni.
-
-**Detection scope:** scansiona aggregator pom + tutti i moduli figli (path
-letti da ``stack.json.maven_aggregator.modules`` quando rilevato in Task 01).
-AssertJ presente in UN qualsiasi modulo → template AssertJ globale.
 
 ## SUPPORTING FILES
 

@@ -92,14 +92,92 @@ def test_estimate_unknown_size_default_medium():
     assert "p50" in result and "p90" in result
 
 
-def test_estimate_invalid_target_raises():
-    """target diverso da 40 o 70 → ValueError."""
+def test_estimate_invalid_target_below_range_raises():
+    """target < 1 → ValueError (new contract: integer in [1, 95])."""
     from estimate_effort import estimate_effort
     try:
-        estimate_effort("medium", 55)
-        raise AssertionError("expected ValueError")
+        estimate_effort("medium", 0)
+        raise AssertionError("expected ValueError for target=0")
     except ValueError:
         pass
+
+
+def test_estimate_invalid_target_above_range_raises():
+    """target > 95 → ValueError (new contract: integer in [1, 95])."""
+    from estimate_effort import estimate_effort
+    try:
+        estimate_effort("medium", 96)
+        raise AssertionError("expected ValueError for target=96")
+    except ValueError:
+        pass
+
+
+# ---------- validate_target + derive_branch_target (GAP-1) ----------
+
+def test_validate_target_accepts_presets():
+    from estimate_effort import validate_target
+    assert validate_target(40) == 40
+    assert validate_target(70) == 70
+
+
+def test_validate_target_accepts_custom_in_range():
+    """Qualsiasi intero 1..95 e' valido (no whitelist)."""
+    from estimate_effort import validate_target
+    assert validate_target(1) == 1
+    assert validate_target(55) == 55
+    assert validate_target(95) == 95
+
+
+def test_validate_target_rejects_out_of_range():
+    from estimate_effort import validate_target
+    for bad in (0, -1, 96, 100, 1000):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad}")
+        except ValueError:
+            pass
+
+
+def test_validate_target_rejects_non_integer():
+    from estimate_effort import validate_target
+    for bad in (40.5, "40", None, [40]):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad!r}")
+        except ValueError:
+            pass
+
+
+def test_derive_branch_target_preset_quick_win():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(40) == 30
+
+
+def test_derive_branch_target_preset_full_bundle():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(70) == 60
+
+
+def test_derive_branch_target_custom():
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(55) == 45
+    assert derive_branch_target(80) == 70
+
+
+def test_derive_branch_target_floor_at_one():
+    """target_line <= 10 deve produrre target_branch >= 1 (floor a 1)."""
+    from estimate_effort import derive_branch_target
+    assert derive_branch_target(1) == 1
+    assert derive_branch_target(5) == 1
+    assert derive_branch_target(10) == 1
+
+
+def test_estimate_custom_target_no_longer_raises():
+    """target=55 (custom) deve essere accettato e produrre stime."""
+    from estimate_effort import estimate_effort
+    result = estimate_effort("medium", 55)
+    assert "p50" in result and "p90" in result
+    assert result["p50"] > 0 and result["p90"] > 0
 
 
 # ---------- CLI sentinel emission ----------
@@ -154,3 +232,62 @@ def test_cli_target_flag_bypasses_sentinel(tmp_path):
     assert choice_path.is_file(), "user-choice.json should be written by --target"
     choice = json.loads(choice_path.read_text())
     assert choice["target_line"] == 40
+
+
+# ---------- _interp_baseline extrapolation (MAJOR fix from code review) ----------
+
+def test_interp_baseline_midpoint_between_presets():
+    """target=55 = midpoint tra 40 (p50=20) e 70 (p50=60) per medium → p50=40."""
+    from estimate_effort import _interp_baseline
+    base = _interp_baseline("medium", 55)
+    assert base["p50"] == 40.0, f"expected 40.0, got {base['p50']}"
+    assert base["p90"] == 70.0, f"expected 70.0, got {base['p90']}"
+
+
+def test_interp_baseline_extrapolates_below_40_no_clamp():
+    """target=10 deve produrre stima INFERIORE a target=40 (non clampata)."""
+    from estimate_effort import _interp_baseline
+    base_10 = _interp_baseline("medium", 10)
+    base_40 = _interp_baseline("medium", 40)
+    assert base_10["p50"] < base_40["p50"], \
+        f"target=10 ({base_10['p50']}) deve essere < target=40 ({base_40['p50']})"
+    assert base_10["p50"] >= 1.0, "floor minimo p50 >= 1.0"
+
+
+def test_interp_baseline_extrapolates_above_70_no_clamp():
+    """target=90 deve produrre stima SUPERIORE a target=70 (non clampata)."""
+    from estimate_effort import _interp_baseline
+    base_70 = _interp_baseline("medium", 70)
+    base_90 = _interp_baseline("medium", 90)
+    assert base_90["p50"] > base_70["p50"], \
+        f"target=90 ({base_90['p50']}) deve essere > target=70 ({base_70['p50']})"
+
+
+def test_estimate_effort_emits_warn_for_extrapolation(capsys):
+    """estimate_effort con target fuori [40,70] deve emettere WARN su stderr."""
+    from estimate_effort import estimate_effort
+    estimate_effort("medium", 20)
+    captured = capsys.readouterr()
+    assert "WARN" in captured.err or "warn" in captured.err.lower(), \
+        f"expected WARN on stderr for extrapolated target, got: {captured.err!r}"
+
+
+def test_estimate_effort_no_warn_for_presets(capsys):
+    """target=40 o 70 non deve emettere WARN."""
+    from estimate_effort import estimate_effort
+    estimate_effort("medium", 40)
+    estimate_effort("medium", 70)
+    captured = capsys.readouterr()
+    assert "WARN" not in captured.err, \
+        f"unexpected WARN on stderr for preset: {captured.err!r}"
+
+
+def test_validate_target_rejects_bool():
+    """bool e' subclass di int in Python — deve essere esplicitamente respinto."""
+    from estimate_effort import validate_target
+    for bad in (True, False):
+        try:
+            validate_target(bad)
+            raise AssertionError(f"expected ValueError for {bad!r}")
+        except ValueError:
+            pass

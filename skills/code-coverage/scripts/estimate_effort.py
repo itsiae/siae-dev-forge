@@ -5,16 +5,22 @@ Workflow:
   Phase 2.1: discover_repo_size() classifica small/medium/large
   Phase 2.2/2.3: estimate_effort() applica moltiplicatori adjusters
   Phase 2.4: emit pending-user-choice.json sentinel (consumed by Claude main
-             loop via AskUserQuestion); ``--target=40|70`` bypass
+             loop via AskUserQuestion); ``--target=<N>`` bypass
 
 Sentinel pattern (Open question #1 overview): la skill bash emette il sentinel
 e si interrompe (exit code 3). Il wrapper Claude main loop legge il sentinel,
 invoca AskUserQuestion, scrive user-choice.json, e ri-lancia da Phase 2.5.
 
+Target contract (post-GAP-1):
+  - 40 = preset "quick-win"  (target_branch = 30)
+  - 70 = preset "full-bundle" (target_branch = 60)
+  - any integer N in [1, 95] = custom (target_branch = max(1, N - 10))
+
 Usage:
     python3 estimate_effort.py <repo>           # emit sentinel
-    python3 estimate_effort.py <repo> --target=40   # bypass + write choice
-    python3 estimate_effort.py <repo> --target=70
+    python3 estimate_effort.py <repo> --target=40   # preset quick-win
+    python3 estimate_effort.py <repo> --target=70   # preset full-bundle
+    python3 estimate_effort.py <repo> --target=55   # custom
 """
 from __future__ import annotations
 
@@ -33,6 +39,52 @@ _BASELINE = {
     "medium": {40: {"p50": 20, "p90": 40}, 70: {"p50": 60, "p90": 100}},
     "large":  {40: {"p50": 45, "p90": 90}, 70: {"p50": 150, "p90": 240}},
 }
+
+# --- target validation (supports presets and custom values) ---
+PRESET_LABELS = {40: "quick-win", 70: "full-bundle"}
+
+
+def validate_target(target_line):
+    """Accept any integer in [1, 95]. Presets are just convenience defaults."""
+    if isinstance(target_line, bool) or not isinstance(target_line, int) \
+       or not (1 <= target_line <= 95):
+        raise ValueError(
+            f"target_line must be an integer between 1 and 95, got {target_line!r}. "
+            "Presets: 40 (quick-win), 70 (full-bundle)."
+        )
+    return target_line
+
+
+def derive_branch_target(target_line):
+    return max(1, target_line - 10)
+
+
+def _interp_baseline(size_class: str, target: int) -> dict:
+    """Restituisce la baseline (p50, p90) per (size_class, target).
+
+    Per i preset (40, 70) usa la tabella diretta. Per i custom estrapola
+    linearmente passando per 40 e 70 — NO clamp — con floor p50/p90 >= 1.0
+    per evitare valori nulli o negativi su target estremi.
+    """
+    sz = size_class if size_class in _BASELINE else "medium"
+    if target in _BASELINE[sz]:
+        base = _BASELINE[sz][target]
+        return {"p50": float(base["p50"]), "p90": float(base["p90"])}
+    low, high = 40, 70
+    ratio = (target - low) / (high - low)
+    low_b = _BASELINE[sz][low]
+    high_b = _BASELINE[sz][high]
+    p50 = low_b["p50"] + ratio * (high_b["p50"] - low_b["p50"])
+    p90 = low_b["p90"] + ratio * (high_b["p90"] - low_b["p90"])
+    return {
+        "p50": max(1.0, p50),
+        "p90": max(1.0, p90),
+    }
+
+
+def _is_extrapolated(target: int) -> bool:
+    """True se target richiede estrapolazione fuori dal range preset [40, 70]."""
+    return target < 40 or target > 70
 
 # Moltiplicatori adjusters
 _ADJUSTERS = {
@@ -88,18 +140,26 @@ def estimate_effort(size_class: str, target: int, adjusters: dict | None = None)
 
     Args:
         size_class: 'small' | 'medium' | 'large' (fallback 'medium')
-        target: 40 o 70 (raise ValueError altrimenti)
+        target: integer in [1, 95]. 40/70 = preset, altri = custom.
         adjusters: dict {name: bool} con flag attivi
 
     Returns:
         {"p50": int, "p90": int}
+
+    Side effects:
+        Emette WARN su stderr quando ``target`` e' fuori dal range preset
+        [40, 70] (custom estrapolato): la stima e' meno calibrata.
     """
-    if target not in (40, 70):
-        raise ValueError(f"target must be 40 or 70, got {target}")
-    sz = size_class if size_class in _BASELINE else "medium"
-    base = _BASELINE[sz][target]
-    p50 = float(base["p50"])
-    p90 = float(base["p90"])
+    validate_target(target)
+    if _is_extrapolated(target):
+        print(
+            f"[estimate_effort] WARN: target={target} outside preset bracket "
+            "[40, 70] — estimate extrapolated, may differ from real wall-clock.",
+            file=sys.stderr,
+        )
+    base = _interp_baseline(size_class, target)
+    p50 = base["p50"]
+    p90 = base["p90"]
     if adjusters:
         for name, active in adjusters.items():
             if active and name in _ADJUSTERS:
@@ -185,7 +245,8 @@ def main() -> None:
     est_a = estimate_effort(size_class, 40, adjusters)
     est_b = estimate_effort(size_class, 70, adjusters)
 
-    # CLI --target=<N> bypass: scrive user-choice.json direttamente, NO sentinel
+    # CLI --target=<N> bypass: scrive user-choice.json direttamente, NO sentinel.
+    # N puo' essere un preset (40, 70) o un custom in [1, 95].
     target_arg = next((a for a in sys.argv[2:] if a.startswith("--target=")), None)
     if target_arg:
         try:
@@ -193,18 +254,26 @@ def main() -> None:
         except (ValueError, IndexError):
             print(json.dumps({"error": "invalid --target= value"}), file=sys.stderr)
             sys.exit(1)
-        if target_val not in (40, 70):
-            print(json.dumps({"error": "--target must be 40 or 70"}), file=sys.stderr)
+        try:
+            validate_target(target_val)
+        except ValueError as exc:
+            print(json.dumps({"error": str(exc)}), file=sys.stderr)
             sys.exit(1)
-        chosen = est_a if target_val == 40 else est_b
+        if target_val == 40:
+            chosen = est_a
+        elif target_val == 70:
+            chosen = est_b
+        else:
+            chosen = estimate_effort(size_class, target_val, adjusters)
         (cov / "user-choice.json").write_text(json.dumps({
             "target_line": target_val,
-            "target_branch": 30 if target_val == 40 else 60,
+            "target_branch": derive_branch_target(target_val),
             "size_class": size_class,
             "estimated_wallclock_min_p50": chosen["p50"],
             "estimated_wallclock_min_p90": chosen["p90"],
             "user_choice_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source": "cli_target_flag",
+            "preset": PRESET_LABELS.get(target_val, "custom"),
         }, indent=2), encoding="utf-8")
         print(json.dumps({"target_line": target_val, "size_class": size_class,
                           "estimate": chosen}, indent=2))
