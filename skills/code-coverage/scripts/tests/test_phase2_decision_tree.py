@@ -10,7 +10,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 SCRIPT = Path(__file__).resolve().parent.parent / "detect_jest_incompat.py"
 sys.path.insert(0, str(SCRIPT.parent))

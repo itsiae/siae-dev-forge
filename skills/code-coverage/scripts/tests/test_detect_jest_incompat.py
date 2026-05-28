@@ -4,10 +4,8 @@ All tests subprocess-driven against the script. No mocking.
 """
 import json
 import subprocess
-import sys
 from pathlib import Path
 
-import pytest
 
 SCRIPT = Path(__file__).resolve().parent.parent / "detect_jest_incompat.py"
 

@@ -7,7 +7,6 @@ and migrate_jest_to_vitest.py.
 import json
 from pathlib import Path
 
-import pytest
 
 ASSET = (
     Path(__file__).resolve().parent.parent.parent

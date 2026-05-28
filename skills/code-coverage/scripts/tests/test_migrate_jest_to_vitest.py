@@ -1,13 +1,10 @@
 """Test migrate_jest_to_vitest.py — codemod, config translation, package.json,
 snapshot, dirty-tree refuse, opt-out, per-PM matrix, smoke verify."""
 import json
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 SCRIPT = Path(__file__).resolve().parent.parent / "migrate_jest_to_vitest.py"
 sys.path.insert(0, str(SCRIPT.parent))
@@ -375,3 +372,74 @@ def test_noop_when_no_migrating_workspaces(tmp_path):
         capture_output=True, text=True,
     )
     assert r.returncode == 4
+
+
+# ─── Code-review MAJOR fix: rollback invokes frozen-lockfile reinstall ────
+
+def test_rollback_invokes_frozen_install_on_verification_failure(tmp_path, monkeypatch):
+    """MAJOR fix from code-review: after restore_snapshot, main() must call
+    rollback_install_cmd_for(pm) per workspace so node_modules stays
+    consistent with restored package.json+lockfile.
+
+    We can't easily mock subprocess inside the script, so we verify the
+    structural property: main() iterates workspaces with status != 'refused'
+    and invokes rollback_install_cmd_for. We test this indirectly via the
+    code path: simulate verification-failed status by inspecting the
+    overall report after a failed run.
+    """
+    import migrate_jest_to_vitest as mod
+
+    # Spy rollback_install_cmd_for to track invocation
+    original_rollback = mod.rollback_install_cmd_for
+    calls: list = []
+
+    def spy_rollback(pm: str):
+        calls.append(pm)
+        return original_rollback(pm)
+
+    monkeypatch.setattr(mod, "rollback_install_cmd_for", spy_rollback)
+
+    # Spy subprocess.run to skip actual exec and force verification-failure
+    original_run = mod.subprocess.run
+
+    def fake_run(cmd, *args, **kwargs):
+        # Detect smoke test (vitest run) and return non-zero to simulate failure
+        if isinstance(cmd, list) and "vitest" in str(cmd):
+            class FakeResult:
+                returncode = 1
+                stdout = ""
+                stderr = "fake smoke fail"
+            return FakeResult()
+        # All other subprocess calls (git status, npm install, rollback) succeed
+        class OkResult:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return OkResult()
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    # Setup workspace with migrate=true
+    (tmp_path / "package.json").write_text(json.dumps({
+        "name": "x",
+        "devDependencies": {"jest": "^29"},
+        "scripts": {"test": "jest"},
+    }))
+    (tmp_path / "package-lock.json").write_text("{}")
+    (tmp_path / "jest.config.js").write_text("module.exports = {};")
+    (tmp_path / ".code-coverage").mkdir()
+    (tmp_path / ".code-coverage" / "strategy.json").write_text(json.dumps({
+        "framework_by_workspace": {".": {"framework": "vitest", "migrate": True}},
+    }))
+
+    # Invoke main via the module entry (mimic CLI)
+    monkeypatch.setattr(sys, "argv", ["migrate_jest_to_vitest.py", str(tmp_path)])
+    try:
+        exit_code = mod.main()
+    except SystemExit as e:
+        exit_code = e.code
+
+    # Exit code 2 = verification failed + restored
+    assert exit_code == 2
+    # And rollback_install_cmd_for was called at least once (for the npm workspace)
+    assert "npm" in calls, f"Expected rollback for npm pm, calls={calls}"

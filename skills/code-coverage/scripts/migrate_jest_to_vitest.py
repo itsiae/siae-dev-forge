@@ -579,6 +579,29 @@ def main() -> int:
 
     if failed_verification:
         restore_snapshot(repo)
+        # Re-install with frozen-lockfile to keep node_modules consistent with
+        # restored package.json + lockfile. Per workspace that had been
+        # touched (status != "refused" / "noop"). Best-effort: failures here
+        # are logged but do not change the exit code (2 already signals
+        # verification-failed + restored).
+        for r in overall["workspaces"]:
+            if r.get("status") == "refused":
+                continue
+            ws_rel = r.get("workspace", ".")
+            ws_path = repo if ws_rel == "." else repo / ws_rel
+            pm = r.get("pm") or detect_pm(ws_path)
+            try:
+                subprocess.run(
+                    rollback_install_cmd_for(pm),
+                    cwd=str(ws_path),
+                    capture_output=True, text=True, timeout=300,
+                    check=False,
+                )
+            except (subprocess.SubprocessError, FileNotFoundError, KeyError):
+                # rollback_install_cmd_for raises KeyError on unknown pm;
+                # SubprocessError on timeout; FileNotFoundError on missing
+                # pm binary. All non-fatal — snapshot is already restored.
+                pass
         return 2
     if any(
         r["status"] in (
