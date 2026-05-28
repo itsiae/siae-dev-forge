@@ -75,7 +75,7 @@ Phase 1 has already produced `.code-coverage/jest-compat.json` via `scripts/dete
 | `vitest-migrate` (jest artifacts + no signal) | `vitest` | `true` | `jest-legacy-migrating-to-vitest` (triggers Phase 4b) |
 | `vitest-default` (no jest at all) | `vitest` | `false` | `vitest-first-default` |
 
-**Opt-out**: `CC_DISABLE_JEST_MIGRATION=1` or `CC_KEEP_JEST=1` env vars, OR `.code-coverage/overrides.json` with `{"force_jest": true, "force_jest_reason": "<reason>"}`. Both surface as signal I10.
+**Opt-out (triple safety boundary)**: (1) `CC_DISABLE_JEST_MIGRATION=1` or `CC_KEEP_JEST=1` env vars; OR (2) `.code-coverage/overrides.json` with `{"force_jest": true, "force_jest_reason": "<reason>"}`; OR (3) intentionally dirty working tree on migration target files (Phase 4b refuses if `git status` shows uncommitted changes). All three opt-outs surface in `decisions.log`. Transparency principle: user can preview Phase 2 verdict by running `python3 scripts/detect_jest_incompat.py <repo>` BEFORE invoking the skill, to see which workspaces would migrate without actually triggering migration.
 
 Other stacks (Python/Java/Kotlin/Go/Rust/C#/Flutter) → direct lookup in `assets/stack-matrix.json` for `framework`, `coverage_command`, `report_format`. No heuristics beyond the matrix.
 
@@ -160,7 +160,7 @@ Migration pipeline (per workspace, atomic):
 8. **Smoke verify**: `npx vitest run --reporter=basic --no-coverage` timeout 120s
 9. **Commit** (delete jest.config.* after verify) OR **Rollback** (restore snapshot + frozen-lockfile reinstall via `rollback_install_cmd_for(pm)`)
 
-Outputs: `.code-coverage/migration-report.json` + `.code-coverage/migration-snapshot/`. Manual review entries surface in Block 9.
+Outputs: `.code-coverage/migration-report.json` + `.code-coverage/migration-snapshot/`. **Block 9 (Next Actions) MUST include every `migration-report.json.workspaces[].files.manual_review[]` entry** verbatim with file:line, so the user can resolve `jest.requireActual`/`requireMock`/`isolateModules`/types post-migration. Missing this surfacing causes CI failures without diagnosis.
 
 Lazy-loaded reference: `references/phase-4b-migration.md` (loaded ONLY if any workspace has `migrate=true` — see HARD READ POLICY).
 

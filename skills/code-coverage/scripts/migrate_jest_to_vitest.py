@@ -286,10 +286,14 @@ def rename_setup_files(ws_dir: Path) -> list[str]:
 # ─── PM detection + per-PM matrix ─────────────────────────────────────────
 
 def detect_pm(ws_dir: Path) -> str:
-    if (ws_dir / ".yarnrc.yml").is_file() and (ws_dir / "yarn.lock").is_file():
-        return "yarn-berry"
+    # Premortem C3 mitigation: pnpm-lock.yaml is the strongest signal — if
+    # present, it wins over a stale .yarnrc.yml that may be left over from
+    # a past yarn-berry migration. This avoids corrupting pnpm lockfiles
+    # when both files coexist.
     if (ws_dir / "pnpm-lock.yaml").is_file():
         return "pnpm"
+    if (ws_dir / ".yarnrc.yml").is_file() and (ws_dir / "yarn.lock").is_file():
+        return "yarn-berry"
     if (ws_dir / "yarn.lock").is_file():
         return "yarn"
     if (ws_dir / "bun.lockb").is_file():

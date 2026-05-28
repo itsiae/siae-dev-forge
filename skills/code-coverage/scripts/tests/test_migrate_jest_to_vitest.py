@@ -443,3 +443,16 @@ def test_rollback_invokes_frozen_install_on_verification_failure(tmp_path, monke
     assert exit_code == 2
     # And rollback_install_cmd_for was called at least once (for the npm workspace)
     assert "npm" in calls, f"Expected rollback for npm pm, calls={calls}"
+
+
+# ─── Premortem C3 mitigation: pnpm wins over stale .yarnrc.yml ────────────
+
+def test_detect_pm_pnpm_wins_over_stale_yarnrc(tmp_path):
+    """If both pnpm-lock.yaml and .yarnrc.yml exist (legacy migration
+    leftover), pnpm must win — pnpm-lock is the strongest signal.
+    Avoids lockfile corruption when migration uses yarn install instead."""
+    from migrate_jest_to_vitest import detect_pm
+    (tmp_path / "pnpm-lock.yaml").write_text("")
+    (tmp_path / ".yarnrc.yml").write_text("nodeLinker: pnp\n")
+    (tmp_path / "yarn.lock").write_text("")  # also leftover
+    assert detect_pm(tmp_path) == "pnpm"
