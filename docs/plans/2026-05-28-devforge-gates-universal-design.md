@@ -7,6 +7,35 @@
 
 ---
 
+## Files Touched
+
+Lista machine-readable dei file modificati o creati (per drift evidence collector):
+
+```
+lib/scope-check.sh                                              [CREATE]
+hooks/scope-check                                                [N/A — solo lib/]
+hooks/pr-premortem-gate                                          [MODIFY]
+hooks/tdd-gate                                                   [MODIFY]
+hooks/pr-blind-review-gate                                       [MODIFY]
+hooks/plan-gate-write                                            [MODIFY]
+hooks/brainstorming-gate                                         [MODIFY]
+skills/siae-premortem/SKILL.md                                   [MODIFY]
+hooks/ENV_VARS.md                                                [MODIFY]
+CHANGELOG.md                                                     [MODIFY]
+.claude-plugin/plugin.json                                       [MODIFY]
+.claude-plugin/marketplace.json                                  [MODIFY]
+tests/scope_check.test.sh                                        [CREATE]
+tests/integration/pr_premortem_gate.test.sh                      [CREATE]
+tests/integration/tdd_gate.test.sh                               [CREATE]
+tests/integration/pr_blind_review_gate.test.sh                   [CREATE]
+tests/integration/plan_gate_write.test.sh                        [CREATE]
+tests/integration/brainstorming_gate.test.sh                     [CREATE]
+tests/skill_premortem_generalized.test.sh                        [CREATE]
+tests/docs_and_version.test.sh                                   [CREATE]
+tests/e2e/smoke_universal.test.sh                                [CREATE]
+tests/e2e/global_grep.test.sh                                    [CREATE]
+```
+
 ## 1. Contesto
 
 DevForge è installabile come plugin Claude Code marketplace e funziona ovunque, ma 5 hook gate-workflow contengono un filtro `grep -qE "[/:]itsiae/"` sul remote `origin` che li rende **no-op silenziosi** fuori dall'org GitHub `itsiae`:
@@ -69,15 +98,21 @@ Memory rilevante:
 #   ~/.claude/.devforge-gate-scope (single line: "universal" or "itsiae")
 devforge_gate_scope_active() {
     local remote_url="${1:-}"
-    local scope="${DEVFORGE_GATE_SCOPE:-}"
+    # NOTE: usa "${VAR-}" (no colon) per distinguere "env unset" da "env set ma vuoto".
+    # Empty string esportato esplicitamente è trattato come "set" e cade al default
+    # universal (NON al state file). Vedi test #19 in scope_check.test.sh.
+    local scope="${DEVFORGE_GATE_SCOPE-__UNSET__}"
 
-    # Fallback to state file if env not set (Claude Code subprocess may not
-    # inherit shell exports — see memory feedback_env_var_not_propagated_to_hooks)
-    if [ -z "$scope" ] && [ -r "${HOME}/.claude/.devforge-gate-scope" ]; then
-        scope=$(head -n1 "${HOME}/.claude/.devforge-gate-scope" 2>/dev/null | tr -d '[:space:]')
+    # Fallback to state file ONLY if env truly unset (memory feedback_env_var_not_propagated_to_hooks)
+    if [ "$scope" = "__UNSET__" ]; then
+        if [ -r "${HOME}/.claude/.devforge-gate-scope" ]; then
+            scope=$(head -n1 "${HOME}/.claude/.devforge-gate-scope" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        else
+            scope=""
+        fi
     fi
 
-    # Default if still empty
+    # Default if still empty (covers both: env="" explicit OR state file empty/missing)
     scope="${scope:-universal}"
 
     case "$scope" in

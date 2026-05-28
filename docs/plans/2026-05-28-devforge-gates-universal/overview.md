@@ -23,6 +23,7 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
+| 0 | **Pre-task:** rebase su main + version recompute + line number re-verify | `task-00-rebase-and-version-recompute.md` | [PENDING] |
 | 1 | Crea `lib/scope-check.sh` + 18 unit test | `task-01-scope-check-lib.md` | [PENDING] |
 | 2 | Refactor `pr-premortem-gate` + 7 integration test | `task-02-refactor-pr-premortem-gate.md` | [PENDING] |
 | 3 | Refactor `tdd-gate` + 7 integration test | `task-03-refactor-tdd-gate.md` | [PENDING] |
