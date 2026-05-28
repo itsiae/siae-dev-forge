@@ -1,0 +1,216 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-05-28",
+  "policy": "Vitest is ALWAYS the default for JS/TS in 2026. Jest is selected ONLY when a hard incompatibility signal (I1..I10) fires. Mere presence of jest.config.* or jest in scripts/deps is NOT incompatibility - it is a migration trigger.",
+  "incompatibility_signals": {
+    "I1": {
+      "name": "react-native",
+      "description": "React Native / Expo project. Vitest has no Metro/Hermes integration.",
+      "detect": {
+        "kind": "any_of",
+        "checks": [
+          {"kind": "package_dep_present", "names": ["react-native"]},
+          {"kind": "package_devdep_present", "names": ["jest-expo", "@react-native/jest-config", "react-native-jest-preset"]},
+          {"kind": "package_dep_prefix", "prefix": "@react-native/"},
+          {"kind": "file_exists", "files": ["metro.config.js", "metro.config.ts"]},
+          {"kind": "regex_in_jest_config", "pattern": "preset\\s*:\\s*['\"](?:react-native|jest-expo|@react-native/babel-preset)['\"]"}
+        ]
+      },
+      "fix_hint": "Keep Jest with jest-expo preset. Vitest support for RN is not stable in 2026."
+    },
+    "I2": {
+      "name": "vue-cli-jest-preset",
+      "description": "Vue CLI 4 plugin-unit-jest with no Vite tooling installed.",
+      "detect": {
+        "kind": "all_of",
+        "checks": [
+          {"kind": "any_of", "checks": [
+            {"kind": "regex_in_jest_config", "pattern": "preset\\s*:\\s*['\"]@vue/cli-plugin-unit-jest['\"]"},
+            {"kind": "package_devdep_present", "names": ["@vue/cli-plugin-unit-jest", "@vue/vue3-jest", "vue-jest"]}
+          ]},
+          {"kind": "package_json_lacks", "names": ["vite", "@vitejs/plugin-vue"]}
+        ]
+      },
+      "fix_hint": "Migrate Vue CLI to Vite first, then re-run /code-coverage; or keep Jest."
+    },
+    "I3": {
+      "name": "angular-jest-preset",
+      "description": "Angular with jest-preset-angular and no @analogjs/vitest-angular.",
+      "detect": {
+        "kind": "all_of",
+        "checks": [
+          {"kind": "any_of", "checks": [
+            {"kind": "regex_in_jest_config", "pattern": "preset\\s*:\\s*['\"]jest-preset-angular['\"]"},
+            {"kind": "package_devdep_present", "names": ["jest-preset-angular"]}
+          ]},
+          {"kind": "package_json_lacks", "names": ["@analogjs/vitest-angular"]}
+        ]
+      },
+      "fix_hint": "Add @analogjs/vitest-angular to migrate, or keep Jest."
+    },
+    "I4": {
+      "name": "node-lt-18",
+      "description": "Node version pinned below 18 (Vitest minimum).",
+      "detect": {
+        "kind": "any_of",
+        "checks": [
+          {"kind": "engines_node_lt", "version": "18.0.0"},
+          {"kind": "nvmrc_lt", "version": "18.0.0"}
+        ]
+      },
+      "fix_hint": "Bump Node engine to >=18, or keep Jest (which still supports Node 16)."
+    },
+    "I5": {
+      "name": "custom-local-transformer",
+      "description": "Jest config has transform: mapping a regex to a local .js/.ts file outside the safe allowlist (ts-jest, babel-jest, @swc/jest, esbuild-jest).",
+      "detect": {
+        "kind": "jest_config_transform_outside_allowlist",
+        "allowlist": ["ts-jest", "babel-jest", "@swc/jest", "esbuild-jest"]
+      },
+      "fix_hint": "Custom transformers are Jest-specific. Keep Jest, or port the transformer as a Vite plugin."
+    },
+    "I6": {
+      "name": "custom-local-resolver",
+      "description": "Jest config has resolver: pointing to a local file (./...).",
+      "detect": {
+        "kind": "regex_in_jest_config",
+        "pattern": "resolver\\s*:\\s*['\"]\\./[^'\"]+['\"]"
+      },
+      "fix_hint": "Custom Jest resolvers cannot be ported. Keep Jest, or rewrite resolution as a Vite plugin."
+    },
+    "I7": {
+      "name": "ts-jest-ast-transformers",
+      "description": "ts-jest with astTransformers configured (no direct Vitest equivalent).",
+      "detect": {
+        "kind": "regex_in_jest_config",
+        "pattern": "astTransformers\\s*:\\s*\\{[^}]*\\w"
+      },
+      "fix_hint": "ts-jest AST transformers have no direct Vitest equivalent. Keep Jest."
+    },
+    "I8": {
+      "name": "custom-test-environment",
+      "description": "Jest testEnvironment is a custom file or non-standard package.",
+      "detect": {
+        "kind": "test_environment_outside_allowlist",
+        "allowlist": ["node", "jsdom", "happy-dom", "jest-environment-node", "jest-environment-jsdom", "jest-environment-happy-dom"]
+      },
+      "fix_hint": "Custom testEnvironment is Jest-specific."
+    },
+    "I9": {
+      "name": "jest-lt-27",
+      "description": "Jest version pinned below 27 (legacy jest-jasmine2 runner not emulable in Vitest).",
+      "detect": {
+        "kind": "jest_version_lt",
+        "version": "27.0.0"
+      },
+      "fix_hint": "Bump Jest to >=27 then re-run, or keep Jest."
+    },
+    "I10": {
+      "name": "force-jest-override",
+      "description": "User explicitly opted into Jest via overrides.json or env var.",
+      "detect": {
+        "kind": "any_of",
+        "checks": [
+          {"kind": "env_var", "name": "CC_DISABLE_JEST_MIGRATION", "value": "1"},
+          {"kind": "env_var", "name": "CC_KEEP_JEST", "value": "1"},
+          {"kind": "overrides_force_jest"}
+        ]
+      },
+      "fix_hint": "Unset CC_DISABLE_JEST_MIGRATION / CC_KEEP_JEST or remove force_jest from overrides.json to allow migration."
+    }
+  },
+  "non_incompatibilities": [
+    "jest.config.* exists (legacy artifact, translatable to vitest.config.ts)",
+    "scripts.test contains 'jest' (rewriteable to vitest run)",
+    "jest in devDependencies (removable)",
+    "ts-jest in devDependencies (removable, Vitest has native TS via esbuild)",
+    "babel-jest in devDependencies (removable or replaced by @vitejs/plugin-babel)",
+    "@swc/jest in devDependencies (removable)",
+    "CommonJS project ('type': 'commonjs' or absent) - Vitest supports CJS via pool='forks'",
+    "Existing *.test.ts using jest.mock/jest.fn (transformable to vi.mock/vi.fn via codemod)",
+    "@testing-library/jest-dom (compatible via /vitest entry)"
+  ],
+  "migration_targets": {
+    "remove_devdeps": [
+      "jest", "@types/jest", "ts-jest", "babel-jest", "@swc/jest",
+      "jest-environment-jsdom", "jest-environment-node", "jest-config", "jest-cli",
+      "@jest/globals"
+    ],
+    "add_devdeps_base": [
+      {"name": "vitest", "version": "^1.6.0"},
+      {"name": "@vitest/coverage-v8", "version": "^1.6.0"}
+    ],
+    "add_devdeps_jsdom": [
+      {"name": "jsdom", "version": "^24.0.0"}
+    ],
+    "frontend_markers": ["react", "vue", "@angular/core", "svelte", "@testing-library/react", "@testing-library/vue"]
+  },
+  "api_migration_map": {
+    "doc": "Used by migrate_jest_to_vitest.py for token-aware regex rewrites in test files.",
+    "rewrites": [
+      {"from": "jest.mock(", "to": "vi.mock("},
+      {"from": "jest.unmock(", "to": "vi.unmock("},
+      {"from": "jest.doMock(", "to": "vi.doMock("},
+      {"from": "jest.dontMock(", "to": "vi.doUnmock("},
+      {"from": "jest.fn(", "to": "vi.fn("},
+      {"from": "jest.spyOn(", "to": "vi.spyOn("},
+      {"from": "jest.clearAllMocks(", "to": "vi.clearAllMocks("},
+      {"from": "jest.resetAllMocks(", "to": "vi.resetAllMocks("},
+      {"from": "jest.restoreAllMocks(", "to": "vi.restoreAllMocks("},
+      {"from": "jest.useFakeTimers(", "to": "vi.useFakeTimers("},
+      {"from": "jest.useRealTimers(", "to": "vi.useRealTimers("},
+      {"from": "jest.advanceTimersByTime(", "to": "vi.advanceTimersByTime("},
+      {"from": "jest.advanceTimersByTimeAsync(", "to": "vi.advanceTimersByTimeAsync("},
+      {"from": "jest.runAllTimers(", "to": "vi.runAllTimers("},
+      {"from": "jest.runOnlyPendingTimers(", "to": "vi.runOnlyPendingTimers("},
+      {"from": "jest.setSystemTime(", "to": "vi.setSystemTime("},
+      {"from": "jest.resetModules(", "to": "vi.resetModules("},
+      {"from": "jest.isolateModules(", "to": "vi.isolateModules("},
+      {"from": "jest.mocked(", "to": "vi.mocked("},
+      {"from": "jest.requireActual(", "to": "await vi.importActual("},
+      {"from": "jest.requireMock(", "to": "await vi.importMock("}
+    ],
+    "manual_review_triggers": [
+      "jest.requireActual",
+      "jest.requireMock",
+      "jest.isolateModules",
+      "jest.setTimeout",
+      "jest.Mock<",
+      "jest.MockedFunction",
+      "jest.SpyInstance"
+    ],
+    "no_rewrite_tokens": [
+      "jest.requireActual",
+      "jest.requireMock"
+    ],
+    "config_keys_manual_review": [
+      "setupFilesAfterEach",
+      "globalSetup",
+      "globalTeardown",
+      "snapshotResolver",
+      "testResultsProcessor"
+    ],
+    "config_key_map": {
+      "testEnvironment": "test.environment",
+      "setupFiles": "test.setupFiles",
+      "setupFilesAfterEach": "MANUAL_REVIEW_NOT_EQUIVALENT",
+      "moduleNameMapper": "resolve.alias",
+      "testMatch": "test.include",
+      "testRegex": "test.include",
+      "testPathIgnorePatterns": "test.exclude",
+      "coveragePathIgnorePatterns": "test.coverage.exclude",
+      "coverageReporters": "test.coverage.reporter",
+      "coverageThreshold": "test.coverage.thresholds",
+      "collectCoverageFrom": "test.coverage.include",
+      "globalSetup": "test.globalSetup",
+      "globalTeardown": "test.globalTeardown",
+      "snapshotSerializers": "test.snapshotSerializers",
+      "clearMocks": "test.clearMocks",
+      "resetMocks": "test.mockReset",
+      "restoreMocks": "test.restoreMocks",
+      "testTimeout": "test.testTimeout",
+      "transform": "DROP_AND_USE_ESBUILD",
+      "preset": "DROP_OR_TRANSLATE"
+    }
+  }
+}
