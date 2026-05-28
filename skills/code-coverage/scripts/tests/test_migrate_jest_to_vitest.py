@@ -400,8 +400,6 @@ def test_rollback_invokes_frozen_install_on_verification_failure(tmp_path, monke
     monkeypatch.setattr(mod, "rollback_install_cmd_for", spy_rollback)
 
     # Spy subprocess.run to skip actual exec and force verification-failure
-    original_run = mod.subprocess.run
-
     def fake_run(cmd, *args, **kwargs):
         # Detect smoke test (vitest run) and return non-zero to simulate failure
         if isinstance(cmd, list) and "vitest" in str(cmd):
