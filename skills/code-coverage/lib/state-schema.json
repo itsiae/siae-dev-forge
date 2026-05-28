@@ -55,6 +55,89 @@
     "decisions.log": {
       "description": "Log centralizzato decisioni autonome (audit trail). Scritto da log_decision() in cache-helper.sh.",
       "type": "string"
+    },
+    "jest-compat.json": {
+      "description": "Output di detect_jest_incompat.py (Phase 1 parallel). Per-workspace Vitest/Jest compatibility verdict. Decision values: vitest-default | vitest-migrate | jest-incompat | jest-forced. Invalidato dallo stesso pinnacle di stack.json.",
+      "ref": "scripts/detect_jest_incompat.py output contract; assets/vitest-jest-compat.json closed signal list I1..I10",
+      "type": "object",
+      "properties": {
+        "version": {"type": "string"},
+        "workspaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "has_jest_artifacts": {"type": "boolean"},
+              "jest_artifacts": {"type": "array", "items": {"type": "string"}},
+              "incompatibility_signals": {"type": "array", "items": {"type": "string"}},
+              "force_jest": {"type": "boolean"},
+              "force_jest_reason": {"type": ["string", "null"]},
+              "decision": {"enum": ["vitest-default", "vitest-migrate", "jest-incompat", "jest-forced"]},
+              "decision_reason": {"type": "string"}
+            }
+          }
+        },
+        "error": {"type": ["string", "null"]}
+      }
+    },
+    "strategy.json": {
+      "description": "Phase 2 output. Per-workspace framework + migrate flag. Triggers Phase 4b when any migrate=true.",
+      "type": "object",
+      "properties": {
+        "framework_by_workspace": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "framework": {"type": "string"},
+              "reason": {"type": "string"},
+              "migrate": {"type": "boolean", "description": "If true, Phase 4b runs migrate_jest_to_vitest.py for this workspace"}
+            }
+          }
+        }
+      }
+    },
+    "migration-report.json": {
+      "description": "Output di migrate_jest_to_vitest.py (Phase 4b). Per-workspace migration outcome.",
+      "ref": "scripts/migrate_jest_to_vitest.py output contract",
+      "type": "object",
+      "properties": {
+        "started_at": {"type": "number"},
+        "workspaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "workspace": {"type": "string"},
+              "status": {"enum": ["ok", "refused", "install-failed", "install-timeout", "verification-failed", "internal-error"]},
+              "pm": {"enum": ["npm", "pnpm", "yarn", "yarn-berry", "bun"]},
+              "files": {
+                "type": "object",
+                "properties": {
+                  "transformed": {"type": "array", "items": {"type": "string"}},
+                  "renamed": {"type": "array", "items": {"type": "string"}},
+                  "manual_review": {"type": "array", "items": {"type": "string"}}
+                }
+              },
+              "unmapped_keys": {"type": "array", "items": {"type": "string"}},
+              "verified": {"type": "boolean"}
+            }
+          }
+        },
+        "elapsed_sec": {"type": "number"}
+      }
+    },
+    "migration-snapshot/": {
+      "description": "Rollback bundle (Phase 4b). Mirror of repo tree (relative paths) of touched files before migration: package.json, jest.config.*, jest.setup.*, lockfile, *.{test,spec}.*. Used by restore_snapshot() on verification failure.",
+      "type": "object"
+    },
+    "overrides.json": {
+      "description": "User overrides (optional). Located in .code-coverage/overrides.json. Surfaces as signal I10 in detect_jest_incompat.",
+      "type": "object",
+      "properties": {
+        "force_jest": {"type": "boolean"},
+        "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."}
+      }
     }
   },
   "definitions": {

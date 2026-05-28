@@ -44,9 +44,14 @@ def test_vue_vitest_real_detection():
     assert fw_check["vitest"]["source"] == "package.json"
 
 
-def test_jest_config_file_wins_over_vitest_devdep(tmp_path):
-    """Principle 4 condition (a): jest.config.{ts,js,mjs,cjs} forces "jest"
-    even when vitest is in devDependencies (legacy monorepo scenario)."""
+def test_jest_config_does_not_force_jest_when_vitest_compatible(tmp_path):
+    """BUG-FIX (2026-05-28): Principle 4 v2 - jest.config.* alone does NOT
+    force jest. Vitest-first is the absolute default; jest selected ONLY
+    when an incompatibility signal (I1..I10) fires.
+
+    Old buggy behavior (pre-fix): jest.config.js + vitest in devDeps -> jest
+    New correct behavior (post-fix): no incompat signal -> vitest
+    """
     repo = tmp_path / "legacy-jest"
     repo.mkdir()
     (repo / "package.json").write_text(json.dumps({
@@ -56,8 +61,9 @@ def test_jest_config_file_wins_over_vitest_devdep(tmp_path):
     }))
     (repo / "jest.config.js").write_text("module.exports = {};\n")
     out = run_validate(repo)
-    assert out.get("required_framework") == "jest", (
-        f"Expected 'jest' (Principle 4 cond. a), got {out.get('required_framework')!r}"
+    assert out.get("required_framework") == "vitest", (
+        f"Expected 'vitest' (Vitest-first, no incompat), "
+        f"got {out.get('required_framework')!r}"
     )
 
 
@@ -210,3 +216,62 @@ def test_install_commands_target_manifest_root(tmp_path):
     assert has_prefix, (
         f"Atteso prefisso 'cd modules/service/lambda && ' in install_commands, got {install_cmds!r}"
     )
+
+
+# ─── Bug-fix regression: Vitest-first delegation to jest-compat.json ──────
+
+def test_required_framework_vitest_when_jest_compat_migrate(tmp_path):
+    """BUG-FIX regression: jest.config + scripts.test=jest -> NOT 'jest'."""
+    from validate_env import _detect_required_framework
+    (tmp_path / "package.json").write_text(json.dumps({
+        "devDependencies": {"jest": "^29"}, "scripts": {"test": "jest"},
+    }))
+    (tmp_path / "jest.config.js").write_text("module.exports = {};")
+    (tmp_path / ".code-coverage").mkdir()
+    (tmp_path / ".code-coverage" / "jest-compat.json").write_text(json.dumps({
+        "version": "1.0.0",
+        "workspaces": {".": {"decision": "vitest-migrate", "has_jest_artifacts": True,
+                             "incompatibility_signals": []}},
+    }))
+    assert _detect_required_framework(tmp_path) == "vitest"
+
+
+def test_required_framework_jest_when_jest_compat_incompat(tmp_path):
+    from validate_env import _detect_required_framework
+    (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"jest": "^29"}}))
+    (tmp_path / ".code-coverage").mkdir()
+    (tmp_path / ".code-coverage" / "jest-compat.json").write_text(json.dumps({
+        "workspaces": {".": {"decision": "jest-incompat",
+                             "incompatibility_signals": ["I1"]}},
+    }))
+    assert _detect_required_framework(tmp_path) == "jest"
+
+
+def test_required_framework_jest_when_compat_forced(tmp_path):
+    from validate_env import _detect_required_framework
+    (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"vitest": "^1"}}))
+    (tmp_path / ".code-coverage").mkdir()
+    (tmp_path / ".code-coverage" / "jest-compat.json").write_text(json.dumps({
+        "workspaces": {".": {"decision": "jest-forced"}},
+    }))
+    assert _detect_required_framework(tmp_path) == "jest"
+
+
+def test_required_framework_vitest_when_compat_absent_fallback(tmp_path):
+    """Pre-Phase-2 call: default to vitest. THE FIX vs old presence-based logic."""
+    from validate_env import _detect_required_framework
+    (tmp_path / "package.json").write_text(json.dumps({
+        "devDependencies": {"jest": "^29"}, "scripts": {"test": "jest"},
+    }))
+    (tmp_path / "jest.config.js").write_text("module.exports = {};")
+    assert _detect_required_framework(tmp_path) == "vitest"
+
+
+def test_required_framework_jest_when_overrides_force_no_compat(tmp_path):
+    from validate_env import _detect_required_framework
+    (tmp_path / "package.json").write_text(json.dumps({"devDependencies": {"jest": "^29"}}))
+    (tmp_path / ".code-coverage").mkdir()
+    (tmp_path / ".code-coverage" / "overrides.json").write_text(json.dumps({
+        "force_jest": True, "force_jest_reason": "compliance",
+    }))
+    assert _detect_required_framework(tmp_path) == "jest"

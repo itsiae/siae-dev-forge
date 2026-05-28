@@ -66,6 +66,20 @@ else
   PIDS+=($!)
 fi
 
+# Phase 2 pre-compute: detect_jest_incompat runs in parallel with other
+# detectors so Phase 2 can read jest-compat.json without an extra wait.
+# Bug-fix 2026-05-28: Vitest-first decision lives here (closed list I1..I10).
+mkdir -p "$REPO/.code-coverage"
+if find "$REPO" -maxdepth 4 -name package.json -not -path '*/node_modules/*' -print -quit 2>/dev/null | grep -q .; then
+  if is_cache_valid "$REPO/.code-coverage/jest-compat.json" "$STACK_PINNACLE"; then
+    echo "[cache] jest-compat.json hit"
+  else
+    python3 "$SKILL_DIR/scripts/detect_jest_incompat.py" "$REPO" \
+      > "$REPO/.code-coverage/jest-compat.json" 2>/dev/null &
+    PIDS+=($!)
+  fi
+fi
+
 # Fail-fast: aspetta tutti i PID e propaga il primo errore.
 for pid in "${PIDS[@]}"; do
   if ! wait "$pid"; then

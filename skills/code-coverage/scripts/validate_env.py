@@ -117,37 +117,39 @@ def _find_manifest_recursive(root: Path, filename: str, max_depth: int = 4) -> P
 def _detect_required_framework(repo_path: Path) -> str:
     """Infer the required test framework from repo manifest files.
 
-    Walk depth=4 per supportare layout SIAE serverless con Terraform root +
-    Lambda manifest nested (es. ``modules/<service>/lambda-<name>/package.json``).
-    Allineato a ``detect_stack._find`` per evitare discrepanze tra detection.
+    BUG-FIX (2026-05-28): per Principle 4 (Vitest-first), JS/TS projects with
+    Jest artifacts are NO LONGER classified as 'jest' by mere presence. The
+    Jest fallback is now decided by Phase 2 via
+    `assets/vitest-jest-compat.json` + `detect_jest_incompat.py`. This function
+    reads the pre-computed `.code-coverage/jest-compat.json` and returns
+    'jest' only when an incompatibility signal (I1..I10) fired OR user
+    opted into Jest via overrides.json.
     """
-    # Try root-level package.json prima (fast path)
+    import json as _json
     pkg_json = _find_manifest_recursive(repo_path, "package.json")
     if pkg_json is not None:
-        # Condition (a) Principle 4: jest.config.{ts,js,mjs,cjs} accanto al package.json
-        pkg_dir = pkg_json.parent
-        for cfg_name in ("jest.config.ts", "jest.config.js", "jest.config.mjs", "jest.config.cjs"):
-            if (pkg_dir / cfg_name).exists():
-                return "jest"
-        # Anche al root, per retrocompat
-        if pkg_dir != repo_path:
-            for cfg_name in ("jest.config.ts", "jest.config.js", "jest.config.mjs", "jest.config.cjs"):
-                if (repo_path / cfg_name).exists():
+        compat_path = repo_path / ".code-coverage" / "jest-compat.json"
+        if compat_path.is_file():
+            try:
+                compat = _json.loads(compat_path.read_text(encoding="utf-8"))
+                root = compat.get("workspaces", {}).get(".", {})
+                decision = root.get("decision", "")
+                if decision in ("jest-incompat", "jest-forced"):
                     return "jest"
-        try:
-            import json as _json
-            pkg = _json.loads(pkg_json.read_text(encoding="utf-8", errors="ignore"))
-            all_deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-            scripts = pkg.get("scripts", {})
-            vitest_in_deps = any("vitest" in k for k in all_deps)
-            test_script = scripts.get("test", "")
-            jest_in_deps = any("jest" in k for k in all_deps) and not vitest_in_deps
-            jest_in_test_script = "jest" in test_script and "vitest" not in test_script and not vitest_in_deps
-            if jest_in_deps or jest_in_test_script:
-                return "jest"
-            return "vitest"
-        except Exception:
-            return "vitest"
+                return "vitest"
+            except (_json.JSONDecodeError, OSError):
+                pass
+        # Fallback: compat file absent (validate_env may run pre-Phase-2).
+        # Honor overrides.json force_jest as last resort.
+        overrides = repo_path / ".code-coverage" / "overrides.json"
+        if overrides.is_file():
+            try:
+                ov = _json.loads(overrides.read_text(encoding="utf-8"))
+                if ov.get("force_jest") is True and ov.get("force_jest_reason"):
+                    return "jest"
+            except (_json.JSONDecodeError, OSError):
+                pass
+        return "vitest"
 
     # Pyspark sniff prima del fallback pytest generico: allinea il dispatch al branch
     # `pyspark` in stack-matrix.json (test_framework=pytest+chispa). Senza questo check,
