@@ -122,14 +122,11 @@ def generate_surefire_patch(
             include_indent = line[: len(line) - len(stripped)]
             break
 
-    # Determina indent del </includes>: ultima riga prima del closing tag.
-    closing_indent = "        "  # 8 spazi default
+    # NB: closing_indent (computed below) was previously captured but unused
+    # downstream — the new <include> is inserted via include_indent + the
+    # existing </includes> line is preserved verbatim. Kept loop for future
+    # use, dropped the now-unused variable.
     seg_lines = includes_segment.splitlines()
-    for line in seg_lines:
-        if line.lstrip().startswith("</includes>"):
-            stripped = line.lstrip(" \t")
-            closing_indent = line[: len(line) - len(stripped)]
-            break
 
     new_include_line = f"{include_indent}<include>{additional_include}</include>"
 

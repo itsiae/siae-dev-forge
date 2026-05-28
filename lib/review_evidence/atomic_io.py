@@ -61,7 +61,6 @@ def write_evidence_atomic(
     propagate.
     """
     target = Path(target)
-    last_err: Optional[OSError] = None
 
     for attempt in range(MAX_RETRIES):
         try:
@@ -73,7 +72,6 @@ def write_evidence_atomic(
                 raise DiskFullError(e.errno, f"disk full / quota exceeded writing {target}") from e
             if not _is_busy_error(e):
                 raise
-            last_err = e
             time.sleep(BACKOFF_BASE_SEC * (2 ** attempt))
 
     # All retries exhausted — fallback (outside iCloud, direct write since no
