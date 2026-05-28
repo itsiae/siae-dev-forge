@@ -585,7 +585,7 @@ def main() -> int:
         # are logged but do not change the exit code (2 already signals
         # verification-failed + restored).
         for r in overall["workspaces"]:
-            if r.get("status") == "refused":
+            if r.get("status") in ("refused", "noop"):
                 continue
             ws_rel = r.get("workspace", ".")
             ws_path = repo if ws_rel == "." else repo / ws_rel
