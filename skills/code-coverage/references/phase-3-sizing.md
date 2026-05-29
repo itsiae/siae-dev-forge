@@ -92,6 +92,22 @@ Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio 
 
 ---
 
+### Step 3b — Branch operator scan + coverage mode (JS/TS only)
+
+Dopo `plan_batches.py`, per ogni file target esegui:
+```
+python3 skills/code-coverage/scripts/count_branch_operators.py <file> \
+  > .code-coverage/branch-count/<file_safe>.json
+```
+Poi classifica la modalità per-file:
+```
+python3 skills/code-coverage/scripts/classify_coverage_mode.py <repo>
+```
+Questo popola `branch_operator_count` e `coverage_mode` in batch-plan.json.
+File con coverage_mode=branch-priority useranno il template branch-matrix in Phase 5.
+
+---
+
 ## Batch Plan File Format
 
 `.code-coverage/batch-plan.json` (written to target repo autonomously, vedi Principle 1):
@@ -107,9 +123,31 @@ Persisti `batch-plan.json` autonomamente in `.code-coverage/`. Emetti messaggio 
   "pending_batches": [
     {
       "id": 1,
+      "tier": "T1",
       "priority": "P1",
-      "files": ["src/services/auth.ts", "src/services/payment.ts"],
-      "status": "pending"
+      "size": 2,
+      "status": "pending",
+      "assigned_to": null,
+      "completed_by": null,
+      "completed_at": null,
+      "files": [
+        {
+          "path": "src/services/auth.ts",
+          "tier": "T1",
+          "priority": "P1",
+          "loc": 412,
+          "branch_operator_count": null,
+          "coverage_mode": null
+        },
+        {
+          "path": "src/services/payment.ts",
+          "tier": "T1",
+          "priority": "P1",
+          "loc": 380,
+          "branch_operator_count": null,
+          "coverage_mode": null
+        }
+      ]
     }
   ],
   "coverage_summary": {}
