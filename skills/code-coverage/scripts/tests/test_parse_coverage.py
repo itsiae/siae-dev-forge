@@ -322,6 +322,75 @@ def test_user_floor_propagates_to_views():
     assert summary["global"]["threshold_met"] is False
 
 
+def test_p1_violators_threshold_uses_user_floor():
+    """La soglia P1-violators e' max(80, user_floor): un modulo P1 con lines tra
+    80 e user_floor diventa violator solo quando il floor utente lo supera."""
+    base = {
+        "global_pct": 90.0,
+        "global_branch_pct": 90.0,
+        "modules": [
+            {"path": "src/services/x.ts", "lines_pct": 82.0, "priority": "P1", "status": "PASS"},
+        ],
+    }
+    # user_floor=85 → soglia P1 = 85 → 82 < 85 → violator
+    violators = pc._build_view_repair({**base, "user_floor": 85.0})["p1_floor_violators"]
+    assert any(m["path"] == "src/services/x.ts" for m in violators)
+    # nessun floor (default 80) → 82 >= 80 → NON violator
+    violators0 = pc._build_view_repair({**base, "user_floor": 0.0})["p1_floor_violators"]
+    assert not any(m["path"] == "src/services/x.ts" for m in violators0)
+
+
+def test_user_floor_clamps_explicit_min_branch_pct():
+    """user_floor alza anche un min_branch_pct ESPLICITO piu' basso del floor."""
+    rules = {
+        "priority_levels": {
+            "P2": {"parent_dirs": ["utils"], "min_coverage_pct": 70.0, "min_branch_pct": 60.0},
+        }
+    }
+    # user_floor=75 → line=max(70,75)=75, branch=max(60,75)=75
+    assert pc.assign_priority_and_threshold("src/utils/x.ts", rules, user_floor=75.0) == ("P2", 75.0, 75.0)
+    # user_floor=50 (< entrambi) → valori espliciti invariati: 70/60
+    assert pc.assign_priority_and_threshold("src/utils/x.ts", rules, user_floor=50.0) == ("P2", 70.0, 60.0)
+
+
+def test_resolve_user_floor_precedence_and_clamp(tmp_path):
+    """resolve_user_floor: explicit > auto-read > 0.0, con clamp difensivo [0,95]."""
+    repo = tmp_path / "repo"
+    cov = repo / ".code-coverage"
+    cov.mkdir(parents=True)
+    cov_file = repo / "coverage" / "summary.json"
+    cov_file.parent.mkdir()
+    cov_file.write_text("{}", encoding="utf-8")
+
+    # (a) explicit ha precedenza anche se user-choice.json esiste con altro valore
+    (cov / "user-choice.json").write_text('{"target_line": 70}', encoding="utf-8")
+    assert pc.resolve_user_floor(cov_file, 83.0) == 83.0
+
+    # (b) auto-read risalendo le dir da input_path
+    assert pc.resolve_user_floor(cov_file, None) == 70.0
+
+    # (c) clamp difensivo: target_line corrotto enorme → 95 (max valido), mai illimitato
+    (cov / "user-choice.json").write_text('{"target_line": 9999}', encoding="utf-8")
+    assert pc.resolve_user_floor(cov_file, None) == 95.0
+
+    # (d) negativo → 0.0
+    (cov / "user-choice.json").write_text('{"target_line": -5}', encoding="utf-8")
+    assert pc.resolve_user_floor(cov_file, None) == 0.0
+
+    # (e) JSON corrotto → 0.0 (nessun crash)
+    (cov / "user-choice.json").write_text("{not json", encoding="utf-8")
+    assert pc.resolve_user_floor(cov_file, None) == 0.0
+
+    # (f) nessun user-choice.json in nessun antenato → 0.0
+    isolated = tmp_path / "isolated" / "a" / "b.json"
+    isolated.parent.mkdir(parents=True)
+    isolated.write_text("{}", encoding="utf-8")
+    assert pc.resolve_user_floor(isolated, None) == 0.0
+
+    # (g) explicit fuori range alto → clamp a 95
+    assert pc.resolve_user_floor(isolated, 200.0) == 95.0
+
+
 def test_branch_gate_skipped_when_parser_emits_no_branch():
     """Parser senza branch (es. go-test, cargo-tarpaulin) → branch_pct=0.0 →
     has_branch_data=False → gate branch NON applicato (no falsi FAIL)."""

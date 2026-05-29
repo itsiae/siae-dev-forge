@@ -556,19 +556,27 @@ def resolve_user_floor(input_path: Path, explicit: float | None) -> float:
       2. `target_line` da `.code-coverage/user-choice.json`, cercato risalendo
          le directory a partire da `input_path`
       3. 0.0 (nessun floor → backward-compat)
+
+    Il valore risolto viene clampato a [0, 95] (range coerente con la validazione
+    [1,95] del sentinel): difende da `user-choice.json` corrotto o `--min-floor`
+    fuori range, evitando che un valore anomalo (es. 9999) alzi ogni soglia
+    facendo fallire silenziosamente tutti i moduli. Negativo → 0 (nessun floor).
     """
+    floor = 0.0
     if explicit is not None and explicit >= 0:
-        return float(explicit)
-    start = input_path if input_path.is_dir() else input_path.parent
-    for base in [start, *start.parents]:
-        uc = base / ".code-coverage" / "user-choice.json"
-        if uc.is_file():
-            try:
-                data = json.loads(uc.read_text(encoding="utf-8", errors="ignore"))
-                return float(data.get("target_line", 0.0) or 0.0)
-            except (json.JSONDecodeError, OSError, ValueError, TypeError):
-                return 0.0
-    return 0.0
+        floor = float(explicit)
+    else:
+        start = input_path if input_path.is_dir() else input_path.parent
+        for base in [start, *start.parents]:
+            uc = base / ".code-coverage" / "user-choice.json"
+            if uc.is_file():
+                try:
+                    data = json.loads(uc.read_text(encoding="utf-8", errors="ignore"))
+                    floor = float(data.get("target_line", 0.0) or 0.0)
+                except (json.JSONDecodeError, OSError, ValueError, TypeError):
+                    floor = 0.0
+                break
+    return max(0.0, min(95.0, floor))
 
 
 def parse(
