@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """count_branch_operators.py — conta ??/||/&&/?: in un file TS/JS (regex AST-lite).
 
-Esclude righe di commento singola (//), import/export e blocchi /* */.
+Esclude righe di commento singola (//), import e re-export puri, e blocchi /* */.
+I re-export puri esclusi sono: `export { ... }`, `export * from ...`,
+`export default <identificatore>` (senza corpo con operatori).
+Le righe `export const`, `export function`, `export class` con operatori inline
+vengono conteggiate normalmente.
 NON gestisce annidamenti profondi: accettabile per DAO/mapper (post-mortem R6).
 Soglia branch_heavy: count > 20.
+
+Limiti noti (regex AST-lite): operatori dentro string literal possono produrre
+falsi positivi; `?` a fine riga e split multi-riga possono dare falsi negativi.
+Accettabile per DAO/mapper.
 
 Usage: count_branch_operators.py <source_file>
 Output JSON: {"file": path, "count": N, "by_operator": {...}, "branch_heavy": bool}
@@ -15,13 +23,22 @@ from pathlib import Path
 
 BRANCH_HEAVY_THRESHOLD = 20
 
-# ternario: ? ... : (escludendo ?. optional chaining e ?? )
 _RE = {
     "??": re.compile(r"\?\?"),
     "||": re.compile(r"\|\|"),
     "&&": re.compile(r"&&"),
-    "?:": re.compile(r"(?<![?.])\?(?!\.)[^?]"),  # ? non seguito/preceduto da ? o .
 }
+
+# Pattern per righe da escludere: import, re-export puri.
+# NON escludi export const/function/class/let/var che possono contenere operatori.
+_SKIP_LINE_RE = re.compile(
+    r"^(?:"
+    r"import\s"                      # import statement
+    r"|export\s*\{[^}]*\}"           # export { A, B }
+    r"|export\s+\*\s+from\s"         # export * from '...'
+    r"|export\s+default\s+\w+\s*;?"  # export default Identifier (no body)
+    r")"
+)
 
 
 def _strip_block_comments(text: str) -> str:
@@ -33,7 +50,7 @@ def count_operators(text: str) -> dict:
     by_op = {"??": 0, "||": 0, "&&": 0, "?:": 0}
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped.startswith("//") or stripped.startswith("import ") or stripped.startswith("export "):
+        if stripped.startswith("//") or _SKIP_LINE_RE.match(stripped):
             continue
         # rimuovi commento inline
         code = line.split("//", 1)[0]

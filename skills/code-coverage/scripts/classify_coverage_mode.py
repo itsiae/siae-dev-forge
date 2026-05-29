@@ -38,6 +38,11 @@ def main() -> None:
     bp_path = repo / ".code-coverage" / "batch-plan.json"
     uc_path = repo / ".code-coverage" / "user-choice.json"
     stack_path = repo / ".code-coverage" / "stack.json"
+
+    if not bp_path.exists():
+        print(json.dumps({"status": "error", "error": f"batch-plan.json not found: {bp_path}"}))
+        sys.exit(0)
+
     bp = json.loads(bp_path.read_text())
     uc = json.loads(uc_path.read_text()) if uc_path.exists() else {}
     stack = json.loads(stack_path.read_text()) if stack_path.exists() else {}
@@ -46,7 +51,10 @@ def main() -> None:
     cur_line = float(stack.get("pre_existing_coverage_pct", 0) or 0)
     cur_branch = float(stack.get("pre_existing_branch_pct", 0) or 0)
 
-    for batch in bp.get("pending_batches", []):
+    # Supporta sia "batches" (chiave prodotta da plan_batches.build_plan) sia
+    # "pending_batches" (chiave legacy) per retrocompatibilità.
+    batches = bp.get("batches", bp.get("pending_batches", []))
+    for batch in batches:
         for f in batch.get("files", []):
             path = f.get("path", "")
             boc = f.get("branch_operator_count")
@@ -57,7 +65,7 @@ def main() -> None:
                                           target_line, target_branch)
     bp_path.write_text(json.dumps(bp, indent=2))
     print(json.dumps({"status": "ok", "files_classified":
-                      sum(len(b.get("files", [])) for b in bp.get("pending_batches", []))}))
+                      sum(len(b.get("files", [])) for b in batches)}))
 
 
 if __name__ == "__main__":

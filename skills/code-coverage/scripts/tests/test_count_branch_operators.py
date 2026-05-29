@@ -49,3 +49,38 @@ def test_branch_heavy_flag(tmp_path):
     out = _run(f)
     assert out["count"] == 25
     assert out["branch_heavy"] is True
+
+
+# ---------------------------------------------------------------------------
+# MAJOR fix: export const/function/class con operatori inline NON devono
+# essere escluse come se fossero re-export puri o import.
+# ---------------------------------------------------------------------------
+
+def test_export_const_with_operator_is_counted(tmp_path):
+    """'export const x = a ?? b' deve contribuire al count (era 0 per bug)."""
+    f = tmp_path / "dao.ts"
+    f.write_text("export const x = a ?? b;\n", encoding="utf-8")
+    out = _run(f)
+    assert out["count"] >= 1, (
+        f"export const con ?? deve dare count>=1, got {out['count']}"
+    )
+
+
+def test_pure_reexport_gives_zero(tmp_path):
+    """'export { A, B }' è un re-export puro: count deve essere 0."""
+    f = tmp_path / "reexport.ts"
+    f.write_text("export { A, B };\n", encoding="utf-8")
+    out = _run(f)
+    assert out["count"] == 0, (
+        f"re-export puro deve dare 0, got {out['count']}"
+    )
+
+
+def test_import_statement_gives_zero(tmp_path):
+    """'import {X} from 'y'' non deve contribuire al count."""
+    f = tmp_path / "imports.ts"
+    f.write_text("import { X } from 'y';\n", encoding="utf-8")
+    out = _run(f)
+    assert out["count"] == 0, (
+        f"import statement deve dare 0, got {out['count']}"
+    )

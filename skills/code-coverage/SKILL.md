@@ -39,6 +39,7 @@ Reading any ref out-of-phase is a context budget violation. Each ref MUST be rea
    = `user-choice.json.target_branch` (può essere alzato da soglia CI, vedi Phase 2.5).
    Per file con `coverage_mode == branch-priority` (branch-heavy o branch lontana dal
    target) usa il template branch-matrix: la line non basta, conta la branch matrix.
+   P1 floor ≥ 80% / P2 ≥ 70% / P3 ≥ 60% enforced (vedi phase-5-generation.md).
 6. **Progressive disclosure.** Load `references/phase-N.md` only on entry to phase N. Phase-1/6 are bash libs (`lib/phase{1,6}-*.sh`); Phase-2/4 are inlined here; Phase-3/5/7 are refs.
 7. **State persistence + cache.** Outputs in `.code-coverage/`. `stack.json`/`size.json`/`env.json` cached vs manifest mtime. Templates cached via `lib/template-cache.sh`. Schema: `lib/state-schema.json`.
 
