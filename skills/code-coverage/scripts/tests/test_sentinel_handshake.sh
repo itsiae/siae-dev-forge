@@ -252,6 +252,59 @@ set -e
 assert_exit "$EXIT7" "1" "no args → exit 1"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Case 8: effective_target — CI threshold (branch=70) overrides preset (branch=60)
+# preset: line=70 → derived branch=60; CI: COVERAGE_BRANCHES=70 → override
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "Case 8: effective_target CI override (branch 70 > preset 60)"
+REPO8="$(setup_repo case8)"
+write_valid_sentinel "$REPO8"
+# CI impone branch=70, preset utente line=70 → derived branch=60 → CI wins
+printf '{"COVERAGE_BRANCHES": 70, "source": "CI.yaml", "working_directory_issues": []}\n' \
+    > "$REPO8/.code-coverage/ci-thresholds.json"
+printf '{"line_branch_delta": 16.77}\n' > "$REPO8/.code-coverage/stack.json"
+set +e
+bash "$HANDSHAKE" write "$REPO8" 70 >/dev/null 2>&1
+EXIT8=$?
+set -e
+assert_exit "$EXIT8" "0" "write target=70 con CI override → exit 0"
+USER_CHOICE8="$REPO8/.code-coverage/user-choice.json"
+# CI branch=70 deve sovrascrivere il derivato branch=60
+assert_json_field "$USER_CHOICE8" "target_branch" "70" "target_branch=70 (CI override su preset 60)"
+# il flag ci_threshold_override deve essere True (non solo coincidenza numerica)
+assert_json_field "$USER_CHOICE8" "ci_threshold_override" "True" "ci_threshold_override=True"
+# ci_thresholds_source deve riportare la fonte CI
+assert_json_field "$USER_CHOICE8" "ci_thresholds_source" "CI.yaml" "ci_thresholds_source=CI.yaml"
+# high_branch_gap deve essere True (line_branch_delta=16.77 > 15)
+assert_json_field "$USER_CHOICE8" "high_branch_gap" "True" "high_branch_gap=True (delta 16.77>15)"
+# decisions.log deve contenere il WARN
+DECLOG8="$REPO8/.code-coverage/decisions.log"
+if [ -f "$DECLOG8" ] && grep -q "CI enforces higher thresholds" "$DECLOG8"; then
+    echo "  ✓ decisions.log contiene WARN CI enforces higher thresholds"
+    TESTS_PASSED=$((TESTS_PASSED+1))
+else
+    echo "  ✗ decisions.log mancante o senza WARN CI enforces higher thresholds"
+    TESTS_FAILED=$((TESTS_FAILED+1))
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case 9: effective_target — no ci-thresholds.json → comportamento invariato
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "Case 9: effective_target senza ci-thresholds.json → no override"
+REPO9="$(setup_repo case9)"
+write_valid_sentinel "$REPO9"
+# nessun ci-thresholds.json
+set +e
+bash "$HANDSHAKE" write "$REPO9" 70 >/dev/null 2>&1
+EXIT9=$?
+set -e
+assert_exit "$EXIT9" "0" "write target=70 senza CI file → exit 0"
+USER_CHOICE9="$REPO9/.code-coverage/user-choice.json"
+assert_json_field "$USER_CHOICE9" "target_branch" "60" "target_branch=60 (no CI override)"
+assert_json_field "$USER_CHOICE9" "ci_threshold_override" "False" "ci_threshold_override=False"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""

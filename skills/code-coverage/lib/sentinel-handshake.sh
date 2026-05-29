@@ -136,6 +136,9 @@ emit("option_b_target_line", opt_b.get("target_line"))
 emit("option_b_target_branch", opt_b.get("target_branch"))
 emit("option_b_p50_min", opt_b.get("estimated_wallclock_min_p50"))
 emit("option_b_p90_min", opt_b.get("estimated_wallclock_min_p90"))
+emit("ci_threshold_override", ctx.get("ci_threshold_override"))
+emit("ci_thresholds_source", ctx.get("ci_thresholds_source"))
+emit("high_branch_gap", ctx.get("high_branch_gap"))
 PY
 }
 
@@ -152,14 +155,16 @@ cmd_write() {
     fi
 
     local out="$repo/.code-coverage/user-choice.json"
-    python3 - "$sentinel" "$out" "$target" <<'PY'
+    python3 - "$sentinel" "$out" "$target" "$repo" <<'PY'
 import json
+import os
 import sys
 import time
 
 sentinel_path = sys.argv[1]
 out_path = sys.argv[2]
 target = int(sys.argv[3])
+repo = sys.argv[4]
 
 try:
     with open(sentinel_path, "r", encoding="utf-8") as fh:
@@ -196,6 +201,53 @@ elif target == 70:
 else:
     target_branch = max(1, target - 10)
 
+# ── CI threshold override ─────────────────────────────────────────────────────
+_user_line = target
+_user_branch = target_branch
+_eff_line = _user_line
+_eff_branch = _user_branch
+_ci_src = "none"
+
+_ci_path = os.path.join(repo, ".code-coverage", "ci-thresholds.json")
+try:
+    with open(_ci_path, "r", encoding="utf-8") as _fh:
+        _ci = json.load(_fh)
+    _ci_branch = _ci.get("COVERAGE_BRANCHES") or _ci.get("COVERAGE_THRESHOLD")
+    _ci_line = _ci.get("COVERAGE_LINES") or _ci.get("COVERAGE_THRESHOLD")
+    if _ci_branch is not None and float(_ci_branch) > _eff_branch:
+        _eff_branch = min(95, float(_ci_branch))
+    if _ci_line is not None and float(_ci_line) > _eff_line:
+        _eff_line = min(95, float(_ci_line))
+    _ci_src = _ci.get("source", "none")
+except Exception:
+    pass
+
+# ── high_branch_gap surfacing ─────────────────────────────────────────────────
+_high_branch_gap = False
+try:
+    _stack_path = os.path.join(repo, ".code-coverage", "stack.json")
+    with open(_stack_path, "r", encoding="utf-8") as _sfh:
+        _stack = json.load(_sfh)
+    _delta = _stack.get("line_branch_delta")
+    _high_branch_gap = (_delta is not None and _delta > 15)
+except Exception:
+    pass
+
+# ── determine effective override flag and update targets ──────────────────────
+_override = (_eff_branch > _user_branch) or (_eff_line > _user_line)
+target = int(_eff_line)
+target_branch = int(_eff_branch)
+
+if _override:
+    _msg = (
+        f"[sentinel] WARN: CI enforces higher thresholds than user preset. "
+        f"Effective line={target} branch={target_branch} "
+        f"(user line={_user_line} branch={_user_branch}). source={_ci_src}"
+    )
+    _log_path = os.path.join(repo, ".code-coverage", "decisions.log")
+    with open(_log_path, "a", encoding="utf-8") as _lf:
+        _lf.write(f"[{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}] {_msg}\n")
+
 payload = {
     "target_line": target,
     "target_branch": target_branch,
@@ -205,6 +257,11 @@ payload = {
     "user_choice_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "source": "sentinel_handshake",
     "preset": preset,
+    "user_requested_line": _user_line,
+    "user_requested_branch": _user_branch,
+    "ci_threshold_override": _override,
+    "ci_thresholds_source": _ci_src,
+    "high_branch_gap": _high_branch_gap,
 }
 
 try:
