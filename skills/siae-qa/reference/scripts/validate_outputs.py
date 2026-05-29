@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import jsonschema  # type: ignore
+    import jsonschema  # type: ignore  # noqa: F401 - presence check for HAS_JSONSCHEMA flag
     from jsonschema import Draft202012Validator
 
     HAS_JSONSCHEMA = True

@@ -23,14 +23,18 @@ description: >
 
 DO NOT read `references/phase-*.md` before reaching the corresponding phase.
 Combined refs after A3 inline = phase-3-sizing.md (~150 LOC) + phase-5-generation.md (~250 LOC) + phase-7-repair.md (~120 LOC) ≈ 520 LOC / ~6 KB.
+Conditional refs (loaded ONLY if trigger fires — NOT in base budget):
+- `references/phase-4b-migration.md` (~140 LOC): loaded SOLO se `strategy.json` contiene workspace con `migrate=true`.
+- `references/java-siae-quirks.md` (~variable): loaded SOLO se Java/Maven detected (vedi Phase 4 loader).
+
 Reading any ref out-of-phase is a context budget violation. Each ref MUST be read AT phase entry, never as preamble.
 
 ## GLOBAL EXECUTION PRINCIPLES (7)
 
-1. **Autonomous execution.** Invocation = blanket approval for read/write/install in `.code-coverage/`, test dirs, `vitest.config.ts`/`jest.config.ts` if absent, and `devDependencies`. Never modify production source. Decisions → `.code-coverage/decisions.log`. ZERO prompts.
+1. **Autonomous execution.** Invocation = blanket approval for read/write/install in `.code-coverage/`, test dirs, `vitest.config.ts` (create if absent), `jest.config.*` (delete during Phase 4b migration with snapshot), `package.json` `scripts`/`devDependencies` keys only, and existing `*.{test,spec}.*` files for Jest→Vitest token transforms during Phase 4b. Never modify production source. Decisions → `.code-coverage/decisions.log`. ZERO prompts.
 2. **Context-safety over completeness.** Batch sizes per tier (T1=3, T2=2, T3=1, T4=1 — `assets/priority-rules.json.ordering_constants`). LARGE/VERY_LARGE → persist `batch-plan.json`, resume cross-session. Batch tool calls (Write) MUST execute parallel in same assistant turn — see Phase 5 batch rule.
 3. **Determinism over creativity.** `assets/stack-matrix.json` is the single source of truth for framework selection.
-4. **Vitest-first for JS/TS** (decision tree inlined in Phase 2 below). Deviate to Jest only on documented constraints.
+4. **Vitest-first for JS/TS, with auto-migration from Jest.** When the project uses Jest but Vitest is compatible (closed list of incompatibility signals I1..I10 in `assets/vitest-jest-compat.json`), Phase 4b migrates `jest.config.*`, `package.json` scripts/devDeps, and test files (codemod) to Vitest. Jest is retained ONLY when ≥1 signal in I1..I9 fires, or I10 user opt-out is active.
 5. **Coverage targets per-priority; global floor 70%.** P1>=80%, P2>=70%, P3>=60%, global>=70% (`assets/priority-rules.json.min_coverage_pct`). P1 at 75% = FAIL. Repair max 3 iter; best-effort if exhausted.
 6. **Progressive disclosure.** Load `references/phase-N.md` only on entry to phase N. Phase-1/6 are bash libs (`lib/phase{1,6}-*.sh`); Phase-2/4 are inlined here; Phase-3/5/7 are refs.
 7. **State persistence + cache.** Outputs in `.code-coverage/`. `stack.json`/`size.json`/`env.json` cached vs manifest mtime. Templates cached via `lib/template-cache.sh`. Schema: `lib/state-schema.json`.
@@ -56,20 +60,28 @@ The chosen-target gate (`>= user_target_line`) is applied later in Phase 2.5 onc
 
 ### Phase 2 — Strategy
 
-Single source: `assets/stack-matrix.json`. Output: `framework_by_workspace` (in-memory + `.code-coverage/strategy.json`), plus `[phase2] workspace=<path> stack=<lang> framework=<fw> reason=...` in `decisions.log`.
+Single source: `assets/stack-matrix.json` + `assets/vitest-jest-compat.json`. Output: `framework_by_workspace` (in-memory + `.code-coverage/strategy.json`), plus `[phase2] workspace=<path> stack=<lang> framework=<fw> reason=... migrate=<bool>` in `decisions.log`.
 
-**Vitest-first decision tree (JS/TS per workspace):**
-1. `jest.config.{ts,js,mjs,cjs}` exists → `jest` (reason `jest-config-present`).
-2. Else `package.json.scripts.test` mentions `jest` AND `vitest` not in devDeps → `jest` (reason `jest-script-no-vitest`).
-3. Else `constraints.json` lists CJS incompatibility → `jest` (reason `cjs-constraint`).
-4. Else `constraints.json` lists legacy-jest → `jest` (reason `legacy-constraint`).
-5. Else → `vitest` (reason `vitest-first-default`).
+**Vitest-first decision tree (JS/TS per workspace) — Migration-aware (v2):**
+
+The mere presence of `jest.config.*` or `jest` in `scripts.test` is NOT an incompatibility — it's the current setup. The skill MIGRATES Jest→Vitest unless a real technical incompatibility signal (I1..I10 in `assets/vitest-jest-compat.json`) fires.
+
+Phase 1 has already produced `.code-coverage/jest-compat.json` via `scripts/detect_jest_incompat.py`. Phase 2 reads it and emits per-workspace decision:
+
+| `jest-compat.json` decision | framework | migrate | reason emitted |
+|---|---|---|---|
+| `jest-forced` (I10) | `jest` | `false` | `force-jest-override:<reason>` |
+| `jest-incompat` (any I1..I9) | `jest` | `false` | `hard-incompat:<comma-joined-signals>` |
+| `vitest-migrate` (jest artifacts + no signal) | `vitest` | `true` | `jest-legacy-migrating-to-vitest` (triggers Phase 4b) |
+| `vitest-default` (no jest at all) | `vitest` | `false` | `vitest-first-default` |
+
+**Opt-out (triple safety boundary)**: (1) `CC_DISABLE_JEST_MIGRATION=1` or `CC_KEEP_JEST=1` env vars; OR (2) `.code-coverage/overrides.json` with `{"force_jest": true, "force_jest_reason": "<reason>"}`; OR (3) intentionally dirty working tree on migration target files (Phase 4b refuses if `git status` shows uncommitted changes). All three opt-outs surface in `decisions.log`. Transparency principle: user can preview Phase 2 verdict by running `python3 scripts/detect_jest_incompat.py <repo>` BEFORE invoking the skill, to see which workspaces would migrate without actually triggering migration.
 
 Other stacks (Python/Java/Kotlin/Go/Rust/C#/Flutter) → direct lookup in `assets/stack-matrix.json` for `framework`, `coverage_command`, `report_format`. No heuristics beyond the matrix.
 
 **Lambda variant (JS/TS):** if `stack.json.is_lambda == true`, files matching `priority-rules.json.lambda_handler_globs` (default `*handler.ts`, `*lambda.ts`) → template `vitest-lambda-handler`; others → standard `vitest`.
 
-**Monorepo:** iterate `stack.json.workspaces[]`, apply tree per workspace. Workspaces with `framework == "unknown"` are logged as `skipped reason=unsupported-language` and listed in Block 4.
+**Monorepo:** iterate `stack.json.workspaces[]`, apply tree per workspace. Each workspace decided INDEPENDENTLY — a monorepo can have a mix of `vitest` (migrating or fresh) and `jest` (kept due to incompat) workspaces. Workspaces with `framework == "unknown"` are logged as `skipped reason=unsupported-language` and listed in Block 4.
 
 **Gate:** if ALL workspaces resolve to `unknown` → emit Block 4 + END.
 
@@ -129,6 +141,28 @@ Read `.code-coverage/env.json`. For each framework with `installed: false` and n
 Frameworks with `command: null` (junit5/junit5-gradle/mockk/cargo-test/flutter_test): read `manual_manifest_edit`, apply autonomously to `pom.xml`/`build.gradle`/`Cargo.toml`/`pubspec.yaml`, then run verification (e.g., `mvn dependency:resolve`, timeout 30s).
 
 **Vitest config generation:** only if `vitest.config.ts` ABSENT and framework=vitest. Generate skeleton with `environment` (`jsdom` for FE, `node` for backend), `coverage.provider: 'v8'`, `reporter: ['text','json-summary']`. Never overwrite existing config. Log decision.
+
+**Jest→Vitest migration (Phase 4b — conditional):** For any workspace with `strategy.json.framework_by_workspace[ws].migrate == true`:
+
+```bash
+python3 skills/code-coverage/scripts/migrate_jest_to_vitest.py "<repo>"
+# Exit codes: 0=ok | 1=refused/install-failed | 2=verification-failed (snapshot restored) | 4=noop
+```
+
+Migration pipeline (per workspace, atomic):
+1. **Dirty-tree pre-flight**: `git status` su file touched → if dirty, REFUSE + Block 4 entry
+2. **Snapshot** package.json + jest.config.* + jest.setup.* + lockfile + all `*.{test,spec}.*` → `.code-coverage/migration-snapshot/`
+3. **Translate** `jest.config.* → vitest.config.ts` (skip if exists). Keys in `config_keys_manual_review` (`setupFilesAfterEach`, `globalSetup`, etc.) are flagged in `migration-report.json.unmapped_keys[]`, NOT rewritten
+4. **Rewrite** `package.json` (scripts: jest→vitest run; devDeps: remove jest stack, add vitest+@vitest/coverage-v8+jsdom-if-FE)
+5. **Codemod** test files via `assets/vitest-jest-compat.json.api_migration_map.rewrites` (21 mappings). Tokens in `no_rewrite_tokens` (`jest.requireActual`, `jest.requireMock`) flagged but NOT rewritten
+6. **Rename** `jest.setup.* → vitest.setup.*` + transform `@testing-library/jest-dom` → `/vitest`
+7. **Install** per-PM (npm/pnpm/yarn/yarn-berry/bun detected from lockfile)
+8. **Smoke verify**: `npx vitest run --reporter=basic --no-coverage` timeout 120s
+9. **Commit** (delete jest.config.* after verify) OR **Rollback** (restore snapshot + frozen-lockfile reinstall via `rollback_install_cmd_for(pm)`)
+
+Outputs: `.code-coverage/migration-report.json` + `.code-coverage/migration-snapshot/`. **Block 9 (Next Actions) MUST include every `migration-report.json.workspaces[].files.manual_review[]` entry** verbatim with file:line, so the user can resolve `jest.requireActual`/`requireMock`/`isolateModules`/types post-migration. Missing this surfacing causes CI failures without diagnosis.
+
+Lazy-loaded reference: `references/phase-4b-migration.md` (loaded ONLY if any workspace has `migrate=true` — see HARD READ POLICY).
 
 **Blocking Check Handler:** if `env.json.missing` includes essential runtime (Node/Python/Java/Go/Rust/Dotnet/Flutter) → emit `ENVIRONMENT BLOCKER` block with runtime-specific install hint + STOP. Do not continue without runtime.
 
