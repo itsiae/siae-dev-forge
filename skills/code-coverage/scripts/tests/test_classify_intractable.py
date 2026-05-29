@@ -131,7 +131,6 @@ def test_suggested_strategy_not_empty_for_tz_mock():
 
 def test_chain_classify_aggregate_produces_suggested_strategy(tmp_path):
     """Simula catena classify→aggregate: intractable.json ha suggested_strategy NON vuoto."""
-    import json
     import aggregate_intractable as ai
 
     src = "export class D { private mapLocale(r){ return r.x ?? '' } }"

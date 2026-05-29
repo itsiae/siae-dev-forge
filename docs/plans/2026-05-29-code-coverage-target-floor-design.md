@@ -65,6 +65,19 @@ Esempi:
 - **CI override invariato**: la logica `max(user, CI)` in `estimate_effort`/`sentinel`
   resta; la CI può solo alzare il floor.
 
+### File modificati (repo-relative)
+
+- `skills/code-coverage/SKILL.md`
+- `skills/code-coverage/assets/priority-rules.json`
+- `skills/code-coverage/lib/phase6-coverage.sh`
+- `skills/code-coverage/lib/sentinel-handshake.sh`
+- `skills/code-coverage/lib/state-schema.json`
+- `skills/code-coverage/scripts/estimate_effort.py`
+- `skills/code-coverage/scripts/parse_coverage.py`
+- `skills/code-coverage/scripts/tests/test_estimate_effort.py`
+- `skills/code-coverage/scripts/tests/test_parse_coverage.py`
+- `skills/code-coverage/scripts/tests/test_sentinel_handshake.sh`
+
 ## Criteri di accettazione
 
 - [x] `target_branch == target_line` per preset 40/70 e custom (no gap −10)
