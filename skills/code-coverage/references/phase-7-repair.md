@@ -20,7 +20,8 @@ Budget init (eseguire all'ingresso Phase 7, nessun coverage run extra):
 ```python
 import json, math, pathlib
 bp = pathlib.Path(".code-coverage/batch-plan.json")
-n = len(json.loads(bp.read_text()).get("batches", [])) if bp.exists() else 0
+d = json.loads(bp.read_text()) if bp.exists() else {}
+n = len(d.get("batches", d.get("pending_batches", []))) if d else 0
 MAX_ITER = min(10, max(3, math.ceil(n * 1.5))) if n else 3
 # Log: [phase7] max_iter=<MAX_ITER> batches=<n>
 ```
@@ -149,7 +150,7 @@ quando definito.
 - Full-file rewrite di un test su un singolo assert failure.
 - Modificare il modulo sorgente per soddisfare il test (è violazione del
   contratto "never modify production source", Phase 0 principio 1).
-- Loop > 3 iter (hard cap, no override).
+- Loop oltre max_iter calcolato (hard cap 10) senza cambio strategia.
 - Re-run completo (`--coverage`) ad ogni Edit (wall-time esplode).
 
 ---

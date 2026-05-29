@@ -10,20 +10,56 @@ import sys
 from pathlib import Path
 
 _PRIVATE_RE = re.compile(r"\bprivate\s+(?:readonly\s+)?(?:async\s+)?(\w+)\s*\(")
-_NEW_RE = re.compile(r"\bnew\s+([A-Z]\w*)\s*\(")
+_NEW_RE = re.compile(r"\bnew\s+([A-Z]\w+)\s*\(")  # ≥2 chars: esclude generics single-letter
 _TZ_RE = re.compile(r"Intl\.|\.toLocale(?:String|DateString|TimeString)\b|process\.env\.TZ\b|getItalyOffset|addItalyOffset")
 _DB_RE = re.compile(r"await\s+this\.(?:db|pool|knex|client|pgClient)\.(?:query|execute|raw)|\.prepare\s*\(|createConnection\s*\(", re.M)
 _MOCK_RE = re.compile(r"vi\.mock|jest\.mock")
 _BUILTINS = {"Date", "Error", "Map", "Set", "Array", "Promise", "Buffer", "RegExp",
              "Object", "Number", "String", "TypeError", "RangeError", "URL"}
 
+# Regex per lo stripping del "noise" (commenti e stringhe)
+_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+_LINE_COMMENT_RE = re.compile(r"//[^\n]*")
+_STRING_SQ_RE = re.compile(r"'(?:[^'\\]|\\.)*'")
+_STRING_DQ_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
+_TEMPLATE_LITERAL_RE = re.compile(r"`(?:[^`\\]|\\.)*`", re.DOTALL)
+
+
+def _strip_noise(text: str) -> str:
+    """Rimuove commenti e stringhe dal sorgente per evitare falsi positivi nelle regex.
+
+    Ordine: block comments, line comments, template literals, double-quoted strings,
+    single-quoted strings. Ogni match viene sostituito con spazi per preservare gli
+    offset (non necessario per la logica, ma mantiene la leggibilità dei log).
+    """
+    text = _BLOCK_COMMENT_RE.sub(lambda m: " " * len(m.group()), text)
+    text = _LINE_COMMENT_RE.sub(lambda m: " " * len(m.group()), text)
+    text = _TEMPLATE_LITERAL_RE.sub(lambda m: " " * len(m.group()), text)
+    text = _STRING_DQ_RE.sub(lambda m: " " * len(m.group()), text)
+    text = _STRING_SQ_RE.sub(lambda m: " " * len(m.group()), text)
+    return text
+
 
 def classify(src_text: str, spec_text: str = "") -> dict:
-    private_methods = [m.group(1) for m in _PRIVATE_RE.finditer(src_text)
+    """Classifica un sorgente TypeScript/JavaScript per tipo di intractability.
+
+    Applica _strip_noise prima di eseguire le regex in modo da ignorare segnali
+    presenti solo in commenti, JSDoc o stringhe letterali.
+
+    Args:
+        src_text: contenuto del file sorgente da analizzare.
+        spec_text: contenuto del file di test esistente (opzionale).
+
+    Returns:
+        dict con chiavi: classification, suggested_action, private_methods,
+        inline_classes, signals.
+    """
+    clean = _strip_noise(src_text)
+    private_methods = [m.group(1) for m in _PRIVATE_RE.finditer(clean)
                        if m.group(1) not in ("get", "set", "constructor")]
-    inline_classes = [c for c in dict.fromkeys(_NEW_RE.findall(src_text)) if c not in _BUILTINS]
-    has_tz = bool(_TZ_RE.search(src_text))
-    has_db = bool(_DB_RE.search(src_text))
+    inline_classes = [c for c in dict.fromkeys(_NEW_RE.findall(clean)) if c not in _BUILTINS]
+    has_tz = bool(_TZ_RE.search(clean))
+    has_db = bool(_DB_RE.search(clean))
     has_mock = bool(_MOCK_RE.search(spec_text))
 
     if private_methods:
@@ -52,6 +88,10 @@ def classify(src_text: str, spec_text: str = "") -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: classify_intractable.py <source_file> [<spec_file>]"}),
+              file=sys.stderr)
+        sys.exit(1)
     src = Path(sys.argv[1]).read_text(encoding="utf-8", errors="ignore")
     spec = ""
     if len(sys.argv) > 2 and Path(sys.argv[2]).exists():

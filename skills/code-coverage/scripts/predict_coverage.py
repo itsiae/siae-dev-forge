@@ -15,8 +15,23 @@ _BRANCH_GAIN = {"SMALL": 5, "MEDIUM": 4, "LARGE": 3, "VERY_LARGE": 2}
 _BRANCH_OPS_PER_LOC = 0.015
 
 
-def predict(size_class, n_batches, total_loc, pre_line, pre_branch,
-            target_line, target_branch):
+def predict(size_class: str, n_batches: int, total_loc: int, pre_line: float,
+            pre_branch: float, target_line: float, target_branch: float) -> dict:
+    """Calcola la prediction di line/branch coverage post Phase 6/7.
+
+    Args:
+        size_class: classe dimensionale del repository (SMALL/MEDIUM/LARGE/VERY_LARGE).
+        n_batches: numero di batch nel batch-plan.
+        total_loc: linee di codice totali del repository.
+        pre_line: percentuale di line coverage pre-esistente.
+        pre_branch: percentuale di branch coverage pre-esistente (0 se assente).
+        target_line: target di line coverage richiesto dall'utente.
+        target_branch: target di branch coverage richiesto dall'utente.
+
+    Returns:
+        dict con chiavi: schema_version, inputs, predictions (con confidence),
+        risk_flags.
+    """
     est_ops = int(total_loc * _BRANCH_OPS_PER_LOC)
     line_gain = n_batches * _LINE_GAIN.get(size_class, 4)
     branch_gain = n_batches * _BRANCH_GAIN.get(size_class, 2)
@@ -61,6 +76,10 @@ def predict(size_class, n_batches, total_loc, pre_line, pre_branch,
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: predict_coverage.py <repo>"}),
+              file=sys.stderr)
+        sys.exit(1)
     repo = Path(sys.argv[1]).resolve()
     cc = repo / ".code-coverage"
     size = json.loads((cc / "size.json").read_text()) if (cc / "size.json").exists() else {}
