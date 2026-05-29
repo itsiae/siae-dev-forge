@@ -350,3 +350,15 @@ Test files are placed in:
 - Go: same package directory as source
 - Rust: use inline `#[cfg(test)] mod tests { use super::*; ... }` for unit tests that need access to private or `pub(crate)` items. Use a separate `tests/<module>.rs` file only for integration tests that exercise the public API.
 - Flutter/Dart: in `test/` directory at the package root, mirroring the `lib/` structure. Example: `lib/services/payment_service.dart` → `test/services/payment_service_test.dart`.
+
+---
+
+## Test Helper Auto-Import
+
+In Phase 4, se assenti, vengono materializzati in `<repo>/<src>/__tests__/helpers/`
+i template da `templates/helpers/` (gate PRESERVE_EXISTING: non sovrascrivere helper esistenti).
+Ogni spec generato importa l'helper rilevante:
+- `scan_tz_usage.py.uses_tz` → `import { mockTz } from '...helpers/mockTz'`
+- `scan_class_instantiations.py` non vuoto → `import { mockClass } from '...helpers/mockClass'`
+- DAO/Knex → `import { mockKnex } from '...helpers/mockKnex'`
+- file con `branch_operator_count > 40` → `import { buildFixtures } from '...helpers/builderFactory'`

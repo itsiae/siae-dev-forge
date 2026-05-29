@@ -174,6 +174,14 @@ Lazy-loaded reference: `references/phase-4b-migration.md` (loaded ONLY if any wo
 
 Output: `.code-coverage/install-log.txt`, `.code-coverage/lockfile.bak`, `decisions.log` updated.
 
+**Phase 4 — Test helpers:** se `<repo>/<src>/__tests__/helpers/` non contiene gli helper,
+copia da `templates/helpers/*.ts` (PRESERVE_EXISTING: skip se già presenti). Log in decisions.log.
+
+**Phase 4 — ICU probe:** se un file under test ha `scan_tz_usage.py.uses_tz==true`, verifica
+che il runtime Node abbia ICU full: `node -e "new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome'}).format(new Date())"`.
+Se fallisce con RangeError → forza l'import di `mockTz` negli spec TZ-dipendenti (il mock
+bypassa Intl) e logga `[phase4] ICU probe failed → mockTz forced` in decisions.log.
+
 ### Phase 5b — Coverage Probe (handled in Phase 1)
 
 Triggered automatically by `phase1-discover.sh` when `test_files_count > 0` AND `module_coverage == []`. Produces `.code-coverage/coverage-report.json` so D1 fires TIER-FIRST in Phase 5. No LLM action required.
