@@ -88,3 +88,29 @@ it('fetches user data (Promise style)', () => {
 ```
 
 **Razionale**: `Promise` non-awaited fa terminare il test prima dell'assert. Vitest/Jest non sa che il test ha aspettative pendenti senza `expect.assertions(N)` o `await`.
+
+---
+
+## Anti-pattern 4: vi.fn() piatto per classi istanziate con `new`
+
+Quando il source-under-test fa `new SpazioDao()` inline, mockare solo le funzioni
+non basta: la classe va mockata come costruttore.
+
+### BAD
+```typescript
+vi.mock('../dao/SpazioDao', () => ({ retrieveAccertamentiApp: vi.fn() }))
+// ❌ SpazioDao resta la classe reale → new SpazioDao() istanzia il codice vero,
+//    i branch interni non sono isolati, il test può rompersi su dipendenze DB.
+```
+
+### GOOD
+```typescript
+vi.mock('../dao/SpazioDao', () => ({
+  SpazioDao: vi.fn().mockImplementation(() => ({
+    retrieveAccertamentiApp: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(null),
+  })),
+}))
+// ✅ Il costruttore è mockato; ogni new SpazioDao() ritorna l'istanza fake.
+```
+Vedi `scan_class_instantiations.py` per estrarre i metodi da mockare.
