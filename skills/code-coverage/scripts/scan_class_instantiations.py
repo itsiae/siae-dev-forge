@@ -26,13 +26,19 @@ _ASSIGN_RE = re.compile(r"(?:const|let|var)\s+(\w+)\s*=\s*new\s+([A-Z]\w+)\s*\("
 
 
 def scan(text: str) -> dict:
-    # mappa import: ClassName -> path
+    # mappa import: ClassName -> path, con supporto alias (import { X as Y } -> sia X che Y mappano al path)
     imports: dict[str, str] = {}
     for m in _IMPORT_RE.finditer(text):
-        names = [n.strip().split(" as ")[0].strip() for n in m.group(1).split(",")]
-        for n in names:
-            if n:
-                imports[n] = m.group(2)
+        path = m.group(2)
+        for spec in m.group(1).split(","):
+            spec = spec.strip()
+            if not spec:
+                continue
+            parts = [p.strip() for p in spec.split(" as ")]
+            # parts[0] = nome originale, parts[1] = alias (se presente)
+            for name in parts:
+                if name:
+                    imports[name] = path
 
     result: dict[str, dict] = {}
     # var -> ClassName per estrarre i metodi invocati
@@ -57,9 +63,12 @@ def scan(text: str) -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: scan_class_instantiations.py <source_file>"}), file=sys.stderr)
+        sys.exit(1)
     src = Path(sys.argv[1])
     text = src.read_text(encoding="utf-8", errors="ignore")
-    print(json.dumps(scan(text), indent=2))
+    print(json.dumps({"file": str(src), "classes": scan(text)}, indent=2))
 
 
 if __name__ == "__main__":

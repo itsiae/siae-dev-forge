@@ -27,6 +27,9 @@ def scan(text: str) -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: scan_tz_usage.py <source_file>"}), file=sys.stderr)
+        sys.exit(1)
     src = Path(sys.argv[1])
     text = src.read_text(encoding="utf-8", errors="ignore")
     res = scan(text)

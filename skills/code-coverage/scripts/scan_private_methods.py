@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 _PRIVATE_RE = re.compile(
-    r"^\s+private\s+(?:readonly\s+)?(?:(async)\s+)?(\w+)\s*\(",
+    r"^\s+private\s+(?:(?:static|override|abstract|readonly)\s+)*(?:(async)\s+)?(\w+)\s*\(",
     re.M,
 )
 
@@ -30,6 +30,9 @@ def scan(text: str) -> list[dict]:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: scan_private_methods.py <source_file>"}), file=sys.stderr)
+        sys.exit(1)
     src = Path(sys.argv[1])
     text = src.read_text(encoding="utf-8", errors="ignore")
     print(json.dumps({"file": str(src), "private_methods": scan(text)}, indent=2))
