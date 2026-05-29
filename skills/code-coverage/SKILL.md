@@ -228,6 +228,11 @@ Conditional (programmatic, NEVER prompt):
 - Block 4 (`unsupported_groups`): only if non-empty.
 - Block 6 (`Dependency Install Commands`): only if `validate_env.py.install_commands` non-empty.
 - Block 9 (`Next Actions`): if any module sub-threshold OR follow-up batch active OR PRESERVE_EXISTING entries OR manual tests suggested.
+  - Include i file di `.code-coverage/intractable.json` con la rispettiva `suggested_strategy`. Formato:
+    "Intractable (manual): src/dao/X.ts → reflection per private methods; src/dao/Y.ts → requires DB fixture (skip in unit)."
+    Ogni entry `files[]` in intractable.json è resa come `"<path> → <suggested_strategy>"` (reason in parentesi se utile).
+  - Aggiungi anche: follow-up batch attivo (pending_batches), PRESERVE_EXISTING entries (file già presenti saltati), manual tests suggeriti.
+  - Se `.code-coverage/intractable.json` è assente o `files[]` è vuoto, ometti la sezione intractable.
 
 ## Java/Maven/SIAE quirks (progressive disclosure)
 
