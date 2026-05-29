@@ -36,11 +36,11 @@
 ### WS-3 — Tecniche avanzate + helper library (Phase 4 + Phase 5/7)
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 9 | `scan_private_methods.py` | `task-09-scan-private-methods.md` | [PENDING] |
-| 10 | `scan_class_instantiations.py` | `task-10-scan-class-instantiations.md` | [PENDING] |
-| 11 | `scan_tz_usage.py` | `task-11-scan-tz-usage.md` | [PENDING] |
-| 12 | Test-helper library + Phase 4 gen | `task-12-helper-library.md` | [PENDING] |
-| 13 | Anti-pattern + few-shot branch-matrix | `task-13-docs-antipattern-fewshot.md` | [PENDING] |
+| 9 | `scan_private_methods.py` | `task-09-scan-private-methods.md` | [DONE] |
+| 10 | `scan_class_instantiations.py` | `task-10-scan-class-instantiations.md` | [DONE] |
+| 11 | `scan_tz_usage.py` | `task-11-scan-tz-usage.md` | [DONE] |
+| 12 | Test-helper library + Phase 4 gen | `task-12-helper-library.md` | [DONE] |
+| 13 | Anti-pattern + few-shot branch-matrix | `task-13-docs-antipattern-fewshot.md` | [DONE] |
 
 ### WS-4 — Repair loop robusto (Phase 7)
 | # | Task | File | Stato |
