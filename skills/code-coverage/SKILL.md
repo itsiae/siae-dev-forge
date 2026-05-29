@@ -112,6 +112,10 @@ If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
 ### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
 If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
 
+**Prediction:** `python3 skills/code-coverage/scripts/predict_coverage.py <repo>` →
+coverage-prediction.json. Includi nel messaggio pre-Phase-4: "[prediction]
+branch_p7=<Y>% confidence=<C> <risk_flag>". Non-bloccante: se fallisce, Phase 3 continua.
+
 ### Phase 4 — Environment
 
 **[Loader]** Trigger predicate (load `references/java-siae-quirks.md` once if ANY is true):

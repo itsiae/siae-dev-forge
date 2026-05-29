@@ -155,6 +155,15 @@ except Exception:
 emit("ci_threshold_override", _ci_override)
 emit("ci_thresholds_source", _ci_src)
 emit("high_branch_gap", _hbg)
+import pathlib as _pl
+_pred = _pl.Path(path).parent / "coverage-prediction.json"
+if _pred.exists():
+    try:
+        _p = json.loads(_pred.read_text())
+        emit("predicted_branch_after_phase7", _p["predictions"]["predicted_branch_after_phase7"])
+        emit("branch_risk", _p["risk_flags"][0]["flag"] if _p.get("risk_flags") else "NONE")
+    except Exception:
+        pass
 PY
 }
 
