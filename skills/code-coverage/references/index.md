@@ -12,6 +12,7 @@ script/asset/lib/template citato in `SKILL.md`.
 | `references/phase-5-generation.md` | 5 | Pre-write gate, ordering tree, AAA pattern, batch ceilings, few-shot trigger |
 | `references/phase-7-repair.md` | 7 | Categorize → group → fix → progress guard → early-abort |
 | `references/java-siae-quirks.md` | 4 | **Conditional** (loaded ONLY if Java/Maven detected): aggregator, JDK/Lombok matrix, Surefire, Jacoco quirks |
+| `references/phase-5-parallel.md` | 5 | Multi-agent dispatch (≤4 Sonnet): trigger, assegnazione, prompt, OUTPUT CONTRACT, join |
 
 > Phase 2 (Strategy) and Phase 4 (Environment base) are inlined in `SKILL.md` — small enough that a ref round-trip was net-negative.
 
