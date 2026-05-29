@@ -51,7 +51,7 @@ def classify(src_text: str, spec_text: str = "") -> dict:
         spec_text: contenuto del file di test esistente (opzionale).
 
     Returns:
-        dict con chiavi: classification, suggested_action, private_methods,
+        dict con chiavi: classification, suggested_strategy, private_methods,
         inline_classes, signals.
     """
     clean = _strip_noise(src_text)
@@ -79,7 +79,7 @@ def classify(src_text: str, spec_text: str = "") -> dict:
 
     return {
         "classification": cls,
-        "suggested_action": action,
+        "suggested_strategy": action,
         "private_methods": private_methods,
         "inline_classes": inline_classes,
         "signals": {"has_private": bool(private_methods), "has_inline_new": bool(inline_classes),

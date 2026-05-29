@@ -1,7 +1,8 @@
 # Phase 5 — Parallel Multi-Agent Dispatch
 
-> Caricato SOLO quando `parallel_mode == enabled` (size_class LARGE/VERY_LARGE,
-> pending_batches >= 2). NON caricare in sessioni single-agent.
+> Caricato SOLO quando `parallel_mode == enabled` (size_class LARGE/VERY_LARGE con
+> pending_batches >= 2, oppure MEDIUM con loc > 15000 e pending_batches >= 3 — vedi
+> sezione Trigger per tutti i casi). NON caricare in sessioni single-agent.
 
 ## Trigger
 parallel_mode = enabled se:
@@ -9,7 +10,7 @@ parallel_mode = enabled se:
 - LARGE e pending_batches >= 2
 - MEDIUM e loc > 15000 e pending_batches >= 3
 Altrimenti single-agent (flusso standard invariato).
-n_agents = min(4, len(pending_batches)).
+n_agents = min(4, pending_batches_count).  <!-- pending_batches_count = numero batch pending, non una lista -->
 
 Disattiva (fallback single-agent) se: pending_batches == 1; env CC_NO_PARALLEL_AGENTS=1;
 overrides.json.force_sequential=true; Agent tool non disponibile; batch tutti T3/T4 ceiling=1.

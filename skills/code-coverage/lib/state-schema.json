@@ -198,7 +198,8 @@
       "type": "object",
       "properties": {
         "force_jest": {"type": "boolean"},
-        "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."}
+        "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."},
+        "force_sequential": {"type": "boolean", "description": "Kill-switch per il parallel multi-agent dispatch (phase-5-parallel.md). Se true, forza il path sequenziale anche per LARGE/VERY_LARGE con pending_batches >= 2. Utile per debug o ambienti dove il tool Agent non è disponibile."}
       }
     },
     "ci-thresholds.json": {

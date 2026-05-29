@@ -203,9 +203,8 @@ If parallel_mode == enabled:
     Sonnet nello STESSO turno, attendi, join, re-queue partial/failed.
   - SKIP il loop sequenziale standard (gira dentro i subagent).
   - Procedi a Phase 6 (coordinatore).
-Else:
-  [loop sequenziale standard — invariato]
-Load `references/phase-5-generation.md`. **Step 0 hard gate (PRESERVE_EXISTING)** + `bash lib/placeholder-check.sh <file>` before every write. Template hard-cache via `lib/template-cache.sh`. Ordering (D1 conditional TIER-FIRST vs P-TIER) + P1 floor enforcement in the ref. Lazy-load `assets/few-shot-e2e.md` (first batch) and `assets/anti-patterns.md` (on any fail).
+Else:  *(solo sequential path — in parallel mode è caricato dai subagent)*
+  Load `references/phase-5-generation.md`. **Step 0 hard gate (PRESERVE_EXISTING)** + `bash lib/placeholder-check.sh <file>` before every write. Template hard-cache via `lib/template-cache.sh`. Ordering (D1 conditional TIER-FIRST vs P-TIER) + P1 floor enforcement in the ref. Lazy-load `assets/few-shot-e2e.md` (first batch) and `assets/anti-patterns.md` (on any fail).
 
 ### Phase 6 — Coverage
 ```bash

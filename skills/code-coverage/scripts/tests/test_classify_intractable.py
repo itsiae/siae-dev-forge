@@ -98,6 +98,64 @@ def test_classify_argv_guard():
 
 
 # ---------------------------------------------------------------------------
+# CRITICAL: contratto campo suggested_strategy (non suggested_action)
+# ---------------------------------------------------------------------------
+
+def test_output_has_suggested_strategy_not_suggested_action():
+    """classify() deve restituire 'suggested_strategy', NON 'suggested_action'."""
+    result = ci.classify("export const x = 1", "")
+    assert "suggested_strategy" in result, "chiave suggested_strategy assente"
+    assert "suggested_action" not in result, "chiave suggested_action non deve essere presente"
+
+
+def test_suggested_strategy_not_empty_for_reflection():
+    """suggested_strategy non deve essere vuoto per NEEDS_REFLECTION."""
+    src = "export class D { private mapLocale(r){ return r.x ?? '' } }"
+    result = ci.classify(src, "")
+    assert result["suggested_strategy"] != ""
+
+
+def test_suggested_strategy_not_empty_for_class_mock():
+    """suggested_strategy non deve essere vuoto per NEEDS_CLASS_MOCK."""
+    src = "import {Svc} from './Svc'\nclass D { f(){ const s = new Svc(); return s.go() } }"
+    result = ci.classify(src, "")
+    assert result["suggested_strategy"] != ""
+
+
+def test_suggested_strategy_not_empty_for_tz_mock():
+    """suggested_strategy non deve essere vuoto per NEEDS_TZ_MOCK."""
+    src = "const f = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome' })"
+    result = ci.classify(src, "")
+    assert result["suggested_strategy"] != ""
+
+
+def test_chain_classify_aggregate_produces_suggested_strategy(tmp_path):
+    """Simula catena classify→aggregate: intractable.json ha suggested_strategy NON vuoto."""
+    import json
+    import aggregate_intractable as ai
+
+    src = "export class D { private mapLocale(r){ return r.x ?? '' } }"
+    classification = ci.classify(src, "")
+
+    # Costruisci il fragment come fa il coordinatore
+    fragment = [
+        {
+            "path": "src/dao/D.ts",
+            "reason": classification["classification"],
+            "suggested_strategy": classification["suggested_strategy"],
+        }
+    ]
+    merged = ai.merge([fragment])
+
+    assert len(merged["files"]) == 1
+    entry = merged["files"][0]
+    assert "suggested_strategy" in entry
+    assert entry["suggested_strategy"] != "", (
+        "suggested_strategy è vuoto: Block 9 mostrerebbe strategia vuota"
+    )
+
+
+# ---------------------------------------------------------------------------
 # m-1: precedenza multi-segnale
 # ---------------------------------------------------------------------------
 

@@ -12,7 +12,11 @@ from pathlib import Path
 def merge(fragments: list[list[dict]]) -> dict:
     seen: dict[str, dict] = {}
     for frag in fragments:
-        for item in frag or []:
+        if not isinstance(frag, list):
+            continue  # fragment malformato (non-lista) → nessuna entry spuria
+        for item in frag:
+            if not isinstance(item, dict):
+                continue  # item non-dict → ignora silenziosamente
             p = item.get("path")
             if p and p not in seen:
                 seen[p] = {
@@ -32,11 +36,15 @@ def write_intractable(repo: Path, fragments: list[list[dict]]) -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: aggregate_intractable.py <repo> [fragment...]"}),
+              file=sys.stderr)
+        sys.exit(1)
     repo = Path(sys.argv[1]).resolve()
     fragments = []
     for fp in sys.argv[2:]:
         try:
-            fragments.append(json.loads(Path(fp).read_text()))
+            fragments.append(json.loads(Path(fp).read_text(encoding="utf-8", errors="replace")))
         except Exception:
             continue
     merged = write_intractable(repo, fragments)
