@@ -53,10 +53,10 @@
 ### WS-5 — Esecuzione multi-agente parallela
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 18 | batch-plan schema multi-agente | `task-18-batch-plan-multiagent.md` | [PENDING] |
-| 19 | `references/phase-5-parallel.md` | `task-19-phase5-parallel-ref.md` | [PENDING] |
-| 20 | SKILL.md hooks Phase 3/5/7 parallel | `task-20-skill-parallel-hooks.md` | [PENDING] |
-| 21 | intractable.json aggregation + Block 9 | `task-21-intractable-aggregation.md` | [PENDING] |
+| 18 | batch-plan schema multi-agente | `task-18-batch-plan-multiagent.md` | [DONE] |
+| 19 | `references/phase-5-parallel.md` | `task-19-phase5-parallel-ref.md` | [DONE] |
+| 20 | SKILL.md hooks Phase 3/5/7 parallel | `task-20-skill-parallel-hooks.md` | [DONE] |
+| 21 | intractable.json aggregation + Block 9 | `task-21-intractable-aggregation.md` | [DONE] |
 
 ---
 
