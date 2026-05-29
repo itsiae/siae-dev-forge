@@ -28,10 +28,10 @@
 ### WS-2 — Generazione branch-aware (Phase 3 + Phase 5)
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 5 | `count_branch_operators.py` | `task-05-branch-operator-counter.md` | [PENDING] |
-| 6 | `classify_coverage_mode.py` | `task-06-coverage-mode.md` | [PENDING] |
-| 7 | Template `vitest-branch-matrix` + dual-fixture | `task-07-branch-matrix-template.md` | [PENDING] |
-| 8 | `plan_batches.py` schema + Phase 3 step 3b | `task-08-plan-batches-schema.md` | [PENDING] |
+| 5 | `count_branch_operators.py` | `task-05-branch-operator-counter.md` | [DONE] |
+| 6 | `classify_coverage_mode.py` | `task-06-coverage-mode.md` | [DONE] |
+| 7 | Template `vitest-branch-matrix` + dual-fixture | `task-07-branch-matrix-template.md` | [DONE] |
+| 8 | `plan_batches.py` schema + Phase 3 step 3b | `task-08-plan-batches-schema.md` | [DONE] |
 
 ### WS-3 — Tecniche avanzate + helper library (Phase 4 + Phase 5/7)
 | # | Task | File | Stato |
