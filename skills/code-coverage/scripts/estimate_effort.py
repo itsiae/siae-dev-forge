@@ -11,10 +11,13 @@ Sentinel pattern (Open question #1 overview): la skill bash emette il sentinel
 e si interrompe (exit code 3). Il wrapper Claude main loop legge il sentinel,
 invoca AskUserQuestion, scrive user-choice.json, e ri-lancia da Phase 2.5.
 
-Target contract (post-GAP-1):
-  - 40 = preset "quick-win"  (target_branch = 30)
-  - 70 = preset "full-bundle" (target_branch = 60)
-  - any integer N in [1, 95] = custom (target_branch = max(1, N - 10))
+Target contract:
+  Il valore inserito dall'utente e' il floor minimo e vale identico per line
+  e branch (target_branch == target_line). La CI threshold puo' alzarlo, mai
+  abbassarlo (vedi Phase 2.5).
+  - 40 = preset "quick-win"  (target_branch = 40)
+  - 70 = preset "full-bundle" (target_branch = 70)
+  - any integer N in [1, 95] = custom (target_branch = N)
 
 Usage:
     python3 estimate_effort.py <repo>           # emit sentinel
@@ -56,7 +59,9 @@ def validate_target(target_line):
 
 
 def derive_branch_target(target_line):
-    return max(1, target_line - 10)
+    # Il valore inserito dall'utente e' il floor minimo: vale identico per line
+    # e branch. La CI threshold (Phase 2.5) puo' alzarlo, mai abbassarlo.
+    return target_line
 
 
 def _interp_baseline(size_class: str, target: int) -> dict:
@@ -197,7 +202,7 @@ def _build_sentinel(repo_path: Path, size_class: str, env_data: dict,
             "A": {
                 "label": "Coverage 40% — quick win",
                 "target_line": 40,
-                "target_branch": 30,
+                "target_branch": 40,
                 "focus": ["POJO", "utility", "mapper", "enum", "low-branch service"],
                 "estimated_wallclock_min_p50": estimate_a["p50"],
                 "estimated_wallclock_min_p90": estimate_a["p90"],
@@ -205,7 +210,7 @@ def _build_sentinel(repo_path: Path, size_class: str, env_data: dict,
             "B": {
                 "label": "Coverage 70% — full bundle",
                 "target_line": 70,
-                "target_branch": 60,
+                "target_branch": 70,
                 "focus": ["service layer con branch", "DAO non-Hibernate",
                           "edge cases setter", "mapper bidirezionali"],
                 "estimated_wallclock_min_p50": estimate_b["p50"],

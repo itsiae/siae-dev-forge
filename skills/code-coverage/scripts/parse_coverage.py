@@ -480,12 +480,16 @@ def _glob_to_regex(pattern: str) -> str:
 
 
 def assign_priority_and_threshold(
-    path: str, priority_rules: dict | None
+    path: str, priority_rules: dict | None, user_floor: float = 0.0
 ) -> tuple[str | None, float, float]:
     """Ritorna (priority, line_threshold, branch_threshold).
 
-    branch_threshold viene letto da `min_branch_pct` con fallback a `min_coverage_pct - 10`
-    per backward-compat con priority-rules.json senza il nuovo campo.
+    branch_threshold viene letto da `min_branch_pct` con fallback a `min_coverage_pct`
+    (branch == line floor) per priority-rules.json senza il campo esplicito.
+
+    `user_floor` e' il valore inserito dall'utente (target_line): e' il MINIMO per
+    ogni soglia. effective = max(default_documentato, user_floor), sia line sia
+    branch. user_floor=0.0 (default) → comportamento invariato (backward-compat).
 
     Classification:
       Pass 1 — match diretto su ``parent_dirs`` (basename del dir contenitore,
@@ -496,10 +500,14 @@ def assign_priority_and_threshold(
         ``**/service/**`` matcha namespace ancestor ``it/siae/services/foo/bar.java``
         classificando 90% file come P1 → floor enforcement loop esplode.
     """
+    def _floor(value: float) -> float:
+        return max(value, user_floor)
+
     default_line = DEFAULT_THRESHOLDS["default"]
-    default_branch = max(0.0, default_line - 10.0)
+    # branch == line floor: il valore line vale anche per la branch quando non
+    # c'e' un min_branch_pct esplicito (coerente col contratto user-choice).
     if not priority_rules:
-        return None, default_line, default_branch
+        return None, _floor(default_line), _floor(default_line)
     levels = priority_rules.get("priority_levels", {})
 
     # parent dir basename (immediato sopra il file)
@@ -512,8 +520,8 @@ def assign_priority_and_threshold(
             level = levels.get(level_name, {})
             if parent in level.get("parent_dirs", []):
                 line_thr = float(level.get("min_coverage_pct", default_line))
-                branch_thr = float(level.get("min_branch_pct", max(0.0, line_thr - 10.0)))
-                return level_name, line_thr, branch_thr
+                branch_thr = float(level.get("min_branch_pct", line_thr))
+                return level_name, _floor(line_thr), _floor(branch_thr)
     # Pass 2: path_patterns fallback ANCORATO agli ultimi 2 segment.
     # "modules/service/lambda/src/api/uptime.ts" -> window = "api/uptime.ts"
     # cosi' "**/service/**" NON triggera P1 su file con penultimate ancestor != "service".
@@ -526,9 +534,9 @@ def assign_priority_and_threshold(
             regex = _glob_to_regex(pattern)
             if re.search(regex, anchor_window):
                 line_thr = float(level.get("min_coverage_pct", default_line))
-                branch_thr = float(level.get("min_branch_pct", max(0.0, line_thr - 10.0)))
-                return level_name, line_thr, branch_thr
-    return None, default_line, default_branch
+                branch_thr = float(level.get("min_branch_pct", line_thr))
+                return level_name, _floor(line_thr), _floor(branch_thr)
+    return None, _floor(default_line), _floor(default_line)
 
 
 def load_priority_rules(skill_root: Path) -> dict | None:
@@ -542,7 +550,41 @@ def load_priority_rules(skill_root: Path) -> dict | None:
         return None
 
 
-def parse(framework: str, input_path: Path, priority_rules: dict | None) -> dict:
+def resolve_user_floor(input_path: Path, explicit: float | None) -> float:
+    """Risolve il floor utente (target_line). Precedenza:
+      1. `explicit` da --min-floor (se >= 0)
+      2. `target_line` da `.code-coverage/user-choice.json`, cercato risalendo
+         le directory a partire da `input_path`
+      3. 0.0 (nessun floor → backward-compat)
+
+    Il valore risolto viene clampato a [0, 95] (range coerente con la validazione
+    [1,95] del sentinel): difende da `user-choice.json` corrotto o `--min-floor`
+    fuori range, evitando che un valore anomalo (es. 9999) alzi ogni soglia
+    facendo fallire silenziosamente tutti i moduli. Negativo → 0 (nessun floor).
+    """
+    floor = 0.0
+    if explicit is not None and explicit >= 0:
+        floor = float(explicit)
+    else:
+        start = input_path if input_path.is_dir() else input_path.parent
+        for base in [start, *start.parents]:
+            uc = base / ".code-coverage" / "user-choice.json"
+            if uc.is_file():
+                try:
+                    data = json.loads(uc.read_text(encoding="utf-8", errors="ignore"))
+                    floor = float(data.get("target_line", 0.0) or 0.0)
+                except (json.JSONDecodeError, OSError, ValueError, TypeError):
+                    floor = 0.0
+                break
+    return max(0.0, min(95.0, floor))
+
+
+def parse(
+    framework: str,
+    input_path: Path,
+    priority_rules: dict | None,
+    user_floor: float = 0.0,
+) -> dict:
     if not input_path.exists():
         return {
             "global_pct": 0.0,
@@ -617,7 +659,9 @@ def parse(framework: str, input_path: Path, priority_rules: dict | None) -> dict
     enriched = []
     failing = []
     for m in modules:
-        pri, line_threshold, branch_threshold = assign_priority_and_threshold(m["path"], priority_rules)
+        pri, line_threshold, branch_threshold = assign_priority_and_threshold(
+            m["path"], priority_rules, user_floor
+        )
         line_ok = m["lines_pct"] >= line_threshold
         # Gate branch: skip se parser non emette branch, OPPURE se il modulo
         # non ha branch testabili (es. data class, getter-only). Distinzione critica:
@@ -667,6 +711,7 @@ def parse(framework: str, input_path: Path, priority_rules: dict | None) -> dict
         "modules": enriched,
         "failing": failing,
         "framework": framework,
+        "user_floor": user_floor,
         "error": None,
     }
 
@@ -696,9 +741,12 @@ def _build_view_repair(full: dict) -> dict:
     modules = full.get("modules", [])
     global_pct = full.get("global_pct", 0.0)
     branch_pct = full.get("global_branch_pct", 0.0)
+    user_floor = float(full.get("user_floor", 0.0))
 
-    # threshold_met: il modulo aggregato passa (lines>=70, default)
-    threshold_met = global_pct >= DEFAULT_THRESHOLDS["default"]
+    # threshold_met: il modulo aggregato passa. Global floor = max(default, user_floor):
+    # il valore inserito dall'utente e' il minimo, mai abbassa il floor documentato.
+    global_floor = max(DEFAULT_THRESHOLDS["default"], user_floor)
+    threshold_met = global_pct >= global_floor
 
     # Sub-threshold modules: status=FAIL
     sub_threshold = [m for m in modules if m.get("status") == "FAIL"]
@@ -713,10 +761,12 @@ def _build_view_repair(full: dict) -> dict:
     non_p1_sub = [m for m in sub_threshold if m.get("priority") != "P1"]
     final_sub = [_trim_module_for_repair(m) for m in p1_sub + non_p1_sub[:20]]
 
-    # P1 floor violators (line < 80)
+    # P1 floor violators (line < soglia P1). Soglia = max(80, user_floor): il valore
+    # utente e' il minimo anche per il floor P1.
+    p1_floor = max(80.0, user_floor)
     p1_violators = [
         m for m in modules
-        if m.get("priority") == "P1" and float(m.get("lines_pct", 100.0)) < 80.0
+        if m.get("priority") == "P1" and float(m.get("lines_pct", 100.0)) < p1_floor
     ]
     p1_violators.sort(key=lambda m: float(m.get("lines_pct", 0.0)))
     p1_violators = [_trim_module_for_repair(m) for m in p1_violators[:20]]
@@ -739,11 +789,12 @@ def _build_view_summary(full: dict) -> dict:
     """Payload ultra-ridotto (~200 tok): solo global + counts."""
     modules = full.get("modules", [])
     count_sub_thr = sum(1 for m in modules if m.get("status") == "FAIL")
+    global_floor = max(DEFAULT_THRESHOLDS["default"], float(full.get("user_floor", 0.0)))
     return {
         "global": {
             "lines_pct": round(full.get("global_pct", 0.0), 2),
             "branches_pct": round(full.get("global_branch_pct", 0.0), 2),
-            "threshold_met": full.get("global_pct", 0.0) >= DEFAULT_THRESHOLDS["default"],
+            "threshold_met": full.get("global_pct", 0.0) >= global_floor,
         },
         "count_modules": len(modules),
         "count_sub_threshold": count_sub_thr,
@@ -792,10 +843,22 @@ def main() -> int:
             "'summary' (~200 tok, solo global+counts) per pre-check"
         ),
     )
+    parser.add_argument(
+        "--min-floor",
+        type=float,
+        default=None,
+        help=(
+            "Floor minimo (target_line utente): e' il MINIMO per ogni soglia "
+            "(line, branch, P1/P2/P3, global). effective = max(default, min-floor). "
+            "Se omesso, viene letto da .code-coverage/user-choice.json (target_line); "
+            "fallback 0.0 = nessun floor."
+        ),
+    )
     args = parser.parse_args()
 
     priority_rules = load_priority_rules(args.skill_root)
-    result = parse(args.framework, args.input, priority_rules)
+    user_floor = resolve_user_floor(args.input, args.min_floor)
+    result = parse(args.framework, args.input, priority_rules, user_floor)
 
     if args.view == "repair":
         result = _build_view_repair(result)

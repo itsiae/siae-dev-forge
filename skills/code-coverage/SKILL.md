@@ -38,11 +38,14 @@ LARGE/VERY_LARGE con pending_batches >= 2, oppure MEDIUM con loc > 15000 e pendi
 Trigger e protocollo in `references/phase-5-parallel.md`. Il coordinatore non legge i sorgenti: li leggono i subagent.
 3. **Determinism over creativity.** `assets/stack-matrix.json` is the single source of truth for framework selection.
 4. **Vitest-first for JS/TS, with auto-migration from Jest.** When the project uses Jest but Vitest is compatible (closed list of incompatibility signals I1..I10 in `assets/vitest-jest-compat.json`), Phase 4b migrates `jest.config.*`, `package.json` scripts/devDeps, and test files (codemod) to Vitest. Jest is retained ONLY when ≥1 signal in I1..I9 fires, or I10 user opt-out is active.
-5. **Coverage targets line E branch separati.** Global floor 70% line. Branch target
-   = `user-choice.json.target_branch` (può essere alzato da soglia CI, vedi Phase 2.5).
-   Per file con `coverage_mode == branch-priority` (branch-heavy o branch lontana dal
-   target) usa il template branch-matrix: la line non basta, conta la branch matrix.
-   P1 floor ≥ 80% / P2 ≥ 70% / P3 ≥ 60% enforced (vedi phase-5-generation.md).
+5. **Il valore utente è il MINIMO per ogni soglia.** `branch == line` (nessun gap):
+   `target_branch == target_line`. Il valore inserito (`user-choice.json.target_line`)
+   è il floor minimo applicato ovunque: `effective = max(default_documentato, target_line)`.
+   Default documentati come floor: global 70% · P1 80% · P2 70% · P3 60%. Se l'utente
+   inserisce 40 nessuno sale; se inserisce 83 tutte le soglie (global, P1/P2/P3, line E
+   branch) salgono a 83. La soglia CI può alzare ulteriormente, mai abbassare (Phase 2.5).
+   `parse_coverage.py` riceve il floor via `--min-floor <target_line>` (Phase 6).
+   Per file con `coverage_mode == branch-priority` usa il template branch-matrix.
 6. **Progressive disclosure.** Load `references/phase-N.md` only on entry to phase N. Phase-1/6 are bash libs (`lib/phase{1,6}-*.sh`); Phase-2/4 are inlined here; Phase-3/5/7 are refs.
 7. **State persistence + cache.** Outputs in `.code-coverage/`. `stack.json`/`size.json`/`env.json` cached vs manifest mtime. Templates cached via `lib/template-cache.sh`. Schema: `lib/state-schema.json`.
 
@@ -302,10 +305,10 @@ bash skills/code-coverage/lib/sentinel-handshake.sh read <repo>
 
 # 4. Scrive user-choice.json con la scelta
 bash skills/code-coverage/lib/sentinel-handshake.sh write <repo> 40
-# Scrive user-choice.json con target_line=40, target_branch=30, p50/p90 dalla sentinel, timestamp
+# Scrive user-choice.json con target_line=40, target_branch=40, p50/p90 dalla sentinel, timestamp
 ```
 
-Lo script accetta target_line come intero in `[1, 95]` (invalid → exit 1). I preset `40` (quick-win) e `70` (full-bundle) usano `target_branch` fisso (30, 60); per i custom `target_branch = max(1, N - 10)`.
+Lo script accetta target_line come intero in `[1, 95]` (invalid → exit 1). Il valore inserito è il **floor minimo** e vale identico per line e branch: `target_branch == target_line` (preset `40`/`70` e custom). La soglia CI (Phase 2.5) può alzare il branch target, mai abbassarlo sotto il valore utente.
 
 ### Interactive prompt
 

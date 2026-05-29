@@ -226,7 +226,7 @@
       "type": "object",
       "properties": {
         "target_line": {"type": "integer", "description": "Target linee effettivo (max tra scelta utente e CI threshold)."},
-        "target_branch": {"type": "integer", "description": "Target branch effettivo (max tra scelta utente e CI threshold)."},
+        "target_branch": {"type": "integer", "description": "Target branch effettivo. Floor utente == target_line (branch == line); la CI threshold puo' alzarlo, mai abbassarlo (max tra floor utente e CI threshold)."},
         "size_class": {"type": ["string", "null"], "description": "Classe dimensione repo da pending-user-choice.json."},
         "estimated_wallclock_min_p50": {"type": ["number", "null"]},
         "estimated_wallclock_min_p90": {"type": ["number", "null"]},

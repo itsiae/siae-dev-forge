@@ -149,27 +149,31 @@ def test_validate_target_rejects_non_integer():
 
 
 def test_derive_branch_target_preset_quick_win():
+    """Il valore inserito e' il floor: branch == line anche per il preset 40."""
     from estimate_effort import derive_branch_target
-    assert derive_branch_target(40) == 30
+    assert derive_branch_target(40) == 40
 
 
 def test_derive_branch_target_preset_full_bundle():
+    """Il valore inserito e' il floor: branch == line anche per il preset 70."""
     from estimate_effort import derive_branch_target
-    assert derive_branch_target(70) == 60
+    assert derive_branch_target(70) == 70
 
 
 def test_derive_branch_target_custom():
+    """Per i custom branch == line: il numero digitato e' il minimo garantito."""
     from estimate_effort import derive_branch_target
-    assert derive_branch_target(55) == 45
-    assert derive_branch_target(80) == 70
+    assert derive_branch_target(55) == 55
+    assert derive_branch_target(80) == 80
+    assert derive_branch_target(83) == 83
 
 
-def test_derive_branch_target_floor_at_one():
-    """target_line <= 10 deve produrre target_branch >= 1 (floor a 1)."""
+def test_derive_branch_target_low_values():
+    """Anche per valori bassi branch == line (nessuna sottrazione)."""
     from estimate_effort import derive_branch_target
     assert derive_branch_target(1) == 1
-    assert derive_branch_target(5) == 1
-    assert derive_branch_target(10) == 1
+    assert derive_branch_target(5) == 5
+    assert derive_branch_target(10) == 10
 
 
 def test_estimate_custom_target_no_longer_raises():
