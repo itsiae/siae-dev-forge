@@ -6,7 +6,19 @@
   "properties": {
     "stack.json": {
       "description": "Output di detect_stack.py — invalidato da package.json/pom.xml/Cargo.toml/pyproject.toml/build.gradle/pubspec.yaml/go.mod mtime. Field `pre_existing_coverage_pct` deriva da GitHub repository variable TEST_COVERAGE_PERCENTAGE (var assente → 0.0); `pre_existing_coverage_source` ∈ {github_variable, missing}.",
-      "ref": "scripts/detect_stack.py output contract"
+      "ref": "scripts/detect_stack.py output contract",
+      "properties": {
+        "pre_existing_branch_pct": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Branch coverage pre-esistente da coverage-summary.json (formato V8/Istanbul). 0.0 se non disponibile."
+        },
+        "line_branch_delta": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Differenza pre_existing_coverage_pct - pre_existing_branch_pct. null se branch non disponibile (V8 branches.pct=0 o summary assente)."
+        }
+      }
     },
     "size.json": {
       "description": "Output di estimate_size.py --file-list — invalidato dallo stesso pinnacle file di stack.json",
@@ -17,8 +29,58 @@
       "ref": "scripts/validate_env.py output contract"
     },
     "batch-plan.json": {
-      "description": "Output di plan_batches.py — TTL session",
-      "ref": "scripts/plan_batches.py output contract (PR8)"
+      "description": "Output di plan_batches.py — TTL session. Ogni batch include i campi multi-agente: status (enum pending|in-progress|agent-timeout|partial|failed|completed, default pending), assigned_to (string|null), completed_by (string|null), completed_at (string ISO|null).",
+      "ref": "scripts/plan_batches.py output contract (PR8)",
+      "type": "object",
+      "properties": {
+        "batches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["pending", "in-progress", "agent-timeout", "partial", "failed", "completed"],
+                "default": "pending",
+                "description": "Stato esecuzione batch nel contesto multi-agente."
+              },
+              "assigned_to": {
+                "type": ["string", "null"],
+                "description": "ID subagent assegnato a questo batch. null se non ancora assegnato."
+              },
+              "completed_by": {
+                "type": ["string", "null"],
+                "description": "ID subagent che ha completato questo batch. null se non completato."
+              },
+              "completed_at": {
+                "type": ["string", "null"],
+                "description": "Timestamp ISO-8601 UTC completamento batch. null se non completato."
+              }
+            }
+          }
+        }
+      }
+    },
+    "intractable.json": {
+      "description": "File marcati intractable da subagent/Phase 7 (aggregati dal coordinatore). Surfacati in Block 9.",
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "reason": {"type": "string"},
+              "suggested_strategy": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "agent-N.log": {
+      "description": "Log temporaneo per subagent N (0-3): contiene i decisions_log_fragment. Merged in decisions.log dal coordinatore al join, poi rimosso.",
+      "type": "string"
     },
     "coverage-summary.json": {
       "description": "Output framework --coverage.reporter=json-summary — TTL session",
@@ -136,7 +198,46 @@
       "type": "object",
       "properties": {
         "force_jest": {"type": "boolean"},
-        "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."}
+        "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."},
+        "force_sequential": {"type": "boolean", "description": "Kill-switch per il parallel multi-agent dispatch (phase-5-parallel.md). Se true, forza il path sequenziale anche per LARGE/VERY_LARGE con pending_batches >= 2. Utile per debug o ambienti dove il tool Agent non è disponibile."}
+      }
+    },
+    "ci-thresholds.json": {
+      "description": "Output di detect_ci_thresholds.py (Phase 1 parallel). Soglie coverage rilevate dal CI workflow locale o remoto. Scritto da phase1-discover.sh. TTL session.",
+      "ref": "scripts/detect_ci_thresholds.py output contract",
+      "type": "object",
+      "properties": {
+        "COVERAGE_LINES": {"type": "number", "description": "Soglia percentuale linee (max tra tutti i file CI)."},
+        "COVERAGE_BRANCHES": {"type": "number", "description": "Soglia percentuale branch (max tra tutti i file CI)."},
+        "COVERAGE_STATEMENTS": {"type": "number", "description": "Soglia percentuale statements (max tra tutti i file CI)."},
+        "COVERAGE_FUNCTIONS": {"type": "number", "description": "Soglia percentuale funzioni (max tra tutti i file CI)."},
+        "COVERAGE_THRESHOLD": {"type": "number", "description": "Soglia globale generica (max tra tutti i file CI)."},
+        "source": {"type": "string", "description": "Nome file workflow sorgente della soglia, o 'remote:<slug>/<wf>@<ref>' se reusable remoto, o 'github-variable:<VAR>' se da Actions variable."},
+        "working_directory_issues": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Lista problemi working-directory rilevati (reusable caller senza working-directory in sub-workspace)."
+        }
+      }
+    },
+    "user-choice.json": {
+      "description": "Output di sentinel-handshake.sh write/prompt. Scelta utente target coverage. Prodotto da Task 10. TTL session.",
+      "ref": "lib/sentinel-handshake.sh cmd_write output contract",
+      "type": "object",
+      "properties": {
+        "target_line": {"type": "integer", "description": "Target linee effettivo (max tra scelta utente e CI threshold)."},
+        "target_branch": {"type": "integer", "description": "Target branch effettivo (max tra scelta utente e CI threshold)."},
+        "size_class": {"type": ["string", "null"], "description": "Classe dimensione repo da pending-user-choice.json."},
+        "estimated_wallclock_min_p50": {"type": ["number", "null"]},
+        "estimated_wallclock_min_p90": {"type": ["number", "null"]},
+        "user_choice_timestamp": {"type": "string", "description": "ISO-8601 UTC timestamp scrittura."},
+        "source": {"type": "string", "enum": ["sentinel_handshake"]},
+        "preset": {"type": "string", "enum": ["quick-win", "full-bundle", "custom"]},
+        "user_requested_line": {"type": "integer", "description": "Valore linee scelto dall'utente prima dell'override CI."},
+        "user_requested_branch": {"type": "integer", "description": "Valore branch derivato dalla scelta utente prima dell'override CI."},
+        "ci_threshold_override": {"type": "boolean", "description": "True se la CI impone soglie superiori alla scelta utente."},
+        "ci_thresholds_source": {"type": "string", "description": "Fonte soglie CI (da ci-thresholds.json.source); 'none' se assente."},
+        "high_branch_gap": {"type": "boolean", "description": "True se line_branch_delta da stack.json supera 15 punti percentuali."}
       }
     }
   },

@@ -12,6 +12,13 @@ if [ ! -f "$FILE" ]; then
   exit 1
 fi
 
+# Template files (living under a templates/ directory) are source templates — their
+# {{PLACEHOLDER}} tokens are intentional and must NOT be treated as leaks.
+if echo "$FILE" | grep -qE '(^|/)templates/'; then
+  echo "OK: template file — placeholders are intentional in $FILE"
+  exit 0
+fi
+
 MATCHES=$(grep -nE '\{\{[[:space:]]*[[:alnum:]_.\-]+[[:space:]]*\}\}' "$FILE" || true)
 
 if [ -n "$MATCHES" ]; then

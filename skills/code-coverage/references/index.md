@@ -12,6 +12,7 @@ script/asset/lib/template citato in `SKILL.md`.
 | `references/phase-5-generation.md` | 5 | Pre-write gate, ordering tree, AAA pattern, batch ceilings, few-shot trigger |
 | `references/phase-7-repair.md` | 7 | Categorize → group → fix → progress guard → early-abort |
 | `references/java-siae-quirks.md` | 4 | **Conditional** (loaded ONLY if Java/Maven detected): aggregator, JDK/Lombok matrix, Surefire, Jacoco quirks |
+| `references/phase-5-parallel.md` | 5 | Multi-agent dispatch (≤4 Sonnet): trigger, assegnazione, prompt, OUTPUT CONTRACT, join |
 
 > Phase 2 (Strategy) and Phase 4 (Environment base) are inlined in `SKILL.md` — small enough that a ref round-trip was net-negative.
 
@@ -51,6 +52,8 @@ script/asset/lib/template citato in `SKILL.md`.
 | `scripts/select_command.py` | Risolve framework→stack + selezione build-system/OS → cov_cmd/report_path/format |
 | `scripts/detect_jest_incompat.py` | Phase 1 parallel: evaluates closed list I1..I10 → `.code-coverage/jest-compat.json` (decision: vitest-default / vitest-migrate / jest-incompat / jest-forced) |
 | `scripts/migrate_jest_to_vitest.py` | Phase 4b conditional: atomic Jest→Vitest migration (dirty-tree refuse, snapshot, codemod, per-PM install/rollback, smoke verify) |
+| `scripts/aggregate_intractable.py` | Phase 5 coordinatore: fonde i fragment `intractable_flags` (subagent + Phase 7) in `.code-coverage/intractable.json` con dedup su path (primo vince). Usage: `aggregate_intractable.py <repo> [fragment.json ...]` |
+| `scripts/classify_intractable.py` | Phase 7 guard: analisi statica TS/JS per classificare un file intractable (NEEDS_REFLECTION / NEEDS_CLASS_MOCK / NEEDS_TZ_MOCK / INTRACTABLE_DB_DEPENDENT / INTRACTABLE_UNKNOWN). Usage: `classify_intractable.py <source_file> [<spec_file>]` |
 
 ## Templates
 

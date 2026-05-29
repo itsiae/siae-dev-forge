@@ -219,6 +219,22 @@ Each public function or method in the target module requires:
 For functions with multiple branches (if/switch), add one test per branch
 that represents a distinct business rule.
 
+### branch-matrix mode (coverage_mode == "branch-priority")
+
+Quando `batch-plan.json.files[].coverage_mode == "branch-priority"`, usa il template
+`templates/vitest-branch-matrix.template.ts` invece del template standard. Per OGNI
+operatore `??` / `||` / `&&` / `?:` riportato in `.code-coverage/branch-count/<file>.json`
+genera 3 test: ramo null, ramo undefined, ramo present. La line coverage è gratis;
+l'obiettivo è la branch matrix.
+
+### Dual-Fixture Rule (branch_operator_count > 40)
+
+Se il file ha `branch_operator_count > 40` (tipico dei mapper con molti `?? ""`),
+genera DUE fixture:
+- `minimalFixture = {}` → esercita tutti i rami fallback;
+- `fullFixture` con TUTTI i campi opzionali valorizzati → esercita tutti i rami value-present.
+Aggiungi un test `it('with all optional fields populated', ...)` che usa `fullFixture`.
+
 ---
 
 ## Mocking patterns
@@ -334,3 +350,15 @@ Test files are placed in:
 - Go: same package directory as source
 - Rust: use inline `#[cfg(test)] mod tests { use super::*; ... }` for unit tests that need access to private or `pub(crate)` items. Use a separate `tests/<module>.rs` file only for integration tests that exercise the public API.
 - Flutter/Dart: in `test/` directory at the package root, mirroring the `lib/` structure. Example: `lib/services/payment_service.dart` → `test/services/payment_service_test.dart`.
+
+---
+
+## Test Helper Auto-Import
+
+In Phase 4, se assenti, vengono materializzati in `<repo>/<src>/__tests__/helpers/`
+i template da `templates/helpers/` (gate PRESERVE_EXISTING: non sovrascrivere helper esistenti).
+Ogni spec generato importa l'helper rilevante:
+- `scan_tz_usage.py.uses_tz` → `import { mockTz } from '...helpers/mockTz'`
+- `scan_class_instantiations.py` non vuoto → `import { mockClass } from '...helpers/mockClass'`
+- DAO/Knex → `import { mockKnex } from '...helpers/mockKnex'`
+- file con `branch_operator_count > 40` → `import { buildFixtures } from '...helpers/builderFactory'`

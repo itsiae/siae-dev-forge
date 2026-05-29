@@ -33,9 +33,16 @@ Reading any ref out-of-phase is a context budget violation. Each ref MUST be rea
 
 1. **Autonomous execution.** Invocation = blanket approval for read/write/install in `.code-coverage/`, test dirs, `vitest.config.ts` (create if absent), `jest.config.*` (delete during Phase 4b migration with snapshot), `package.json` `scripts`/`devDependencies` keys only, and existing `*.{test,spec}.*` files for Jest→Vitest token transforms during Phase 4b. Never modify production source. Decisions → `.code-coverage/decisions.log`. ZERO prompts.
 2. **Context-safety over completeness.** Batch sizes per tier (T1=3, T2=2, T3=1, T4=1 — `assets/priority-rules.json.ordering_constants`). LARGE/VERY_LARGE → persist `batch-plan.json`, resume cross-session. Batch tool calls (Write) MUST execute parallel in same assistant turn — see Phase 5 batch rule.
+LARGE/VERY_LARGE con pending_batches >= 2, oppure MEDIUM con loc > 15000 e pending_batches >= 3
+→ parallel multi-agent dispatch (fino a 4 subagent Sonnet, ognuno owner di batch disgiunti).
+Trigger e protocollo in `references/phase-5-parallel.md`. Il coordinatore non legge i sorgenti: li leggono i subagent.
 3. **Determinism over creativity.** `assets/stack-matrix.json` is the single source of truth for framework selection.
 4. **Vitest-first for JS/TS, with auto-migration from Jest.** When the project uses Jest but Vitest is compatible (closed list of incompatibility signals I1..I10 in `assets/vitest-jest-compat.json`), Phase 4b migrates `jest.config.*`, `package.json` scripts/devDeps, and test files (codemod) to Vitest. Jest is retained ONLY when ≥1 signal in I1..I9 fires, or I10 user opt-out is active.
-5. **Coverage targets per-priority; global floor 70%.** P1>=80%, P2>=70%, P3>=60%, global>=70% (`assets/priority-rules.json.min_coverage_pct`). P1 at 75% = FAIL. Repair max 3 iter; best-effort if exhausted.
+5. **Coverage targets line E branch separati.** Global floor 70% line. Branch target
+   = `user-choice.json.target_branch` (può essere alzato da soglia CI, vedi Phase 2.5).
+   Per file con `coverage_mode == branch-priority` (branch-heavy o branch lontana dal
+   target) usa il template branch-matrix: la line non basta, conta la branch matrix.
+   P1 floor ≥ 80% / P2 ≥ 70% / P3 ≥ 60% enforced (vedi phase-5-generation.md).
 6. **Progressive disclosure.** Load `references/phase-N.md` only on entry to phase N. Phase-1/6 are bash libs (`lib/phase{1,6}-*.sh`); Phase-2/4 are inlined here; Phase-3/5/7 are refs.
 7. **State persistence + cache.** Outputs in `.code-coverage/`. `stack.json`/`size.json`/`env.json` cached vs manifest mtime. Templates cached via `lib/template-cache.sh`. Schema: `lib/state-schema.json`.
 
@@ -106,7 +113,13 @@ Snippet contract: missing/malformed `user-choice.json` or `stack.json` → silen
 If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
 
 ### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
-If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
+If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py --size <repo>/.code-coverage/size.json --stack <repo>/.code-coverage/stack.json --out <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
+Valuta il trigger parallelo (vedi references/phase-5-parallel.md "Trigger"). Logga:
+"[phase3] parallel_mode=enabled agents=N" oppure "[phase3] parallel_mode=disabled reason=...".
+
+**Prediction:** `python3 skills/code-coverage/scripts/predict_coverage.py <repo>` →
+coverage-prediction.json. Includi nel messaggio pre-Phase-4: "[prediction]
+branch_p7=<Y>% confidence=<C> <risk_flag>". Non-bloccante: se fallisce, Phase 3 continua.
 
 ### Phase 4 — Environment
 
@@ -170,12 +183,28 @@ Lazy-loaded reference: `references/phase-4b-migration.md` (loaded ONLY if any wo
 
 Output: `.code-coverage/install-log.txt`, `.code-coverage/lockfile.bak`, `decisions.log` updated.
 
+**Phase 4 — Test helpers:** se `<repo>/<src>/__tests__/helpers/` non contiene gli helper,
+copia da `templates/helpers/*.ts` (PRESERVE_EXISTING: skip se già presenti). Log in decisions.log.
+
+**Phase 4 — ICU probe:** se un file under test ha `scan_tz_usage.py.uses_tz==true`, verifica
+che il runtime Node abbia ICU full: `node -e "new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome'}).format(new Date())"`.
+Se fallisce con RangeError → forza l'import di `mockTz` negli spec TZ-dipendenti (il mock
+bypassa Intl) e logga `[phase4] ICU probe failed → mockTz forced` in decisions.log.
+
 ### Phase 5b — Coverage Probe (handled in Phase 1)
 
 Triggered automatically by `phase1-discover.sh` when `test_files_count > 0` AND `module_coverage == []`. Produces `.code-coverage/coverage-report.json` so D1 fires TIER-FIRST in Phase 5. No LLM action required.
 
 ### Phase 5 — Generation
-Load `references/phase-5-generation.md`. **Step 0 hard gate (PRESERVE_EXISTING)** + `bash lib/placeholder-check.sh <file>` before every write. Template hard-cache via `lib/template-cache.sh`. Ordering (D1 conditional TIER-FIRST vs P-TIER) + P1 floor enforcement in the ref. Lazy-load `assets/few-shot-e2e.md` (first batch) and `assets/anti-patterns.md` (on any fail).
+If parallel_mode == enabled:
+  - Verifica che il tool Agent sia disponibile (altrimenti fallback sequenziale + log).
+  - Load `references/phase-5-parallel.md`.
+  - Esegui il Dispatch Protocol (P1-P5): assegna batch→agenti, dispatcha le Agent call
+    Sonnet nello STESSO turno, attendi, join, re-queue partial/failed.
+  - SKIP il loop sequenziale standard (gira dentro i subagent).
+  - Procedi a Phase 6 (coordinatore).
+Else:  *(solo sequential path — in parallel mode è caricato dai subagent)*
+  Load `references/phase-5-generation.md`. **Step 0 hard gate (PRESERVE_EXISTING)** + `bash lib/placeholder-check.sh <file>` before every write. Template hard-cache via `lib/template-cache.sh`. Ordering (D1 conditional TIER-FIRST vs P-TIER) + P1 floor enforcement in the ref. Lazy-load `assets/few-shot-e2e.md` (first batch) and `assets/anti-patterns.md` (on any fail).
 
 ### Phase 6 — Coverage
 ```bash
@@ -184,7 +213,11 @@ bash skills/code-coverage/lib/phase6-coverage.sh "<repo>"
 If all P1>=80%, P2>=70%, P3>=60%, global>=70% → SKIP Phase 7 → OUTPUT.
 
 ### Phase 7 — Repair
-See `references/phase-7-repair.md` (categorize → group → systemic-fix vs per-file → progress guard → autonomous early-abort). Max 3 iter, max 1 full coverage run/iter.
+See `references/phase-7-repair.md` (categorize → group → systemic-fix vs per-file → progress guard → autonomous early-abort). Max iter = min(10, max(3, ceil(batch_plan.batches.length × 1.5))) — letto da
+.code-coverage/batch-plan.json (fallback 3). Max 1 full coverage run/iter.
+If parallel_mode == enabled: i fix per-file con >= 2 file di categorie diverse sono
+dispatchati a repair-agent Sonnet in parallelo (vedi phase-5-parallel.md "Phase 7 parallel
+repair"). Systemic fix e full coverage run restano sequenziali (coordinatore).
 
 ## OUTPUT — Conditional Blocks
 
@@ -194,6 +227,11 @@ Conditional (programmatic, NEVER prompt):
 - Block 4 (`unsupported_groups`): only if non-empty.
 - Block 6 (`Dependency Install Commands`): only if `validate_env.py.install_commands` non-empty.
 - Block 9 (`Next Actions`): if any module sub-threshold OR follow-up batch active OR PRESERVE_EXISTING entries OR manual tests suggested.
+  - Include i file di `.code-coverage/intractable.json` con la rispettiva `suggested_strategy`. Formato:
+    "Intractable (manual): src/dao/X.ts → reflection per private methods; src/dao/Y.ts → requires DB fixture (skip in unit)."
+    Ogni entry `files[]` in intractable.json è resa come `"<path> → <suggested_strategy>"` (reason in parentesi se utile).
+  - Aggiungi anche: follow-up batch attivo (pending_batches), PRESERVE_EXISTING entries (file già presenti saltati), manual tests suggeriti.
+  - Se `.code-coverage/intractable.json` è assente o `files[]` è vuoto, ometti la sezione intractable.
 
 ## Java/Maven/SIAE quirks (progressive disclosure)
 

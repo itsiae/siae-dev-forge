@@ -275,3 +275,22 @@ def test_required_framework_jest_when_overrides_force_no_compat(tmp_path):
         "force_jest": True, "force_jest_reason": "compliance",
     }))
     assert _detect_required_framework(tmp_path) == "jest"
+
+
+def test_resolves_framework_from_manifest_root(tmp_path):
+    """BUG-FIX (task-04): _detect_required_framework must read the workspace
+    key matching manifest_root (e.g. "modules/service/lambda-handler"), NOT
+    the hardcoded "." key. When manifest_root workspace decision is
+    "jest-incompat" but "." decision is "vitest", must return "jest"."""
+    import validate_env
+    cc = tmp_path / ".code-coverage"
+    cc.mkdir()
+    # decision jest è sul sub-workspace, NON su "."
+    (cc / "stack.json").write_text('{"manifest_root": "modules/service/lambda-handler"}')
+    (cc / "jest-compat.json").write_text(
+        '{"workspaces": {"modules/service/lambda-handler": {"decision": "jest-incompat"}, ".": {"decision": "vitest"}}}'
+    )
+    (tmp_path / "modules" / "service" / "lambda-handler").mkdir(parents=True)
+    (tmp_path / "modules" / "service" / "lambda-handler" / "package.json").write_text('{"name": "x"}')
+    fw = validate_env._detect_required_framework(tmp_path)
+    assert fw == "jest"  # deve leggere il workspace manifest_root, non "."
