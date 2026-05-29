@@ -29,8 +29,58 @@
       "ref": "scripts/validate_env.py output contract"
     },
     "batch-plan.json": {
-      "description": "Output di plan_batches.py — TTL session",
-      "ref": "scripts/plan_batches.py output contract (PR8)"
+      "description": "Output di plan_batches.py — TTL session. Ogni batch include i campi multi-agente: status (enum pending|in-progress|agent-timeout|partial|failed|completed, default pending), assigned_to (string|null), completed_by (string|null), completed_at (string ISO|null).",
+      "ref": "scripts/plan_batches.py output contract (PR8)",
+      "type": "object",
+      "properties": {
+        "batches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["pending", "in-progress", "agent-timeout", "partial", "failed", "completed"],
+                "default": "pending",
+                "description": "Stato esecuzione batch nel contesto multi-agente."
+              },
+              "assigned_to": {
+                "type": ["string", "null"],
+                "description": "ID subagent assegnato a questo batch. null se non ancora assegnato."
+              },
+              "completed_by": {
+                "type": ["string", "null"],
+                "description": "ID subagent che ha completato questo batch. null se non completato."
+              },
+              "completed_at": {
+                "type": ["string", "null"],
+                "description": "Timestamp ISO-8601 UTC completamento batch. null se non completato."
+              }
+            }
+          }
+        }
+      }
+    },
+    "intractable.json": {
+      "description": "File marcati intractable da subagent/Phase 7 (aggregati dal coordinatore). Surfacati in Block 9.",
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "reason": {"type": "string"},
+              "suggested_strategy": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "agent-N.log": {
+      "description": "Log temporaneo per subagent N (0-3): contiene i decisions_log_fragment. Merged in decisions.log dal coordinatore al join, poi rimosso.",
+      "type": "string"
     },
     "coverage-summary.json": {
       "description": "Output framework --coverage.reporter=json-summary — TTL session",

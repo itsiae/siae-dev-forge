@@ -177,6 +177,16 @@ def test_batch_has_multiagent_and_branch_fields():
     assert f["coverage_mode"] is None
 
 
+def test_state_schema_declares_multiagent_files():
+    p = Path(__file__).resolve().parents[2] / "lib" / "state-schema.json"
+    text = p.read_text()
+    assert "intractable.json" in text
+    assert "agent-" in text  # agent-N.log o agent-{id}.log
+    # batch-plan deve documentare i campi multi-agente
+    assert "assigned_to" in text
+    assert "completed_by" in text
+
+
 def test_e2e_with_estimate_size_real_output(tmp_path):
     """E2E: verifica che estimate_size.py emetta REALMENTE tier+priority,
     e che plan_batches.py possa consumarli senza fixture hand-written.
