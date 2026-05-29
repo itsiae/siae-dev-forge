@@ -20,10 +20,10 @@
 ### WS-1 — Fondamenta dati (prerequisito di tutto)
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | `pre_existing_branch_pct` in stack.json | `task-01-stack-branch-pct.md` | [PENDING] |
-| 2 | CI thresholds + working-dir single-pass | `task-02-detect-ci-thresholds.md` | [PENDING] |
-| 3 | effective_target nel sentinel handshake | `task-03-effective-target.md` | [PENDING] |
-| 4 | Fix bug workspace-key + stale jest tag | `task-04-stale-jest-fix.md` | [PENDING] |
+| 1 | `pre_existing_branch_pct` in stack.json | `task-01-stack-branch-pct.md` | [DONE] |
+| 2 | CI thresholds + working-dir single-pass | `task-02-detect-ci-thresholds.md` | [DONE] |
+| 3 | effective_target nel sentinel handshake | `task-03-effective-target.md` | [DONE] |
+| 4 | Fix bug workspace-key + stale jest tag | `task-04-stale-jest-fix.md` | [DONE] |
 
 ### WS-2 — Generazione branch-aware (Phase 3 + Phase 5)
 | # | Task | File | Stato |
