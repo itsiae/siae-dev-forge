@@ -6,7 +6,19 @@
   "properties": {
     "stack.json": {
       "description": "Output di detect_stack.py — invalidato da package.json/pom.xml/Cargo.toml/pyproject.toml/build.gradle/pubspec.yaml/go.mod mtime. Field `pre_existing_coverage_pct` deriva da GitHub repository variable TEST_COVERAGE_PERCENTAGE (var assente → 0.0); `pre_existing_coverage_source` ∈ {github_variable, missing}.",
-      "ref": "scripts/detect_stack.py output contract"
+      "ref": "scripts/detect_stack.py output contract",
+      "properties": {
+        "pre_existing_branch_pct": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Branch coverage pre-esistente da coverage-summary.json (formato V8/Istanbul). 0.0 se non disponibile."
+        },
+        "line_branch_delta": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Differenza pre_existing_coverage_pct - pre_existing_branch_pct. null se branch non disponibile (V8 branches.pct=0 o summary assente)."
+        }
+      }
     },
     "size.json": {
       "description": "Output di estimate_size.py --file-list — invalidato dallo stesso pinnacle file di stack.json",

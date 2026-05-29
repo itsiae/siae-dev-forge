@@ -771,6 +771,35 @@ def parse_lcov_info(lcov_path: Path) -> tuple[float, list[dict]]:
     return round(global_pct, 2), modules
 
 
+def parse_coverage_summary_for_branch(repo_path: Path) -> tuple[float, float]:
+    """Legge coverage/coverage-summary.json (formato V8/Istanbul).
+
+    Returns (line_pct, branch_pct). (0.0, 0.0) se non disponibile.
+    Cerca prima sotto manifest_root/coverage, poi sotto repo/coverage.
+    """
+    candidates = [
+        repo_path / "coverage" / "coverage-summary.json",
+    ]
+    # sub-workspace: prova anche manifest_root/coverage
+    try:
+        mr = detect_manifest_root(repo_path)
+        if mr and mr != ".": 
+            candidates.insert(0, repo_path / mr / "coverage" / "coverage-summary.json")
+    except Exception:
+        pass
+    for candidate in candidates:
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8", errors="ignore"))
+            total = data.get("total", {})
+            line_pct = float(total.get("lines", {}).get("pct", 0) or 0)
+            branch_pct = float(total.get("branches", {}).get("pct", 0) or 0)
+            if line_pct > 0:
+                return round(line_pct, 2), round(branch_pct, 2)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+    return 0.0, 0.0
+
+
 def parse_jacoco_for_existing(jacoco_path: Path) -> tuple[float, list[dict]]:
     if not jacoco_path.exists():
         return 0.0, []
@@ -833,6 +862,8 @@ _OUTPUT_SCHEMA_DEFAULTS: dict = {
     "maven_aggregator": None,
     "orchestration_only": False,
     "orchestration_reason": None,
+    "pre_existing_branch_pct": 0.0,
+    "line_branch_delta": None,
 }
 
 
@@ -882,6 +913,18 @@ def main() -> None:
     gh_hint, _ = read_github_coverage_variable(root)
     coverage_exclude = detect_coverage_exclude(root)
 
+    # Branch coverage pre-esistente (V8/Istanbul summary)
+    cov_line, cov_branch = parse_coverage_summary_for_branch(root)
+    if cov_line > 0 and pre_existing_source == "missing":
+        pre_existing_pct = cov_line
+        pre_existing_source = "local_report"
+    pre_existing_branch_pct = cov_branch
+    # delta None se branch non disponibile (0 con line>0 = V8 non conta i branch)
+    line_branch_delta = (
+        round(pre_existing_pct - pre_existing_branch_pct, 2)
+        if pre_existing_branch_pct > 0 else None
+    )
+
     # ADR-1: orchestration-only early-exit (IaC/Terragrunt repo).
     orch_only, orch_reason = is_orchestration_only_repo(root)
     if orch_only:
@@ -923,6 +966,8 @@ def main() -> None:
         "maven_aggregator": maven_agg,
         "orchestration_only": False,
         "orchestration_reason": None,
+        "pre_existing_branch_pct": pre_existing_branch_pct,
+        "line_branch_delta": line_branch_delta,
         "error": None,
     }, indent=2))
 

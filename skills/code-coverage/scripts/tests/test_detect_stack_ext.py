@@ -133,8 +133,8 @@ def test_not_a_directory_emits_stdout_json_exit_zero(tmp_path):
     payload = json.loads(proc.stdout)
     assert payload["error"] is not None
     assert "Not a directory" in payload["error"]
-    # full-shape schema: default fields + maven_aggregator (Task 01) + error
-    assert len(payload.keys()) == 21
+    # full-shape schema: default fields + maven_aggregator (Task 01) + branch fields (Task 01) + error
+    assert len(payload.keys()) == 23
 
 
 def test_missing_argument_emits_stdout_json_exit_zero():
@@ -143,7 +143,7 @@ def test_missing_argument_emits_stdout_json_exit_zero():
     payload = json.loads(proc.stdout)
     assert payload["error"] is not None
     assert "Usage" in payload["error"]
-    assert len(payload.keys()) == 21  # +1 maven_aggregator (Task 01)
+    assert len(payload.keys()) == 23  # +1 maven_aggregator (Task 01) +2 branch fields (Task 01)
 
 
 def test_walk_finds_java_deep_layout(tmp_path):
@@ -194,6 +194,7 @@ def test_error_payload_schema_complete(tmp_path):
         "module_coverage", "coverage_exclude",
         "orchestration_only", "orchestration_reason", "manifest_root",
         "maven_aggregator",
+        "pre_existing_branch_pct", "line_branch_delta",
         "error",
     }
     assert set(payload.keys()) == expected_keys
