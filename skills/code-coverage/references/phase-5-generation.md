@@ -219,6 +219,22 @@ Each public function or method in the target module requires:
 For functions with multiple branches (if/switch), add one test per branch
 that represents a distinct business rule.
 
+### branch-matrix mode (coverage_mode == "branch-priority")
+
+Quando `batch-plan.json.files[].coverage_mode == "branch-priority"`, usa il template
+`templates/vitest-branch-matrix.template.ts` invece del template standard. Per OGNI
+operatore `??` / `||` / `&&` / `?:` riportato in `.code-coverage/branch-count/<file>.json`
+genera 3 test: ramo null, ramo undefined, ramo present. La line coverage è gratis;
+l'obiettivo è la branch matrix.
+
+### Dual-Fixture Rule (branch_operator_count > 40)
+
+Se il file ha `branch_operator_count > 40` (tipico dei mapper con molti `?? ""`),
+genera DUE fixture:
+- `minimalFixture = {}` → esercita tutti i rami fallback;
+- `fullFixture` con TUTTI i campi opzionali valorizzati → esercita tutti i rami value-present.
+Aggiungi un test `it('with all optional fields populated', ...)` che usa `fullFixture`.
+
 ---
 
 ## Mocking patterns
