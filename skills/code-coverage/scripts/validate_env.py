@@ -120,10 +120,9 @@ def _read_manifest_root_rel(repo_path: Path) -> str:
     Returns the relative path string (e.g. "modules/service/lambda-handler")
     or "." if stack.json is absent / unreadable / field missing.
     """
-    import json as _json
     stack = repo_path / ".code-coverage" / "stack.json"
     try:
-        mr = _json.loads(stack.read_text(encoding="utf-8")).get("manifest_root", ".")
+        mr = json.loads(stack.read_text(encoding="utf-8")).get("manifest_root", ".")
         return mr if isinstance(mr, str) and mr.strip() else "."
     except Exception:
         return "."
@@ -140,13 +139,12 @@ def _detect_required_framework(repo_path: Path) -> str:
     'jest' only when an incompatibility signal (I1..I10) fired OR user
     opted into Jest via overrides.json.
     """
-    import json as _json
     pkg_json = _find_manifest_recursive(repo_path, "package.json")
     if pkg_json is not None:
         compat_path = repo_path / ".code-coverage" / "jest-compat.json"
         if compat_path.is_file():
             try:
-                compat = _json.loads(compat_path.read_text(encoding="utf-8"))
+                compat = json.loads(compat_path.read_text(encoding="utf-8"))
                 ws_key = _read_manifest_root_rel(repo_path)
                 ws = (compat.get("workspaces", {}).get(ws_key)
                       or compat.get("workspaces", {}).get(".", {}))
@@ -154,17 +152,17 @@ def _detect_required_framework(repo_path: Path) -> str:
                 if decision in ("jest-incompat", "jest-forced"):
                     return "jest"
                 return "vitest"
-            except (_json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError):
                 pass
         # Fallback: compat file absent (validate_env may run pre-Phase-2).
         # Honor overrides.json force_jest as last resort.
         overrides = repo_path / ".code-coverage" / "overrides.json"
         if overrides.is_file():
             try:
-                ov = _json.loads(overrides.read_text(encoding="utf-8"))
+                ov = json.loads(overrides.read_text(encoding="utf-8"))
                 if ov.get("force_jest") is True and ov.get("force_jest_reason"):
                     return "jest"
-            except (_json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError):
                 pass
         return "vitest"
 

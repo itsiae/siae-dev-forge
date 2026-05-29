@@ -305,6 +305,33 @@ assert_json_field "$USER_CHOICE9" "target_branch" "60" "target_branch=60 (no CI 
 assert_json_field "$USER_CHOICE9" "ci_threshold_override" "False" "ci_threshold_override=False"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Case 10 (C-1): cmd_read legge ci_threshold_override da user-choice.json
+# Dopo un write con CI override, cmd_read deve emettere ci_threshold_override=true
+# (non stringa vuota come se leggesse da ctx del pending sentinel).
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "Case 10 (C-1): cmd_read emette ci_threshold_override da user-choice.json"
+REPO10="$(setup_repo case10)"
+write_valid_sentinel "$REPO10"
+# CI override: COVERAGE_BRANCHES=70 > preset derivato=60
+printf '{"COVERAGE_BRANCHES": 70, "source": "CI.yaml", "working_directory_issues": []}\n' \
+    > "$REPO10/.code-coverage/ci-thresholds.json"
+# write user-choice.json (ci_threshold_override=True, ci_thresholds_source=CI.yaml)
+set +e
+bash "$HANDSHAKE" write "$REPO10" 70 >/dev/null 2>&1
+EXIT10_W=$?
+set -e
+assert_exit "$EXIT10_W" "0" "Case10: write target=70 con CI override → exit 0"
+# Ora leggi e verifica che cmd_read emetta ci_threshold_override=true
+set +e
+STDOUT10="$(bash "$HANDSHAKE" read "$REPO10" 2>/dev/null)"
+EXIT10_R=$?
+set -e
+assert_exit "$EXIT10_R" "0" "Case10: read dopo write con CI override → exit 0"
+assert_contains "$STDOUT10" "ci_threshold_override=true" "Case10: cmd_read emette ci_threshold_override=true"
+assert_contains "$STDOUT10" "ci_thresholds_source=CI.yaml" "Case10: cmd_read emette ci_thresholds_source=CI.yaml"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""

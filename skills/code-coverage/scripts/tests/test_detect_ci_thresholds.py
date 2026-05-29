@@ -54,3 +54,38 @@ jobs:
 def test_no_workflows_dir(tmp_path):
     out = _run(tmp_path)
     assert out == {"working_directory_issues": []} or out.get("working_directory_issues") == []
+
+
+# ── M-1: argv guard ──────────────────────────────────────────────────────────
+
+def test_no_args_exits_zero_with_valid_json():
+    """M-1: invocazione senza argomenti → exit 0 + JSON valido con working_directory_issues."""
+    out = subprocess.run([sys.executable, str(SCRIPT)],
+                         capture_output=True, text=True)
+    assert out.returncode == 0, f"Expected exit 0, got {out.returncode}. stderr={out.stderr}"
+    data = json.loads(out.stdout)
+    assert "working_directory_issues" in data
+    assert isinstance(data["working_directory_issues"], list)
+
+
+# ── M-2: cross-file max ───────────────────────────────────────────────────────
+
+def test_multifile_keeps_max_threshold(tmp_path):
+    """M-2: quando più file CI hanno COVERAGE_LINES diversi, vince il massimo."""
+    _wf(tmp_path, "CI.yaml", """
+jobs:
+  test:
+    env:
+      COVERAGE_LINES: 80
+""")
+    _wf(tmp_path, "test.yml", """
+jobs:
+  test:
+    env:
+      COVERAGE_LINES: 60
+""")
+    out = _run(tmp_path)
+    # Deve riportare 80 (max), non 60 (sovrascrittura last-wins)
+    assert out["COVERAGE_LINES"] == 80, (
+        f"Expected COVERAGE_LINES=80 (max across files), got {out.get('COVERAGE_LINES')}"
+    )

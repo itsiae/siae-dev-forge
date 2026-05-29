@@ -776,6 +776,9 @@ def parse_coverage_summary_for_branch(repo_path: Path) -> tuple[float, float]:
 
     Returns (line_pct, branch_pct). (0.0, 0.0) se non disponibile.
     Cerca prima sotto manifest_root/coverage, poi sotto repo/coverage.
+
+    NOTA: line_branch_delta può combinare sorgenti eterogenee (lcov/jacoco per
+    line, V8 summary per branch) — limite noto; accettato per uso diagnostico.
     """
     candidates = [
         repo_path / "coverage" / "coverage-summary.json",
@@ -783,7 +786,7 @@ def parse_coverage_summary_for_branch(repo_path: Path) -> tuple[float, float]:
     # sub-workspace: prova anche manifest_root/coverage
     try:
         mr = detect_manifest_root(repo_path)
-        if mr and mr != ".": 
+        if mr and mr != ".":
             candidates.insert(0, repo_path / mr / "coverage" / "coverage-summary.json")
     except Exception:
         pass

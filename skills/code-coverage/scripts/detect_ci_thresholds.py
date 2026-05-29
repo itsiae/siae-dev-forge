@@ -71,7 +71,7 @@ def _gh_variable(slug: str, var: str) -> float | None:
 def _manifest_root(repo: Path) -> str:
     stack = repo / ".code-coverage" / "stack.json"
     try:
-        return json.loads(stack.read_text()).get("manifest_root", ".")
+        return json.loads(stack.read_text(encoding="utf-8")).get("manifest_root", ".")
     except Exception:
         return "."
 
@@ -87,6 +87,12 @@ def _repo_slug(repo: Path) -> str | None:
 
 
 def main() -> None:
+    # M-1: argv guard — exit 0 + safe JSON if no argument provided
+    if len(sys.argv) < 2:
+        print(json.dumps({"working_directory_issues": [],
+                          "error": "Usage: detect_ci_thresholds.py <repo_path>"}))
+        sys.exit(0)
+
     repo = Path(sys.argv[1]).resolve()
     wf_dir = repo / ".github" / "workflows"
     thresholds: dict[str, float] = {}
@@ -101,11 +107,15 @@ def main() -> None:
             text = wf.read_text(encoding="utf-8", errors="ignore")
             found = _scan_text(text)
             if found:
-                thresholds.update(found)
-                source = wf.name
+                # M-2: merge keeping max per key; update source only when a key is set/raised
+                for key, val in found.items():
+                    if key not in thresholds or val > thresholds[key]:
+                        thresholds[key] = val
+                        source = wf.name
             for m in _REUSABLE_RE.finditer(text):
                 reusables.append((m.group(1), m.group(2), m.group(3)))
                 # working-directory audit: solo se sub-workspace
+                # NOTA: audit file-scoped (single-caller SIAE); multi-job per-block non coperto
                 if manifest_root != "." and "working-directory" not in text:
                     wd_issues.append(
                         f"{wf.name}: reusable caller without working-directory "

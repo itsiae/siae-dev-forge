@@ -136,9 +136,25 @@ emit("option_b_target_line", opt_b.get("target_line"))
 emit("option_b_target_branch", opt_b.get("target_branch"))
 emit("option_b_p50_min", opt_b.get("estimated_wallclock_min_p50"))
 emit("option_b_p90_min", opt_b.get("estimated_wallclock_min_p90"))
-emit("ci_threshold_override", ctx.get("ci_threshold_override"))
-emit("ci_thresholds_source", ctx.get("ci_thresholds_source"))
-emit("high_branch_gap", ctx.get("high_branch_gap"))
+# C-1 FIX: read ci_threshold_override / ci_thresholds_source / high_branch_gap
+# from user-choice.json (written by cmd_write) when it exists.
+# ctx in pending-user-choice.json does NOT carry these fields → always None.
+import os as _os
+_uc_path = _os.path.join(_os.path.dirname(path), "user-choice.json")
+_ci_override = None
+_ci_src = None
+_hbg = None
+try:
+    with open(_uc_path, "r", encoding="utf-8") as _uc:
+        _uc_data = json.load(_uc)
+    _ci_override = _uc_data.get("ci_threshold_override")
+    _ci_src = _uc_data.get("ci_thresholds_source")
+    _hbg = _uc_data.get("high_branch_gap")
+except Exception:
+    pass
+emit("ci_threshold_override", _ci_override)
+emit("ci_thresholds_source", _ci_src)
+emit("high_branch_gap", _hbg)
 PY
 }
 

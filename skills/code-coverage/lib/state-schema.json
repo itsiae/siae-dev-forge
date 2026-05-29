@@ -150,6 +150,44 @@
         "force_jest": {"type": "boolean"},
         "force_jest_reason": {"type": "string", "description": "Required when force_jest=true. Without reason, override is ignored."}
       }
+    },
+    "ci-thresholds.json": {
+      "description": "Output di detect_ci_thresholds.py (Phase 1 parallel). Soglie coverage rilevate dal CI workflow locale o remoto. Scritto da phase1-discover.sh. TTL session.",
+      "ref": "scripts/detect_ci_thresholds.py output contract",
+      "type": "object",
+      "properties": {
+        "COVERAGE_LINES": {"type": "number", "description": "Soglia percentuale linee (max tra tutti i file CI)."},
+        "COVERAGE_BRANCHES": {"type": "number", "description": "Soglia percentuale branch (max tra tutti i file CI)."},
+        "COVERAGE_STATEMENTS": {"type": "number", "description": "Soglia percentuale statements (max tra tutti i file CI)."},
+        "COVERAGE_FUNCTIONS": {"type": "number", "description": "Soglia percentuale funzioni (max tra tutti i file CI)."},
+        "COVERAGE_THRESHOLD": {"type": "number", "description": "Soglia globale generica (max tra tutti i file CI)."},
+        "source": {"type": "string", "description": "Nome file workflow sorgente della soglia, o 'remote:<slug>/<wf>@<ref>' se reusable remoto, o 'github-variable:<VAR>' se da Actions variable."},
+        "working_directory_issues": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Lista problemi working-directory rilevati (reusable caller senza working-directory in sub-workspace)."
+        }
+      }
+    },
+    "user-choice.json": {
+      "description": "Output di sentinel-handshake.sh write/prompt. Scelta utente target coverage. Prodotto da Task 10. TTL session.",
+      "ref": "lib/sentinel-handshake.sh cmd_write output contract",
+      "type": "object",
+      "properties": {
+        "target_line": {"type": "integer", "description": "Target linee effettivo (max tra scelta utente e CI threshold)."},
+        "target_branch": {"type": "integer", "description": "Target branch effettivo (max tra scelta utente e CI threshold)."},
+        "size_class": {"type": ["string", "null"], "description": "Classe dimensione repo da pending-user-choice.json."},
+        "estimated_wallclock_min_p50": {"type": ["number", "null"]},
+        "estimated_wallclock_min_p90": {"type": ["number", "null"]},
+        "user_choice_timestamp": {"type": "string", "description": "ISO-8601 UTC timestamp scrittura."},
+        "source": {"type": "string", "enum": ["sentinel_handshake"]},
+        "preset": {"type": "string", "enum": ["quick-win", "full-bundle", "custom"]},
+        "user_requested_line": {"type": "integer", "description": "Valore linee scelto dall'utente prima dell'override CI."},
+        "user_requested_branch": {"type": "integer", "description": "Valore branch derivato dalla scelta utente prima dell'override CI."},
+        "ci_threshold_override": {"type": "boolean", "description": "True se la CI impone soglie superiori alla scelta utente."},
+        "ci_thresholds_source": {"type": "string", "description": "Fonte soglie CI (da ci-thresholds.json.source); 'none' se assente."},
+        "high_branch_gap": {"type": "boolean", "description": "True se line_branch_delta da stack.json supera 15 punti percentuali."}
+      }
     }
   },
   "definitions": {
