@@ -80,6 +80,14 @@ if find "$REPO" -maxdepth 4 -name package.json -not -path '*/node_modules/*' -pr
   fi
 fi
 
+if is_cache_valid "$REPO/.code-coverage/ci-thresholds.json" "$STACK_PINNACLE"; then
+  echo "[cache] ci-thresholds.json hit"
+else
+  python3 "$SKILL_DIR/scripts/detect_ci_thresholds.py" "$REPO" \
+    > "$REPO/.code-coverage/ci-thresholds.json" 2>/dev/null &
+  PIDS+=($!)
+fi
+
 # Fail-fast: aspetta tutti i PID e propaga il primo errore.
 for pid in "${PIDS[@]}"; do
   if ! wait "$pid"; then
