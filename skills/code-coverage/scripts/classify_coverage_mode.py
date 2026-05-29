@@ -34,6 +34,10 @@ def _branch_count_for(repo: Path, file_path: str) -> int:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: classify_coverage_mode.py <repo_path>"}),
+              file=sys.stderr)
+        sys.exit(1)
     repo = Path(sys.argv[1]).resolve()
     bp_path = repo / ".code-coverage" / "batch-plan.json"
     uc_path = repo / ".code-coverage" / "user-choice.json"

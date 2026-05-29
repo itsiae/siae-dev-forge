@@ -99,3 +99,20 @@ def test_main_no_crash_when_batch_plan_missing(tmp_path):
     assert out, "main() non ha prodotto output"
     data = json.loads(out)
     assert isinstance(data, dict), "l'output deve essere un oggetto JSON"
+
+
+# ---------------------------------------------------------------------------
+# ISSUE-8: argv guard — classify_coverage_mode.py senza argv deve uscire con 1
+# ---------------------------------------------------------------------------
+
+def test_argv_guard_no_args():
+    """classify_coverage_mode.py senza argomenti deve scrivere JSON su stderr e uscire con 1."""
+    result = subprocess.run(
+        [sys.executable, str(SCRIPTS_DIR / "classify_coverage_mode.py")],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 1, (
+        f"atteso exit 1 senza argv, got {result.returncode}"
+    )
+    err = json.loads(result.stderr)
+    assert "error" in err, "stderr deve contenere JSON con chiave 'error'"

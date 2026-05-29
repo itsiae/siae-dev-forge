@@ -9,13 +9,15 @@ import re
 import sys
 from pathlib import Path
 
-_PRIVATE_RE = re.compile(r"\bprivate\s+(?:readonly\s+)?(?:async\s+)?(\w+)\s*\(")
+_PRIVATE_RE = re.compile(r"\bprivate\s+(?:(?:static|override|abstract|readonly)\s+)*(?:async\s+)?(\w+)\s*\(")
 _NEW_RE = re.compile(r"\bnew\s+([A-Z]\w+)\s*\(")  # ≥2 chars: esclude generics single-letter
-_TZ_RE = re.compile(r"Intl\.|\.toLocale(?:String|DateString|TimeString)\b|process\.env\.TZ\b|getItalyOffset|addItalyOffset")
+_TZ_RE = re.compile(r"\bIntl\.|\.toLocale(?:String|DateString|TimeString)\b|process\.env\.TZ\b|getItalyOffset|addItalyOffset")
 _DB_RE = re.compile(r"await\s+this\.(?:db|pool|knex|client|pgClient)\.(?:query|execute|raw)|\.prepare\s*\(|createConnection\s*\(", re.M)
 _MOCK_RE = re.compile(r"vi\.mock|jest\.mock")
 _BUILTINS = {"Date", "Error", "Map", "Set", "Array", "Promise", "Buffer", "RegExp",
-             "Object", "Number", "String", "TypeError", "RangeError", "URL"}
+             "WeakMap", "WeakSet", "Object", "Number", "String", "Boolean", "Proxy",
+             "TypeError", "RangeError", "URL", "URLSearchParams", "Int8Array",
+             "Uint8Array", "Float64Array", "DataView", "TextEncoder", "TextDecoder"}
 
 # Regex per lo stripping del "noise" (commenti e stringhe)
 _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)

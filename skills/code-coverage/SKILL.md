@@ -33,9 +33,9 @@ Reading any ref out-of-phase is a context budget violation. Each ref MUST be rea
 
 1. **Autonomous execution.** Invocation = blanket approval for read/write/install in `.code-coverage/`, test dirs, `vitest.config.ts` (create if absent), `jest.config.*` (delete during Phase 4b migration with snapshot), `package.json` `scripts`/`devDependencies` keys only, and existing `*.{test,spec}.*` files for Jest→Vitest token transforms during Phase 4b. Never modify production source. Decisions → `.code-coverage/decisions.log`. ZERO prompts.
 2. **Context-safety over completeness.** Batch sizes per tier (T1=3, T2=2, T3=1, T4=1 — `assets/priority-rules.json.ordering_constants`). LARGE/VERY_LARGE → persist `batch-plan.json`, resume cross-session. Batch tool calls (Write) MUST execute parallel in same assistant turn — see Phase 5 batch rule.
-LARGE/VERY_LARGE con pending_batches >= 2 → parallel multi-agent dispatch (fino a 4
-subagent Sonnet, ognuno owner di batch disgiunti). Trigger e protocollo in
-`references/phase-5-parallel.md`. Il coordinatore non legge i sorgenti: li leggono i subagent.
+LARGE/VERY_LARGE con pending_batches >= 2, oppure MEDIUM con loc > 15000 e pending_batches >= 3
+→ parallel multi-agent dispatch (fino a 4 subagent Sonnet, ognuno owner di batch disgiunti).
+Trigger e protocollo in `references/phase-5-parallel.md`. Il coordinatore non legge i sorgenti: li leggono i subagent.
 3. **Determinism over creativity.** `assets/stack-matrix.json` is the single source of truth for framework selection.
 4. **Vitest-first for JS/TS, with auto-migration from Jest.** When the project uses Jest but Vitest is compatible (closed list of incompatibility signals I1..I10 in `assets/vitest-jest-compat.json`), Phase 4b migrates `jest.config.*`, `package.json` scripts/devDeps, and test files (codemod) to Vitest. Jest is retained ONLY when ≥1 signal in I1..I9 fires, or I10 user opt-out is active.
 5. **Coverage targets line E branch separati.** Global floor 70% line. Branch target
@@ -113,7 +113,7 @@ Snippet contract: missing/malformed `user-choice.json` or `stack.json` → silen
 If gate fires → Block 8 "coverage already sufficient for chosen target" + END.
 
 ### Phase 3 — Sizing (REF if LARGE/VERY_LARGE)
-If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py <repo> > <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
+If `size.json.class IN ("LARGE","VERY_LARGE")` → emit phased-mode notice, run `python3 skills/code-coverage/scripts/plan_batches.py --size <repo>/.code-coverage/size.json --stack <repo>/.code-coverage/stack.json --out <repo>/.code-coverage/batch-plan.json`, load `references/phase-3-sizing.md`.
 Valuta il trigger parallelo (vedi references/phase-5-parallel.md "Trigger"). Logga:
 "[phase3] parallel_mode=enabled agents=N" oppure "[phase3] parallel_mode=disabled reason=...".
 

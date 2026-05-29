@@ -114,13 +114,9 @@ File con coverage_mode=branch-priority useranno il template branch-matrix in Pha
 
 ```json
 {
-  "created_at": "2026-05-07T12:00:00Z",
-  "repo_path": "<path>",
-  "size_class": "LARGE",
-  "total_source_files": 312,
-  "total_loc": 38500,
-  "completed_batches": [],
-  "pending_batches": [
+  "ordering_strategy": "tier-first",
+  "total_files": 2,
+  "batches": [
     {
       "id": 1,
       "tier": "T1",
@@ -150,7 +146,7 @@ File con coverage_mode=branch-priority useranno il template branch-matrix in Pha
       ]
     }
   ],
-  "coverage_summary": {}
+  "deferred": []
 }
 ```
 

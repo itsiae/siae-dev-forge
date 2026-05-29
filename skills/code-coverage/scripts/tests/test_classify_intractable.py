@@ -191,3 +191,95 @@ def test_precedence_tz_plus_db():
         "}"
     )
     assert ci.classify(src, "")["classification"] == "NEEDS_TZ_MOCK"
+
+
+# ---------------------------------------------------------------------------
+# ISSUE-4: _PRIVATE_RE deve gestire modificatori static|override|abstract
+# ---------------------------------------------------------------------------
+
+def test_private_static_method_needs_reflection():
+    """private static foo() deve triggerare NEEDS_REFLECTION (ISSUE-4)."""
+    src = "export class D { private static compute(x: number) { return x * 2; } }"
+    result = ci.classify(src, "")
+    assert result["classification"] == "NEEDS_REFLECTION", (
+        f"private static deve → NEEDS_REFLECTION, got {result['classification']}"
+    )
+    assert "compute" in result["private_methods"]
+
+
+def test_private_override_method_needs_reflection():
+    """private override foo() deve triggerare NEEDS_REFLECTION (ISSUE-4)."""
+    src = "export class D { private override render() { return null; } }"
+    result = ci.classify(src, "")
+    assert result["classification"] == "NEEDS_REFLECTION", (
+        f"private override deve → NEEDS_REFLECTION, got {result['classification']}"
+    )
+
+
+def test_private_abstract_method_needs_reflection():
+    """private abstract foo() deve triggerare NEEDS_REFLECTION (ISSUE-4)."""
+    src = "export abstract class D { private abstract process(): void; }"
+    result = ci.classify(src, "")
+    assert result["classification"] == "NEEDS_REFLECTION", (
+        f"private abstract deve → NEEDS_REFLECTION, got {result['classification']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# ISSUE-5: _TZ_RE deve avere word boundary su Intl (NotIntl.foo falso positivo)
+# ---------------------------------------------------------------------------
+
+def test_not_intl_no_tz_mock():
+    """NotIntl.foo NON deve triggerare NEEDS_TZ_MOCK (ISSUE-5)."""
+    src = "const x = NotIntl.foo();"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_TZ_MOCK", (
+        "NotIntl.foo non deve causare NEEDS_TZ_MOCK: falso positivo!"
+    )
+    assert result["signals"]["has_tz"] is False
+
+
+# ---------------------------------------------------------------------------
+# ISSUE-6: _BUILTINS deve includere TextEncoder, TextDecoder e altri
+# ---------------------------------------------------------------------------
+
+def test_new_text_encoder_no_class_mock():
+    """new TextEncoder() NON deve triggerare NEEDS_CLASS_MOCK (ISSUE-6)."""
+    src = "function encode(s: string) { return new TextEncoder().encode(s); }"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_CLASS_MOCK", (
+        "TextEncoder è un builtin: non deve triggerare NEEDS_CLASS_MOCK"
+    )
+    assert "TextEncoder" not in result["inline_classes"]
+
+
+def test_new_text_decoder_no_class_mock():
+    """new TextDecoder() NON deve triggerare NEEDS_CLASS_MOCK (ISSUE-6)."""
+    src = "function decode(b: ArrayBuffer) { return new TextDecoder().decode(b); }"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_CLASS_MOCK"
+    assert "TextDecoder" not in result["inline_classes"]
+
+
+def test_new_url_search_params_no_class_mock():
+    """new URLSearchParams() NON deve triggerare NEEDS_CLASS_MOCK (ISSUE-6)."""
+    src = "const p = new URLSearchParams('a=1');"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_CLASS_MOCK"
+    assert "URLSearchParams" not in result["inline_classes"]
+
+
+def test_new_weak_map_no_class_mock():
+    """new WeakMap() NON deve triggerare NEEDS_CLASS_MOCK (ISSUE-6)."""
+    src = "const m = new WeakMap();"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_CLASS_MOCK"
+    assert "WeakMap" not in result["inline_classes"]
+
+
+def test_new_data_view_no_class_mock():
+    """new DataView() NON deve triggerare NEEDS_CLASS_MOCK (ISSUE-6)."""
+    src = "const dv = new DataView(buffer);"
+    result = ci.classify(src, "")
+    assert result["classification"] != "NEEDS_CLASS_MOCK"
+    assert "DataView" not in result["inline_classes"]

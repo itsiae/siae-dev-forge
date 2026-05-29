@@ -67,6 +67,10 @@ def count_operators(text: str) -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Usage: count_branch_operators.py <source_file>"}),
+              file=sys.stderr)
+        sys.exit(1)
     src = Path(sys.argv[1])
     text = src.read_text(encoding="utf-8", errors="ignore")
     result = count_operators(text)

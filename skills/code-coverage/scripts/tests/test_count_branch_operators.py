@@ -84,3 +84,21 @@ def test_import_statement_gives_zero(tmp_path):
     assert out["count"] == 0, (
         f"import statement deve dare 0, got {out['count']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# ISSUE-7: argv guard — count_branch_operators.py senza argv deve uscire con 1
+# ---------------------------------------------------------------------------
+
+def test_argv_guard_no_args():
+    """count_branch_operators.py senza argomenti deve scrivere JSON su stderr e uscire con 1."""
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT)],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode == 1, (
+        f"atteso exit 1 senza argv, got {proc.returncode}"
+    )
+    import json as _json
+    err = _json.loads(proc.stderr)
+    assert "error" in err, "stderr deve contenere JSON con chiave 'error'"
