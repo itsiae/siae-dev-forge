@@ -45,10 +45,10 @@
 ### WS-4 — Repair loop robusto (Phase 7)
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 14 | `classify_intractable.py` | `task-14-classify-intractable.md` | [PENDING] |
-| 15 | max_iter scaling + repair-strategies cat 13 | `task-15-max-iter-scaling.md` | [PENDING] |
-| 16 | Two-tier guard + strategy ladder | `task-16-two-tier-guard.md` | [PENDING] |
-| 17 | `predict_coverage.py` + sentinel display | `task-17-predict-coverage.md` | [PENDING] |
+| 14 | `classify_intractable.py` | `task-14-classify-intractable.md` | [DONE] |
+| 15 | max_iter scaling + repair-strategies cat 13 | `task-15-max-iter-scaling.md` | [DONE] |
+| 16 | Two-tier guard + strategy ladder | `task-16-two-tier-guard.md` | [DONE] |
+| 17 | `predict_coverage.py` + sentinel display | `task-17-predict-coverage.md` | [DONE] |
 
 ### WS-5 — Esecuzione multi-agente parallela
 | # | Task | File | Stato |
