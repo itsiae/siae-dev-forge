@@ -308,3 +308,21 @@ def test_output_includes_force_jest_reason(tmp_path):
     }))
     out = _run(tmp_path)
     assert "regulatory audit" in (out["workspaces"]["."]["force_jest_reason"] or "")
+
+
+def test_stale_jest_config_tagged(tmp_path):
+    """BUG-FIX (task-04): when jest.config.* is present but scripts.test uses
+    vitest (vitest active), _detect_jest_artifacts must emit stale-config:
+    prefix instead of config:. This prevents the jest config from being
+    treated as a live jest artifact that could push decision toward jest."""
+    import sys
+    sys.path.insert(0, str(SCRIPT.parent))
+    import detect_jest_incompat as d
+    (tmp_path / "jest.config.ts").write_text("export default {}")
+    (tmp_path / "package.json").write_text(
+        '{"scripts": {"test": "vitest run"}, "devDependencies": {"vitest": "^2", "jest": "^29"}}'
+    )
+    has, artifacts = d._detect_jest_artifacts(tmp_path)
+    assert any(a.startswith("stale-config:") for a in artifacts), artifacts
+    # nessun artifact "config:" puro quando vitest è il runner attivo
+    assert not any(a.startswith("config:") and not a.startswith("stale-config:") for a in artifacts)

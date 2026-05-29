@@ -71,25 +71,29 @@ def _jest_config_text(ws: Path) -> str:
 
 def _detect_jest_artifacts(ws: Path) -> tuple[bool, list[str]]:
     artifacts: list[str] = []
-    cfg = _find_jest_config(ws)
-    if cfg is not None:
-        artifacts.append(f"config:{cfg.name}")
     pkg = _read_json(ws / "package.json")
     scripts = pkg.get("scripts") if isinstance(pkg.get("scripts"), dict) else {}
     test_script = str(scripts.get("test", "")) if scripts else ""
-    if "jest" in test_script and "vitest" not in test_script:
-        artifacts.append(f"script:test='{test_script[:60]}'")
     all_deps = {
         **(pkg.get("dependencies") or {}),
         **(pkg.get("devDependencies") or {}),
     }
+    vitest_active = ("vitest" in test_script) or any("vitest" in k for k in all_deps)
+
+    cfg = _find_jest_config(ws)
+    if cfg is not None:
+        artifacts.append(f"stale-config:{cfg.name}:vitest-active" if vitest_active
+                         else f"config:{cfg.name}")
+    if "jest" in test_script and "vitest" not in test_script:
+        artifacts.append(f"script:test='{test_script[:60]}'")
     jest_deps = [
         k for k in all_deps
         if k == "jest" or k.startswith("jest-")
         or k in ("@types/jest", "ts-jest", "babel-jest", "@swc/jest", "@jest/globals")
     ]
     if jest_deps:
-        artifacts.append(f"deps:{','.join(jest_deps[:5])}")
+        artifacts.append(f"stale-deps:{','.join(jest_deps[:5])}" if vitest_active
+                         else f"deps:{','.join(jest_deps[:5])}")
     return bool(artifacts), artifacts
 
 
