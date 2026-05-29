@@ -196,7 +196,8 @@ bash skills/code-coverage/lib/phase6-coverage.sh "<repo>"
 If all P1>=80%, P2>=70%, P3>=60%, global>=70% → SKIP Phase 7 → OUTPUT.
 
 ### Phase 7 — Repair
-See `references/phase-7-repair.md` (categorize → group → systemic-fix vs per-file → progress guard → autonomous early-abort). Max 3 iter, max 1 full coverage run/iter.
+See `references/phase-7-repair.md` (categorize → group → systemic-fix vs per-file → progress guard → autonomous early-abort). Max iter = min(10, max(3, ceil(batch_plan.batches.length × 1.5))) — letto da
+.code-coverage/batch-plan.json (fallback 3). Max 1 full coverage run/iter.
 
 ## OUTPUT — Conditional Blocks
 

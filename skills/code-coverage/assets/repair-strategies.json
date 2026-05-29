@@ -242,6 +242,29 @@
       ],
       "systemic_eligible": false,
       "systemic_threshold_count": 0
+    },
+    {
+      "id": 13,
+      "name": "branch_gap_stall",
+      "patterns": [],
+      "description": "Test passano ma branch coverage non sale dopo N iter. Non è un test failure: gap strutturale. Trigger: progress guard locale stall.",
+      "fix_steps": [
+        "Run classify_intractable.py per determinare la tecnica",
+        "NEEDS_REFLECTION → test reflection su private methods",
+        "NEEDS_CLASS_MOCK → vi.mock factory per classi inline",
+        "NEEDS_TZ_MOCK → mock Intl/TZ via importOriginal",
+        "INTRACTABLE_DB_DEPENDENT → marcare intractable e skippare"
+      ],
+      "systemic_eligible": false,
+      "systemic_threshold_count": 0,
+      "systemic_fix_template": null,
+      "manual_hints": {
+        "NEEDS_REFLECTION": "(inst as unknown as {m:Fn}).m.call(inst, fixture)",
+        "NEEDS_CLASS_MOCK": "vi.mock('<path>', () => ({Class: vi.fn().mockImplementation(() => ({...}))}))",
+        "NEEDS_TZ_MOCK": "vi.mock utils importOriginal, override getItalyOffset/addItalyOffset",
+        "INTRACTABLE_DB_DEPENDENT": "Requires real DB; skip or integration test",
+        "INTRACTABLE_UNKNOWN": "Manual investigation required"
+      }
     }
   ],
   "normalize_regex": [

@@ -160,3 +160,12 @@ def test_normalize_deterministic_multiline():
     sig1 = cf.normalize(err1)
     sig2 = cf.normalize(err2)
     assert sig1 == sig2, f"multiline normalize non deterministico:\n{sig1!r}\n!=\n{sig2!r}"
+
+
+def test_repair_strategies_has_branch_gap_stall():
+    p = Path(__file__).resolve().parents[2] / "assets" / "repair-strategies.json"
+    data = json.loads(p.read_text())
+    # struttura: lista di categorie o dict con "categories"
+    cats = data if isinstance(data, list) else data.get("categories", data.get("strategies", []))
+    ids = [c.get("id") for c in cats] if isinstance(cats, list) else list(cats.keys())
+    assert 13 in ids or "13" in [str(i) for i in ids], "manca categoria 13 branch_gap_stall"

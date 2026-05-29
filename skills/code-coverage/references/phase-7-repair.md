@@ -9,10 +9,21 @@ abortisce best-effort quando il progresso si ferma.
 
 ## Budget
 
-- **max 3 iterazioni totali**
+- **max_iter = min(10, max(3, ceil(len(batch-plan.json.batches) × 1.5)))**
+  (letto all'ingresso Phase 7; batch-plan.json assente → fallback 3)
 - **max 1 full coverage run per iterazione** (re-run solo i test modificati
   fino a fine iter; coverage full solo a chiusura)
+- **hard cap 10 iter (budget contesto)**
 - **early-abort autonomous** (vedi sotto)
+
+Budget init (eseguire all'ingresso Phase 7, nessun coverage run extra):
+```python
+import json, math, pathlib
+bp = pathlib.Path(".code-coverage/batch-plan.json")
+n = len(json.loads(bp.read_text()).get("batches", [])) if bp.exists() else 0
+MAX_ITER = min(10, max(3, math.ceil(n * 1.5))) if n else 3
+# Log: [phase7] max_iter=<MAX_ITER> batches=<n>
+```
 
 ---
 
