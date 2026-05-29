@@ -4,9 +4,9 @@
 # Verifica i case principali:
 #   1. read sentinel valido → exit 0 + key=value su stdout (option_a_target_line=40, ecc.)
 #   2. read sentinel mancante → exit 1
-#   3. write target=40 → user-choice.json creato (target_line=40, target_branch=30)
+#   3. write target=40 → user-choice.json creato (target_line=40, target_branch=40)
 #   4. write target=99 (invalid) → exit 1
-#   5. (bonus) write target=70 → user-choice.json creato (target_line=70, target_branch=60)
+#   5. (bonus) write target=70 → user-choice.json creato (target_line=70, target_branch=70)
 #   6. (bonus) read sentinel malformed → exit 1
 #
 # Usage: bash skills/code-coverage/scripts/tests/test_sentinel_handshake.sh
@@ -110,7 +110,7 @@ write_valid_sentinel() {
     "A": {
       "label": "Coverage 40% — quick win",
       "target_line": 40,
-      "target_branch": 30,
+      "target_branch": 40,
       "focus": ["POJO", "utility"],
       "estimated_wallclock_min_p50": 25,
       "estimated_wallclock_min_p90": 50
@@ -118,7 +118,7 @@ write_valid_sentinel() {
     "B": {
       "label": "Coverage 70% — full bundle",
       "target_line": 70,
-      "target_branch": 60,
+      "target_branch": 70,
       "focus": ["service layer"],
       "estimated_wallclock_min_p50": 98,
       "estimated_wallclock_min_p90": 164
@@ -187,7 +187,7 @@ USER_CHOICE3="$REPO3/.code-coverage/user-choice.json"
     { echo "  ✓ user-choice.json creato"; TESTS_PASSED=$((TESTS_PASSED+1)); } || \
     { echo "  ✗ user-choice.json non creato"; TESTS_FAILED=$((TESTS_FAILED+1)); }
 assert_json_field "$USER_CHOICE3" "target_line" "40" "target_line=40"
-assert_json_field "$USER_CHOICE3" "target_branch" "30" "target_branch=30 (fixed rule)"
+assert_json_field "$USER_CHOICE3" "target_branch" "40" "target_branch=40 (branch == line)"
 assert_json_field "$USER_CHOICE3" "size_class" "medium" "size_class=medium"
 assert_json_field "$USER_CHOICE3" "estimated_wallclock_min_p50" "25" "p50=25 dal sentinel"
 assert_json_field "$USER_CHOICE3" "estimated_wallclock_min_p90" "50" "p90=50 dal sentinel"
@@ -210,7 +210,7 @@ assert_exit "$EXIT4" "1" "write target=99 → exit 1"
     { echo "  ✗ user-choice.json creato erroneamente"; TESTS_FAILED=$((TESTS_FAILED+1)); }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Case 5 (bonus): write target=70 → user-choice.json corretto (branch=60)
+# Case 5 (bonus): write target=70 → user-choice.json corretto (branch=70)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "Case 5 (bonus): write target=70"
@@ -223,7 +223,7 @@ set -e
 assert_exit "$EXIT5" "0" "write target=70 → exit 0"
 USER_CHOICE5="$REPO5/.code-coverage/user-choice.json"
 assert_json_field "$USER_CHOICE5" "target_line" "70" "target_line=70"
-assert_json_field "$USER_CHOICE5" "target_branch" "60" "target_branch=60 (fixed rule)"
+assert_json_field "$USER_CHOICE5" "target_branch" "70" "target_branch=70 (branch == line)"
 assert_json_field "$USER_CHOICE5" "estimated_wallclock_min_p50" "98" "p50=98 da option B"
 assert_json_field "$USER_CHOICE5" "estimated_wallclock_min_p90" "164" "p90=164 da option B"
 
@@ -252,15 +252,15 @@ set -e
 assert_exit "$EXIT7" "1" "no args → exit 1"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Case 8: effective_target — CI threshold (branch=70) overrides preset (branch=60)
-# preset: line=70 → derived branch=60; CI: COVERAGE_BRANCHES=70 → override
+# Case 8: effective_target — CI threshold (branch=80) overrides il floor utente (branch=70)
+# preset: line=70 → branch=70 (== line); CI: COVERAGE_BRANCHES=80 → override
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "Case 8: effective_target CI override (branch 70 > preset 60)"
+echo "Case 8: effective_target CI override (branch 80 > floor utente 70)"
 REPO8="$(setup_repo case8)"
 write_valid_sentinel "$REPO8"
-# CI impone branch=70, preset utente line=70 → derived branch=60 → CI wins
-printf '{"COVERAGE_BRANCHES": 70, "source": "CI.yaml", "working_directory_issues": []}\n' \
+# CI impone branch=80, preset utente line=70 → branch=70 → CI wins
+printf '{"COVERAGE_BRANCHES": 80, "source": "CI.yaml", "working_directory_issues": []}\n' \
     > "$REPO8/.code-coverage/ci-thresholds.json"
 printf '{"line_branch_delta": 16.77}\n' > "$REPO8/.code-coverage/stack.json"
 set +e
@@ -269,8 +269,8 @@ EXIT8=$?
 set -e
 assert_exit "$EXIT8" "0" "write target=70 con CI override → exit 0"
 USER_CHOICE8="$REPO8/.code-coverage/user-choice.json"
-# CI branch=70 deve sovrascrivere il derivato branch=60
-assert_json_field "$USER_CHOICE8" "target_branch" "70" "target_branch=70 (CI override su preset 60)"
+# CI branch=80 deve sovrascrivere il floor utente branch=70
+assert_json_field "$USER_CHOICE8" "target_branch" "80" "target_branch=80 (CI override su floor utente 70)"
 # il flag ci_threshold_override deve essere True (non solo coincidenza numerica)
 assert_json_field "$USER_CHOICE8" "ci_threshold_override" "True" "ci_threshold_override=True"
 # ci_thresholds_source deve riportare la fonte CI
@@ -301,7 +301,7 @@ EXIT9=$?
 set -e
 assert_exit "$EXIT9" "0" "write target=70 senza CI file → exit 0"
 USER_CHOICE9="$REPO9/.code-coverage/user-choice.json"
-assert_json_field "$USER_CHOICE9" "target_branch" "60" "target_branch=60 (no CI override)"
+assert_json_field "$USER_CHOICE9" "target_branch" "70" "target_branch=70 (no CI override, branch == line)"
 assert_json_field "$USER_CHOICE9" "ci_threshold_override" "False" "ci_threshold_override=False"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -313,8 +313,8 @@ echo ""
 echo "Case 10 (C-1): cmd_read emette ci_threshold_override da user-choice.json"
 REPO10="$(setup_repo case10)"
 write_valid_sentinel "$REPO10"
-# CI override: COVERAGE_BRANCHES=70 > preset derivato=60
-printf '{"COVERAGE_BRANCHES": 70, "source": "CI.yaml", "working_directory_issues": []}\n' \
+# CI override: COVERAGE_BRANCHES=80 > floor utente=70
+printf '{"COVERAGE_BRANCHES": 80, "source": "CI.yaml", "working_directory_issues": []}\n' \
     > "$REPO10/.code-coverage/ci-thresholds.json"
 # write user-choice.json (ci_threshold_override=True, ci_thresholds_source=CI.yaml)
 set +e

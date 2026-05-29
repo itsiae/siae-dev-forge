@@ -56,18 +56,11 @@ _validate_target_line() {
     return 0
 }
 
-# Derive branch target: 40→30, 70→60, custom N → max(1, N-10).
+# Derive branch target: branch == line. Il valore inserito dall'utente e' il
+# floor minimo e vale identico per line e branch (preset 40/70 e custom).
+# La CI threshold (vedi cmd_write) puo' alzarlo, mai abbassarlo.
 _derive_branch_target() {
-    local line="$1"
-    case "$line" in
-        40) echo 30 ;;
-        70) echo 60 ;;
-        *)
-            local b=$((line - 10))
-            [ "$b" -lt 1 ] && b=1
-            echo "$b"
-            ;;
-    esac
+    echo "$1"
 }
 
 cmd_read() {
@@ -218,13 +211,10 @@ else:
 p50 = chosen.get("estimated_wallclock_min_p50")
 p90 = chosen.get("estimated_wallclock_min_p90")
 
-# target_branch: 40→30, 70→60, custom N → max(1, N-10)
-if target == 40:
-    target_branch = 30
-elif target == 70:
-    target_branch = 60
-else:
-    target_branch = max(1, target - 10)
+# target_branch == target_line: il valore inserito dall'utente e' il floor
+# minimo e vale identico per line e branch (preset 40/70 e custom). La CI
+# threshold sotto puo' alzarlo, mai abbassarlo.
+target_branch = target
 
 # ── CI threshold override ─────────────────────────────────────────────────────
 _user_line = target

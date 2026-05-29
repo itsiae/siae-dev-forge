@@ -102,7 +102,17 @@ if [ ! -e "$REPORT_FULL_PATH" ]; then
   exit 1
 fi
 
+# min-floor: il target_line scelto dall'utente e' il MINIMO per ogni soglia.
+# Passato esplicito dal repo; se assente, parse_coverage.py risale comunque da REPORT.
+MIN_FLOOR_ARGS=()
+USER_CHOICE_PATH="$REPO/.code-coverage/user-choice.json"
+if [ -f "$USER_CHOICE_PATH" ]; then
+  TARGET_LINE="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('target_line',''))" "$USER_CHOICE_PATH" 2>/dev/null)"
+  [ -n "$TARGET_LINE" ] && MIN_FLOOR_ARGS=(--min-floor "$TARGET_LINE")
+fi
+
 python3 "$SKILL_DIR/scripts/parse_coverage.py" "$FORMAT" "$REPORT_FULL_PATH" \
+  "${MIN_FLOOR_ARGS[@]}" \
   > "$REPO/.code-coverage/coverage-report.json"
 
 if [ "$PROBE_MODE" -eq 1 ]; then

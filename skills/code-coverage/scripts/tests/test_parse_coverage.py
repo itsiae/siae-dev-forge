@@ -228,6 +228,100 @@ def test_priority_rules_branch_threshold_gate():
     assert payment["fail_reason"] == "lines"
 
 
+def test_branch_threshold_fallback_equals_line():
+    """Quando min_branch_pct NON e' esplicito, il branch threshold fa fallback
+    al line threshold (branch == line floor), non a line - 10."""
+    # Caso A: nessuna priority rule → default branch == default line
+    pri, line_thr, branch_thr = pc.assign_priority_and_threshold("src/foo.ts", None)
+    assert pri is None
+    assert branch_thr == line_thr
+
+    # Caso B: Pass 1 (parent_dirs) senza min_branch_pct → branch == line
+    rules_parent = {
+        "priority_levels": {
+            "P1": {"parent_dirs": ["services"], "min_coverage_pct": 80.0},
+        }
+    }
+    pri, line_thr, branch_thr = pc.assign_priority_and_threshold(
+        "src/services/payment.ts", rules_parent
+    )
+    assert pri == "P1"
+    assert line_thr == 80.0
+    assert branch_thr == 80.0
+
+    # Caso C: livello P2 (parent_dirs) senza min_branch_pct → branch == line.
+    # Usa parent_dirs perche' il match path_patterns ancorato e' deliberatamente
+    # restrittivo (vedi test_priority_path_patterns_*); parent_dirs e' il
+    # classificatore primario in produzione.
+    rules_p2 = {
+        "priority_levels": {
+            "P2": {"parent_dirs": ["utils"], "min_coverage_pct": 65.0},
+        }
+    }
+    pri, line_thr, branch_thr = pc.assign_priority_and_threshold(
+        "src/utils/dates.ts", rules_p2
+    )
+    assert pri == "P2"
+    assert line_thr == 65.0
+    assert branch_thr == 65.0
+
+
+def test_user_floor_clamps_priority_thresholds():
+    """Il valore utente e' il MINIMO per ogni soglia: effective = max(default, user_floor),
+    sia line sia branch (branch == line)."""
+    rules = {
+        "priority_levels": {
+            "P1": {"parent_dirs": ["services"], "min_coverage_pct": 80.0},
+            "P2": {"parent_dirs": ["utils"], "min_coverage_pct": 70.0},
+            "P3": {"parent_dirs": ["config"], "min_coverage_pct": 60.0},
+        }
+    }
+
+    # user_floor=70 → P1 resta 80 (80>70), P2 resta 70, P3 SALE a 70 (60<70)
+    p1 = pc.assign_priority_and_threshold("src/services/x.ts", rules, user_floor=70.0)
+    p2 = pc.assign_priority_and_threshold("src/utils/x.ts", rules, user_floor=70.0)
+    p3 = pc.assign_priority_and_threshold("src/config/x.ts", rules, user_floor=70.0)
+    assert p1 == ("P1", 80.0, 80.0)
+    assert p2 == ("P2", 70.0, 70.0)
+    assert p3 == ("P3", 70.0, 70.0)
+
+    # user_floor=83 → tutte salgono a 83/83
+    assert pc.assign_priority_and_threshold("src/services/x.ts", rules, user_floor=83.0) == ("P1", 83.0, 83.0)
+    assert pc.assign_priority_and_threshold("src/config/x.ts", rules, user_floor=83.0) == ("P3", 83.0, 83.0)
+
+    # user_floor=40 → nessuna sale (40 < tutti i default)
+    assert pc.assign_priority_and_threshold("src/services/x.ts", rules, user_floor=40.0) == ("P1", 80.0, 80.0)
+    assert pc.assign_priority_and_threshold("src/config/x.ts", rules, user_floor=40.0) == ("P3", 60.0, 60.0)
+
+    # nessuna priority rule + user_floor=85 → default (70) alzato a 85
+    pri, line_thr, branch_thr = pc.assign_priority_and_threshold("src/x.ts", None, user_floor=85.0)
+    assert pri is None
+    assert line_thr == 85.0
+    assert branch_thr == 85.0
+
+    # default param: user_floor=0.0 → comportamento invariato (backward-compat)
+    assert pc.assign_priority_and_threshold("src/config/x.ts", rules) == ("P3", 60.0, 60.0)
+
+
+def test_user_floor_propagates_to_views():
+    """user_floor confluisce in parse() e governa threshold_met globale (max(70, floor))
+    e la soglia P1 violators (max(80, floor))."""
+    rules = {
+        "priority_levels": {
+            "P1": {"parent_dirs": ["services"], "min_coverage_pct": 80.0},
+        }
+    }
+    # vitest fixture: payment.ts lines=60. Con user_floor=85 il global floor sale a 85.
+    result = pc.parse("vitest", FIXTURES / "vitest-summary.json", rules, user_floor=85.0)
+    assert result["user_floor"] == 85.0
+    repair = pc._build_view_repair(result)
+    # global lines_pct < 85 → threshold_met False
+    assert repair["global"]["threshold_met"] is False
+    # P1 violators usa max(80, 85)=85 come soglia
+    summary = pc._build_view_summary(result)
+    assert summary["global"]["threshold_met"] is False
+
+
 def test_branch_gate_skipped_when_parser_emits_no_branch():
     """Parser senza branch (es. go-test, cargo-tarpaulin) → branch_pct=0.0 →
     has_branch_data=False → gate branch NON applicato (no falsi FAIL)."""
