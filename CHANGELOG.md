@@ -4,6 +4,39 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.73.0] - 2026-05-30
+
+### Changed — DevForge subagent default model: `inherit` → `sonnet`
+
+Tutti e 5 i subagent DevForge (`code-reviewer`, `doc-generator`, `mcp-impact-analyst`,
+`qa-investigator`, `spec-reviewer`) ora dichiarano `model: sonnet` nel frontmatter
+invece di `model: inherit`. Significa che ogni dispatch via Agent tool gira di
+default su Claude Sonnet (oggi 4.6), indipendentemente dal modello della sessione
+parent (Opus 4.7, Haiku 4.5, ecc.).
+
+**Razionale:**
+- **Coerenza eval baseline:** tutti i dispatch DevForge convergono sullo stesso modello → output piu' riproducibile, regression detection piu' affidabile
+- **Cost efficiency:** Sonnet 4.6 e' ~5x meno costoso di Opus 4.7 per token; review/spec-review/qa-investigator hanno pattern di output che non beneficiano significativamente di Opus
+- **Throughput:** Sonnet 4.6 ha latenza minore → review parallel piu' veloci
+
+**Override esplicito:**
+chi vuole un agent specifico su Opus puo' ancora forzarlo in-call:
+
+```
+Agent({subagent_type: "siae-devforge:code-reviewer", model: "opus", prompt: ...})
+```
+
+Il `model` passato come parametro tool ha precedenza sul frontmatter agent.
+
+**Migration:** zero migration richiesta. Utenti che non hanno mai customizzato
+nulla vedono comportamento invariato (i loro dispatch usavano gia' il modello
+default della sessione, che in molti casi era Sonnet); chi era esplicitamente su
+Opus per i subagent ora si trova Sonnet — vedi override sopra per ripristinare.
+
+### Tests
+
+- `tests/agent_model_sonnet.test.sh` — 18 check (5 agenti × 2 + frontmatter integrity + count check + zero residui inherit/altri valori)
+
 ## [1.68.0] - 2026-05-25
 
 ### Added — siae-premortem skill + pr-premortem-gate hook

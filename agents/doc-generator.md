@@ -58,7 +58,7 @@ tools:
   - mcp__sport-kg__describe_table
   - mcp__sport-kg__semantic_search
   - mcp__sport-kg__semantic_resolve
-model: inherit
+model: sonnet
 ---
 
 ```

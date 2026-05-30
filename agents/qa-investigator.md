@@ -37,7 +37,7 @@ description: |
   assistant: "Dispatch 4 qa-investigator paralleli, uno per domanda. Ognuno scrive nel scratchpad condiviso. Consolido al ritorno."
   <commentary>Pattern multi-domanda parallel: 4 invocazioni concorrenti, ognuna con scope ristretto. Lo scratchpad evita re-discovery di entita' trasversali (es. AAS IdP scoperto in domanda 4 ma usato anche in 1+3).</commentary>
   </example>
-model: inherit
+model: sonnet
 tools:
   - Read
   - Bash

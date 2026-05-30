@@ -36,7 +36,7 @@ description: |
   assistant: "Dispatch mcp-impact-analyst per impact_of_dto_change: blast radius transitivo sui consumer reali."
   <commentary>Modifica DTO library = potenziale breaking change cross-service. L'agent usa impact_of_dto_change + impact_with_evidence per identificare consumer attivi negli ultimi 30gg ES.</commentary>
   </example>
-model: inherit
+model: sonnet
 tools:
   - Read
   - Bash

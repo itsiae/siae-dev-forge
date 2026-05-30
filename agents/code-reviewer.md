@@ -30,7 +30,7 @@ description: |
   assistant: "[Attiva code-reviewer] Review IaC: verifico struttura file, naming, security (IAM least privilege, encryption), state management, e conformita' al pattern Terragrunt SIAE."
   <commentary>Per moduli IaC la review enfatizza security, struttura file (_input.tf, _local.tf, _output.tf), e aderenza ai pattern Terragrunt documentati.</commentary>
   </example>
-model: inherit
+model: sonnet
 tools:
   - Read
   - Bash
