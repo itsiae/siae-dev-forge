@@ -1,6 +1,6 @@
 # Task 05 — Modello prevalente + token in telemetria
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File:** `lib/token-collector.py` (MODIFICA), `hooks/stop-gate` (MODIFICA), `tests/test_token_collector.py` (MODIFICA)
 **Dipende da:** Task 01, Task 02
 **Requisito:** utente 2026-06-01 — "metterei anche il numero di token e il modello prevalentemente usato"

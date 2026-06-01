@@ -1,6 +1,6 @@
 # Task 04 — Dedup tool: analyze-token-usage.py delega al core
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File:** `tests/analyze-token-usage.py` (MODIFICA), `tests/test_token_collector.py` (MODIFICA)
 **Dipende da:** Task 01, Task 02
 

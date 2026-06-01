@@ -140,6 +140,25 @@ esistono già. Solo il `cost_eur` diventa accurato.
 - [ ] AC8: `model_prevalent` = modello con più token; tie-break alfabetico deterministico
 - [ ] AC9: test suite verde (14 casi in `tests/test_token_collector.py`)
 
+## Addendum 2026-06-01 — Modelli recenti (Task 06)
+
+Verifica (smentita parziale del finding iniziale): il pricing di `claude-opus-4-8`/`4-7`
+NON era sottostimato. `canonical_model()` matcha il prefisso generico `"claude-opus-4"`
+(già presente) → `pricing_for_model()` via fallback `startswith("claude-opus")` → rate
+Opus $5/$25 **corretti**. Nessuna sottostima di costo.
+
+Il valore reale del task è la **granularità del `canonical_model`**: oggi opus-4-8 e
+opus-4-7 vengono collassati a `"claude-opus-4"` (etichetta generica), il che degrada la
+precisione del `model_prevalent` e di eventuali analisi per-versione.
+
+Prezzi verificati (web, giu 2026): Opus 4.7/4.8 = $5/$25 (= Opus 4.6). Sonnet 4.7 **non
+esiste** (tier corrente = 4.6) → non aggiunto.
+
+Fix: aggiungere `claude-opus-4-8`/`4-7` a `MODEL_PREFIXES` (PRIMA del prefisso generico,
+l'ordine di match conta) e a `PRICING_USD_PER_1M` (entry esplicite, leggibilità).
+- [ ] AC10: `usage_cost_eur(input=1M, "claude-opus-4-8")` usa rate Opus ($5) — già vero, ora esplicito
+- [ ] AC11: `canonical_model("claude-opus-4-7-xxx")` = `"claude-opus-4-7"` (granularità, era `"claude-opus-4"`)
+
 ## Stima SP
 
 | Scala | SP |

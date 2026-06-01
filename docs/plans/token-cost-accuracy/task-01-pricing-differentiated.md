@@ -1,6 +1,6 @@
 # Task 01 — Pricing differenziato cache 5m/1h
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File:** `lib/token-collector.py` (MODIFICA), `tests/test_token_collector.py` (NUOVO)
 **Dipende da:** nessuno
 

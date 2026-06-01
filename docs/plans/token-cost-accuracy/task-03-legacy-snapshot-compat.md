@@ -1,6 +1,6 @@
 # Task 03 — Retrocompat snapshot legacy
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File:** `tests/test_token_collector.py` (MODIFICA). Codice: verifica, modifica solo se test rosso.
 **Dipende da:** Task 01
 

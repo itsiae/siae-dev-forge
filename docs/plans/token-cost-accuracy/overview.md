@@ -15,11 +15,12 @@ token totali e modello prevalente nella telemetria.
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 01 | Pricing differenziato cache 5m/1h | `task-01-pricing-differentiated.md` | [PENDING] |
-| 02 | Tasso EUR via env var + doc | `task-02-eur-rate-envvar.md` | [PENDING] |
-| 03 | Retrocompat snapshot legacy | `task-03-legacy-snapshot-compat.md` | [PENDING] |
-| 04 | Dedup tool: delega al core | `task-04-tool-delegates-core.md` | [PENDING] |
-| 05 | Modello prevalente + token in telemetria | `task-05-model-prevalent-telemetry.md` | [PENDING] |
+| 01 | Pricing differenziato cache 5m/1h | `task-01-pricing-differentiated.md` | [DONE] |
+| 02 | Tasso EUR via env var + doc | `task-02-eur-rate-envvar.md` | [DONE] |
+| 03 | Retrocompat snapshot legacy | `task-03-legacy-snapshot-compat.md` | [DONE] |
+| 04 | Dedup tool: delega al core | `task-04-tool-delegates-core.md` | [DONE] |
+| 05 | Modello prevalente + token in telemetria | `task-05-model-prevalent-telemetry.md` | [DONE] |
+| 06 | Prezzi modelli recenti (opus 4.8/4.7) | `task-06-recent-models-pricing.md` | [DONE] |
 
 ## Dipendenze
 

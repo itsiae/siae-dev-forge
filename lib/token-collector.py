@@ -15,6 +15,8 @@ STATE_DIR = Path(os.path.expanduser(os.environ.get("DEVFORGE_STATE_DIR", "~/.cla
 
 # cache write: 5m = 1.25x base input, 1h = 2x base input (prezzi Anthropic)
 PRICING_USD_PER_1M: dict[str, dict[str, float]] = {
+    "claude-opus-4-8":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
+    "claude-opus-4-7":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
     "claude-opus-4-6":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
     "claude-sonnet-4-6":  {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
     "claude-haiku-4-5":   {"input": 1.0, "output": 5.0,  "cache_read": 0.10, "cache_write_5m": 1.25, "cache_write_1h": 2.0},
@@ -23,6 +25,8 @@ PRICING_USD_PER_1M: dict[str, dict[str, float]] = {
 
 # Legacy alias list for canonical_model prefix matching
 MODEL_PREFIXES: tuple[str, ...] = (
+    "claude-opus-4-8",
+    "claude-opus-4-7",
     "claude-opus-4-6",
     "claude-opus-4-5",
     "claude-opus-4-1",

@@ -1,6 +1,6 @@
 # Task 02 — Tasso EUR via env var + doc
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File:** `lib/token-collector.py` (MODIFICA), `hooks/ENV_VARS.md` (MODIFICA), `tests/test_token_collector.py` (MODIFICA)
 **Dipende da:** Task 01
 

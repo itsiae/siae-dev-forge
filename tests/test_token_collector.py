@@ -163,3 +163,16 @@ def test_normalize_stats_without_by_model_no_crash():
     stats = tc.normalize_stats(legacy)
     assert stats["by_model"] == {}
     assert stats["model_prevalent"] == ""
+
+
+# --- Task 06: prezzi modelli recenti (opus 4.8/4.7) ---
+
+def test_opus_4_8_priced_as_opus_not_default():
+    cost = tc.usage_cost_eur(_metrics(input=1_000_000), "claude-opus-4-8")
+    # Opus input 5.0 USD * 0.91 = 4.55 EUR (NON default 3.0*0.91=2.73)
+    assert abs(cost - 4.55) < 0.01
+
+
+def test_opus_4_7_canonical_recognized():
+    assert tc.canonical_model("claude-opus-4-7-20260416") == "claude-opus-4-7"
+    assert tc.canonical_model("claude-opus-4-8") == "claude-opus-4-8"
