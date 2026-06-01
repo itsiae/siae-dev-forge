@@ -13,11 +13,12 @@ from typing import Any
 
 STATE_DIR = Path(os.path.expanduser(os.environ.get("DEVFORGE_STATE_DIR", "~/.claude")))
 
+# cache write: 5m = 1.25x base input, 1h = 2x base input (prezzi Anthropic)
 PRICING_USD_PER_1M: dict[str, dict[str, float]] = {
-    "claude-opus-4-6":    {"input": 5.0,   "output": 25.0,  "cache_read": 0.50,  "cache_write": 6.25},
-    "claude-sonnet-4-6":  {"input": 3.0,   "output": 15.0,  "cache_read": 0.30,  "cache_write": 3.75},
-    "claude-haiku-4-5":   {"input": 1.0,   "output": 5.0,   "cache_read": 0.10,  "cache_write": 1.25},
-    "default":            {"input": 3.0,   "output": 15.0,  "cache_read": 0.30,  "cache_write": 3.75},
+    "claude-opus-4-6":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
+    "claude-sonnet-4-6":  {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
+    "claude-haiku-4-5":   {"input": 1.0, "output": 5.0,  "cache_read": 0.10, "cache_write_5m": 1.25, "cache_write_1h": 2.0},
+    "default":            {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
 }
 
 # Legacy alias list for canonical_model prefix matching
@@ -302,7 +303,8 @@ def usage_cost_eur(metrics: dict[str, int], model: str | None) -> float:
         metrics["input"] * rates["input"] / 1_000_000
         + metrics["output"] * rates["output"] / 1_000_000
         + metrics["cache_read"] * rates["cache_read"] / 1_000_000
-        + metrics["cache_write"] * rates["cache_write"] / 1_000_000
+        + metrics["cache_write_5m"] * rates["cache_write_5m"] / 1_000_000
+        + metrics["cache_write_1h"] * rates["cache_write_1h"] / 1_000_000
     )
     return round(cost_usd * USD_TO_EUR, 6)
 
