@@ -120,6 +120,8 @@ def empty_stats() -> dict[str, Any]:
         "cache_write_1h": 0,
         "total": 0,
         "cost_eur": 0.0,
+        "by_model": {},
+        "model_prevalent": "",
         "updated_at": "",
     }
 
@@ -137,6 +139,10 @@ def normalize_stats(raw: dict[str, Any] | None) -> dict[str, Any]:
             stats[key] = int(value or 0)
         else:
             stats[key] = value or default
+
+    raw_by_model = raw.get("by_model")
+    stats["by_model"] = dict(raw_by_model) if isinstance(raw_by_model, dict) else {}
+    stats["model_prevalent"] = raw.get("model_prevalent") or ""
 
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
     stats["total"] = int(
@@ -364,9 +370,31 @@ def add_usage_delta(stats: dict[str, Any], previous: dict[str, Any] | None, curr
         stats["cost_eur"] = round(float(stats.get("cost_eur", 0.0)) + cost_delta, 6)
         changed = True
 
+    model = current.get("model") or ""
+    if model:
+        delta_total = sum(
+            max(int(current.get(field, 0) or 0) - int(previous.get(field, 0) or 0), 0)
+            for field in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")
+        )
+        if delta_total > 0:
+            by_model = stats.setdefault("by_model", {})
+            by_model[model] = int(by_model.get(model, 0)) + delta_total
+            changed = True
+
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
     stats["total"] = int(stats["input"] + stats["output"] + stats["cache_read"] + stats["cache_write"])
     return changed
+
+
+def finalize_model_prevalent(stats: dict[str, Any]) -> None:
+    """Set stats['model_prevalent'] to the model with most tokens (tie-break: alphabetical)."""
+    by_model = stats.get("by_model") or {}
+    if not by_model:
+        stats["model_prevalent"] = ""
+        return
+    stats["model_prevalent"] = min(
+        by_model.items(), key=lambda kv: (-int(kv[1]), kv[0])
+    )[0]
 
 
 def init() -> None:
@@ -448,6 +476,7 @@ def update() -> None:
 
         new_offset = handle.tell()
 
+    finalize_model_prevalent(stats)
     stats["updated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     stats["cost_eur"] = round(float(stats.get("cost_eur", 0.0)), 6)
     write_stats(stats)

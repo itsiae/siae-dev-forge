@@ -128,3 +128,38 @@ def test_tool_has_no_local_pricing():
     tool_src = (REPO_ROOT / "tests" / "analyze-token-usage.py").read_text()
     assert "PRICING = {" not in tool_src
     assert "def calculate_cost" not in tool_src
+
+
+# --- Task 05: modello prevalente + token in telemetria ---
+
+def _snapshot(model, total):
+    return {"input": total, "output": 0, "cache_read": 0, "cache_write_5m": 0,
+            "cache_write_1h": 0, "cache_write": 0, "total": total,
+            "model": model, "cost_eur": 0.0}
+
+
+def test_model_prevalent_picks_max_tokens():
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None, _snapshot("claude-sonnet-4-6", 1000))
+    tc.add_usage_delta(stats, None, _snapshot("claude-opus-4-6", 5000))
+    tc.finalize_model_prevalent(stats)
+    assert stats["model_prevalent"] == "claude-opus-4-6"
+    assert stats["by_model"]["claude-sonnet-4-6"] == 1000
+    assert stats["by_model"]["claude-opus-4-6"] == 5000
+
+
+def test_model_prevalent_tiebreak_alphabetical():
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None, _snapshot("claude-sonnet-4-6", 1000))
+    tc.add_usage_delta(stats, None, _snapshot("claude-opus-4-6", 1000))
+    tc.finalize_model_prevalent(stats)
+    # parità → ordine alfabetico → "claude-opus-4-6" < "claude-sonnet-4-6"
+    assert stats["model_prevalent"] == "claude-opus-4-6"
+
+
+def test_normalize_stats_without_by_model_no_crash():
+    legacy = {"input": 100, "output": 50, "cache_read": 0, "cache_write_5m": 0,
+              "cache_write_1h": 0, "cost_eur": 0.1}
+    stats = tc.normalize_stats(legacy)
+    assert stats["by_model"] == {}
+    assert stats["model_prevalent"] == ""
