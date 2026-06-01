@@ -83,3 +83,22 @@ def test_eur_rate_one_means_cost_eur_equals_usd(monkeypatch):
     monkeypatch.setenv("DEVFORGE_USD_EUR_RATE", "1.0")
     cost = tc.usage_cost_eur(_metrics(input=1_000_000), "claude-sonnet-4-6")
     assert abs(cost - 3.0) < 0.01  # 3.0 USD, rate 1.0 → 3.0
+
+
+# --- Task 03: retrocompat snapshot legacy ---
+
+def test_legacy_snapshot_no_crash():
+    legacy = {"input": 100, "output": 50, "cache_read": 10,
+              "cache_write": 200, "cost_eur": 0.123, "model": "claude-sonnet-4-6"}
+    normalized = tc.normalize_usage_snapshot(legacy)
+    assert normalized["cost_eur"] == 0.123
+    assert normalized["cache_write_5m"] == 0
+    assert normalized["cache_write_1h"] == 0
+
+
+def test_legacy_stats_normalize_no_crash():
+    legacy_stats = {"input": 100, "output": 50, "cache_read": 10,
+                    "cache_write": 200, "cost_eur": 0.5}
+    stats = tc.normalize_stats(legacy_stats)
+    assert stats["cost_eur"] == 0.5
+    assert stats["cache_write"] == 0
