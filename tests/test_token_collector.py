@@ -102,3 +102,29 @@ def test_legacy_stats_normalize_no_crash():
     stats = tc.normalize_stats(legacy_stats)
     assert stats["cost_eur"] == 0.5
     assert stats["cache_write"] == 0
+
+
+# --- Task 04: dedup tool delega al core ---
+
+def _load_tool():
+    tool_path = REPO_ROOT / "tests" / "analyze-token-usage.py"
+    spec = importlib.util.spec_from_file_location("analyze_token_usage", tool_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_tool_delegates_to_core():
+    tool = _load_tool()
+    usage = {"input_tokens": 1000, "output_tokens": 500,
+             "cache_creation_input_tokens": 2000, "cache_read_input_tokens": 300}
+    event = {"type": "assistant", "message": {"model": "claude-sonnet-4-6", "usage": usage}}
+    tool_cost = tool.cost_for_usage(event, usage)
+    core_cost = tc.usage_cost_eur(tc.usage_tokens(usage), "claude-sonnet-4-6")
+    assert abs(tool_cost - core_cost) < 1e-9
+
+
+def test_tool_has_no_local_pricing():
+    tool_src = (REPO_ROOT / "tests" / "analyze-token-usage.py").read_text()
+    assert "PRICING = {" not in tool_src
+    assert "def calculate_cost" not in tool_src
