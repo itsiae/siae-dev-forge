@@ -168,6 +168,34 @@ batch_count=$(find "${SESSION_DIR4}/outbox" -maxdepth 1 -name 'batch-*.jsonl' -n
 assert_eq "non-empty batch file created" "1" "${batch_count}"
 
 # ─────────────────────────────────────────────────────────────
+# Test 7 — token-collector fields: session_end token breakdown contract
+# ─────────────────────────────────────────────────────────────
+echo "Test 7: token-collector fields emits 10-field tab line + valid by_model/by_tool JSON"
+
+SID7="testsid-fields"
+SESSION_DIR7="${TEST_TMP}/.claude/devforge-state/${SID7}"
+mkdir -p "${SESSION_DIR7}"
+export DEVFORGE_SESSION_DIR="${SESSION_DIR7}"
+cat > "${SESSION_DIR7}/token-stats.json" <<'JSON'
+{"input":300,"output":200,"cache_read":400,"cache_write_5m":50,"cache_write_1h":50,
+ "cache_write":100,"total":1000,"cost_eur":0.123456,
+ "by_model":{"claude-opus-4-8":1000},"by_tool":{"Bash":5,"Read":9,"mcp__sport-kg":2},
+ "model_prevalent":"claude-opus-4-8","updated_at":"2026-06-01T00:00:00Z"}
+JSON
+
+FIELDS_LINE=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null)
+nfields=$(printf '%s' "$FIELDS_LINE" | awk -F'\t' '{print NF}')
+assert_eq "fields line has 10 columns" "10" "${nfields}"
+assert_eq "f1 total" "1000" "$(printf '%s' "$FIELDS_LINE" | cut -f1)"
+assert_eq "f5 input" "300" "$(printf '%s' "$FIELDS_LINE" | cut -f5)"
+assert_eq "f7 cache_write_5m" "50" "$(printf '%s' "$FIELDS_LINE" | cut -f7)"
+BY_TOOL_JSON=$(printf '%s' "$FIELDS_LINE" | cut -f10)
+# Build a session_end-style meta and validate it parses as JSON with the new keys
+META="{\"by_model\":$(printf '%s' "$FIELDS_LINE" | cut -f9),\"by_tool\":${BY_TOOL_JSON}}"
+parsed=$(printf '%s' "$META" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['by_tool']['Bash'], d['by_model']['claude-opus-4-8'])" 2>/dev/null || echo "PARSE_FAIL")
+assert_eq "meta JSON valid with by_tool/by_model embedded" "5 1000" "${parsed}"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""

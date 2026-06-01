@@ -268,3 +268,47 @@ def test_update_tallies_tools_and_dedups(tmp_path, monkeypatch):
     tc.update()
     stats2 = tc.read_stats()
     assert stats2["by_tool"] == {"Bash": 1, "Read": 1, "Edit": 1, "mcp__sport-kg": 1}
+
+
+# --- Telemetry expansion: session_end field contract (Comp.2) ---
+
+def test_session_fields_line_order_and_json():
+    import json as _json
+    stats = tc.empty_stats()
+    stats.update({
+        "total": 1000, "output": 200, "cost_eur": 0.123456,
+        "input": 300, "cache_read": 400, "cache_write_5m": 50, "cache_write_1h": 50,
+        "model_prevalent": "claude-opus-4-8",
+        "by_model": {"claude-opus-4-8": 1000},
+        "by_tool": {"Bash": 5, "Read": 9, "mcp__sport-kg": 2},
+    })
+    line = tc.session_fields_line(stats)
+    fields = line.split("\t")
+    assert len(fields) == 10
+    assert fields[0] == "1000"            # total
+    assert fields[1] == "200"             # output
+    assert fields[2] == "0.123456"        # cost_eur
+    assert fields[3] == "claude-opus-4-8" # model_prevalent
+    assert fields[4] == "300"             # input
+    assert fields[5] == "400"             # cache_read
+    assert fields[6] == "50"              # cache_write_5m
+    assert fields[7] == "50"              # cache_write_1h
+    assert _json.loads(fields[8]) == {"claude-opus-4-8": 1000}   # by_model
+    assert _json.loads(fields[9]) == {"Bash": 5, "Read": 9, "mcp__sport-kg": 2}  # by_tool
+
+
+def test_session_fields_line_no_tabs_in_json():
+    stats = tc.empty_stats()
+    stats["by_tool"] = {"Bash": 1, "mcp__sport-kg": 2}
+    stats["by_model"] = {"claude-sonnet-4-6": 10}
+    line = tc.session_fields_line(stats)
+    # JSON fields must be compact (no tab/newline) so they stay inside the line
+    assert line.count("\t") == 9
+    assert "\n" not in line
+
+
+def test_session_fields_line_empty_stats_safe():
+    line = tc.session_fields_line(tc.empty_stats())
+    fields = line.split("\t")
+    assert fields[8] == "{}"   # by_model empty
+    assert fields[9] == "{}"   # by_tool empty

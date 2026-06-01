@@ -543,9 +543,37 @@ def update() -> None:
         write_usage_index(usage_index)
 
 
+def session_fields_line(stats: dict[str, Any]) -> str:
+    """Tab-separated session_end field contract consumed by hooks/stop-gate.
+
+    Order (f1..f10): total, output, cost_eur, model_prevalent, input,
+    cache_read, cache_write_5m, cache_write_1h, json(by_model), json(by_tool).
+    by_model/by_tool are compact JSON (no tab/newline) so they stay on one line
+    and can be embedded verbatim into the session_end meta object.
+    """
+    by_model = json.dumps(stats.get("by_model", {}) or {}, separators=(",", ":"), sort_keys=True)
+    by_tool = json.dumps(stats.get("by_tool", {}) or {}, separators=(",", ":"), sort_keys=True)
+    return "\t".join((
+        str(int(stats.get("total", 0) or 0)),
+        str(int(stats.get("output", 0) or 0)),
+        str(stats.get("cost_eur", 0) or 0),
+        str(stats.get("model_prevalent", "") or ""),
+        str(int(stats.get("input", 0) or 0)),
+        str(int(stats.get("cache_read", 0) or 0)),
+        str(int(stats.get("cache_write_5m", 0) or 0)),
+        str(int(stats.get("cache_write_1h", 0) or 0)),
+        by_model,
+        by_tool,
+    ))
+
+
 def flush() -> None:
     update()
     print(json.dumps(read_stats(), separators=(",", ":"), sort_keys=True))
+
+
+def fields() -> None:
+    print(session_fields_line(read_stats()))
 
 
 def main() -> int:
@@ -554,6 +582,8 @@ def main() -> int:
         init()
     elif command == "flush":
         flush()
+    elif command == "fields":
+        fields()
     else:
         update()
     return 0
