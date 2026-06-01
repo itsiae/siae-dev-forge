@@ -51,7 +51,6 @@ def resolve_eur_rate() -> float:
     return value if value > 0 else 0.91
 
 
-USD_TO_EUR = resolve_eur_rate()
 TOKEN_FIELDS = (
     "input",
     "output",
