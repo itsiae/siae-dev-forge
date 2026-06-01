@@ -13,15 +13,20 @@ from typing import Any
 
 STATE_DIR = Path(os.path.expanduser(os.environ.get("DEVFORGE_STATE_DIR", "~/.claude")))
 
+# cache write: 5m = 1.25x base input, 1h = 2x base input (prezzi Anthropic)
 PRICING_USD_PER_1M: dict[str, dict[str, float]] = {
-    "claude-opus-4-6":    {"input": 5.0,   "output": 25.0,  "cache_read": 0.50,  "cache_write": 6.25},
-    "claude-sonnet-4-6":  {"input": 3.0,   "output": 15.0,  "cache_read": 0.30,  "cache_write": 3.75},
-    "claude-haiku-4-5":   {"input": 1.0,   "output": 5.0,   "cache_read": 0.10,  "cache_write": 1.25},
-    "default":            {"input": 3.0,   "output": 15.0,  "cache_read": 0.30,  "cache_write": 3.75},
+    "claude-opus-4-8":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
+    "claude-opus-4-7":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
+    "claude-opus-4-6":    {"input": 5.0, "output": 25.0, "cache_read": 0.50, "cache_write_5m": 6.25, "cache_write_1h": 10.0},
+    "claude-sonnet-4-6":  {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
+    "claude-haiku-4-5":   {"input": 1.0, "output": 5.0,  "cache_read": 0.10, "cache_write_5m": 1.25, "cache_write_1h": 2.0},
+    "default":            {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
 }
 
 # Legacy alias list for canonical_model prefix matching
 MODEL_PREFIXES: tuple[str, ...] = (
+    "claude-opus-4-8",
+    "claude-opus-4-7",
     "claude-opus-4-6",
     "claude-opus-4-5",
     "claude-opus-4-1",
@@ -34,7 +39,18 @@ MODEL_PREFIXES: tuple[str, ...] = (
     "claude-haiku-3-5",
     "claude-haiku-3",
 )
-USD_TO_EUR = 0.91
+def resolve_eur_rate() -> float:
+    """USD→EUR rate from DEVFORGE_USD_EUR_RATE env var. Fallback 0.91 on absent/malformed/<=0."""
+    raw = os.environ.get("DEVFORGE_USD_EUR_RATE", "")
+    if not raw:
+        return 0.91
+    try:
+        value = float(raw)
+    except (ValueError, TypeError):
+        return 0.91
+    return value if value > 0 else 0.91
+
+
 TOKEN_FIELDS = (
     "input",
     "output",
@@ -107,6 +123,8 @@ def empty_stats() -> dict[str, Any]:
         "cache_write_1h": 0,
         "total": 0,
         "cost_eur": 0.0,
+        "by_model": {},
+        "model_prevalent": "",
         "updated_at": "",
     }
 
@@ -124,6 +142,10 @@ def normalize_stats(raw: dict[str, Any] | None) -> dict[str, Any]:
             stats[key] = int(value or 0)
         else:
             stats[key] = value or default
+
+    raw_by_model = raw.get("by_model")
+    stats["by_model"] = dict(raw_by_model) if isinstance(raw_by_model, dict) else {}
+    stats["model_prevalent"] = raw.get("model_prevalent") or ""
 
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
     stats["total"] = int(
@@ -302,9 +324,10 @@ def usage_cost_eur(metrics: dict[str, int], model: str | None) -> float:
         metrics["input"] * rates["input"] / 1_000_000
         + metrics["output"] * rates["output"] / 1_000_000
         + metrics["cache_read"] * rates["cache_read"] / 1_000_000
-        + metrics["cache_write"] * rates["cache_write"] / 1_000_000
+        + metrics["cache_write_5m"] * rates["cache_write_5m"] / 1_000_000
+        + metrics["cache_write_1h"] * rates["cache_write_1h"] / 1_000_000
     )
-    return round(cost_usd * USD_TO_EUR, 6)
+    return round(cost_usd * resolve_eur_rate(), 6)
 
 
 def normalize_usage_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
@@ -350,9 +373,31 @@ def add_usage_delta(stats: dict[str, Any], previous: dict[str, Any] | None, curr
         stats["cost_eur"] = round(float(stats.get("cost_eur", 0.0)) + cost_delta, 6)
         changed = True
 
+    model = current.get("model") or ""
+    if model:
+        delta_total = sum(
+            max(int(current.get(field, 0) or 0) - int(previous.get(field, 0) or 0), 0)
+            for field in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")
+        )
+        if delta_total > 0:
+            by_model = stats.setdefault("by_model", {})
+            by_model[model] = int(by_model.get(model, 0)) + delta_total
+            changed = True
+
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
     stats["total"] = int(stats["input"] + stats["output"] + stats["cache_read"] + stats["cache_write"])
     return changed
+
+
+def finalize_model_prevalent(stats: dict[str, Any]) -> None:
+    """Set stats['model_prevalent'] to the model with most tokens (tie-break: alphabetical)."""
+    by_model = stats.get("by_model") or {}
+    if not by_model:
+        stats["model_prevalent"] = ""
+        return
+    stats["model_prevalent"] = min(
+        by_model.items(), key=lambda kv: (-int(kv[1]), kv[0])
+    )[0]
 
 
 def init() -> None:
@@ -434,6 +479,7 @@ def update() -> None:
 
         new_offset = handle.tell()
 
+    finalize_model_prevalent(stats)
     stats["updated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     stats["cost_eur"] = round(float(stats.get("cost_eur", 0.0)), 6)
     write_stats(stats)
