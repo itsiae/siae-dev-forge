@@ -60,3 +60,26 @@ def test_unknown_model_falls_back_to_default():
     cost_eur = tc.usage_cost_eur(_metrics(input=1_000_000), "gpt-nonexistent")
     # default input 3.0 USD * 0.91 = 2.73 EUR
     assert abs(cost_eur - 2.73) < 0.01
+
+
+# --- Task 02: tasso EUR via env var ---
+
+def test_eur_rate_override(monkeypatch):
+    monkeypatch.setenv("DEVFORGE_USD_EUR_RATE", "1.0")
+    assert tc.resolve_eur_rate() == 1.0
+
+
+def test_eur_rate_default(monkeypatch):
+    monkeypatch.delenv("DEVFORGE_USD_EUR_RATE", raising=False)
+    assert tc.resolve_eur_rate() == 0.91
+
+
+def test_eur_rate_malformed_falls_back(monkeypatch):
+    monkeypatch.setenv("DEVFORGE_USD_EUR_RATE", "not-a-number")
+    assert tc.resolve_eur_rate() == 0.91
+
+
+def test_eur_rate_one_means_cost_eur_equals_usd(monkeypatch):
+    monkeypatch.setenv("DEVFORGE_USD_EUR_RATE", "1.0")
+    cost = tc.usage_cost_eur(_metrics(input=1_000_000), "claude-sonnet-4-6")
+    assert abs(cost - 3.0) < 0.01  # 3.0 USD, rate 1.0 → 3.0

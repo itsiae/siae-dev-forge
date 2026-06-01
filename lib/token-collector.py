@@ -35,7 +35,19 @@ MODEL_PREFIXES: tuple[str, ...] = (
     "claude-haiku-3-5",
     "claude-haiku-3",
 )
-USD_TO_EUR = 0.91
+def resolve_eur_rate() -> float:
+    """USD→EUR rate from DEVFORGE_USD_EUR_RATE env var. Fallback 0.91 on absent/malformed/<=0."""
+    raw = os.environ.get("DEVFORGE_USD_EUR_RATE", "")
+    if not raw:
+        return 0.91
+    try:
+        value = float(raw)
+    except (ValueError, TypeError):
+        return 0.91
+    return value if value > 0 else 0.91
+
+
+USD_TO_EUR = resolve_eur_rate()
 TOKEN_FIELDS = (
     "input",
     "output",
@@ -306,7 +318,7 @@ def usage_cost_eur(metrics: dict[str, int], model: str | None) -> float:
         + metrics["cache_write_5m"] * rates["cache_write_5m"] / 1_000_000
         + metrics["cache_write_1h"] * rates["cache_write_1h"] / 1_000_000
     )
-    return round(cost_usd * USD_TO_EUR, 6)
+    return round(cost_usd * resolve_eur_rate(), 6)
 
 
 def normalize_usage_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
