@@ -196,6 +196,71 @@ parsed=$(printf '%s' "$META" | python3 -c "import json,sys; d=json.load(sys.stdi
 assert_eq "meta JSON valid with by_tool/by_model embedded" "5 1000" "${parsed}"
 
 # ─────────────────────────────────────────────────────────────
+# Test 8 — post-skill: token delta per skill in skill_completed
+# ─────────────────────────────────────────────────────────────
+echo "Test 8: post-skill emits tokens_total_delta/tokens_output_delta in skill_completed"
+
+# post-skill calls devforge_init_session which re-derives DEVFORGE_SESSION_DIR
+# from the sid. Discover that same dir so the subprocess finds our stats fixture.
+devforge_init_session 2>/dev/null || true
+SESSION_DIR8="${DEVFORGE_SESSION_DIR}"
+mkdir -p "${SESSION_DIR8}"
+# Current cumulative token stats (no .jsonl session → token-collector update is a no-op)
+cat > "${SESSION_DIR8}/token-stats.json" <<'JSON'
+{"input":600,"output":200,"cache_read":200,"cache_write_5m":0,"cache_write_1h":0,
+ "cache_write":0,"total":1000,"cost_eur":0.05,"by_model":{},"by_tool":{},
+ "model_prevalent":"","updated_at":"2026-06-01T00:00:00Z"}
+JSON
+# Previous skill snapshot: 5-field SKILL_TS_FILE (prev total=400, output=80)
+SKILL_TS_FILE8="${HOME}/.claude/.devforge-skill-start"
+mkdir -p "${HOME}/.claude"
+echo '1710000000000000000|siae-devforge:siae-prev|2. Design|400|80' > "$SKILL_TS_FILE8"
+TEST_LOG8="${TEST_TMP}/skilltok.jsonl"
+export DEVFORGE_LOG_FILE="$TEST_LOG8"
+rm -f "$TEST_LOG8"
+
+echo '{"skill":"siae-devforge:siae-brainstorming"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 || true
+
+delta_total=$(grep '"event":"skill_completed"' "$TEST_LOG8" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    d=json.loads(l); m=d.get('meta',{})
+    if 'tokens_total_delta' in m: print(m['tokens_total_delta']); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "tokens_total_delta = 1000-400 = 600" "600" "${delta_total}"
+
+delta_out=$(grep '"event":"skill_completed"' "$TEST_LOG8" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    d=json.loads(l); m=d.get('meta',{})
+    if 'tokens_output_delta' in m: print(m['tokens_output_delta']); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "tokens_output_delta = 200-80 = 120" "120" "${delta_out}"
+
+# ─────────────────────────────────────────────────────────────
+# Test 9 — post-skill: legacy 3-field SKILL_TS_FILE → no crash, delta 0
+# ─────────────────────────────────────────────────────────────
+echo "Test 9: post-skill tolerates legacy 3-field SKILL_TS_FILE (delta=0, no crash)"
+echo '1710000000000000000|siae-devforge:siae-legacy|2. Design' > "$SKILL_TS_FILE8"
+rm -f "$TEST_LOG8"
+echo '{"skill":"siae-devforge:siae-brainstorming"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1
+legacy_exit=$?
+assert_eq "post-skill exit 0 on legacy 3-field file" "0" "${legacy_exit}"
+legacy_delta=$(grep '"event":"skill_completed"' "$TEST_LOG8" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    d=json.loads(l); m=d.get('meta',{})
+    if d.get('meta'): print(m.get('tokens_total_delta','MISSING')); break
+else: print('NOEVENT')
+" 2>/dev/null || echo "ERR")
+assert_eq "legacy file → tokens_total_delta = 0" "0" "${legacy_delta}"
+
+unset DEVFORGE_LOG_FILE
+rm -f "$SKILL_TS_FILE8"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""
