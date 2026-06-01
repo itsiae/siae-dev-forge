@@ -4,6 +4,32 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.75.0] - 2026-06-01
+
+### Added — Espansione capacità telemetria: token esatti + "cosa hanno fatto"
+
+La telemetria DevForge ora misura, oltre al costo accurato già esistente, il
+breakdown completo dei token e l'attività degli utenti. Tutte le modifiche sono
+additive (schema_version resta 2, il consumer ignora i campi nuovi).
+
+- **`session_end`** arricchito con breakdown token completo: `input_tokens`,
+  `cache_read_tokens`, `cache_write_5m_tokens`, `cache_write_1h_tokens`, il dict
+  `by_model` e il nuovo `by_tool` (conteggio tool per tipo: Bash/Read/Edit/Task/
+  `mcp__<server>`, …).
+- **`by_tool`** catturato agganciandosi al reader `.jsonl` incrementale già
+  esistente di `lib/token-collector.py` (funzioni `iter_tool_names`,
+  `tally_tools`, `canonical_tool`) — nessun nuovo hook PostToolUse, zero overhead
+  per-call, cattura anche i subagent. Dedup legato all'`usage_id` nuovo.
+- **`skill_completed`** arricchito con `tokens_total_delta` e
+  `tokens_output_delta`: i token spesi mentre quella skill era il contesto attivo.
+  `SKILL_TS_FILE` esteso a 5 campi (retrocompatibile con i reader a 3 campi).
+- Nuovo comando `token-collector.py fields` (funzione pura `session_fields_line`)
+  che espone il contratto a 10 campi consumato da `hooks/stop-gate`, eliminando il
+  python inline fragile.
+
+Design: `docs/plans/2026-06-01-telemetry-capability-expansion-design.md`.
+Test: +12 casi (9 pytest in `test_token_collector.py`, 3 bash in `test_telemetry_fixes.sh`).
+
 ## [1.73.0] - 2026-05-30
 
 ### Changed — DevForge subagent default model: `inherit` → `sonnet`
