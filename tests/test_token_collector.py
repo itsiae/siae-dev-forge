@@ -176,3 +176,95 @@ def test_opus_4_8_priced_as_opus_not_default():
 def test_opus_4_7_canonical_recognized():
     assert tc.canonical_model("claude-opus-4-7-20260416") == "claude-opus-4-7"
     assert tc.canonical_model("claude-opus-4-8") == "claude-opus-4-8"
+
+
+# --- Telemetry expansion: tool usage tally (by_tool) ---
+
+def _assistant_event(message_id, tool_names, input_tokens=10, output_tokens=5):
+    """Build a Claude Code .jsonl assistant event with usage + tool_use blocks."""
+    content = [{"type": "text", "text": "..."}]
+    for name in tool_names:
+        content.append({"type": "tool_use", "id": f"tu_{name}", "name": name, "input": {}})
+    return {
+        "type": "assistant",
+        "message": {
+            "id": message_id,
+            "model": "claude-opus-4-8",
+            "content": content,
+            "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens},
+        },
+    }
+
+
+def test_canonical_tool_collapses_mcp_to_server():
+    assert tc.canonical_tool("mcp__sport-kg__who_calls") == "mcp__sport-kg"
+    assert tc.canonical_tool("mcp__atlassian__authenticate") == "mcp__atlassian"
+
+
+def test_canonical_tool_builtin_unchanged():
+    for name in ("Bash", "Read", "Edit", "Write", "Task", "Glob", "Grep", "WebFetch"):
+        assert tc.canonical_tool(name) == name
+
+
+def test_canonical_tool_malformed_mcp_unchanged():
+    # <3 segmenti o server vuoto → nome invariato
+    assert tc.canonical_tool("mcp__") == "mcp__"
+    assert tc.canonical_tool("mcp__server") == "mcp__server"
+
+
+def test_iter_tool_names_extracts_from_source():
+    src = _assistant_event("m1", ["Bash", "Read", "mcp__sport-kg__who_calls"])["message"]
+    # iter_tool_names riceve il source già estratto (message dict), non l'event
+    names = list(tc.iter_tool_names(src))
+    assert names == ["Bash", "Read", "mcp__sport-kg"]
+
+
+def test_iter_tool_names_no_tool_use_yields_nothing():
+    src = {"content": [{"type": "text", "text": "hi"}]}
+    assert list(tc.iter_tool_names(src)) == []
+    assert list(tc.iter_tool_names({})) == []
+
+
+def test_tally_tools_increments_by_tool():
+    stats = tc.empty_stats()
+    src = _assistant_event("m1", ["Bash", "Bash", "Read"])["message"]
+    tc.tally_tools(stats, src)
+    assert stats["by_tool"] == {"Bash": 2, "Read": 1}
+
+
+def test_empty_stats_has_by_tool():
+    assert tc.empty_stats()["by_tool"] == {}
+
+
+def test_normalize_stats_without_by_tool_no_crash():
+    legacy = {"input": 100, "output": 50}
+    stats = tc.normalize_stats(legacy)
+    assert stats["by_tool"] == {}
+
+
+def test_update_tallies_tools_and_dedups(tmp_path, monkeypatch):
+    """update() conta i tool una sola volta per usage_id, anche su re-read da reset cursore."""
+    session_dir = tmp_path / "sess"
+    session_dir.mkdir()
+    monkeypatch.setenv("DEVFORGE_SESSION_DIR", str(session_dir))
+    jsonl = tmp_path / "session.jsonl"
+    import json as _json
+    events = [
+        _assistant_event("m1", ["Bash", "Read"]),
+        _assistant_event("m2", ["Edit", "mcp__sport-kg__who_calls"]),
+    ]
+    jsonl.write_text("\n".join(_json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    monkeypatch.setenv("DEVFORGE_TOKEN_SESSION_JSONL", str(jsonl))
+
+    tc.init()
+    # init posiziona il cursore a fine file → forziamo offset 0 per leggere tutto
+    tc.write_cursor(str(jsonl), 0)
+    tc.update()
+    stats = tc.read_stats()
+    assert stats["by_tool"] == {"Bash": 1, "Read": 1, "Edit": 1, "mcp__sport-kg": 1}
+
+    # re-read da reset cursore: stessi usage_id → NON raddoppia
+    tc.write_cursor(str(jsonl), 0)
+    tc.update()
+    stats2 = tc.read_stats()
+    assert stats2["by_tool"] == {"Bash": 1, "Read": 1, "Edit": 1, "mcp__sport-kg": 1}
