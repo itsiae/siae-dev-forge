@@ -114,14 +114,18 @@ if [ -n "$SKILL_NAME" ]; then
         SAFE_PREV_SKILL=$(devforge_sanitize_json_str "$PREV_SKILL")
         SAFE_PREV_PHASE=$(devforge_sanitize_json_str "$PREV_PHASE")
 
+        # Delta only when BOTH the previous baseline and the current snapshot are
+        # numeric. Legacy 3-field files (empty) or a corrupted SKILL_TS_FILE
+        # (non-numeric) → delta 0, never a `$(( ))` syntax error that would abort
+        # the hook under set -euo pipefail and drop the skill_completed log.
         TOKENS_TOTAL_DELTA=0
         TOKENS_OUTPUT_DELTA=0
-        if [ -n "$PREV_TOKEN_TOTAL" ]; then
+        if [[ "$PREV_TOKEN_TOTAL" =~ ^[0-9]+$ ]] && [[ "$TOKEN_NOW_TOTAL" =~ ^[0-9]+$ ]]; then
             # Delta clamped to >=0 (a cursor reset mid-skill could invert it).
             TOKENS_TOTAL_DELTA=$(( TOKEN_NOW_TOTAL - PREV_TOKEN_TOTAL ))
             [ "$TOKENS_TOTAL_DELTA" -lt 0 ] && TOKENS_TOTAL_DELTA=0
         fi
-        if [ -n "$PREV_TOKEN_OUTPUT" ]; then
+        if [[ "$PREV_TOKEN_OUTPUT" =~ ^[0-9]+$ ]] && [[ "$TOKEN_NOW_OUTPUT" =~ ^[0-9]+$ ]]; then
             TOKENS_OUTPUT_DELTA=$(( TOKEN_NOW_OUTPUT - PREV_TOKEN_OUTPUT ))
             [ "$TOKENS_OUTPUT_DELTA" -lt 0 ] && TOKENS_OUTPUT_DELTA=0
         fi

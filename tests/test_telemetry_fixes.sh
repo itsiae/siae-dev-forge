@@ -257,6 +257,24 @@ else: print('NOEVENT')
 " 2>/dev/null || echo "ERR")
 assert_eq "legacy file → tokens_total_delta = 0" "0" "${legacy_delta}"
 
+# ─────────────────────────────────────────────────────────────
+# Test 10 — post-skill: non-numeric token field in SKILL_TS_FILE → no crash
+# ─────────────────────────────────────────────────────────────
+echo "Test 10: post-skill tolerates corrupted (non-numeric) token field (delta=0, no crash)"
+echo '1710000000000000000|siae-devforge:siae-corrupt|2. Design|abc|xyz' > "$SKILL_TS_FILE8"
+rm -f "$TEST_LOG8"
+echo '{"skill":"siae-devforge:siae-brainstorming"}' | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1
+corrupt_exit=$?
+assert_eq "post-skill exit 0 on non-numeric token field" "0" "${corrupt_exit}"
+corrupt_delta=$(grep '"event":"skill_completed"' "$TEST_LOG8" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    d=json.loads(l); m=d.get('meta',{})
+    if d.get('meta'): print(m.get('tokens_total_delta','MISSING')); break
+else: print('NOEVENT')
+" 2>/dev/null || echo "ERR")
+assert_eq "non-numeric field → tokens_total_delta = 0" "0" "${corrupt_delta}"
+
 unset DEVFORGE_LOG_FILE
 rm -f "$SKILL_TS_FILE8"
 
