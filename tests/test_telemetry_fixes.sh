@@ -168,6 +168,45 @@ batch_count=$(find "${SESSION_DIR4}/outbox" -maxdepth 1 -name 'batch-*.jsonl' -n
 assert_eq "non-empty batch file created" "1" "${batch_count}"
 
 # ─────────────────────────────────────────────────────────────
+# Test 7 — devforge_identity_bundle: 6 campi, JSON valido, no repo_root
+# ─────────────────────────────────────────────────────────────
+echo "Test 7: devforge_identity_bundle emits 6-field valid JSON (in a repo)"
+
+IBREPO="${TEST_TMP}/ibrepo"
+mkdir -p "$IBREPO"
+( cd "$IBREPO" && git init -q && git config user.email "Mario.Rossi@siae.it" && git config user.name "Mario Rossi" )
+BUNDLE7=$( cd "$IBREPO" && devforge_identity_bundle )
+# parsable JSON with exactly the 6 expected keys, no repo_root
+keys7=$(printf '%s' "$BUNDLE7" | python3 -c "import json,sys; d=json.load(sys.stdin); print(','.join(sorted(d.keys())))" 2>/dev/null || echo "PARSE_FAIL")
+assert_eq "bundle has 6 keys, no repo_root" "git_global_email,git_global_name,git_local_email,git_local_name,host,os_user" "$keys7"
+local_email7=$(printf '%s' "$BUNDLE7" | python3 -c "import json,sys; print(json.load(sys.stdin)['git_local_email'])" 2>/dev/null || echo "ERR")
+assert_eq "git_local_email captured" "Mario.Rossi@siae.it" "$local_email7"
+
+# ─────────────────────────────────────────────────────────────
+# Test 8 — devforge_identity_bundle: outside a repo, set -e, no abort
+# ─────────────────────────────────────────────────────────────
+echo "Test 8: devforge_identity_bundle outside a repo does not abort (set -e)"
+NONREPO="${TEST_TMP}/nonrepo"
+mkdir -p "$NONREPO"
+BUNDLE8=$( cd "$NONREPO" && set -euo pipefail && devforge_identity_bundle; echo "exit:$?" )
+ib8_exit=$(printf '%s' "$BUNDLE8" | grep -o 'exit:[0-9]*' | cut -d: -f2)
+assert_eq "helper exit 0 outside repo" "0" "${ib8_exit:-1}"
+BUNDLE8_JSON=$(printf '%s' "$BUNDLE8" | sed 's/exit:[0-9]*$//')
+osuser8=$(printf '%s' "$BUNDLE8_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print('OK' if d['os_user'] else 'EMPTY')" 2>/dev/null || echo "PARSE_FAIL")
+assert_eq "os_user populated outside repo" "OK" "$osuser8"
+
+# ─────────────────────────────────────────────────────────────
+# Test 9 — sanitization: git name with quotes/backslash/newline → valid JSON
+# ─────────────────────────────────────────────────────────────
+echo "Test 9: identity bundle sanitizes quotes/backslash/newline in git name"
+IBREPO9="${TEST_TMP}/ibrepo9"
+mkdir -p "$IBREPO9"
+( cd "$IBREPO9" && git init -q && git config user.email "a@b.it" && git config user.name 'Ma"rio\Ros'$'\n''si' )
+BUNDLE9=$( cd "$IBREPO9" && devforge_identity_bundle )
+valid9=$(printf '%s' "$BUNDLE9" | python3 -c "import json,sys; json.load(sys.stdin); print('VALID')" 2>/dev/null || echo "INVALID")
+assert_eq "bundle JSON valid with special chars in name" "VALID" "$valid9"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""
