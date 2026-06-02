@@ -44,6 +44,13 @@ USER_CANONICAL=$(devforge_canonicalize_user "$USER_RAW_EMAIL")
 
 # Raw multi-signal identity bundle (resolution happens downstream)
 IDENTITY_BUNDLE=$(devforge_identity_bundle 2>/dev/null || echo '{}')
+# Validity guard: the bundle is interpolated verbatim into the session_start
+# meta JSON. If a partial/non-object output ever slips through, coerce to {} so
+# the JSONL line on S3 can never be corrupted. Lightweight, no python dependency.
+case "$IDENTITY_BUNDLE" in
+    '{'*'}') : ;;
+    *) IDENTITY_BUNDLE='{}' ;;
+esac
 
 # Write user.json (pinned for entire session). identity is best-effort: if the
 # bundle is unparsable, json.loads fails and user.json is written without it.

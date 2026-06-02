@@ -207,6 +207,67 @@ valid9=$(printf '%s' "$BUNDLE9" | python3 -c "import json,sys; json.load(sys.std
 assert_eq "bundle JSON valid with special chars in name" "VALID" "$valid9"
 
 # ─────────────────────────────────────────────────────────────
+# Test 10/11 — session-start emits identity in user.json + session_start.meta
+# ─────────────────────────────────────────────────────────────
+echo "Test 10/11: session-start writes identity to user.json and session_start.meta"
+SS_HOME="${TEST_TMP}/sshome"
+SS_REPO="${SS_HOME}/repo"
+mkdir -p "$SS_REPO"
+( cd "$SS_REPO" && git init -q && git config user.email "dev@siae.it" && git config user.name "Dev Test" )
+SS_LOG="${SS_HOME}/ss.jsonl"
+identity_in_userjson="NO"; identity_in_event="NO"
+(
+  cd "$SS_REPO"
+  HOME="$SS_HOME" DEVFORGE_LOG_FILE="$SS_LOG" DEVFORGE_DISABLE_RECAP=1 \
+    bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 </dev/null || true
+)
+# user.json identity
+UJSON=$(find "$SS_HOME/.claude/devforge-state" -name user.json 2>/dev/null | head -1)
+if [ -n "$UJSON" ]; then
+  identity_in_userjson=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('YES' if isinstance(d.get('identity'),dict) and 'os_user' in d['identity'] else 'NO')" "$UJSON" 2>/dev/null || echo "NO")
+fi
+assert_eq "user.json includes identity bundle" "YES" "$identity_in_userjson"
+# session_start.meta identity
+if [ -f "$SS_LOG" ]; then
+  identity_in_event=$(grep '"event":"session_start"' "$SS_LOG" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    d=json.loads(l); m=d.get('meta',{})
+    if isinstance(m.get('identity'),dict) and 'os_user' in m['identity']: print('YES'); break
+else: print('NO')
+" 2>/dev/null || echo "NO")
+fi
+assert_eq "session_start.meta includes identity bundle" "YES" "$identity_in_event"
+
+# ─────────────────────────────────────────────────────────────
+# Test 12 — user.json write tolerates an unparsable bundle (silent skip)
+# ─────────────────────────────────────────────────────────────
+echo "Test 12: user.json write skips identity silently on unparsable bundle"
+UJ12="${TEST_TMP}/uj12.json"
+python3 -c "
+import json,sys
+raw,source,canonical,path,bundle=sys.argv[1:6]
+d={'raw':raw,'source':source,'canonical':canonical}
+try:
+    d['identity']=json.loads(bundle)
+except Exception:
+    pass
+json.dump(d,open(path,'w'))
+" "r@x" "test" "r@x" "$UJ12" "{not valid json" 2>/dev/null || true
+uj12_ok=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('OK' if 'identity' not in d and d.get('raw')=='r@x' else 'BAD')" "$UJ12" 2>/dev/null || echo "ERR")
+assert_eq "user.json valid without identity on bad bundle" "OK" "$uj12_ok"
+
+# ─────────────────────────────────────────────────────────────
+# Test 13 — identity bundle validity guard (malformed → {})
+# ─────────────────────────────────────────────────────────────
+echo "Test 13: malformed bundle is coerced to {} before meta interpolation"
+# Reproduce the session-start guard logic in isolation
+_guard() { case "$1" in '{'*'}') printf '%s' "$1" ;; *) printf '{}' ;; esac; }
+assert_eq "valid bundle passes through" '{"a":1}' "$(_guard '{"a":1}')"
+assert_eq "partial/garbage bundle coerced to {}" '{}' "$(_guard 'garbage{partial')"
+assert_eq "empty bundle coerced to {}" '{}' "$(_guard '')"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""
