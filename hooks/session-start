@@ -42,12 +42,21 @@ else
 fi
 USER_CANONICAL=$(devforge_canonicalize_user "$USER_RAW_EMAIL")
 
-# Write user.json (pinned for entire session)
+# Raw multi-signal identity bundle (resolution happens downstream)
+IDENTITY_BUNDLE=$(devforge_identity_bundle 2>/dev/null || echo '{}')
+
+# Write user.json (pinned for entire session). identity is best-effort: if the
+# bundle is unparsable, json.loads fails and user.json is written without it.
 if command -v python3 >/dev/null 2>&1; then
     python3 -c "
 import json,sys
-json.dump({'raw': sys.argv[1], 'source': sys.argv[2], 'canonical': sys.argv[3]}, open(sys.argv[4], 'w'))
-" "$USER_RAW_EMAIL" "$USER_SOURCE" "$USER_CANONICAL" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || true
+d={'raw': sys.argv[1], 'source': sys.argv[2], 'canonical': sys.argv[3]}
+try:
+    d['identity']=json.loads(sys.argv[5])
+except Exception:
+    pass
+json.dump(d, open(sys.argv[4], 'w'))
+" "$USER_RAW_EMAIL" "$USER_SOURCE" "$USER_CANONICAL" "${DEVFORGE_SESSION_DIR}/user.json" "$IDENTITY_BUNDLE" 2>/dev/null || true
 fi
 
 # Initialize seq counter
@@ -271,7 +280,7 @@ devforge_cache_user "$RESOLVED_USER_RAW" "$RESOLVED_USER_SOURCE"
 # Log session start event
 SAFE_PROJECT_DIR=$(devforge_sanitize_json_str "$(pwd)")
 SAFE_PLUGIN_VERSION=$(devforge_sanitize_json_str "$PLUGIN_VERSION")
-devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"${SAFE_PROJECT_DIR}\",\"plugin_version\":\"${SAFE_PLUGIN_VERSION}\"}"
+devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"${SAFE_PROJECT_DIR}\",\"plugin_version\":\"${SAFE_PLUGIN_VERSION}\",\"identity\":${IDENTITY_BUNDLE}}"
 
 # Save session start timestamp for duration calculation in session_end
 echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
