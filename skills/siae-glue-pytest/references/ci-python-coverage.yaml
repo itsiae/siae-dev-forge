@@ -1,0 +1,25 @@
+name: CI Python Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'modules/silver-codifica/glue-jobs/**'
+      - '.github/workflows/ci-python-coverage.yaml'
+  push:
+    branches:
+      - 'release/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Pytest Coverage
+    uses: itsiae/siae-gh-actions/.github/workflows/pytest-coverage.yaml@v3.0.0
+    with:
+      modules: |
+        modules/silver-codifica/glue-jobs
+      python_version: '3.11'
+      min_coverage_threshold: 70
+    secrets: inherit
