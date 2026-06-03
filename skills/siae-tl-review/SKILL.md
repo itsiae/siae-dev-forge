@@ -1,7 +1,7 @@
 ---
 name: siae-tl-review
 version: 1.0.0
-last_modified: 2026-05-25
+last_modified: 2026-06-03
 description: >
   Revisiona Test List manuali (CSV/XLS/XLSX) rispetto ai requisiti di progetto,
   generando una Matrice di Tracciabilita' Requisiti (RTM) e un report di revisione
@@ -469,6 +469,11 @@ Produci una tabella di triage TC:
 | TC-099 | ✅ | ❌ Expected Result vuoto | Edge | Step 3 manca atteso |
 ```
 
+**Al termine della tabella triage**, aggiorna la colonna Note della vista inversa
+nella RTM (`rtm-<data>.md` gia' salvata) applicando la regola di aggregazione
+definita in Fase 3. Mostra la vista inversa aggiornata in chat e confirma il
+salvataggio del file.
+
 ---
 
 ### FASE 5 — Report di Revisione Finale (Guardrail G6)
@@ -501,7 +506,7 @@ file TL (senza estensione), relativa al **current working directory**:
 **Nessun PAT, credenziale o segreto in chiaro in questi file (G8).**
 
 **Struttura obbligatoria** (Markdown, output in chat + salvataggio in
-`./QA-REVIEW/siae-tl-review-report-<YYYY-MM-DD>.md`):
+`./QA-REVIEW/<nome-file-TL>/siae-tl-review-report-<YYYY-MM-DD>.md`):
 
 ```markdown
 # Report di Revisione Test List — [Nome Progetto] — [Data]
@@ -572,11 +577,14 @@ possano linkare direttamente.
 
 **Modalita' compatta (attiva automaticamente per TL > 30 TC):**
 
-Aggregare la tabella triage per area funzionale (derivata dalla colonna "Jira
-Story" o "Team Competenza"). Per ogni area mostrare: # TC totali, # eseguibili,
-# non eseguibili, # con step incompleti, gap BVA rilevati. Il dettaglio TC per
-TC rimane disponibile in appendice del report su richiesta esplicita
-dell'utente.
+In chat mostrare la tabella triage aggregata per area funzionale (derivata dalla
+colonna "Jira Story" o "Team Competenza"). Per ogni area: # TC totali,
+# eseguibili, # non eseguibili, # con step incompleti, gap BVA rilevati.
+
+Il dettaglio TC per TC va **sempre incluso nel file salvato** (Appendice C del
+report) indipendentemente dalla modalita' compatta — questo garantisce che i
+cross-link `[TC-NNN](#tc-nnn)` nelle sezioni Gap e Raccomandazioni siano sempre
+risolvibili. In chat il dettaglio e' mostrato solo su richiesta esplicita.
 
 **Chiedi all'utente:**
 1. Conferma di aver salvato gli artefatti in `./QA-REVIEW/` (la skill lo fa

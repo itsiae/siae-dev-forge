@@ -4,6 +4,25 @@
 > quando: bisogna generare la RTM, definire il livello di copertura, o
 > mostrare un esempio "fatto bene" all'utente.
 
+## 0. Nota normativa — deduzioni e casi inventati
+
+**Gli esempi nelle sezioni seguenti mostrano AC e TC derivati esclusivamente
+da requisiti espliciti nel materiale fornito.** Non usare questi esempi come
+legittimazione per dedurre TC non ancorati a requisiti reali.
+
+Regola operativa (G2): se un AC non e' nel materiale fornito, il campo AC
+nella RTM riporta `"Non verificabile dal materiale"` e il campo Gap riporta
+`"AC mancante — richiede conferma con il team"`. NON inventare un AC
+"plausibile" per completare la riga.
+
+I valori soglia presenti nell'esempio compilato (sezione 4) — es. "15 minuti
+di blocco", "link scade dopo 1h" — sono puramente dimostrativi. Non devono
+essere mutuati in RTM reali senza conferma esplicita nei requisiti di progetto.
+Ogni AC nella RTM deve citare la fonte (`Jira BTP-NNN`, `Doc §X`, `Chat
+R-NN`) che lo rende verificabile.
+
+---
+
 ## 1. Cos'e' una RTM (e perche' bidirezionale)
 
 La Requirements Traceability Matrix (RTM) e' lo strumento ISTQB / IEEE 829 per
@@ -49,25 +68,6 @@ flaggati come orfani.
 | `Non Coperto 🔴` | Nessun TC eseguibile per questo AC | Gap critico — emerge in sezione 4 del report finale. |
 | `Coperto ma NON ESEGUIBILE 🟠` | Esiste un TC, ma flaggato `NON ESEGUIBILE MANUALMENTE` (G4) | Conta come gap effettivo. |
 
-## 0. Nota normativa — deduzioni e casi inventati
-
-**Gli esempi nelle sezioni seguenti mostrano AC e TC derivati esclusivamente
-da requisiti espliciti nel materiale fornito.** Non usare questi esempi come
-legittimazione per dedurre TC non ancorati a requisiti reali.
-
-Regola operativa (G2): se un AC non e' nel materiale fornito, il campo AC
-nella RTM riporta `"Non verificabile dal materiale"` e il campo Gap riporta
-`"AC mancante — richiede conferma con il team"`. NON inventare un AC
-"plausibile" per completare la riga.
-
-I valori soglia presenti nell'esempio compilato (sezione 4) — es. "15 minuti
-di blocco", "link scade dopo 1h" — sono puramente dimostrativi. Non devono
-essere mutuati in RTM reali senza conferma esplicita nei requisiti di progetto.
-Ogni AC nella RTM deve citare la fonte (`Jira BTP-NNN`, `Doc §X`, `Chat
-R-NN`) che lo rende verificabile.
-
----
-
 ## 4. Esempio completo compilato
 
 ### Scenario
@@ -112,7 +112,7 @@ piu' evidenze separate da ` | `.
 | TC-002 | R-01.AC-2 | |
 | TC-003 | R-01.AC-3 | |
 | TC-004 | R-03.AC-1 | |
-| TC-005 | R-03.AC-2 | ❌ NON ESEGUIBILE — query DB diretta | ⚠️ Step incompleti — step 2 |
+| TC-005 | R-03.AC-2 | ❌ NON ESEGUIBILE — query DB diretta \| ⚠️ Step incompleti — step 2 |
 | TC-099 | (nessuno)  | ⚠️ TC orfano — verificare se R-04 mancante o test obsoleto |
 ```
 
