@@ -1,7 +1,7 @@
 ---
 name: siae-tl-review
 version: 1.0.0
-last_modified: 2026-05-25
+last_modified: 2026-06-03
 description: >
   Revisiona Test List manuali (CSV/XLS/XLSX) rispetto ai requisiti di progetto,
   generando una Matrice di Tracciabilita' Requisiti (RTM) e un report di revisione
@@ -77,6 +77,18 @@ buchi con assunzioni "plausibili". Motivazione: la RTM e' uno strumento di
 audit; basarla su AC inventati e' un difetto strutturale che propaga errori in
 tutte le fasi successive.
 
+**Lo stesso vincolo si applica ai TC proposti nelle Fasi 4 e 5.**
+Se in F4 (analisi BVA/EP, criterio 4) si identifica l'assenza di un TC per un
+boundary value o una classe di equivalenza, **NON generare il TC come artefatto
+concreto**. Documentare il gap come raccomandazione in F5 con label:
+- `[IPOTESI — richiede conferma QA]` se il requisito e' in Jira o documento
+  strutturato con AC espliciti.
+- `[IPOTESI — fonte: <tipo> §<rif>]` se il materiale e' wireframe, brief verbale
+  o screenshot (es. `[IPOTESI — fonte: wireframe §3.2]`). L'invariante e' la
+  tracciabilita' della fonte, non la sua formalita'.
+
+Se l'AC non e' nel materiale fornito, il gap e' "Non verificabile dal materiale".
+
 ### **G3 — Autenticazione Jira obbligatoria**
 **Se l'utente sceglie l'opzione Jira ma l'MCP Atlassian non e' configurato,
 risolvi il Personal Access Token (PAT) Jira PRIMA di qualsiasi chiamata API**,
@@ -106,6 +118,23 @@ Se l'utente sceglie di **persistere** il PAT (livello L2), la skill deve:
 Motivazione: il PAT e' un secret enterprise SIAE; un leak nel transcript di
 sessione (che puo' essere condiviso, salvato, indicizzato) e' un incidente
 di sicurezza non recuperabile per rotazione del token.
+
+### **G9 — Scope gate per TL multi-team/multi-sprint**
+**Trigger: TL con 2 o piu' Team Competenza distinti OPPURE story su sprint non
+consecutivi (gap >= 2 sprint tra la story piu' vecchia e la piu' recente).
+NON scatta su TL con story multiple sullo stesso team nello stesso sprint o
+sprint consecutivi.** Quando il trigger scatta, presentare prima della Fase 1
+l'elenco dei Team Competenza distinti e delle Jira Story / Sprint rilevati,
+e chiedere se analizzare tutto o un sottoinsieme.
+
+Se l'utente sceglie un sottoinsieme, escludere i TC fuori scope **prima** della
+generazione della RTM. I TC esclusi NON compaiono nella vista inversa: non sono
+orfani — sono fuori scope. Documentare il filtro applicato nell'intestazione del
+report (sezione 1 "Scope della Revisione") e nel naming degli artefatti (C2).
+
+Motivazione: una TL multi-team ingurgitata integralmente produce TC orfani da
+scope errato indistinguibili da orfani reali, gonfiando i gap con falsi positivi
+strutturali che il team confonderà con gap reali.
 
 ### **G4 — Eseguibilita' manuale come precondizione di approvazione**
 **Nessun Test Case puo' essere "approvato" se richiede:**
@@ -197,7 +226,23 @@ silenziosi in ingestion producono RTM falsate senza che nessuno se ne accorga.
 **Vuoi procedere alla Fase 1 (Raccolta dei Requisiti)?**
 ```
 
-6. **Stop fino a conferma esplicita** (G1).
+6. **Scope gate (G9):** se la TL contiene Team Competenza distinti **oppure**
+   Jira Story / Sprint di piu' iterazioni, mostra prima di procedere:
+
+   ```
+   Team Competenza rilevati: [lista]
+   Jira Story / Sprint distinti: [lista]
+
+   Vuoi analizzare:
+   A) L'intera TL (N TC)
+   B) Un sottoinsieme — indica i team e/o le story da includere
+   ```
+
+   Se l'utente sceglie B, filtra i TC **subito** e memorizza il filtro per il
+   naming degli artefatti in Fase 5. I TC esclusi non compaiono nell'analisi
+   ne' nella vista inversa.
+
+7. **Stop fino a conferma esplicita** (G1).
 
 ---
 
@@ -344,10 +389,14 @@ completo con esempi compilati):
 - `Caso Negativo ❌` — flusso di errore/eccezione coperto.
 - `Non Coperto 🔴` — nessun TC eseguibile manualmente per questo AC.
 
-**Bidirezionalita':** dopo la RTM principale, produci una vista inversa:
+**Bidirezionalita':** dopo la RTM principale, produci una vista inversa
+**preliminare** (solo TC orfani noti a questo punto). Avvisa esplicitamente
+che la colonna Note verra' completata al termine della Fase 4:
 
 ```markdown
 ## Vista inversa — TC → Requisiti
+> ⚠️ Colonna Note preliminare — verra' aggiornata con i flag di Fase 4
+> (NON ESEGUIBILE, step incompleti, gap BVA/EP).
 
 | TC ID | Mappato a | Note |
 |-------|-----------|------|
@@ -357,6 +406,18 @@ completo con esempi compilati):
 
 I TC orfani vanno segnalati come gap (potrebbero indicare requisiti impliciti
 non documentati, oppure test obsoleti).
+
+**La colonna Note della vista inversa viene aggiornata al termine della Fase 4**
+con i flag emersi dall'analisi. Regola di aggregazione — per ogni TC:
+
+| Condizione rilevata in F4 | Valore da inserire in Note |
+|---------------------------|---------------------------|
+| TC non mappato a nessun requisito | `⚠️ TC orfano` |
+| TC flaggato NON ESEGUIBILE MANUALMENTE | `❌ NON ESEGUIBILE — <motivo sintetico>` |
+| TC con step incompleti (Expected Result assente/generico) | `⚠️ Step incompleti — step N` |
+| Gap BVA/EP documentato come [IPOTESI] in F5 | `[IPOTESI …] — vedi F5 Raccomandazioni` (label completa: vedi G2) |
+
+Se un TC ha piu' evidenze, concatenarle con ` | `. Se nessuna evidenza: cella vuota.
 
 Chiedi conferma RTM e procedi alla Fase 4.
 
@@ -388,11 +449,19 @@ manualita').
 3. **Copertura Happy Path:** per ogni requisito esiste almeno 1 TC che
    esercita il percorso principale degli AC?
 
-4. **Copertura Edge Case / Negativi:** per ogni requisito sono presenti TC
-   per BVA (es. lunghezza minima/massima campi) e per Equivalence Partitioning
-   negativo (input invalidi, permessi insufficienti, timeout)? Vedi
-   `references/istqb-checklist.md` per la checklist BVA/EP applicata al
-   contesto SIAE.
+4. **Copertura Edge Case / Negativi (solo da materiale fornito):** verifica se
+   nella TL esistono TC per BVA (es. lunghezza minima/massima campi) e per
+   Equivalence Partitioning negativo (input invalidi, permessi insufficienti,
+   timeout). Vedi `references/istqb-checklist.md` per la checklist BVA/EP.
+
+   **Vincolo G2-esteso:** se manca un TC per un boundary value o classe di
+   equivalenza, **NON generarlo e NON proporlo come artefatto concreto**.
+   Documentare il gap come raccomandazione in Fase 5 usando la label
+   appropriata in base al tipo di fonte (vedi G2 per selezione label):
+   - `[IPOTESI — richiede conferma QA]` se il requisito e' in Jira/doc strutturato.
+   - `[IPOTESI — fonte: <tipo> §<rif>]` se il materiale e' wireframe/brief/screenshot.
+   Questo vincolo sovrascrive qualsiasi ragionamento applicativo plausibile:
+   un TC dedotto senza requisito esplicito e' un caso inventato.
 
 5. **Tracciabilita' (G6):** ogni TC e' presente nella RTM (Fase 3)? TC orfani
    → flag in report.
@@ -407,31 +476,48 @@ Produci una tabella di triage TC:
 | TC-099 | ✅ | ❌ Expected Result vuoto | Edge | Step 3 manca atteso |
 ```
 
+**Al termine della tabella triage**, aggiorna la colonna Note della vista inversa
+nella RTM (`rtm-<data>.md` gia' salvata) applicando la regola di aggregazione
+definita in Fase 3. Mostra la vista inversa aggiornata in chat e conferma il
+salvataggio del file.
+
+> **Check anti-skip:** se nella vista inversa mostrata in chat e' ancora
+> presente il disclaimer `⚠️ Colonna Note preliminare`, l'aggiornamento non
+> e' ancora stato eseguito — farlo adesso prima di procedere a Fase 5.
+
 ---
 
 ### FASE 5 — Report di Revisione Finale (Guardrail G6)
 
 **Obiettivo:** consolidare tutto in un documento ISTQB-compliant.
 
-**Persistenza artefatti — directory `./QA-REVIEW/`:**
+**Persistenza artefatti — directory `./QA-REVIEW/<nome-file-TL>/`:**
 
-Tutti gli artefatti della revisione vanno salvati in `./QA-REVIEW/` relativa
-al **current working directory** (la cartella da cui l'utente ha lanciato
-Claude — controllabile con `pwd`). La skill deve:
+Tutti gli artefatti vanno salvati in una subdirectory denominata con il nome del
+file TL (senza estensione), relativa al **current working directory**:
 
-1. Creare la directory on-demand: `mkdir -p ./QA-REVIEW/`.
-2. Salvare in `./QA-REVIEW/`:
+1. Creare la directory on-demand:
+   `mkdir -p ./QA-REVIEW/<nome-file-TL>/`
+2. Salvare in `./QA-REVIEW/<nome-file-TL>/`:
    - `siae-tl-review-report-<YYYY-MM-DD>.md` — report finale (questa fase).
    - `rtm-<YYYY-MM-DD>.md` — RTM bidirezionale (Fase 3, gia' offerta).
    - `ac-validated-<YYYY-MM-DD>.md` — AC confermati (appendice Fase 2),
      opzionale ma raccomandato come traccia di audit.
-3. Se la directory esiste gia' con file dello stesso giorno: chiedere
+
+   Esempio: file `SIAE_BTP_TestList_ClusterArancione.csv`
+   → `./QA-REVIEW/SIAE_BTP_TestList_ClusterArancione/siae-tl-review-report-2026-06-03.md`
+
+3. Se lo scope e' un sottoinsieme (filtro applicato in F0 via G9), aggiungere
+   il filtro al nome della subdirectory usando doppio underscore come separatore:
+   → `./QA-REVIEW/SIAE_BTP_TestList_ClusterArancione__TeamAlpha/...`
+
+4. Se la directory esiste gia' con file dello stesso giorno: chiedere
    all'utente se sovrascrivere o usare suffisso `-<HHmm>`.
 
 **Nessun PAT, credenziale o segreto in chiaro in questi file (G8).**
 
 **Struttura obbligatoria** (Markdown, output in chat + salvataggio in
-`./QA-REVIEW/siae-tl-review-report-<YYYY-MM-DD>.md`):
+`./QA-REVIEW/<nome-file-TL>/siae-tl-review-report-<YYYY-MM-DD>.md`):
 
 ```markdown
 # Report di Revisione Test List — [Nome Progetto] — [Data]
@@ -463,7 +549,7 @@ rischio complessivo, raccomandazione top-1]
 ## 5. Raccomandazioni ISTQB (prioritizzate)
 - **CRITICO** — [azione, requisito impattato, owner suggerito]
 - **ALTO** — ...
-- **MEDIO** — ...
+- **MEDIO** — [IPOTESI — richiede conferma QA] Manca TC per boundary value di R-NN.AC-M (campo X: lunghezza max non testata). Ancorare a R-NN.AC-M prima di aggiungere TC.
 - **BASSO** — ...
 
 ## 6. Entry/Exit Criteria di Revisione
@@ -484,6 +570,32 @@ rischio complessivo, raccomandazione top-1]
 
 Sezione 4 (G6) sempre presente, anche se vuota — in tal caso scrivere
 "Nessun gap rilevato. Motivazione: ..." con argomentazione esplicita.
+
+**Cross-link obbligatori tra artefatti:**
+
+Ogni sezione del report che cita TC o AC deve includere un anchor link esplicito:
+- `[R-01](rtm-<data>.md#r-01)` per riferimenti a requisiti nella RTM.
+- `[TC-045](#tc-045)` per riferimenti a singoli TC nella tabella triage.
+
+La RTM salvata in `rtm-<YYYY-MM-DD>.md` deve avere un header `### <ID Req>` per
+ogni requisito (es. `### R-01`), in modo che il report possa linkare
+direttamente con `[R-01](rtm-<data>.md#r-01)`.
+
+La tabella triage TC prodotta in Fase 4 deve essere inclusa in appendice del
+report con righe identificabili (es. header di sezione `### TC-NNN`) per ogni
+TC non eseguibile o con anomalie, in modo che le sezioni Gap e Raccomandazioni
+possano linkare direttamente.
+
+**Modalita' compatta (attiva automaticamente per TL > 30 TC):**
+
+In chat mostrare la tabella triage aggregata per area funzionale (derivata dalla
+colonna "Jira Story" o "Team Competenza"). Per ogni area: # TC totali,
+# eseguibili, # non eseguibili, # con step incompleti, gap BVA rilevati.
+
+Il dettaglio TC per TC va **sempre incluso nel file salvato** (Appendice C del
+report) indipendentemente dalla modalita' compatta — questo garantisce che i
+cross-link `[TC-NNN](#tc-nnn)` nelle sezioni Gap e Raccomandazioni siano sempre
+risolvibili. In chat il dettaglio e' mostrato solo su richiesta esplicita.
 
 **Chiedi all'utente:**
 1. Conferma di aver salvato gli artefatti in `./QA-REVIEW/` (la skill lo fa

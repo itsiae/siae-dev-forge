@@ -4,6 +4,25 @@
 > quando: bisogna generare la RTM, definire il livello di copertura, o
 > mostrare un esempio "fatto bene" all'utente.
 
+## 0. Nota normativa — deduzioni e casi inventati
+
+**Gli esempi nelle sezioni seguenti mostrano AC e TC derivati esclusivamente
+da requisiti espliciti nel materiale fornito.** Non usare questi esempi come
+legittimazione per dedurre TC non ancorati a requisiti reali.
+
+Regola operativa (G2): se un AC non e' nel materiale fornito, il campo AC
+nella RTM riporta `"Non verificabile dal materiale"` e il campo Gap riporta
+`"AC mancante — richiede conferma con il team"`. NON inventare un AC
+"plausibile" per completare la riga.
+
+I valori soglia presenti nell'esempio compilato (sezione 4) — es. "15 minuti
+di blocco", "link scade dopo 1h" — sono puramente dimostrativi. Non devono
+essere mutuati in RTM reali senza conferma esplicita nei requisiti di progetto.
+Ogni AC nella RTM deve citare la fonte (`Jira BTP-NNN`, `Doc §X`, `Chat
+R-NN`) che lo rende verificabile.
+
+---
+
 ## 1. Cos'e' una RTM (e perche' bidirezionale)
 
 La Requirements Traceability Matrix (RTM) e' lo strumento ISTQB / IEEE 829 per
@@ -82,6 +101,10 @@ flaggati come orfani.
 
 ### 4.2 Vista inversa
 
+La colonna Note aggrega tutti i flag emersi dalla Fase 4 (aggiornata a fine F4,
+non alla produzione iniziale della RTM). Regola: cella vuota = nessuna evidenza;
+piu' evidenze separate da ` | `.
+
 ```markdown
 | TC ID | Mappato a | Note |
 |-------|-----------|------|
@@ -89,14 +112,8 @@ flaggati come orfani.
 | TC-002 | R-01.AC-2 | |
 | TC-003 | R-01.AC-3 | |
 | TC-004 | R-03.AC-1 | |
-| TC-005 | R-03.AC-2 | ⚠️ Flaggato NON ESEGUIBILE MANUALMENTE — riformulazione proposta |
-```
-
-In questo esempio non ci sono TC orfani. Se ne avessimo trovato uno, sarebbe
-apparso cosi':
-
-```markdown
-| TC-099 | (nessuno) | ⚠️ TC orfano — verificare se R-04 mancante o test obsoleto |
+| TC-005 | R-03.AC-2 | ❌ NON ESEGUIBILE — query DB diretta \| ⚠️ Step incompleti — step 2 |
+| TC-099 | (nessuno)  | ⚠️ TC orfano — verificare se R-04 mancante o test obsoleto |
 ```
 
 ## 5. Calcolo della copertura
@@ -132,15 +149,28 @@ Per l'esempio precedente:
 Quando l'utente conferma la RTM in Fase 3, **salvala** in:
 
 ```
-./QA-REVIEW/rtm-<YYYY-MM-DD>.md
+./QA-REVIEW/<nome-file-TL>/rtm-<YYYY-MM-DD>.md
 ```
 
-Path relativo al **current working directory** (cartella da cui Claude e'
-stato lanciato). La skill crea `./QA-REVIEW/` on-demand con `mkdir -p`.
+dove `<nome-file-TL>` e' il nome del file TL senza estensione (es.
+`SIAE_BTP_TestList_ClusterArancione`). Se e' stato applicato un filtro di
+scope (G9), aggiungere il suffisso: `<nome-file-TL>__<filtro>/`.
+
+Path relativo al **current working directory**. La skill crea la directory
+on-demand con `mkdir -p`.
+
+**Anchor header obbligatorio:** ogni requisito nella RTM deve avere un header
+Markdown di livello 3 che lo precede, in modo da essere linkabile dal report:
+
+```markdown
+### R-01
+| R-01 | Login con username+password | AC-1 | ... |
+```
+
+Questo consente al report finale di usare `[R-01](rtm-<data>.md#r-01)` per
+cross-link diretto.
 
 Se esiste gia' un file con la stessa data, chiedere se sovrascrivere o usare
 suffisso orario `-<HHmm>`.
 
-Cosi' la RTM diventa artefatto tracciabile e citabile nel report finale
-(sezione 2). **G8:** nessuna credenziale, PAT o secret in chiaro in questo
-file.
+**G8:** nessuna credenziale, PAT o secret in chiaro in questo file.
