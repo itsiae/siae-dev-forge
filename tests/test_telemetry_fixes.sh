@@ -297,6 +297,42 @@ print('cache_read' not in sk, d['by_model_tokens']['claude-opus-4-8']['cache_rea
 assert_eq "by_skill no cache_read, by_model_tokens has cache_read, pricing unit+rate" "True 200 usd_per_1m_tokens 5.0" "${parsed14}"
 
 # ─────────────────────────────────────────────────────────────
+# Test 15 — capture-test-result emits test_run_result (Comp.2)
+# ─────────────────────────────────────────────────────────────
+echo "Test 15: capture-test-result emits test_run_result (status+framework)"
+CTR_HOME="${TEST_TMP}/ctrhome"; mkdir -p "${CTR_HOME}/.claude"
+CTR_LOG="${CTR_HOME}/ctr.jsonl"; rm -f "$CTR_LOG"
+echo '{"tool_input":{"command":"pytest tests/ -q"},"tool_response":{"is_error":true,"output":"1 failed"}}' \
+  | HOME="$CTR_HOME" DEVFORGE_LOG_FILE="$CTR_LOG" bash "${PLUGIN_ROOT}/hooks/capture-test-result" >/dev/null 2>&1 || true
+trr=$(grep '"event":"test_run_result"' "$CTR_LOG" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    m=json.loads(l).get('meta',{})
+    if 'status' in m: print(m['status'], m.get('framework')); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "test_run_result FAIL + pytest framework" "FAIL pytest" "$trr"
+
+# ─────────────────────────────────────────────────────────────
+# Test 16 — capture-test-result emits tdd_cycle on RED→GREEN (Comp.2)
+# ─────────────────────────────────────────────────────────────
+echo "Test 16: capture-test-result emits tdd_cycle RED->GREEN with elapsed_sec"
+echo "siae-devforge:siae-tdd" > "${CTR_HOME}/.claude/.devforge-session-skills"
+# Seed RED state entered 5s ago
+echo "RED|target|test|$(( $(date +%s) - 5 ))" > "${CTR_HOME}/.claude/.devforge-tdd-state"
+rm -f "$CTR_LOG"
+echo '{"tool_input":{"command":"pytest tests/ -q"},"tool_response":{"is_error":false,"output":"1 passed"}}' \
+  | HOME="$CTR_HOME" DEVFORGE_LOG_FILE="$CTR_LOG" bash "${PLUGIN_ROOT}/hooks/capture-test-result" >/dev/null 2>&1 || true
+tdc=$(grep '"event":"tdd_cycle"' "$CTR_LOG" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    m=json.loads(l).get('meta',{})
+    if m.get('to_phase')=='GREEN': print(m['from_phase'], m['to_phase'], m['elapsed_sec']>=5); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "tdd_cycle RED->GREEN elapsed>=5" "RED GREEN True" "$tdc"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""
