@@ -86,18 +86,53 @@ if [ -n "$SKILL_NAME" ]; then
     # aborting the script if the JSONL log write fails).
     SAFE_SKILL_NAME=$(devforge_sanitize_json_str "$SKILL_NAME")
 
+    # Current cumulative token snapshot (for per-skill delta). Refresh first,
+    # then read total/output via the token-collector field contract (f1/f2).
+    # No-op if no session dir / stats yet → snapshot stays 0, delta omitted.
+    TOKEN_NOW_TOTAL=0
+    TOKEN_NOW_OUTPUT=0
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ]; then
+        python3 "${PLUGIN_ROOT}/lib/token-collector.py" update >/dev/null 2>&1 || true
+        _TOK_LINE=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null) || true
+        if [ -n "${_TOK_LINE:-}" ]; then
+            TOKEN_NOW_TOTAL=$(printf '%s' "$_TOK_LINE" | cut -f1)
+            TOKEN_NOW_OUTPUT=$(printf '%s' "$_TOK_LINE" | cut -f2)
+        fi
+    fi
+
     # Close the previous skill cycle before overwriting SKILL_TS_FILE
     if [ -f "$SKILL_TS_FILE" ]; then
         PREV_DATA=$(cat "$SKILL_TS_FILE")
         PREV_START_NS=$(echo "$PREV_DATA" | cut -d'|' -f1)
         PREV_SKILL=$(echo "$PREV_DATA" | cut -d'|' -f2)
         PREV_PHASE=$(echo "$PREV_DATA" | cut -d'|' -f3)
+        # Token snapshot from the previous invocation (fields 4/5). Legacy
+        # 3-field files have NO baseline → delta 0 (we must not attribute the
+        # whole cumulative total to a single skill).
+        PREV_TOKEN_TOTAL=$(echo "$PREV_DATA" | cut -d'|' -f4)
+        PREV_TOKEN_OUTPUT=$(echo "$PREV_DATA" | cut -d'|' -f5)
         SAFE_PREV_SKILL=$(devforge_sanitize_json_str "$PREV_SKILL")
         SAFE_PREV_PHASE=$(devforge_sanitize_json_str "$PREV_PHASE")
 
+        # Delta only when BOTH the previous baseline and the current snapshot are
+        # numeric. Legacy 3-field files (empty) or a corrupted SKILL_TS_FILE
+        # (non-numeric) → delta 0, never a `$(( ))` syntax error that would abort
+        # the hook under set -euo pipefail and drop the skill_completed log.
+        TOKENS_TOTAL_DELTA=0
+        TOKENS_OUTPUT_DELTA=0
+        if [[ "$PREV_TOKEN_TOTAL" =~ ^[0-9]+$ ]] && [[ "$TOKEN_NOW_TOTAL" =~ ^[0-9]+$ ]]; then
+            # Delta clamped to >=0 (a cursor reset mid-skill could invert it).
+            TOKENS_TOTAL_DELTA=$(( TOKEN_NOW_TOTAL - PREV_TOKEN_TOTAL ))
+            [ "$TOKENS_TOTAL_DELTA" -lt 0 ] && TOKENS_TOTAL_DELTA=0
+        fi
+        if [[ "$PREV_TOKEN_OUTPUT" =~ ^[0-9]+$ ]] && [[ "$TOKEN_NOW_OUTPUT" =~ ^[0-9]+$ ]]; then
+            TOKENS_OUTPUT_DELTA=$(( TOKEN_NOW_OUTPUT - PREV_TOKEN_OUTPUT ))
+            [ "$TOKENS_OUTPUT_DELTA" -lt 0 ] && TOKENS_OUTPUT_DELTA=0
+        fi
+
         if [ -n "$PREV_START_NS" ] && [ -n "$PREV_SKILL" ]; then
             devforge_log_timed "skill_completed" "success" "$PREV_START_NS" \
-                "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\"}" || true
+                "{\"skill_name\":\"${SAFE_PREV_SKILL}\",\"sdlc_phase\":\"${SAFE_PREV_PHASE}\",\"outcome\":\"success\",\"tokens_total_delta\":${TOKENS_TOTAL_DELTA},\"tokens_output_delta\":${TOKENS_OUTPUT_DELTA}}" || true
         fi
     fi
 
@@ -109,7 +144,9 @@ if [ -n "$SKILL_NAME" ]; then
     # Written after logging so we don't overwrite the previous skill's data
     # before devforge_log_timed has read it above.
     NOW_NS=$(_devforge_epoch_ns)
-    echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}" > "$SKILL_TS_FILE"
+    # 5-field format: START_NS|SKILL|PHASE|TOKEN_TOTAL|TOKEN_OUTPUT (additive;
+    # legacy 3-field readers using cut -f1..3 remain valid).
+    echo "${NOW_NS}|${SKILL_NAME}|${SDLC_PHASE}|${TOKEN_NOW_TOTAL}|${TOKEN_NOW_OUTPUT}" > "$SKILL_TS_FILE"
 
     # Plan lifecycle events (AC-9, AC-10)
     # Euristica: cerca design doc recentemente modificato (last PLAN_EVENT_WINDOW_SEC) nel cwd corrente

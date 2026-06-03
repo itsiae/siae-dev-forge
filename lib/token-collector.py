@@ -124,6 +124,7 @@ def empty_stats() -> dict[str, Any]:
         "total": 0,
         "cost_eur": 0.0,
         "by_model": {},
+        "by_tool": {},
         "model_prevalent": "",
         "updated_at": "",
     }
@@ -145,6 +146,8 @@ def normalize_stats(raw: dict[str, Any] | None) -> dict[str, Any]:
 
     raw_by_model = raw.get("by_model")
     stats["by_model"] = dict(raw_by_model) if isinstance(raw_by_model, dict) else {}
+    raw_by_tool = raw.get("by_tool")
+    stats["by_tool"] = dict(raw_by_tool) if isinstance(raw_by_tool, dict) else {}
     stats["model_prevalent"] = raw.get("model_prevalent") or ""
 
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
@@ -226,6 +229,52 @@ def canonical_model(model: str | None) -> str:
         if model.startswith(prefix):
             return prefix
     return ""
+
+
+def canonical_tool(name: str) -> str:
+    """Collapse MCP tools to mcp__<server> to bound by_tool cardinality.
+
+    Built-in tools (Bash, Read, Edit, ...) are returned unchanged. MCP tool
+    names have the form mcp__<server>__<tool>; with a valid non-empty server
+    they collapse to mcp__<server>, otherwise the name is returned unchanged.
+    """
+    if not isinstance(name, str):
+        return ""
+    if name.startswith("mcp__"):
+        parts = name.split("__")
+        if len(parts) >= 3 and parts[1]:
+            return f"mcp__{parts[1]}"
+    return name
+
+
+def iter_tool_names(source: dict[str, Any]):
+    """Yield canonical tool names for tool_use blocks in an already-extracted source.
+
+    Receives the source already produced by iter_usage_sources in update()'s loop
+    (NOT the raw event, and does NOT call iter_usage_sources itself). tool_use
+    blocks live only in source["message"]["content"] (verified on real .jsonl);
+    any other shape is a no-op.
+    """
+    if not isinstance(source, dict):
+        return
+    message = source.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, list):
+        content = source.get("content") if isinstance(source.get("content"), list) else None
+    if not isinstance(content, list):
+        return
+    for item in content:
+        if isinstance(item, dict) and item.get("type") == "tool_use":
+            name = item.get("name")
+            if isinstance(name, str) and name:
+                yield canonical_tool(name)
+
+
+def tally_tools(stats: dict[str, Any], source: dict[str, Any]) -> None:
+    """Increment stats['by_tool'] for each tool_use occurrence in source."""
+    by_tool = stats.setdefault("by_tool", {})
+    for name in iter_tool_names(source):
+        by_tool[name] = int(by_tool.get(name, 0)) + 1
 
 
 def pricing_for_model(model: str | None) -> dict[str, float]:
@@ -469,13 +518,19 @@ def update() -> None:
                     continue
 
                 usage_id = usage_identity(source)
+                is_new = usage_id not in usage_index
                 previous_snapshot = usage_index.get(usage_id)
                 if add_usage_delta(stats, previous_snapshot, current_snapshot):
                     usage_index[usage_id] = current_snapshot
                     index_changed = True
-                elif usage_id not in usage_index:
+                elif is_new:
                     usage_index[usage_id] = current_snapshot
                     index_changed = True
+                # Tool tally: once per usage_id, independent of the if/elif branch
+                # above, so a new turn with delta>0 is still counted and a re-read
+                # from a cursor reset does not double-count.
+                if is_new:
+                    tally_tools(stats, source)
 
         new_offset = handle.tell()
 
@@ -488,9 +543,37 @@ def update() -> None:
         write_usage_index(usage_index)
 
 
+def session_fields_line(stats: dict[str, Any]) -> str:
+    """Tab-separated session_end field contract consumed by hooks/stop-gate.
+
+    Order (f1..f10): total, output, cost_eur, model_prevalent, input,
+    cache_read, cache_write_5m, cache_write_1h, json(by_model), json(by_tool).
+    by_model/by_tool are compact JSON (no tab/newline) so they stay on one line
+    and can be embedded verbatim into the session_end meta object.
+    """
+    by_model = json.dumps(stats.get("by_model", {}) or {}, separators=(",", ":"), sort_keys=True)
+    by_tool = json.dumps(stats.get("by_tool", {}) or {}, separators=(",", ":"), sort_keys=True)
+    return "\t".join((
+        str(int(stats.get("total", 0) or 0)),
+        str(int(stats.get("output", 0) or 0)),
+        str(stats.get("cost_eur", 0) or 0),
+        str(stats.get("model_prevalent", "") or ""),
+        str(int(stats.get("input", 0) or 0)),
+        str(int(stats.get("cache_read", 0) or 0)),
+        str(int(stats.get("cache_write_5m", 0) or 0)),
+        str(int(stats.get("cache_write_1h", 0) or 0)),
+        by_model,
+        by_tool,
+    ))
+
+
 def flush() -> None:
     update()
     print(json.dumps(read_stats(), separators=(",", ":"), sort_keys=True))
+
+
+def fields() -> None:
+    print(session_fields_line(read_stats()))
 
 
 def main() -> int:
@@ -499,6 +582,8 @@ def main() -> int:
         init()
     elif command == "flush":
         flush()
+    elif command == "fields":
+        fields()
     else:
         update()
     return 0
