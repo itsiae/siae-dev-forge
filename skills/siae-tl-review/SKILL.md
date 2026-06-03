@@ -415,7 +415,7 @@ con i flag emersi dall'analisi. Regola di aggregazione — per ogni TC:
 | TC non mappato a nessun requisito | `⚠️ TC orfano` |
 | TC flaggato NON ESEGUIBILE MANUALMENTE | `❌ NON ESEGUIBILE — <motivo sintetico>` |
 | TC con step incompleti (Expected Result assente/generico) | `⚠️ Step incompleti — step N` |
-| Gap BVA/EP documentato come [IPOTESI] in F5 | `[IPOTESI BVA/EP] — vedi F5 Raccomandazioni` |
+| Gap BVA/EP documentato come [IPOTESI] in F5 | `[IPOTESI …] — vedi F5 Raccomandazioni` (label completa: vedi G2) |
 
 Se un TC ha piu' evidenze, concatenarle con ` | `. Se nessuna evidenza: cella vuota.
 
@@ -456,8 +456,10 @@ manualita').
 
    **Vincolo G2-esteso:** se manca un TC per un boundary value o classe di
    equivalenza, **NON generarlo e NON proporlo come artefatto concreto**.
-   Documentare il gap come raccomandazione in Fase 5 con label
-   `[IPOTESI — richiede conferma QA]`, ancorata all'AC che lo origina.
+   Documentare il gap come raccomandazione in Fase 5 usando la label
+   appropriata in base al tipo di fonte (vedi G2 per selezione label):
+   - `[IPOTESI — richiede conferma QA]` se il requisito e' in Jira/doc strutturato.
+   - `[IPOTESI — fonte: <tipo> §<rif>]` se il materiale e' wireframe/brief/screenshot.
    Questo vincolo sovrascrive qualsiasi ragionamento applicativo plausibile:
    un TC dedotto senza requisito esplicito e' un caso inventato.
 
