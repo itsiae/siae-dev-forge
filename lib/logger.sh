@@ -271,6 +271,18 @@ devforge_identity_bundle() {
         "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")"
 }
 
+# Raw cumulative session token total (from token-stats.json). Fallback 0 if the
+# file/session dir is absent or python3 is unavailable. Used to anchor token spend
+# to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
+devforge_session_token_total() {
+    local f="${DEVFORGE_SESSION_DIR:-}/token-stats.json"
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ] && command -v python3 >/dev/null 2>&1; then
+        python3 -c "import json,sys; print(int(json.load(open(sys.argv[1])).get('total',0) or 0))" "$f" 2>/dev/null || echo 0
+    else
+        echo 0
+    fi
+}
+
 # Resolve user identity and its source without mutating global state.
 devforge_resolve_user_raw() {
     local user="" source="unknown"

@@ -333,6 +333,17 @@ else: print('MISSING')
 assert_eq "tdd_cycle RED->GREEN elapsed>=5" "RED GREEN True" "$tdc"
 
 # ─────────────────────────────────────────────────────────────
+# Test 17 — devforge_session_token_total helper (Comp.3a)
+# ─────────────────────────────────────────────────────────────
+echo "Test 17: devforge_session_token_total reads total, fallback 0"
+SID17="testsid-toktot"; SDIR17="${TEST_TMP}/.claude/devforge-state/${SID17}"; mkdir -p "$SDIR17"
+export DEVFORGE_SESSION_DIR="$SDIR17"
+printf '{"total":12345,"output":100}' > "${SDIR17}/token-stats.json"
+assert_eq "session_token_total reads total" "12345" "$(devforge_session_token_total)"
+rm -f "${SDIR17}/token-stats.json"
+assert_eq "session_token_total fallback 0 when missing" "0" "$(devforge_session_token_total)"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""

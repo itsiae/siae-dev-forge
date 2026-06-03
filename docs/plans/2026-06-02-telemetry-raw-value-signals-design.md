@@ -37,9 +37,10 @@ framework}` e `tdd_cycle {from_phase, to_phase, elapsed_sec, reason}` (epoch = f
 elapsed ≥ 0). Falliscono soft, mai interrompono il test run.
 
 ### Comp.3 — Ancore token raw
-3a: `session_tokens_cumulative` su `pr_merged` (2 punti) via helper
-`devforge_session_token_total()`. 3b: `tokens_at_block` su `tdd_gate`/`brainstorming_gate`
-blocked (stesso helper).
+3a [FATTO]: `session_tokens_cumulative` su `pr_merged` (2 punti) via helper
+`devforge_session_token_total()`. 3b [FOLLOW-UP differito]: `tokens_at_block` su
+`tdd_gate`/`brainstorming_gate` blocked (stesso helper) — minore valore, più superficie sui
+gate; rimandato a PR successiva per contenere lo scope.
 
 ### Comp.4 — `by_model_tokens`: componenti token per modello (RAW per pricing multi-vendor)
 Oggi `by_model` (PR #296) = `{model: total}` → insufficiente per applicare listini diversi

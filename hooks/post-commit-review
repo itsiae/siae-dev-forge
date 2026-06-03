@@ -181,7 +181,7 @@ EOF_SNAP
                 [ "$ORPHAN_STATE" = "CLOSED" ] && MERGE_METHOD="closed"
 
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA}}"
+                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
 
                 ORPHAN_REWORK=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${ORPHAN_PR}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
                 ORPHAN_REWORK=${ORPHAN_REWORK:-0}
@@ -232,7 +232,7 @@ if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
                 [ "$DELTA" -lt 0 ] && DELTA=0
 
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA}}"
+                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
 
                 # pr_metrics aggregato (legge snapshot PRIMA del cleanup)
                 REWORK_COUNT=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
