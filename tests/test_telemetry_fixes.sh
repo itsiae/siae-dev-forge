@@ -268,6 +268,35 @@ assert_eq "partial/garbage bundle coerced to {}" '{}' "$(_guard 'garbage{partial
 assert_eq "empty bundle coerced to {}" '{}' "$(_guard '')"
 
 # ─────────────────────────────────────────────────────────────
+# Test 14 — token-collector fields: 13-field contract + by_skill/by_model_tokens/pricing JSON
+# ─────────────────────────────────────────────────────────────
+echo "Test 14: token-collector fields emits 13 columns with valid by_skill/by_model_tokens/pricing"
+SID14="testsid-fields13"
+SESSION_DIR14="${TEST_TMP}/.claude/devforge-state/${SID14}"
+mkdir -p "${SESSION_DIR14}"
+export DEVFORGE_SESSION_DIR="${SESSION_DIR14}"
+cat > "${SESSION_DIR14}/token-stats.json" <<'JSON'
+{"input":600,"output":200,"cache_read":200,"cache_write_5m":0,"cache_write_1h":0,
+ "cache_write":0,"total":1000,"cost_eur":0.05,
+ "by_model":{"claude-opus-4-8":1000},"by_tool":{"Bash":5},
+ "by_skill":{"siae-devforge:siae-tdd":{"output":200,"input":600,"cache_write_5m":0,"cache_write_1h":0}},
+ "by_model_tokens":{"claude-opus-4-8":{"input":600,"output":200,"cache_read":200,"cache_write_5m":0,"cache_write_1h":0}},
+ "model_prevalent":"claude-opus-4-8","updated_at":"2026-06-03T00:00:00Z"}
+JSON
+FL14=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null)
+nf14=$(printf '%s' "$FL14" | awk -F'\t' '{print NF}')
+assert_eq "fields line has 13 columns" "13" "${nf14}"
+# f11 by_skill, f12 by_model_tokens, f13 pricing — all valid JSON, build a meta and parse
+META14="{\"by_skill\":$(printf '%s' "$FL14" | cut -f11),\"by_model_tokens\":$(printf '%s' "$FL14" | cut -f12),\"pricing\":$(printf '%s' "$FL14" | cut -f13)}"
+parsed14=$(printf '%s' "$META14" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+sk=d['by_skill']['siae-devforge:siae-tdd']
+print('cache_read' not in sk, d['by_model_tokens']['claude-opus-4-8']['cache_read'], d['pricing']['unit'], d['pricing']['by_model']['claude-opus-4-8']['input'])
+" 2>/dev/null || echo "PARSE_FAIL")
+assert_eq "by_skill no cache_read, by_model_tokens has cache_read, pricing unit+rate" "True 200 usd_per_1m_tokens 5.0" "${parsed14}"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""

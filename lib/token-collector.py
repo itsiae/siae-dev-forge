@@ -23,6 +23,10 @@ PRICING_USD_PER_1M: dict[str, dict[str, float]] = {
     "default":            {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write_5m": 3.75, "cache_write_1h": 6.0},
 }
 
+# Unit of the pricing rates, emitted in the pricing snapshot so the downstream
+# consumer has a stable contract when applying alternative vendor price lists.
+PRICING_UNIT = "usd_per_1m_tokens"
+
 # Legacy alias list for canonical_model prefix matching
 MODEL_PREFIXES: tuple[str, ...] = (
     "claude-opus-4-8",
@@ -125,6 +129,8 @@ def empty_stats() -> dict[str, Any]:
         "cost_eur": 0.0,
         "by_model": {},
         "by_tool": {},
+        "by_skill": {},
+        "by_model_tokens": {},
         "model_prevalent": "",
         "updated_at": "",
     }
@@ -148,6 +154,10 @@ def normalize_stats(raw: dict[str, Any] | None) -> dict[str, Any]:
     stats["by_model"] = dict(raw_by_model) if isinstance(raw_by_model, dict) else {}
     raw_by_tool = raw.get("by_tool")
     stats["by_tool"] = dict(raw_by_tool) if isinstance(raw_by_tool, dict) else {}
+    raw_by_skill = raw.get("by_skill")
+    stats["by_skill"] = dict(raw_by_skill) if isinstance(raw_by_skill, dict) else {}
+    raw_by_model_tokens = raw.get("by_model_tokens")
+    stats["by_model_tokens"] = dict(raw_by_model_tokens) if isinstance(raw_by_model_tokens, dict) else {}
     stats["model_prevalent"] = raw.get("model_prevalent") or ""
 
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
@@ -366,6 +376,18 @@ def usage_tokens(usage: dict[str, Any]) -> dict[str, int]:
     }
 
 
+def pricing_snapshot(models) -> dict[str, Any]:
+    """Raw pricing rate-table applied, for the models used in the session.
+
+    Emits {unit, eur_rate, by_model:{model:{input,output,cache_read,
+    cache_write_5m,cache_write_1h}}}. These are the Anthropic rates DevForge
+    applied to produce cost_eur; combined with by_model_tokens the downstream
+    consumer can recompute cost under ANY vendor price list. Raw, not a cost.
+    """
+    by_model = {m: dict(pricing_for_model(m)) for m in sorted(models) if m}
+    return {"unit": PRICING_UNIT, "eur_rate": resolve_eur_rate(), "by_model": by_model}
+
+
 def usage_cost_eur(metrics: dict[str, int], model: str | None) -> float:
     rates = pricing_for_model(model)
 
@@ -405,14 +427,17 @@ def build_usage_snapshot(source: dict[str, Any], usage: dict[str, Any]) -> dict[
     return snapshot
 
 
-def add_usage_delta(stats: dict[str, Any], previous: dict[str, Any] | None, current: dict[str, Any]) -> bool:
+def add_usage_delta(stats: dict[str, Any], previous: dict[str, Any] | None, current: dict[str, Any], skill: str | None = None) -> bool:
     previous = previous or normalize_usage_snapshot({})
     changed = False
 
+    # Per-field positive deltas (the canonical token components for this turn).
+    deltas: dict[str, int] = {}
     for field in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h"):
         current_value = int(current.get(field, 0) or 0)
         previous_value = int(previous.get(field, 0) or 0)
         delta = current_value - previous_value
+        deltas[field] = delta if delta > 0 else 0
         if delta > 0:
             stats[field] += delta
             changed = True
@@ -422,16 +447,30 @@ def add_usage_delta(stats: dict[str, Any], previous: dict[str, Any] | None, curr
         stats["cost_eur"] = round(float(stats.get("cost_eur", 0.0)) + cost_delta, 6)
         changed = True
 
+    # delta_total INCLUDES cache_read (consistent with by_model_tokens, which also
+    # includes it for downstream cost recompute). Used as the activity guard.
+    delta_total = sum(deltas.values())
+
     model = current.get("model") or ""
-    if model:
-        delta_total = sum(
-            max(int(current.get(field, 0) or 0) - int(previous.get(field, 0) or 0), 0)
-            for field in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")
-        )
-        if delta_total > 0:
-            by_model = stats.setdefault("by_model", {})
-            by_model[model] = int(by_model.get(model, 0)) + delta_total
-            changed = True
+    if model and delta_total > 0:
+        by_model = stats.setdefault("by_model", {})
+        by_model[model] = int(by_model.get(model, 0)) + delta_total
+        # Comp.4: per-model component breakdown (ALL 5 components incl. cache_read)
+        # — the raw data the consumer needs to apply any vendor price list.
+        bmt = stats.setdefault("by_model_tokens", {}).setdefault(
+            model, {f: 0 for f in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")})
+        for f in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h"):
+            bmt[f] = int(bmt.get(f, 0)) + deltas[f]
+        changed = True
+
+    # Comp.1: per-skill component breakdown EXCLUDING cache_read (anti-inflation:
+    # cache_read is re-read context, not skill "work"). Same delta-gated dedup.
+    if skill and delta_total > 0:
+        sk = stats.setdefault("by_skill", {}).setdefault(
+            skill, {f: 0 for f in ("output", "input", "cache_write_5m", "cache_write_1h")})
+        for f in ("output", "input", "cache_write_5m", "cache_write_1h"):
+            sk[f] = int(sk.get(f, 0)) + deltas[f]
+        changed = True
 
     stats["cache_write"] = int(stats["cache_write_5m"] + stats["cache_write_1h"])
     stats["total"] = int(stats["input"] + stats["output"] + stats["cache_read"] + stats["cache_write"])
@@ -508,6 +547,11 @@ def update() -> None:
             except json.JSONDecodeError:
                 continue
 
+            # attributionSkill is a top-level event field (verified on real .jsonl);
+            # read ONCE per event, before the source loop, so it is not applied
+            # twice across the event + data.message sources.
+            event_skill = event.get("attributionSkill") if isinstance(event.get("attributionSkill"), str) else None
+
             for source in iter_usage_sources(event):
                 usage = extract_usage(source)
                 if not usage:
@@ -520,7 +564,7 @@ def update() -> None:
                 usage_id = usage_identity(source)
                 is_new = usage_id not in usage_index
                 previous_snapshot = usage_index.get(usage_id)
-                if add_usage_delta(stats, previous_snapshot, current_snapshot):
+                if add_usage_delta(stats, previous_snapshot, current_snapshot, skill=event_skill):
                     usage_index[usage_id] = current_snapshot
                     index_changed = True
                 elif is_new:
@@ -546,13 +590,19 @@ def update() -> None:
 def session_fields_line(stats: dict[str, Any]) -> str:
     """Tab-separated session_end field contract consumed by hooks/stop-gate.
 
-    Order (f1..f10): total, output, cost_eur, model_prevalent, input,
-    cache_read, cache_write_5m, cache_write_1h, json(by_model), json(by_tool).
-    by_model/by_tool are compact JSON (no tab/newline) so they stay on one line
-    and can be embedded verbatim into the session_end meta object.
+    Order (f1..f13): total, output, cost_eur, model_prevalent, input,
+    cache_read, cache_write_5m, cache_write_1h, json(by_model), json(by_tool),
+    json(by_skill), json(by_model_tokens), json(pricing).
+    All JSON fields are compact (no tab/newline) so they stay on one line and can
+    be embedded verbatim into the session_end meta object.
     """
-    by_model = json.dumps(stats.get("by_model", {}) or {}, separators=(",", ":"), sort_keys=True)
-    by_tool = json.dumps(stats.get("by_tool", {}) or {}, separators=(",", ":"), sort_keys=True)
+    compact = lambda d: json.dumps(d or {}, separators=(",", ":"), sort_keys=True)
+    by_model = compact(stats.get("by_model", {}))
+    by_tool = compact(stats.get("by_tool", {}))
+    by_skill = compact(stats.get("by_skill", {}))
+    by_model_tokens = compact(stats.get("by_model_tokens", {}))
+    pricing = json.dumps(pricing_snapshot(set((stats.get("by_model") or {}).keys())),
+                         separators=(",", ":"), sort_keys=True)
     return "\t".join((
         str(int(stats.get("total", 0) or 0)),
         str(int(stats.get("output", 0) or 0)),
@@ -564,6 +614,9 @@ def session_fields_line(stats: dict[str, Any]) -> str:
         str(int(stats.get("cache_write_1h", 0) or 0)),
         by_model,
         by_tool,
+        by_skill,
+        by_model_tokens,
+        pricing,
     ))
 
 

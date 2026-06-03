@@ -284,7 +284,7 @@ def test_session_fields_line_order_and_json():
     })
     line = tc.session_fields_line(stats)
     fields = line.split("\t")
-    assert len(fields) == 10
+    assert len(fields) == 13   # f1..f10 (#296) + f11 by_skill, f12 by_model_tokens, f13 pricing
     assert fields[0] == "1000"            # total
     assert fields[1] == "200"             # output
     assert fields[2] == "0.123456"        # cost_eur
@@ -303,7 +303,7 @@ def test_session_fields_line_no_tabs_in_json():
     stats["by_model"] = {"claude-sonnet-4-6": 10}
     line = tc.session_fields_line(stats)
     # JSON fields must be compact (no tab/newline) so they stay inside the line
-    assert line.count("\t") == 9
+    assert line.count("\t") == 12   # 13 fields → 12 separators
     assert "\n" not in line
 
 
@@ -312,3 +312,99 @@ def test_session_fields_line_empty_stats_safe():
     fields = line.split("\t")
     assert fields[8] == "{}"   # by_model empty
     assert fields[9] == "{}"   # by_tool empty
+
+
+# --- Design A: by_skill (Comp.1), by_model_tokens (Comp.4), pricing (Comp.5) ---
+
+def _snap(model, **comp):
+    base = {"input": 0, "output": 0, "cache_read": 0, "cache_write_5m": 0,
+            "cache_write_1h": 0, "cache_write": 0, "model": model, "cost_eur": 0.0}
+    base.update(comp)
+    base["cache_write"] = base["cache_write_5m"] + base["cache_write_1h"]
+    base["total"] = base["input"] + base["output"] + base["cache_read"] + base["cache_write"]
+    return base
+
+
+def test_empty_stats_has_by_skill_and_by_model_tokens():
+    s = tc.empty_stats()
+    assert s["by_skill"] == {}
+    assert s["by_model_tokens"] == {}
+
+
+def test_add_usage_delta_accepts_skill_param_backward_compatible():
+    # senza skill → comportamento by_model invariato (no by_skill accumulato)
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None, _snap("claude-opus-4-8", output=100, input=50))
+    assert stats["by_skill"] == {}
+    assert stats["by_model"]["claude-opus-4-8"] == 150
+
+
+def test_by_skill_excludes_cache_read_anti_inflation():
+    # Comp.1 + AC10: by_skill accumula output/input/cache_write_* MA NON cache_read
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None,
+                       _snap("claude-opus-4-8", output=100, input=50, cache_read=9999,
+                             cache_write_5m=10, cache_write_1h=20),
+                       skill="siae-devforge:siae-tdd")
+    sk = stats["by_skill"]["siae-devforge:siae-tdd"]
+    assert sk == {"output": 100, "input": 50, "cache_write_5m": 10, "cache_write_1h": 20}
+    assert "cache_read" not in sk
+
+
+def test_by_model_tokens_includes_cache_read():
+    # Comp.4 + AC11: by_model_tokens accumula TUTTI i 5 componenti, incluso cache_read
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None,
+                       _snap("claude-sonnet-4-6", output=100, input=50, cache_read=200,
+                             cache_write_5m=10, cache_write_1h=20),
+                       skill="siae-x")
+    bmt = stats["by_model_tokens"]["claude-sonnet-4-6"]
+    assert bmt == {"input": 50, "output": 100, "cache_read": 200,
+                   "cache_write_5m": 10, "cache_write_1h": 20}
+
+
+def test_by_skill_and_by_model_tokens_dedup_on_reread():
+    # stesso snapshot ri-applicato (delta 0) → non raddoppia
+    stats = tc.empty_stats()
+    snap = _snap("claude-opus-4-8", output=100, input=50, cache_read=30)
+    tc.add_usage_delta(stats, None, snap, skill="siae-tdd")
+    tc.add_usage_delta(stats, snap, snap, skill="siae-tdd")  # previous==current → delta 0
+    assert stats["by_skill"]["siae-tdd"]["output"] == 100
+    assert stats["by_model_tokens"]["claude-opus-4-8"]["output"] == 100
+
+
+def test_normalize_stats_persist_reload_keeps_new_fields(tmp_path, monkeypatch):
+    # AC13: write_stats + read_stats NON perde by_skill / by_model_tokens
+    monkeypatch.setenv("DEVFORGE_SESSION_DIR", str(tmp_path))
+    stats = tc.empty_stats()
+    tc.add_usage_delta(stats, None, _snap("claude-opus-4-8", output=100, cache_read=10),
+                       skill="siae-tdd")
+    tc.write_stats(stats)
+    reloaded = tc.read_stats()
+    assert reloaded["by_skill"].get("siae-tdd", {}).get("output") == 100
+    assert reloaded["by_model_tokens"].get("claude-opus-4-8", {}).get("output") == 100
+
+
+def test_pricing_unit_constant():
+    assert tc.PRICING_UNIT == "usd_per_1m_tokens"
+
+
+def test_pricing_snapshot_for_models():
+    snap = tc.pricing_snapshot({"claude-opus-4-8", "claude-sonnet-4-6"})
+    assert snap["unit"] == "usd_per_1m_tokens"
+    assert snap["eur_rate"] == tc.resolve_eur_rate()
+    assert snap["by_model"]["claude-opus-4-8"]["input"] == 5.0
+    assert snap["by_model"]["claude-sonnet-4-6"]["output"] == 15.0
+
+
+def test_session_fields_line_has_13_fields():
+    import json as _json
+    stats = tc.empty_stats()
+    stats["by_skill"] = {"siae-tdd": {"output": 5}}
+    stats["by_model_tokens"] = {"claude-opus-4-8": {"input": 1, "output": 2}}
+    line = tc.session_fields_line(stats)
+    f = line.split("\t")
+    assert len(f) == 13
+    assert _json.loads(f[10]) == {"siae-tdd": {"output": 5}}     # f11 by_skill
+    assert _json.loads(f[11]) == {"claude-opus-4-8": {"input": 1, "output": 2}}  # f12 by_model_tokens
+    assert "by_model" in _json.loads(f[12])  # f13 pricing object
