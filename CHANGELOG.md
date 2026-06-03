@@ -4,6 +4,30 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.78.0] - 2026-06-03
+
+### Added — Segnali raw "chi produce di valore" + pricing multi-vendor (Design A)
+
+Estensione telemetria con segnali RAW additivi su S3 (la valutazione resta a valle in
+`developer-telemetry`). Tutto additivo (`schema_version` 2, campi/eventi esistenti invariati),
+attribuzione token non gonfiata.
+
+- **`by_skill`** (`session_end`): componenti token per skill da `attributionSkill` nativo,
+  ESCLUDENDO `cache_read` (anti-inflazione: il contesto riletto non è "lavoro" della skill).
+- **`by_model_tokens`** (`session_end`): breakdown componenti per modello INCLUDENDO `cache_read`
+  — il dato raw che permette al consumer di applicare i listini di vendor/soluzioni diverse.
+- **`pricing`** (`session_end`): rate-table applicato `{unit:"usd_per_1m_tokens", eur_rate,
+  by_model:{model:rates}}` + costante `PRICING_UNIT`. Con `by_model_tokens` il consumer
+  ricalcola il costo per qualsiasi vendor; `cost_eur` esistente invariato.
+- **`test_run_result`** + **`tdd_cycle`** (`capture-test-result`, prima non emetteva nulla):
+  esito test (status/exit/coverage/framework) e transizioni TDD (from/to/elapsed_sec/reason).
+- **`session_tokens_cumulative`** su `pr_merged` (ancora token→esito) via helper
+  `devforge_session_token_total`.
+- `add_usage_delta(...,skill=None)`; `session_fields_line` esteso f11-f13; persist-reload safe.
+
+Design: `docs/plans/2026-06-02-telemetry-raw-value-signals-design.md`. Test: +13 casi
+(pytest + bash). Follow-up: `tokens_at_block` sui gate (Comp.3b).
+
 ## [1.76.0] - 2026-06-02
 
 ### Added — Bundle identità developer raw per risoluzione resiliente a valle
