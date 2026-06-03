@@ -1,0 +1,20 @@
+{
+  "dedup_key": "a3786fc952862b8d",
+  "title": "Profile update does not invalidate Redis cache; reads serve stale data for up to 5 minutes",
+  "severity": "SEV-3",
+  "category": "cache-staleness",
+  "entry_point_id": "profile.update",
+  "preconditions": [
+    "User U's profile is cached under redis key profile:U with TTL 300 s.",
+    "Less than 300 s have elapsed since the cache was populated."
+  ],
+  "steps": [
+    "(api-caller) PUT /v1/profile with display_name='Alice (new)' as user U",
+    "(api-caller) GET /v1/profile/U immediately afterwards (within the TTL window)",
+    "(observer) Inspect the response body display_name and compare against the database row"
+  ],
+  "expected": "GET /v1/profile/U returns display_name='Alice (new)' (the value just written).",
+  "actual": "GET /v1/profile/U returns the previously-cached display_name for up to 300 s, until the TTL expires or the key is evicted.",
+  "suggested_fix_direction": "On PUT /v1/profile, after the DB update succeeds, call redis.delete(f'profile:{user_id}') (write-invalidate cache-aside). Alternatively write-through: update redis with the new value in the same transaction.",
+  "reproduction_rate_target": "deterministic"
+}

@@ -9,10 +9,22 @@ abortisce best-effort quando il progresso si ferma.
 
 ## Budget
 
-- **max 3 iterazioni totali**
+- **max_iter = min(10, max(3, ceil(len(batch-plan.json.batches) × 1.5)))**
+  (letto all'ingresso Phase 7; batch-plan.json assente → fallback 3)
 - **max 1 full coverage run per iterazione** (re-run solo i test modificati
   fino a fine iter; coverage full solo a chiusura)
+- **hard cap 10 iter (budget contesto)**
 - **early-abort autonomous** (vedi sotto)
+
+Budget init (eseguire all'ingresso Phase 7, nessun coverage run extra):
+```python
+import json, math, pathlib
+bp = pathlib.Path(".code-coverage/batch-plan.json")
+d = json.loads(bp.read_text()) if bp.exists() else {}
+n = len(d.get("batches", d.get("pending_batches", []))) if d else 0
+MAX_ITER = min(10, max(3, math.ceil(n * 1.5))) if n else 3
+# Log: [phase7] max_iter=<MAX_ITER> batches=<n>
+```
 
 ---
 
@@ -60,19 +72,43 @@ bash skills/code-coverage/lib/phase6-coverage.sh "$REPO"
 
 Aggiorna `coverage-report.json`.
 
-### Step 5 — Progress guard
+### Step 5 — Two-tier progress guard
 
-Calcola delta vs iterazione precedente:
+Variabili (init all'ingresso Phase 7):
+  cov_at_start = branch% baseline (fine Phase 6)
+  strategy_index = 0   # indice in STRATEGY_LADDER
 
-```python
-delta_global = global_cov_now - global_cov_prev
-delta_failing = failing_count_now - failing_count_prev
+Dopo ogni iter N:
+  delta_local  = branch_now - branch_prev      # iter N vs N-1
+  delta_global = branch_now - cov_at_start      # iter N vs baseline
+  LOCAL_STALL = 1.0 pp   GLOBAL_ABORT = 5.0 pp
 
-if delta_global < 0.5 and delta_failing >= 0:
-    # No progress → STOP best-effort
-    emit_block_8_with_stalled_files()
-    exit_repair_loop()
-```
+  if delta_local >= LOCAL_STALL:
+      → ACTIVE (continua con la stessa strategia)
+  elif delta_local < LOCAL_STALL and delta_global >= GLOBAL_ABORT:
+      → STALLED_LOCAL: advance_strategy(); se ladder esaurita → BEST_EFFORT
+      → log: [phase7] guard=LOCAL stall iter=N delta_local=X delta_global=Y → advancing to <ladder[idx]>
+  elif delta_global < GLOBAL_ABORT and iter >= 2:
+      → per ogni file stalled: classify_intractable.py
+        se almeno uno ∈ {NEEDS_REFLECTION, NEEDS_CLASS_MOCK, NEEDS_TZ_MOCK} → advance_strategy(), continua
+        altrimenti → BEST_EFFORT genuino
+      → log: [phase7] guard=GLOBAL delta_global=Y < 5pp → BEST_EFFORT
+
+advance_strategy(): strategy_index += 1; se >= len(STRATEGY_LADDER) → segnale BEST_EFFORT.
+  Salta un gradino se il suo prerequisito non è soddisfatto da nessun file stalled.
+
+### STRATEGY_LADDER
+0. LINE_COVERAGE_TESTS  — happy-path, default ingresso
+1. BRANCH_MATRIX_TESTS  — template branch-matrix (Task 07), per ?? / || / && / ?:
+2. REFLECTION_TESTS     — private methods via reflection (scan_private_methods.py)
+3. CLASS_MOCK_TESTS     — vi.mock factory per classi inline (scan_class_instantiations.py)
+4. TZ_MOCK_TESTS        — mockTz helper (scan_tz_usage.py)
+5. FULL_FIXTURE_BUILDER — dual-fixture per file branch_operator_count > 40
+
+Ordina i file stalled per branch_gap decrescente quando si avanza di gradino.
+
+Per iter > 3 usa `parse_coverage.py --view repair` (payload ridotto) invece di --view full,
+così le iter extra abilitate da max_iter scaling non saturano il contesto.
 
 ### Step 6 — Autonomous early-abort
 
@@ -114,7 +150,7 @@ quando definito.
 - Full-file rewrite di un test su un singolo assert failure.
 - Modificare il modulo sorgente per soddisfare il test (è violazione del
   contratto "never modify production source", Phase 0 principio 1).
-- Loop > 3 iter (hard cap, no override).
+- Loop oltre max_iter calcolato (hard cap 10) senza cambio strategia.
 - Re-run completo (`--coverage`) ad ogni Edit (wall-time esplode).
 
 ---

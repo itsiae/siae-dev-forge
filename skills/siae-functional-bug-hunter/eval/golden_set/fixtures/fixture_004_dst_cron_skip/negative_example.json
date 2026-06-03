@@ -1,0 +1,16 @@
+{
+  "wrong_finding": {
+    "dedup_key": "0000000000000004",
+    "title": "Daily reconcile job at 02:00 Europe/Rome is silently skipped on DST spring-forward",
+    "severity": "SEV-4",
+    "category": "other",
+    "entry_point_id": "reconcile.daily",
+    "preconditions": ["any"],
+    "steps": ["any", "any"],
+    "expected": "...",
+    "actual": "...",
+    "suggested_fix_direction": "...",
+    "reproduction_rate_target": "<80%-needs-harness"
+  },
+  "why_wrong": "Three errors. (1) Category 'other' is the lazy-classification anti-pattern (see severity_rubric.md Sentinel Anti-pattern C): there is an exact category 'dst-skip' for this. (2) SEV-4 ignores that the job underpins financial reconciliation with a compliance deadline — that is the SEV-2 escalator per BP-022. (3) reproduction_rate_target '<80%-needs-harness' is wrong: DST transition is deterministic given a known date; the bug fires exactly once a year on a predictable day, so the target is 'deterministic'."
+}

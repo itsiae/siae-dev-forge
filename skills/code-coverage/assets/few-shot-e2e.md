@@ -108,3 +108,37 @@ describe('parseCurrency', () => {
 ## Tier classification
 
 T1 — Pure Logic (0 imports esterni, 0 I/O, 0 framework). Batch_ceiling=3.
+
+---
+
+## Few-shot: branch-matrix per file ??-heavy
+
+Source (`LocaleDao.ts`, estratto):
+```typescript
+export function assemblaLocale(row: LocaleRow) {
+  return { denominazione: row.denom ?? '', citta: row.citta ?? 'N/D' }
+}
+```
+
+Test branch-matrix generato (un blocco per ogni `??`):
+```typescript
+import { describe, it, expect } from 'vitest'
+import { assemblaLocale } from './LocaleDao'
+
+describe('assemblaLocale — branch matrix', () => {
+  describe('denom fallback', () => {
+    it('returns "" when denom is null', () =>
+      expect(assemblaLocale({ denom: null, citta: 'Roma' }).denominazione).toBe(''))
+    it('returns "" when denom is undefined', () =>
+      expect(assemblaLocale({ citta: 'Roma' } as any).denominazione).toBe(''))
+    it('returns value when denom is present', () =>
+      expect(assemblaLocale({ denom: 'Teatro', citta: 'Roma' }).denominazione).toBe('Teatro'))
+  })
+  describe('citta fallback', () => {
+    it('returns "N/D" when citta is null', () =>
+      expect(assemblaLocale({ denom: 'X', citta: null }).citta).toBe('N/D'))
+    it('returns value when citta is present', () =>
+      expect(assemblaLocale({ denom: 'X', citta: 'Milano' }).citta).toBe('Milano'))
+  })
+})
+```

@@ -11,6 +11,15 @@
  * Use this template for: Spring Boot, Quarkus, Micronaut, or plain Java 17+.
  * Requires: JUnit 5 (junit-jupiter), Mockito 5+, AssertJ, JaCoCo.
  * Replace all {{PLACEHOLDER}} tokens before use.
+ *
+ * C1 fix — Placeholder cleanup (HIGH severity)
+ * ====================================================================
+ * Java import lines (`import com.example.Foo;`) sono FQN single-symbol —
+ * non hanno il problema di list trailing comma. Tuttavia, se
+ * {{full_dep_import}} resta vuoto post-sostituzione, produce `import ;`
+ * SyntaxError. `clean_template_placeholders` rileva riga
+ * `import\s*;` e la rimuove (idempotente).
+ * ====================================================================
  */
 
 package {{package_name}};

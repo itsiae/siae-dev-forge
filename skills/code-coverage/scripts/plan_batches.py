@@ -68,6 +68,10 @@ def build_batches(file_list: list, ceilings: dict) -> list:
                     "priority": current_batch[0].get("priority"),
                     "files": current_batch,
                     "size": len(current_batch),
+                    "status": "pending",
+                    "assigned_to": None,
+                    "completed_by": None,
+                    "completed_at": None,
                 })
                 batch_id += 1
                 current_batch = []
@@ -82,6 +86,10 @@ def build_batches(file_list: list, ceilings: dict) -> list:
             "priority": current_batch[0].get("priority"),
             "files": current_batch,
             "size": len(current_batch),
+            "status": "pending",
+            "assigned_to": None,
+            "completed_by": None,
+            "completed_at": None,
         })
 
     return batches
@@ -128,7 +136,11 @@ def build_plan(size_data: dict, stack_data: dict, rules: dict) -> dict:
 
     skip_patterns = rules.get("skip_patterns", [])
     deferred = [f for f in sorted_files if is_skipped(f["path"], skip_patterns)]
-    eligible = [f for f in sorted_files if not is_skipped(f["path"], skip_patterns)]
+    eligible = [
+        {**f, "branch_operator_count": f.get("branch_operator_count", None),
+               "coverage_mode": f.get("coverage_mode", None)}
+        for f in sorted_files if not is_skipped(f["path"], skip_patterns)
+    ]
 
     batches = build_batches(eligible, ceilings)
 

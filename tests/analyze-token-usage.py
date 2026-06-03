@@ -19,21 +19,29 @@ OUTPUT ESEMPIO:
     ─────────────────────────────────────────────────────────────────────────────────────
     TOTAL                                             37     31k     5,593    1,255k   $4.26
 """
+from __future__ import annotations
 
+import importlib.util
 import json
 import sys
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, Any
 
-# Prezzi Claude Sonnet 4.6 (per 1M token)
-# Aggiorna questi valori se cambiano i prezzi Anthropic
-PRICING = {
-    "input":        3.00,   # $3.00 / 1M input tokens
-    "output":      15.00,   # $15.00 / 1M output tokens
-    "cache_write":  3.75,   # $3.75 / 1M cache write tokens
-    "cache_read":   0.30,   # $0.30 / 1M cache read tokens
-}
+# Single source of truth per i prezzi: deleghiamo al core token-collector.
+# Il filename ha un trattino → import via importlib (pattern test_anti_bloat_lint.py).
+_core_path = Path(__file__).parent.parent / "lib" / "token-collector.py"
+_spec = importlib.util.spec_from_file_location("token_collector", _core_path)
+_tc = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_tc)
+
+
+def cost_for_usage(event: dict, usage: dict) -> float:
+    """Costo in EUR via core token-collector (single source of truth)."""
+    metrics = _tc.usage_tokens(usage)
+    model = _tc.extract_model(event)
+    return _tc.usage_cost_eur(metrics, model)
 
 
 def load_session(filepath: str) -> list[dict]:
@@ -64,22 +72,6 @@ def extract_usage(event: dict) -> dict | None:
         usage = event["usage"]
 
     return usage
-
-
-def calculate_cost(usage: dict) -> float:
-    """Calcola il costo in dollari per un evento di usage"""
-    input_tokens = usage.get("input_tokens", 0)
-    output_tokens = usage.get("output_tokens", 0)
-    cache_creation = usage.get("cache_creation_input_tokens", 0)
-    cache_read = usage.get("cache_read_input_tokens", 0)
-
-    cost = (
-        (input_tokens / 1_000_000) * PRICING["input"] +
-        (output_tokens / 1_000_000) * PRICING["output"] +
-        (cache_creation / 1_000_000) * PRICING["cache_write"] +
-        (cache_read / 1_000_000) * PRICING["cache_read"]
-    )
-    return cost
 
 
 def format_number(n: int) -> str:
@@ -143,7 +135,7 @@ def analyze_session(filepath: str) -> None:
             agent["output_tokens"] += usage.get("output_tokens", 0)
             agent["cache_creation_tokens"] += usage.get("cache_creation_input_tokens", 0)
             agent["cache_read_tokens"] += usage.get("cache_read_input_tokens", 0)
-            agent["cost"] += calculate_cost(usage)
+            agent["cost"] += cost_for_usage(event, usage)
 
     if not agents:
         print("Nessun dato di usage trovato nella sessione.")
@@ -182,7 +174,7 @@ def analyze_session(filepath: str) -> None:
         f"{'Input':>{col_widths['input']}}  "
         f"{'Output':>{col_widths['output']}}  "
         f"{'Cache':>{col_widths['cache']}}  "
-        f"{'Cost':>{col_widths['cost']}}"
+        f"{'Cost(€)':>{col_widths['cost']}}"
     )
 
     separator = "─" * len(header)
@@ -209,7 +201,7 @@ def analyze_session(filepath: str) -> None:
             f"{format_number(data['input_tokens']):>{col_widths['input']}}  "
             f"{format_number(data['output_tokens']):>{col_widths['output']}}  "
             f"{format_number(cache_total):>{col_widths['cache']}}  "
-            f"${data['cost']:>{col_widths['cost']-1}.2f}"
+            f"€{data['cost']:>{col_widths['cost']-1}.2f}"
         )
 
     print(separator)
@@ -221,7 +213,7 @@ def analyze_session(filepath: str) -> None:
         f"{format_number(totals['input_tokens']):>{col_widths['input']}}  "
         f"{format_number(totals['output_tokens']):>{col_widths['output']}}  "
         f"{format_number(cache_total):>{col_widths['cache']}}  "
-        f"${totals['cost']:>{col_widths['cost']-1}.2f}"
+        f"€{totals['cost']:>{col_widths['cost']-1}.2f}"
     )
 
     print()
@@ -233,9 +225,9 @@ def analyze_session(filepath: str) -> None:
         sub_cost = totals["cost"] - main_cost
         sub_pct = (sub_cost / totals["cost"] * 100) if totals["cost"] > 0 else 0
 
-        print(f"💡 Insights:")
-        print(f"   Subagent cost: ${sub_cost:.2f} ({sub_pct:.0f}% del totale)")
-        print(f"   Subagent più costoso: {most_expensive[0]} (${most_expensive[1]['cost']:.2f})")
+        print("💡 Insights:")
+        print(f"   Subagent cost: €{sub_cost:.2f} ({sub_pct:.0f}% del totale)")
+        print(f"   Subagent più costoso: {most_expensive[0]} (€{most_expensive[1]['cost']:.2f})")
 
         if sub_pct > 60:
             print(f"   ⚠️  I subagent usano >{sub_pct:.0f}% dei token — considera di ridurre il contesto passato ai subagent")

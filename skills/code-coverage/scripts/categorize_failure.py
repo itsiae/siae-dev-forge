@@ -41,13 +41,24 @@ def normalize(error_message: str, normalize_rules: list | None = None) -> str:
     """Normalizza un messaggio d'errore in una signature deterministica.
 
     Strip path / timestamp / hex / line:col / ANSI escape.
-    Tronca a 200 char. Lavora sulla prima riga (split su \\n).
+    Tronca a 200 char.
+
+    NOTA (C2 fix): prende le PRIME 3 RIGHE NON-VUOTE concatenate da \\n.
+    Rationale: Vitest/Jest stampano line-1 con header tipo
+    "FAIL src/foo.test.ts (3 tests | 2 failed)" e la vera assertion arriva
+    5-15 righe dopo. Prendere solo line-1 produceva signature broken e
+    grouping fallito (systemic-fix mai applicato).
     """
     if normalize_rules is None:
         normalize_rules = load_strategies().get("normalize_regex", [])
 
-    first_line = error_message.split("\n")[0]
-    sig = first_line
+    non_empty_lines: list[str] = []
+    for line in error_message.split("\n"):
+        if line.strip():
+            non_empty_lines.append(line)
+        if len(non_empty_lines) >= 3:
+            break
+    sig = "\n".join(non_empty_lines)
     for rule in normalize_rules:
         sig = re.sub(rule["pattern"], rule["replace"], sig)
 

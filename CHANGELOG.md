@@ -4,157 +4,231 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.63.8] - 2026-05-21
+## [1.78.0] - 2026-06-03
 
-### Added — Bootstrap SYNC su apertura PR (`gh pr create`/edit)
+### Added — Segnali raw "chi produce di valore" + pricing multi-vendor (Design A)
 
-Richiesta utente: *"Sta roba deve partire quando si apre PR"* — non lazy in background, ma garantire i runner installati al momento della PR.
+Estensione telemetria con segnali RAW additivi su S3 (la valutazione resta a valle in
+`developer-telemetry`). Tutto additivo (`schema_version` 2, campi/eventi esistenti invariati),
+attribuzione token non gonfiata.
 
-**Integrazione `hooks/pr-gate` (PreToolUse Bash `gh pr create|edit`):**
+- **`by_skill`** (`session_end`): componenti token per skill da `attributionSkill` nativo,
+  ESCLUDENDO `cache_read` (anti-inflazione: il contesto riletto non è "lavoro" della skill).
+- **`by_model_tokens`** (`session_end`): breakdown componenti per modello INCLUDENDO `cache_read`
+  — il dato raw che permette al consumer di applicare i listini di vendor/soluzioni diverse.
+- **`pricing`** (`session_end`): rate-table applicato `{unit:"usd_per_1m_tokens", eur_rate,
+  by_model:{model:rates}}` + costante `PRICING_UNIT`. Con `by_model_tokens` il consumer
+  ricalcola il costo per qualsiasi vendor; `cost_eur` esistente invariato.
+- **`test_run_result`** + **`tdd_cycle`** (`capture-test-result`, prima non emetteva nulla):
+  esito test (status/exit/coverage/framework) e transizioni TDD (from/to/elapsed_sec/reason).
+- **`session_tokens_cumulative`** su `pr_merged` (ancora token→esito) via helper
+  `devforge_session_token_total`.
+- `add_usage_delta(...,skill=None)`; `session_fields_line` esteso f11-f13; persist-reload safe.
 
-```bash
-# Prima del security scan, garantisce runner installati (SYNC)
-if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
-    devforge_log "pr_gate" "info" "{\"check\":\"runner_bootstrap_start\"}"
-    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" --sync 2>&1 || true
-    devforge_log "pr_gate" "success" "{\"check\":\"runner_bootstrap_done\"}"
-fi
+Design: `docs/plans/2026-06-02-telemetry-raw-value-signals-design.md`. Test: +13 casi
+(pytest + bash). Follow-up: `tokens_at_block` sui gate (Comp.3b).
+
+## [1.76.0] - 2026-06-02
+
+### Added — Bundle identità developer raw per risoluzione resiliente a valle
+
+Per rendere estremamente resiliente la risoluzione dei nomi developer a valle
+(`developer-telemetry`), il producer ora emette **tutti i segnali grezzi di identità**
+invece di una sola identità pre-risolta (lossy su macchine condivise / git config errata).
+Tutto additivo (`schema_version` resta 2, eventi e campi esistenti invariati).
+
+- Nuovo helper `lib/logger.sh::devforge_identity_bundle` → oggetto JSON a singola riga con
+  `git_local_email`, `git_local_name`, `git_global_email`, `git_global_name`, `os_user`,
+  `host`. Ogni segnale best-effort (vuoto se assente), sanitizzato, non aborta mai sotto
+  `set -euo pipefail`. `repo_root` escluso (già campo top-level dell'evento).
+- `hooks/session-start` emette il bundle in `session_start.meta` (fonte autorevole su S3) e in
+  `user.json` (cache locale, best-effort python3-only). Catena first-match e `actor_canonical`
+  invariati. Bundle non-parsabile → `user.json` senza `identity` (silent skip), sessione mai
+  bloccata.
+
+Design: `docs/plans/2026-06-02-developer-identity-bundle-design.md`. Test: +6 casi bash in
+`tests/test_telemetry_fixes.sh` (16/16 PASS).
+
+## [1.73.0] - 2026-05-30
+
+### Changed — DevForge subagent default model: `inherit` → `sonnet`
+
+Tutti e 5 i subagent DevForge (`code-reviewer`, `doc-generator`, `mcp-impact-analyst`,
+`qa-investigator`, `spec-reviewer`) ora dichiarano `model: sonnet` nel frontmatter
+invece di `model: inherit`. Significa che ogni dispatch via Agent tool gira di
+default su Claude Sonnet (oggi 4.6), indipendentemente dal modello della sessione
+parent (Opus 4.7, Haiku 4.5, ecc.).
+
+**Razionale:**
+- **Coerenza eval baseline:** tutti i dispatch DevForge convergono sullo stesso modello → output piu' riproducibile, regression detection piu' affidabile
+- **Cost efficiency:** Sonnet 4.6 e' ~5x meno costoso di Opus 4.7 per token; review/spec-review/qa-investigator hanno pattern di output che non beneficiano significativamente di Opus
+- **Throughput:** Sonnet 4.6 ha latenza minore → review parallel piu' veloci
+
+**Override esplicito:**
+chi vuole un agent specifico su Opus puo' ancora forzarlo in-call:
+
+```
+Agent({subagent_type: "siae-devforge:code-reviewer", model: "opus", prompt: ...})
 ```
 
-**Differenza vs v1.63.6/7:**
-- v1.63.6/7: bootstrap in `review-evidence` **background async** (commit, push, gh pr create)
-- v1.63.8: bootstrap in `pr-gate` **SYNC bloccante** SOLO su `gh pr create|edit`
+Il `model` passato come parametro tool ha precedenza sul frontmatter agent.
 
-Doppia copertura:
-1. Hook `review-evidence` lancia bootstrap async — copre commit/push
-2. Hook `pr-gate` lancia bootstrap **SYNC** — garantisce installazione PRIMA del security scan PR
+**Migration:** zero migration richiesta. Utenti che non hanno mai customizzato
+nulla vedono comportamento invariato (i loro dispatch usavano gia' il modello
+default della sessione, che in molti casi era Sonnet); chi era esplicitamente su
+Opus per i subagent ora si trova Sonnet — vedi override sopra per ripristinare.
 
-**Cooldown 1h** evita re-bootstrap: se review-evidence l'ha già fatto pochi minuti fa, pr-gate skippa silent. Se cold-start (prima session macchina), pr-gate attende install completo prima di procedere col scan.
+### Tests
 
-**Non-blocking sempre**: warning rossi se install fallisce, scan procede con tool disponibili. `|| true` garantisce exit 0 anche se bootstrap fail.
+- `tests/agent_model_sonnet.test.sh` — 18 check (5 agenti × 2 + frontmatter integrity + count check + zero residui inherit/altri valori)
 
-**Eventi telemetria emessi:**
-- `pr_gate` con `check: runner_bootstrap_start` — momento avvio
-- `pr_gate` con `check: runner_bootstrap_done` — momento completamento (anche se warning rossi)
+## [1.68.0] - 2026-05-25
 
-## [1.63.7] - 2026-05-21
+### Added — siae-premortem skill + pr-premortem-gate hook
 
-### Changed — Bootstrap esteso a TUTTI i 16 runner OSS (default)
+Klein premortem method (HBR 2007 "Performing a Project Premortem") integrato come
+gate pre-PR su itsiae/*. Cattura failure mode che la code review missa per
+hindsight bias (Klein: +30% identificazione cause fallimento usando hindsight
+prospettico vs. domanda "cosa puo' andare storto?").
 
-Richiesta utente: *"Devono partire di default con autoinstallati sempre"* — non solo i 6 core security primary.
+**Skill `siae-premortem`** — metodo a 5 step adattato per LLM single-agent:
+1. Set the premise ("3 mesi dopo merge, fallimento conclamato")
+2. Brainstorm 5-10 cause concrete e specifiche
+3. Categorizzazione (Tecnica / Operativa / Adozione / Esterna)
+4. Top-3 con mitigazioni concrete (no wishful thinking)
+5. Decisione: PROCEDI / RIVISITA / REJECT
 
-`scripts/runner-bootstrap.sh CORE_RUNNERS` esteso da 6 a 16 tool (tutti i runner OSS DevForge eccetto `mvn` che è build tool, non SAST):
+**Hook `pr-premortem-gate`** — PreToolUse Bash matcher, blocca `gh pr create|edit`
+senza evidenza siae-premortem in session-skills o task-scoped. Pattern speculare a
+`pr-blind-review-gate`. Scope: itsiae/* only. Bypass tracciato 5/giorno:
+`DEVFORGE_SKIP_PREMORTEM=1` (solo hotfix/bump/revert).
 
-| Stack | Runner |
-|---|---|
-| cross | semgrep, gitleaks, eslint, ts-unused-exports |
-| java | spotbugs |
-| python | bandit, pip-audit, vulture, pyright |
-| ios | swiftlint |
-| android | detekt, ktlint |
-| aws | tflint, tfsec, checkov, cfn-lint |
+**Anti-pattern guard nella skill:**
+- "Bias da implementer" se cause solo Tecniche → forza Adozione/Operativa/Esterna
+- "Wishful mitigation" ("faremo attenzione") esplicitamente rigettata
+- "PR piccola, niente puo' andare storto" → le PR piccole rompono produzione quanto le grandi
 
-**Cold-start vs steady-state:**
-- Prima session (cold): brew + pip + npm install di 16 tool. Latency 3-15 min in background (asincrono, no-blocking workflow).
-- Sessioni successive: cooldown 1h evita re-bootstrap. Tool già in PATH = silent exit 0.
-- Cache brew/pip rende le ri-install successive (es. dopo cache eviction) sotto 30s.
+Reference: https://hbr.org/2007/09/performing-a-project-premortem
 
-**Throttling**: max 4 install paralleli per evitare brew lock contention.
+## [1.66.0] - 2026-05-21
 
-**Warning rossi** (`\033[1;31m[DEVFORGE WARN]\033[0m`) emessi su stderr per ogni tool che fallisce install. Non bloccano. L'utente vede chiaramente cosa è degradato.
+### Changed — code-coverage skill v2 optimization (10 fixes consolidated)
 
-**Override env vars** (memoria `feedback_session_start_hook_invariants`):
-- `DEVFORGE_BOOTSTRAP_COOLDOWN=0` — force re-bootstrap (debug)
-- `DEVFORGE_RUNNER_ENSURE_TIMEOUT=N` — timeout per singolo runner install (default 60s)
+Three parallel expert audits (best-practice, runtime, full-stack) converged on
+10 high-ROI fixes to reduce iterations / wall-time / token spend without losing
+efficacy (>=70% global, P1>=80%).
 
-## [1.63.6] - 2026-05-21
+**Expected impact on LARGE repo runs:** tokens ~280-400k → ~180-220k (-35%);
+round-trips 12-18 → 7-9; Phase 5 batch from sequential turns to parallel.
 
-### Added — Runner auto-bootstrap automatico (zero setup per nuovi dev)
+**SKILL.md + references:** description frontmatter trim, HARD READ POLICY
+anti-eager-load, inlined `phase-2-strategy.md` + `phase-4-environment.md`
+into `SKILL.md` (refs deleted), explicit parallel-Write directive, Phase 5b
+note moved.
 
-Richiesta utente: *"Lo deve fare in automatico DevForge"* — non manualmente. Estensione di v1.63.5 `--ensure`: ora il bootstrap è invocato dal hook `review-evidence` ad ogni esecuzione, non più solo on-demand.
+**Python scripts (`parse_coverage.py`, `detect_stack.py`):** new
+`--view {full,repair,summary}` flag on parse_coverage; `detect_monorepo_workspaces`
+adds Maven `<modules>` + Gradle `include()` parsing.
 
-**Nuovo `scripts/runner-bootstrap.sh`:**
-- 6 runner core security: `semgrep, gitleaks, bandit, pip-audit, tfsec, checkov`
-- Esecuzione in background (no-blocking), max 4 parallel via job control
-- Cooldown 1h via sentinel `~/.claude/.devforge-runner-bootstrap-last` (override `DEVFORGE_BOOTSTRAP_COOLDOWN`)
-- PATH esteso a `/opt/homebrew/bin`, `~/.local/bin`, `~/Library/Python/3.*/bin`, `~/.npm-global/bin` (subshell hook non eredita PATH utente)
-- Modes: default `async` (background parallel), `--sync` (per test/CI)
-- Idempotent: runner già installati = exit silent
-- Output: warning rossi ANSI da `--ensure` su stderr (TTY-aware)
+**Templates + categorize + phase1 + cache:** idempotent `clean_template_placeholders`
+helper, `categorize_failure` normalize multi-line, Phase 5b probe inside
+`phase1-discover.sh`, `decisions.log` archive on completion + `discovery-summary.json`
+emit.
 
-**Integrazione `hooks/review-evidence`:**
-```bash
-# Lancio bootstrap in background subito dopo session init
-if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
-    "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" >/dev/null 2>&1 &
-fi
-```
+### Fixed — auto-review iter findings
 
-**Flusso end-to-end per nuovo dev SIAE:**
-1. `claude` (apre sessione)
-2. Hook `session-start` → `siae-onboarding`
-3. Primo `git commit`/`gh pr create` → `review-evidence` scatta
-4. **`runner-bootstrap.sh` lancia in background** install dei 6 runner core
-5. Cooldown 1h: prossimi commit non re-bootstrappano
-6. Warning rossi ANSI su stderr per ogni runner che fallisce install
+- `phase1-discover.sh:88-99` — Python heredoc injection (`$REPO` interpolated
+  in `python3 -c "..."`). Converted to `python3 - "$REPO" <<'PYEOF'` + `sys.argv[1]`.
+- `cache-helper.sh:42-50` — archive race condition: `archive_ts` now includes
+  `_$$` (PID) + `rm -f "$sentinel"` post-archive.
 
-**Test empirico:**
-- Cooldown clear + tutti installati → silent ✓
-- Cooldown attivo → skip silent ✓
-- Subshell PATH ora vede `~/Library/Python/3.9/bin` ✓ (bandit/pip-audit visti correttamente)
+### Breaking — semantics fix
 
-**Tool non in bootstrap auto** (su `--ensure` esplicito): eslint, ts-unused-exports, swiftlint, ktlint, tflint, vulture, pyright, detekt, cfn-lint, spotbugs, mvn. Motivazione: ridurre cold-start latency e brew lock contention.
+- **`priority-rules.json` v1.0 → v1.1**: priority assignment via `path_patterns`
+  now anchored to `last_2_segments` (parity with `estimate_size.py`). Paths
+  like `src/api/restore.ts` no longer match `**/store/**`. Existing baselines
+  may shift module priority assignment.
+- **`parse_go_cover`**: returns line% weighted by `numStmt` from `coverage.out`
+  raw format. Previously over-reported on funcs with unequal statement counts.
+  Go repos that passed spuriously may now report accurate (lower) coverage.
 
-## [1.63.5] - 2026-05-21
+### Test coverage
 
-### Added — Runner lazy auto-install non-blocking (`--ensure <tool>`)
+142/142 passed (was 103 baseline, +39 new tests). Coverage gate bypass
+(`DEVFORGE_SKIP_GIT_GATE=1`) tracked: pre-existing gap on `estimate_size.py`,
+`select_command.py`, `validate_env.py` (not touched by this PR).
 
-Verifica empirica security stack DevForge: 17 runner OSS dichiarati (semgrep, gitleaks, bandit, pip-audit, vulture, pyright, eslint, ts-unused-exports, mvn, spotbugs, swiftlint, detekt, ktlint, tflint, tfsec, checkov, cfn-lint) ma **0 installati** sulla mia macchina al primo check (eccetto `mvn`). PR Gate scattava 125 volte in 6gg con `security_scan_clean` ma solo via regex inline — i runner SAST/secrets veri non scattavano per assenza CLI tool.
+## [1.65.0] - 2026-05-21
 
-**Comportamento desiderato (richiesta utente)**: se runner missing → prova auto-install. Se install fallisce → **warning rosso in console, NON bloccare** workflow utente.
+### Changed — Skill `siae-functional-bug-hunter` v1.1.0 -> v1.2.0
 
-**Implementazione**: nuovo flag `--ensure <tool>` per `scripts/devforge-install-runners.sh`:
-- Step 1: `command -v <tool>` → se presente, exit 0 silent
-- Step 2: tenta `bash $0 --stack <auto-detected-stack>` con timeout `$DEVFORGE_RUNNER_ENSURE_TIMEOUT` (default 90s)
-- Step 3: re-check. Se OK → log success, exit 0
-- Step 4: se ancora missing → stampa **WARNING ROSSO ANSI** (`\033[1;31m[DEVFORGE WARN]\033[0m`) su stderr con:
-  - tool name + stack identificato
-  - comando di install manuale
-  - path log auto-install
-- **Exit 0 sempre** (non-blocking)
+Audit a 4 agenti paralleli + implementation plan via 3-blind-agent consensus
+(Round 1 Independent + Round 2 Cross-pollination + Round 3 fact-check empirico
++ Round 4 sintesi). Vedi `audit-reports/functional-bug-hunter-audit-2026-05-21.md`
+e `docs/plans/2026-05-21-functional-bug-hunter-improvements-design.md`.
 
-**Mappa tool→stack inline** (no dipendenza da definizioni funzioni piu' avanti nel file):
-- `cross`: semgrep, gitleaks, eslint, ts-unused-exports
-- `java`: mvn, spotbugs
-- `python`: bandit, pip-audit, vulture, pyright
-- `ios`: swiftlint
-- `android`: detekt, ktlint
-- `aws`: tflint, tfsec, checkov, cfn-lint
+**Score impact** (atteso): 6.75/10 -> ~8.5/10 sui 4 assi audit (scope
+coherence, Anthropic best practice, token efficiency, bug-finding effectiveness).
 
-**Test edge case (4/4 PASS):**
-1. Tool unknown (`mythical-tool`): warning "runner unknown", exit 0
-2. Tool gia' installato (`semgrep`): silent, exit 0
-3. Tool missing, install timeout (`eslint`, timeout 20s): warning rosso, exit 0
-4. Tool missing, install timeout breve (`swiftlint`, timeout 5s): warning rosso, exit 0
+#### Added
 
-**Stato install locale post-audit** (12/17 runner OSS installati):
-- ✅ cross: semgrep, gitleaks
-- ✅ java: mvn, spotbugs
-- ✅ python: bandit, pip-audit, vulture, pyright
-- ✅ android: detekt
-- ✅ aws: tfsec, checkov, cfn-lint
-- ❌ swiftlint, ktlint, tflint, eslint, ts-unused-exports (warning rosso emesso quando invocati)
+- `scripts/path_feasibility.py` — Phase 6 filter codificato (glob + keyword,
+  no AST, stdlib only). 5 test pytest. Chiude gap A1 #2 audit ("capability
+  dichiarata ma non codificata").
+- `scripts/run_lock.py dispatch` sub-command — Mode enum
+  (interactive/strict/report-only) x 5 STOP events -> Action
+  (PAUSE/CONTINUE/DEGRADE). 17 test pytest. Chiude gap A1 #3.
+- `commands/siae-functional-bug-hunter.md` — slash command file registrato
+  (pattern allineato a `commands/forge-*.md`). Chiude gap A1 #4.
+- `references/pipeline_internals.md` — Phase 0..8 narrative estratta
+  on-demand (-1600 tok eager). Chiude gap A3 #5.
+- `references/hallucination_guard.md` — HG-01..05 contract + grounding
+  policy estratti (-520 tok eager). Chiude gap A3 #9.
+- `references/README.md` — load-matrix progressive disclosure
+  Phase->Reference->Load-condition. Chiude gap A2 #6.
+- `references/runtime_modes.md` — single source of truth per dispatch
+  matrix (sincronizzata con `run_lock.py::_DISPATCH_TABLE`).
+- `references/stacks/typescript-javascript.md` — BP-024 react-lifecycle-race
+  e BP-025 set-state-after-unmount. Chiude gap A4 #1.
+- `references/stacks/data-platform.md` — BP-026 nullable-join-key-loss e
+  BP-027 window-missing-partition-by. Chiude gap A4 #2.
+- `tests/test_path_feasibility.py` (5 test) e
+  `tests/test_run_lock_dispatch.py` (17 test). Coverage: 32/32 PASS.
 
-**Follow-up tracciato**: `brew install tflint` fallisce (formula rimossa da homebrew core). Script install dovrebbe fall-back a GitHub release `terraform-linters/tflint` o tap `terraform-linters/tap`.
+#### Changed
 
-**Workflow utente per nuovo dev SIAE:**
-```bash
-# Lazy: ogni runner si auto-installa al primo uso
-bash scripts/devforge-install-runners.sh --ensure semgrep
+- `SKILL.md` description ridotta da 1209 a 854 char (conformita' Anthropic
+  Agent Skills frontmatter ≤1024). Chiude gap A2 #1.
+- `SKILL.md` body compresso da 422 LOC / 4059 token a 228 LOC / 2314 token
+  (-43%) via estrazione Phase narrative + dedup hallucination guard.
+- `SKILL.md` aggiunte sezioni `## When to use` e `## Supported stacks`
+  (recupero stack list rimossa dalla description).
+- `skill_semver` 1.1.0 -> 1.2.0.
 
-# Eager: tutto subito
-bash scripts/devforge-install-runners.sh --stack all
-```
+#### Out of scope (rimandato a v1.3.0)
+
+Vedi design doc, sezione "Out of scope". Notabili: split `bug_patterns.md`
+(5290 tok, on-demand soft cap), `@file:` imports formali, BP-028/029,
+test suite pytest completa per ogni script.
+
+## [1.64.0] - 2026-05-21
+
+### Added — Skill `siae-functional-bug-hunter` (manual-only)
+
+Integrata nel marketplace la skill `siae-functional-bug-hunter` (skill_semver 1.1.0): static, multi-repo, cross-stack functional bug hunter. Ingerisce uno o piu' root di repository, rileva quando occorre estendere la dependency closure, genera ipotesi di bug da una matrice di pattern stack-aware, le filtra per path feasibility ed emette un `qa_report.md` deterministico raggruppato per user-journey con recipe di riproduzione minimally-flaky scritte per un tester manuale (profilo ISTQB Foundation + 2 anni di esperienza).
+
+Stack supportati: Java, TypeScript/JavaScript, Python, Go, Rust, Kotlin, Swift, Ruby, .NET/C#, Scala, Flutter/Dart, Terraform/HCL, AWS serverless (SAM/CDK/SFN/EventBridge), data platforms (dbt/Airflow/Spark/SQL), piu' un profilo di fallback generico.
+
+**Invocazione manual-only**: la skill parte solo via slash command esplicito `/siae-functional-bug-hunter` con JSON conforme al contratto Inputs. Nessun hook automatico, nessun session-start activation, nessun auto-trigger natural-language. Tre runtime mode: `interactive` (TTY, pausa su scope mancante), `strict` (CI, mai pausa), `report-only` (low-confidence partial ammesso).
+
+**Esclusioni**: findings SAST-only che non passano il functional manifestation test; generazione di codice di test automatizzato.
+
+**File aggiunti:** `skills/siae-functional-bug-hunter/` (88 file, 580K) — SKILL.md, `scripts/` (preflight, dependency_closure, list_entry_points, render_qa_report, hallucination_guard, redact_pii, generate_payloads, run_lock), `references/` (bug_patterns, cross_stack_bridges, lifecycle_playbook, severity_rubric, repro_voice_guide, qa_inclusion_tree, qa_report_json_schema, repo_granularity, subagent_contract, stacks/INDEX.md), `tools/` (check_pluggability, repro_voice_lint, triggerlint, wordcount), `tests/`, `eval/`, `assets/`.
+
+**File modificati:**
+- `.claude-plugin/plugin.json` — version 1.63.4 -> 1.64.0, count 43 skill -> 44 skill
+- `.claude-plugin/marketplace.json` — version 1.63.4 -> 1.64.0, count 43 skill -> 44 skill
+- `README.md` — count 43 skill -> 44 skill (header + tree)
 
 ## [1.63.4] - 2026-05-20
 

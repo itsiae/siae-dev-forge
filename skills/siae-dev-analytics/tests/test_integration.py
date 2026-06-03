@@ -1,11 +1,9 @@
 """Integration test end-to-end: config → autodetect → fetch → compute → export."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pytest
-import pandas as pd
 
 import run_analytics as ra
 

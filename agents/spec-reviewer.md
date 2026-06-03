@@ -32,7 +32,7 @@ tools:
   - Bash
   - Grep
   - Glob
-model: inherit
+model: sonnet
 ---
 
 ```

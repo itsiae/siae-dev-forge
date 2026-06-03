@@ -1,0 +1,16 @@
+{
+  "wrong_finding": {
+    "dedup_key": "0000000000000002",
+    "title": "Stripe webhook handler processes replayed events without idempotency key",
+    "severity": "SEV-3",
+    "category": "data-race",
+    "entry_point_id": "payments.webhook",
+    "preconditions": ["any"],
+    "steps": ["any", "any"],
+    "expected": "...",
+    "actual": "...",
+    "suggested_fix_direction": "...",
+    "reproduction_rate_target": "deterministic"
+  },
+  "why_wrong": "Two mistakes. (1) Category 'data-race' is wrong: there is no concurrent mutation by two actors here — there is at-least-once delivery from a single producer. The correct category is 'webhook-replay' (BP-019). (2) Severity SEV-3 ignores the financial downstream impact: Stripe redelivers on the order of percent of events, so > 10% of paying customers can observe the duplicate. Correct severity is SEV-1 per R-SEV1-03 with category webhook-replay."
+}

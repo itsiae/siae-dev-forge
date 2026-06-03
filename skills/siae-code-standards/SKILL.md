@@ -251,6 +251,9 @@ Tutti gli stack SIAE usano logging strutturato in formato JSON.
 3. **Non mischiare stili.** Se un file usa camelCase, tutto il file deve usare camelCase.
 4. **Chiedi conferma** se trovi conflitti tra queste linee guida e il codice esistente nel repo.
 5. **Rischio**: la scrittura di codice e' 🟡 MEDIO. Mostra la pre-flight card prima di creare o modificare file.
+6. **Simplicity First.** Scrivi il minimo codice che risolve il problema richiesto. Niente astrazioni per codice single-use, niente Strategy/Factory pattern per una sola implementazione, niente flag di "configurabilita'" non richiesti, niente error handling per scenari impossibili. Domanda: *"Un senior engineer direbbe che e' overengineered?"* Se si', semplifica. La complessita' si aggiunge **quando emerge il bisogno**, non in anticipo.
+7. **Surgical Changes.** Modifica solo le righe che tracciano direttamente al task richiesto. Vietato il drive-by refactoring: non "migliorare" codice adiacente, non riformattare quote/whitespace/import, non aggiungere type hints non richiesti, non rinominare variabili "tanto che ci sono". Se noti dead code o bug fuori scope, **segnala** in output ma non toccare. Test: ogni riga modificata nel diff deve risalire a una frase nel task originale.
+8. **Match existing style.** Se il file usa `'` allora tu usi `'`, se non ha docstring non aggiungere docstring, se l'indentazione e' 2 spazi mantienila. La coerenza intra-file batte la tua preferenza personale.
 
 | 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-code-standards |
 |:---|
@@ -297,6 +300,9 @@ Invoca `siae-verification` prima di dichiarare il codice conforme agli standard.
 | "L'exception handler non serve qui" | I casi impossibili accadono in produzione. Gestiscili. |
 | "Questo metodo ha 200 righe ma e' leggibile" | Oltre 30 righe e' un segnale. Spezza il metodo. |
 | "I commenti spiegano il codice brutto" | Il codice dovrebbe spiegare se stesso. Riscrivi, non commentare. |
+| "Aggiungo l'interfaccia astratta, magari domani serve" | YAGNI. Aggiungi l'astrazione quando arriva la seconda implementazione, non prima. |
+| "Gia' che modifico il file, sistemo questa altra cosa" | Drive-by refactor = diff esplose + review lente + bug nascosti. Modifica solo le righe del task. Apri PR separata per il resto. |
+| "Cambio le quote/typing/format mentre fixo il bug" | No. Match existing style. Lo stile del file vince sulla tua preferenza. |
 
 ## Classificazione Rischio Operazioni
 

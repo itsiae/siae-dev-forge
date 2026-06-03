@@ -1,0 +1,20 @@
+{
+  "dedup_key": "cb9b8da0e86e7606",
+  "title": "Cursor pagination on orders skips records when created_at collides",
+  "severity": "SEV-3",
+  "category": "cursor-drift",
+  "entry_point_id": "orders.list",
+  "preconditions": [
+    "The orders table contains at least two rows with identical created_at (e.g. created in the same batch).",
+    "The user is paging through /v1/orders with limit=2."
+  ],
+  "steps": [
+    "(api-caller) GET /v1/orders?limit=2 and capture the response; note the last order's created_at as cursor1",
+    "(api-caller) GET /v1/orders?limit=2&cursor=cursor1 and capture the response",
+    "(observer) Compare the set of order ids across the two pages; report whether any order present in the database in the time window was returned 0 or 2 times"
+  ],
+  "expected": "Each order in the time window appears exactly once across the concatenated pages.",
+  "actual": "Orders sharing created_at with the cursor boundary are either skipped (when cursor used strict <) or duplicated (when cursor used <=).",
+  "suggested_fix_direction": "Change the query to ORDER BY created_at DESC, id DESC and use a composite cursor (created_at, id). The boundary clause becomes WHERE (created_at, id) < ($cursor_ts, $cursor_id).",
+  "reproduction_rate_target": "95%"
+}

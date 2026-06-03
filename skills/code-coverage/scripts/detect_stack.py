@@ -359,11 +359,202 @@ def detect_build_systems(root: Path) -> list[str]:
     return bs
 
 
+_MAVEN_MODULES_BLOCK_RE = re.compile(r"<modules>(.*?)</modules>", re.DOTALL)
+_MAVEN_MODULE_ENTRY_RE = re.compile(r"<module>([^<]+)</module>")
+_MAVEN_PACKAGING_POM_RE = re.compile(r"<packaging>\s*pom\s*</packaging>", re.IGNORECASE)
+_MAVEN_JACOCO_PLUGIN_RE = re.compile(r"<artifactId>\s*jacoco-maven-plugin\s*</artifactId>")
+_MAVEN_JUNIT5_RE = re.compile(r"<artifactId>\s*junit-jupiter(?:-api)?\s*</artifactId>")
+_POM_MAXDEPTH_DEFAULT = 4
+_GRADLE_INCLUDE_KOTLIN_RE = re.compile(r"include\(([^)]*)\)")
+_GRADLE_QUOTED_RE = re.compile(r"['\"]([^'\"]+)['\"]")
+_GRADLE_INCLUDE_GROOVY_BLOCK_RE = re.compile(
+    r"include\s+(['\"][^'\"]+['\"](?:\s*,\s*['\"][^'\"]+['\"])*)"
+)
+
+
+def detect_monorepo_workspaces(root: Path) -> list[str]:
+    """Estrae i workspace path Maven (pom.xml ``<modules>``) e Gradle
+    (settings.gradle[.kts] ``include``).
+
+    Maven: parse ``<modules><module>name</module>...</modules>`` (top-level pom).
+    Gradle: parse ``include 'a'``, ``include "a", "b:c"``, ``include('a', 'b:c')``.
+    Path Gradle ``a:b:c`` viene normalizzato a ``a/b/c``.
+
+    Ritorna lista deduplicata in ordine di scoperta (Maven prima, poi Gradle).
+    """
+    workspaces: list[str] = []
+    seen: set[str] = set()
+
+    # Maven reactor (top-level pom)
+    pom_path = root / "pom.xml"
+    if pom_path.is_file():
+        content = _read_text_safe(pom_path)
+        for block in _MAVEN_MODULES_BLOCK_RE.findall(content):
+            for module in _MAVEN_MODULE_ENTRY_RE.findall(block):
+                module = module.strip()
+                if module and module not in seen:
+                    workspaces.append(module)
+                    seen.add(module)
+
+    # Gradle multi-module (top-level settings.gradle[.kts])
+    for fname in ("settings.gradle", "settings.gradle.kts"):
+        spath = root / fname
+        if not spath.is_file():
+            continue
+        content = _read_text_safe(spath)
+        # Strip line comments (// ...) per evitare match dentro a commenti
+        sanitized_lines = []
+        for line in content.splitlines():
+            idx = line.find("//")
+            sanitized_lines.append(line[:idx] if idx != -1 else line)
+        sanitized = "\n".join(sanitized_lines)
+
+        raw_modules: list[str] = []
+        if fname.endswith(".kts"):
+            # Kotlin DSL: include("a", "b:c") — extract args, then all quoted strings
+            for args in _GRADLE_INCLUDE_KOTLIN_RE.findall(sanitized):
+                raw_modules.extend(_GRADLE_QUOTED_RE.findall(args))
+        else:
+            # Groovy DSL: include 'a', 'b:c'
+            for m in _GRADLE_INCLUDE_GROOVY_BLOCK_RE.finditer(sanitized):
+                raw_modules.extend(_GRADLE_QUOTED_RE.findall(m.group(1)))
+
+        for raw in raw_modules:
+            # Gradle usa ':' come separator: ':services:api' o 'services:api' -> 'services/api'
+            normalized = raw.strip().lstrip(":").replace(":", "/")
+            if normalized and normalized not in seen:
+                workspaces.append(normalized)
+                seen.add(normalized)
+
+    return workspaces
+
+
+def _find_pom_files(root: Path, max_depth: int = _POM_MAXDEPTH_DEFAULT) -> list[Path]:
+    """Lista pom.xml fino a max_depth, esclude node_modules/target/.code-coverage."""
+    result: list[Path] = []
+    for dirpath, filenames in _walk(root, max_depth=max_depth):
+        depth = len(dirpath.relative_to(root).parts)
+        if depth > max_depth:
+            continue
+        if "pom.xml" in filenames:
+            result.append(dirpath / "pom.xml")
+    return result
+
+
+def detect_maven_aggregator(root: Path, max_depth: int | None = None) -> dict | None:
+    """Cerca un pom aggregator Maven (Task 01) in `root` con walk depth-limited.
+
+    Selezione deterministica in priorità:
+    1. Pom con ``<packaging>pom</packaging>`` AND ``<modules>`` non vuoto
+       (aggregator vero). In caso di multipli match, vince il PIU' SHALLOW
+       (depth minore = aggregator radice). A parità di depth, ordine
+       lessicografico.
+    2. Fallback: pom con ``jacoco-maven-plugin`` AND ``junit-jupiter`` deps
+       (modulo con tooling unit-test coerente).
+
+    Args:
+        root: repo root path.
+        max_depth: profondità walk. Default 4 (configurabile via env var
+            ``CC_POM_MAXDEPTH``).
+
+    Returns:
+        dict con chiavi ``manifest_root``, ``aggregator_pom``, ``modules``,
+        ``selection_reason``, oppure None se non trovato.
+    """
+    if max_depth is None:
+        env_val = os.environ.get("CC_POM_MAXDEPTH")
+        try:
+            max_depth = int(env_val) if env_val else _POM_MAXDEPTH_DEFAULT
+        except ValueError:
+            max_depth = _POM_MAXDEPTH_DEFAULT
+
+    # Override esplicito utente via .code-coverage/overrides.json (AC 4)
+    overrides_path = root / ".code-coverage" / "overrides.json"
+    if overrides_path.is_file():
+        try:
+            ov = json.loads(overrides_path.read_text(encoding="utf-8", errors="ignore"))
+            if isinstance(ov, dict) and ov.get("aggregator_pom"):
+                agg_rel = str(ov["aggregator_pom"])
+                manifest_rel = str(ov.get("manifest_root") or str(Path(agg_rel).parent))
+                pom_abs = root / agg_rel
+                modules: list[str] = []
+                if pom_abs.is_file():
+                    try:
+                        content = pom_abs.read_text(encoding="utf-8", errors="ignore")
+                        modules = [m.strip() for m in _MAVEN_MODULE_ENTRY_RE.findall(content) if m.strip()]
+                    except OSError:
+                        pass
+                return {
+                    "manifest_root": manifest_rel,
+                    "aggregator_pom": agg_rel,
+                    "modules": modules,
+                    "selection_reason": "user-override",
+                }
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    poms = _find_pom_files(root, max_depth=max_depth)
+    if not poms:
+        return None
+
+    aggregator_candidates: list[tuple[int, str, Path, list[str]]] = []
+    fallback_candidates: list[tuple[int, str, Path]] = []
+
+    for pom_path in poms:
+        try:
+            content = pom_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        depth = len(pom_path.relative_to(root).parts) - 1  # parent dir depth
+        rel_parent = pom_path.parent.relative_to(root)
+        rel_parent_str = "." if str(rel_parent) == "." else str(rel_parent)
+
+        # Priorità 1: packaging-pom + modules non vuoti
+        if _MAVEN_PACKAGING_POM_RE.search(content):
+            mods = [m.strip() for m in _MAVEN_MODULE_ENTRY_RE.findall(content) if m.strip()]
+            if mods:
+                aggregator_candidates.append((depth, rel_parent_str, pom_path, mods))
+                continue
+
+        # Priorità 2: fallback jacoco + junit5
+        if _MAVEN_JACOCO_PLUGIN_RE.search(content) and _MAVEN_JUNIT5_RE.search(content):
+            fallback_candidates.append((depth, rel_parent_str, pom_path))
+
+    if aggregator_candidates:
+        # PIU' SHALLOW vince; tiebreak ordine lessicografico
+        aggregator_candidates.sort(key=lambda t: (t[0], t[1]))
+        depth, rel_parent_str, pom_path, mods = aggregator_candidates[0]
+        agg_rel = str(pom_path.relative_to(root))
+        return {
+            "manifest_root": rel_parent_str,
+            "aggregator_pom": agg_rel,
+            "modules": mods,
+            "selection_reason": "packaging-pom-with-modules",
+        }
+
+    if fallback_candidates:
+        # PIU' SHALLOW vince; tiebreak ordine lessicografico
+        fallback_candidates.sort(key=lambda t: (t[0], t[1]))
+        depth, rel_parent_str, pom_path = fallback_candidates[0]
+        agg_rel = str(pom_path.relative_to(root))
+        return {
+            "manifest_root": rel_parent_str,
+            "aggregator_pom": agg_rel,
+            "modules": [],
+            "selection_reason": "jacoco-junit5-fallback",
+        }
+
+    return None
+
+
 def detect_monorepo(root: Path) -> bool:
     if _find(root, {"turbo.json", "nx.json", "lerna.json", "pnpm-workspace.yaml", "rush.json"}):
         return True
     pkg = _read_json_safe(root / "package.json")
     if "workspaces" in pkg:
+        return True
+    # Maven reactor / Gradle multi-module
+    if detect_monorepo_workspaces(root):
         return True
     child_count = 0
     for d in ["packages", "apps", "services", "modules"]:
@@ -580,6 +771,38 @@ def parse_lcov_info(lcov_path: Path) -> tuple[float, list[dict]]:
     return round(global_pct, 2), modules
 
 
+def parse_coverage_summary_for_branch(repo_path: Path) -> tuple[float, float]:
+    """Legge coverage/coverage-summary.json (formato V8/Istanbul).
+
+    Returns (line_pct, branch_pct). (0.0, 0.0) se non disponibile.
+    Cerca prima sotto manifest_root/coverage, poi sotto repo/coverage.
+
+    NOTA: line_branch_delta può combinare sorgenti eterogenee (lcov/jacoco per
+    line, V8 summary per branch) — limite noto; accettato per uso diagnostico.
+    """
+    candidates = [
+        repo_path / "coverage" / "coverage-summary.json",
+    ]
+    # sub-workspace: prova anche manifest_root/coverage
+    try:
+        mr = detect_manifest_root(repo_path)
+        if mr and mr != ".":
+            candidates.insert(0, repo_path / mr / "coverage" / "coverage-summary.json")
+    except Exception:
+        pass
+    for candidate in candidates:
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8", errors="ignore"))
+            total = data.get("total", {})
+            line_pct = float(total.get("lines", {}).get("pct", 0) or 0)
+            branch_pct = float(total.get("branches", {}).get("pct", 0) or 0)
+            if line_pct > 0:
+                return round(line_pct, 2), round(branch_pct, 2)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+    return 0.0, 0.0
+
+
 def parse_jacoco_for_existing(jacoco_path: Path) -> tuple[float, list[dict]]:
     if not jacoco_path.exists():
         return 0.0, []
@@ -628,6 +851,7 @@ _OUTPUT_SCHEMA_DEFAULTS: dict = {
     "package_managers": [],
     "build_systems": [],
     "monorepo": False,
+    "monorepo_workspaces": [],
     "ci_cd": [],
     "architecture_style": "unknown",
     "existing_test_frameworks": [],
@@ -638,8 +862,11 @@ _OUTPUT_SCHEMA_DEFAULTS: dict = {
     "module_coverage": [],
     "coverage_exclude": [],
     "manifest_root": ".",
+    "maven_aggregator": None,
     "orchestration_only": False,
     "orchestration_reason": None,
+    "pre_existing_branch_pct": 0.0,
+    "line_branch_delta": None,
 }
 
 
@@ -689,6 +916,18 @@ def main() -> None:
     gh_hint, _ = read_github_coverage_variable(root)
     coverage_exclude = detect_coverage_exclude(root)
 
+    # Branch coverage pre-esistente (V8/Istanbul summary)
+    cov_line, cov_branch = parse_coverage_summary_for_branch(root)
+    if cov_line > 0 and pre_existing_source == "missing":
+        pre_existing_pct = cov_line
+        pre_existing_source = "local_report"
+    pre_existing_branch_pct = cov_branch
+    # delta None se branch non disponibile (0 con line>0 = V8 non conta i branch)
+    line_branch_delta = (
+        round(pre_existing_pct - pre_existing_branch_pct, 2)
+        if pre_existing_branch_pct > 0 else None
+    )
+
     # ADR-1: orchestration-only early-exit (IaC/Terragrunt repo).
     orch_only, orch_reason = is_orchestration_only_repo(root)
     if orch_only:
@@ -702,6 +941,13 @@ def main() -> None:
         print(json.dumps(payload, indent=2))
         return
 
+    # Task 01: detect aggregator pom (SIAE multi-module layout)
+    maven_agg = detect_maven_aggregator(root)
+    manifest_root_default = detect_manifest_root(root)
+    # Aggregator override: se rilevato un pom aggregator vero, manifest_root
+    # punta alla sua directory (Phase 4/6 fa cd su questo path).
+    manifest_root_final = maven_agg["manifest_root"] if maven_agg else manifest_root_default
+
     print(json.dumps({
         "repo_path": str(root),
         "languages": languages,
@@ -709,6 +955,7 @@ def main() -> None:
         "package_managers": detect_package_managers(root),
         "build_systems": detect_build_systems(root),
         "monorepo": detect_monorepo(root),
+        "monorepo_workspaces": detect_monorepo_workspaces(root),
         "ci_cd": detect_ci_cd(root),
         "architecture_style": detect_architecture(root, frameworks),
         "existing_test_frameworks": existing_tf,
@@ -718,9 +965,12 @@ def main() -> None:
         "pre_existing_coverage_hint": gh_hint,
         "module_coverage": module_cov,
         "coverage_exclude": coverage_exclude,
-        "manifest_root": detect_manifest_root(root),
+        "manifest_root": manifest_root_final,
+        "maven_aggregator": maven_agg,
         "orchestration_only": False,
         "orchestration_reason": None,
+        "pre_existing_branch_pct": pre_existing_branch_pct,
+        "line_branch_delta": line_branch_delta,
         "error": None,
     }, indent=2))
 

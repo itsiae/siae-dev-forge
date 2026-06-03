@@ -11,6 +11,12 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 | `DEVFORGE_ENFORCEMENT_OFF` | `0` | v1.45 | Disable **all** gates. Exit `{}` on every invocation. |
 | `DEVFORGE_USE_SESSION_SCOPE` | `0` | **v1.47 (PR #2)** | Rollback switch. Restores session-scoped enforcement for every task-scoped gate (tdd, brainstorming, stop, pre-commit, pr-blind-review, plan-gate-write). Set for an entire shell if task-scope enforcement misbehaves. |
 
+## Token Collector (v1.74+)
+
+| Env var | Default | Description |
+|---|---|---|
+| `DEVFORGE_USD_EUR_RATE` | `0.91` | Tasso di conversione USD→EUR usato da `lib/token-collector.py` per stimare `cost_estimate_eur` nella telemetria `session_end`. Valore malformato o `<=0` → fallback al default. Settabile a livello shell/CI per allineare al cambio reale. |
+
 ## Per-gate bypass (tracked)
 
 | Env var | Default | Gate | Abuse threshold | Notes |

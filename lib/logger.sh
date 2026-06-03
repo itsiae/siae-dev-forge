@@ -250,6 +250,39 @@ devforge_canonicalize_user() {
     echo "$raw"
 }
 
+# Emit a RAW multi-signal identity bundle as a single-line JSON object.
+# All signals best-effort (empty string if unavailable); never aborts under
+# `set -euo pipefail`. NO resolution/normalization here — the downstream
+# consumer (developer-telemetry) resolves with the full signal set, which makes
+# shared-machine / wrong-git-config cases disambiguable. repo_root is NOT
+# included: it is already a top-level event field (see devforge_log_timed).
+devforge_identity_bundle() {
+    local gle gln gge ggn osu host
+    gle=$(git config user.email 2>/dev/null || true)
+    gln=$(git config user.name 2>/dev/null || true)
+    gge=$(git config --global user.email 2>/dev/null || true)
+    ggn=$(git config --global user.name 2>/dev/null || true)
+    osu="${USER:-}"
+    [ -z "$osu" ] && osu=$(whoami 2>/dev/null || echo "")
+    host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "")
+    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s"}' \
+        "$(devforge_sanitize_json_str "$gle")" "$(devforge_sanitize_json_str "$gln")" \
+        "$(devforge_sanitize_json_str "$gge")" "$(devforge_sanitize_json_str "$ggn")" \
+        "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")"
+}
+
+# Raw cumulative session token total (from token-stats.json). Fallback 0 if the
+# file/session dir is absent or python3 is unavailable. Used to anchor token spend
+# to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
+devforge_session_token_total() {
+    local f="${DEVFORGE_SESSION_DIR:-}/token-stats.json"
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ] && command -v python3 >/dev/null 2>&1; then
+        python3 -c "import json,sys; print(int(json.load(open(sys.argv[1])).get('total',0) or 0))" "$f" 2>/dev/null || echo 0
+    else
+        echo 0
+    fi
+}
+
 # Resolve user identity and its source without mutating global state.
 devforge_resolve_user_raw() {
     local user="" source="unknown"

@@ -14,7 +14,11 @@
 set -e
 set -o pipefail
 
-REPO="${1:?usage: phase6-coverage.sh <repo_path>}"
+REPO="${1:?usage: phase6-coverage.sh <repo_path> [--probe]}"
+PROBE_MODE=0
+if [ "${2:-}" = "--probe" ]; then
+  PROBE_MODE=1
+fi
 
 if [ ! -d "$REPO" ]; then
   echo "ERROR: repo path not found: $REPO" >&2
@@ -76,6 +80,12 @@ if [ "$COV_EXIT" -ne 0 ]; then
   # repair loop su sintomo sbagliato. Block 4 + END.
   echo "ERROR: coverage command failed with exit=$COV_EXIT" >&2
   echo "See .code-coverage/coverage-stdout.log for details" >&2
+  if [ "$PROBE_MODE" -eq 1 ]; then
+    # C3 fix: in modalità --probe (discovery only) il fallimento del runner
+    # è informativo, non bloccante. Exit 0 per non rompere phase1-discover.
+    echo "[phase6-probe] runner exit=$COV_EXIT — probe non-fatal, continuing" >&2
+    exit 0
+  fi
   exit "$COV_EXIT"
 fi
 
@@ -83,10 +93,30 @@ fi
 REPORT_FULL_PATH="$TARGET_DIR/$REPORT_PATH"
 if [ ! -e "$REPORT_FULL_PATH" ]; then
   echo "ERROR: coverage report not produced at $REPORT_FULL_PATH" >&2
+  if [ "$PROBE_MODE" -eq 1 ]; then
+    # C3 fix: in probe mode il report mancante è normale (es. test infra
+    # presente ma nessun coverage tool installato). Exit 0 senza coverage-report.
+    echo "[phase6-probe] no report produced — probe complete, no parsed output" >&2
+    exit 0
+  fi
   exit 1
 fi
 
+# min-floor: il target_line scelto dall'utente e' il MINIMO per ogni soglia.
+# Passato esplicito dal repo; se assente, parse_coverage.py risale comunque da REPORT.
+MIN_FLOOR_ARGS=()
+USER_CHOICE_PATH="$REPO/.code-coverage/user-choice.json"
+if [ -f "$USER_CHOICE_PATH" ]; then
+  TARGET_LINE="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('target_line',''))" "$USER_CHOICE_PATH" 2>/dev/null)"
+  [ -n "$TARGET_LINE" ] && MIN_FLOOR_ARGS=(--min-floor "$TARGET_LINE")
+fi
+
 python3 "$SKILL_DIR/scripts/parse_coverage.py" "$FORMAT" "$REPORT_FULL_PATH" \
+  "${MIN_FLOOR_ARGS[@]}" \
   > "$REPO/.code-coverage/coverage-report.json"
 
-echo "[phase6] coverage parsed → .code-coverage/coverage-report.json (format=$FORMAT)"
+if [ "$PROBE_MODE" -eq 1 ]; then
+  echo "[phase6-probe] coverage parsed (probe mode) → .code-coverage/coverage-report.json (format=$FORMAT)"
+else
+  echo "[phase6] coverage parsed → .code-coverage/coverage-report.json (format=$FORMAT)"
+fi

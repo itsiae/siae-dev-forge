@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "fixtures": [
+    {"slug": "email", "input": "email.input.txt", "expected": "email.expected.txt", "redaction_type": "EMAIL"},
+    {"slug": "ipv4", "input": "ipv4.input.txt", "expected": "ipv4.expected.txt", "redaction_type": "IPV4"},
+    {"slug": "ipv6", "input": "ipv6.input.txt", "expected": "ipv6.expected.txt", "redaction_type": "IPV6"},
+    {"slug": "jwt", "input": "jwt.input.txt", "expected": "jwt.expected.txt", "redaction_type": "JWT"},
+    {"slug": "aws_key", "input": "aws_key.input.txt", "expected": "aws_key.expected.txt", "redaction_type": "AWS_ACCESS_KEY_ID"},
+    {"slug": "it_cf", "input": "it_cf.input.txt", "expected": "it_cf.expected.txt", "redaction_type": "IT_CF"},
+    {"slug": "it_iban", "input": "it_iban.input.txt", "expected": "it_iban.expected.txt", "redaction_type": "IT_IBAN"},
+    {"slug": "hex32", "input": "hex32.input.txt", "expected": "hex32.expected.txt", "redaction_type": "HEX"}
+  ]
+}

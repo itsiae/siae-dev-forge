@@ -17,12 +17,10 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 
 from lib.review_evidence.collector import _merge_metrics, orchestrate
-from lib.review_evidence.registry import Collector, register, registry
+from lib.review_evidence.registry import register, registry
 from lib.review_evidence.thresholds import Thresholds, compute_verdict
 
 REPO_ROOT = Path(__file__).parent.parent

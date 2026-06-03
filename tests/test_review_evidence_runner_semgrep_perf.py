@@ -8,17 +8,14 @@ EC-44: streaming JSON parser per output >50MB.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from lib.review_evidence.runners.semgrep import (
     SemgrepRunner,
     _MIN_SEMGREP_VERSION,
     _TIMEOUT_PER_FILE,
 )
-from lib.review_evidence.scoring import SecurityFindings
 
 
 def test_min_semgrep_version_constant():

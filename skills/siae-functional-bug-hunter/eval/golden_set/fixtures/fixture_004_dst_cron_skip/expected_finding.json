@@ -1,0 +1,21 @@
+{
+  "dedup_key": "e76a4dbb15232f8d",
+  "title": "Daily reconcile job at 02:00 Europe/Rome is silently skipped on DST spring-forward",
+  "severity": "SEV-2",
+  "category": "dst-skip",
+  "entry_point_id": "reconcile.daily",
+  "preconditions": [
+    "Today is the last Sunday of March in the Europe/Rome timezone (DST spring-forward).",
+    "The reconcile job is scheduled at 02:00 Europe/Rome via APScheduler CronTrigger."
+  ],
+  "steps": [
+    "(scheduler) Wait for 01:59 Europe/Rome on the spring-forward Sunday; observe the clock jump directly to 03:00",
+    "(observer) Inspect the scheduler log around 02:00–03:00 and report whether the reconcile.daily fire-event is present",
+    "(observer) Inspect finance@ inbox and report whether the daily summary email arrived",
+    "(observer) Inspect the reconciled-rows table for that date and report the row count"
+  ],
+  "expected": "The reconcile job runs exactly once on the spring-forward day (either at the start of the new local time or with an explicit DST-shift warning logged).",
+  "actual": "APScheduler skips the 02:00 fire because that hour does not exist; no log entry; no summary email; the reconciled-rows table for that date has zero entries until manual rerun.",
+  "suggested_fix_direction": "Schedule the cron in UTC and document the corresponding local-time semantics. If a local-time requirement is firm, switch to APScheduler's IntervalTrigger or to a timezone-aware library that emits an explicit warning and shifts to the next valid local time.",
+  "reproduction_rate_target": "deterministic"
+}

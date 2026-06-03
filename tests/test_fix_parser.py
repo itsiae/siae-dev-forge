@@ -9,7 +9,7 @@ Covers all 5 atomic patterns (MVP + follow-up PR-D):
 """
 from __future__ import annotations
 
-from lib.review_evidence.fix_parser import FixAction, parse_block_reasons
+from lib.review_evidence.fix_parser import parse_block_reasons
 from lib.review_evidence.schema import Evidence, Verdict
 
 

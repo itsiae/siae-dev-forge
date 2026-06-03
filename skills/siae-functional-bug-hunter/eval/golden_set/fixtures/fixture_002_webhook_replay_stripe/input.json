@@ -1,0 +1,33 @@
+{
+  "entry_points": [
+    {
+      "id": "payments.webhook",
+      "boundary_id": "POST /v1/payments/webhook",
+      "kind": "http-route",
+      "unit_id": "billing-service",
+      "trigger": "POST /v1/payments/webhook",
+      "actor": "event-publisher",
+      "inputs": [
+        {"name": "Stripe-Signature", "type": "header"},
+        {"name": "body.type", "type": "enum[payment_intent.created, payment_intent.succeeded, charge.captured]"},
+        {"name": "body.data.object.id", "type": "string (pi_xxx)"}
+      ],
+      "downstream_calls": [
+        "db.orders.update(status=...)",
+        "mailer.send_receipt(...)"
+      ],
+      "side_effects": [
+        "order row state transition",
+        "outgoing receipt email"
+      ],
+      "source_ref": {
+        "file": "billing/webhooks/stripe.py",
+        "line_start": 24,
+        "line_end": 78,
+        "sha": "b2c3d4e",
+        "dirty_flag": false
+      }
+    }
+  ],
+  "stack_context": "python+flask; handler validates Stripe-Signature but does not store event.id; processes charge.captured by setting order.status=PAID regardless of whether payment_intent.succeeded was previously seen"
+}

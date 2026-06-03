@@ -1,9 +1,8 @@
 """Tests for CI-fetch SARIF parser + gh run download orchestration."""
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
 from lib.review_evidence._sarif import parse_sarif, aggregate_sarif_dir
 from lib.review_evidence.ci_fetch import fetch_ci_sarif

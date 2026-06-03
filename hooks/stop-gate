@@ -70,24 +70,33 @@ _devforge_emit_session_end() {
     # Refresh token stats
     python3 "${PLUGIN_ROOT}/lib/token-collector.py" update 2>/dev/null || true
 
-    # Token stats for session_end enrichment
-    local TOKEN_TOTAL=0 TOKEN_OUTPUT=0 TOKEN_COST_EUR="0"
+    # Token stats for session_end enrichment (field contract: token-collector.py fields)
+    local TOKEN_TOTAL=0 TOKEN_OUTPUT=0 TOKEN_COST_EUR="0" TOKEN_MODEL=""
+    local TOKEN_INPUT=0 TOKEN_CACHE_READ=0 TOKEN_CW5M=0 TOKEN_CW1H=0
+    local TOKEN_BY_MODEL="{}" TOKEN_BY_TOOL="{}"
+    local TOKEN_BY_SKILL="{}" TOKEN_BY_MODEL_TOKENS="{}" TOKEN_PRICING="{}"
     if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ]; then
         local TDATA
-        TDATA=$(python3 -c "
-import json,sys
-d=json.load(open(sys.argv[1]))
-print(f'{d.get(\"total\",0)}\t{d.get(\"output\",0)}\t{d.get(\"cost_eur\",0)}')
-" "${DEVFORGE_SESSION_DIR}/token-stats.json" 2>/dev/null) || true
+        TDATA=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null) || true
         if [ -n "$TDATA" ]; then
             TOKEN_TOTAL=$(printf '%s' "$TDATA" | cut -f1)
             TOKEN_OUTPUT=$(printf '%s' "$TDATA" | cut -f2)
             TOKEN_COST_EUR=$(printf '%s' "$TDATA" | cut -f3)
+            TOKEN_MODEL=$(printf '%s' "$TDATA" | cut -f4)
+            TOKEN_INPUT=$(printf '%s' "$TDATA" | cut -f5)
+            TOKEN_CACHE_READ=$(printf '%s' "$TDATA" | cut -f6)
+            TOKEN_CW5M=$(printf '%s' "$TDATA" | cut -f7)
+            TOKEN_CW1H=$(printf '%s' "$TDATA" | cut -f8)
+            TOKEN_BY_MODEL=$(printf '%s' "$TDATA" | cut -f9)
+            TOKEN_BY_TOOL=$(printf '%s' "$TDATA" | cut -f10)
+            TOKEN_BY_SKILL=$(printf '%s' "$TDATA" | cut -f11)
+            TOKEN_BY_MODEL_TOKENS=$(printf '%s' "$TDATA" | cut -f12)
+            TOKEN_PRICING=$(printf '%s' "$TDATA" | cut -f13)
         fi
     fi
 
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
-        "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR}}"
+        "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR},\"model_prevalent\":\"${TOKEN_MODEL}\",\"input_tokens\":${TOKEN_INPUT},\"cache_read_tokens\":${TOKEN_CACHE_READ},\"cache_write_5m_tokens\":${TOKEN_CW5M},\"cache_write_1h_tokens\":${TOKEN_CW1H},\"by_model\":${TOKEN_BY_MODEL},\"by_tool\":${TOKEN_BY_TOOL},\"by_skill\":${TOKEN_BY_SKILL},\"by_model_tokens\":${TOKEN_BY_MODEL_TOKENS},\"pricing\":${TOKEN_PRICING}}"
 
     # PR #3 ADR-009: 3-line recap to stderr so the operator sees adoption
     # numbers at session close (non-blocking, does NOT affect decision).

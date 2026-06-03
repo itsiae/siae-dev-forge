@@ -1,8 +1,6 @@
 """Tests for Python collector."""
-import json
 from pathlib import Path
 from unittest.mock import patch
-import pytest
 
 from lib.review_evidence.collectors.python import PythonCollector
 

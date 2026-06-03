@@ -148,6 +148,45 @@ def test_main_prints_to_stdout_when_no_out(tmp_path, monkeypatch, capsys):
     assert plan["deferred"] == []
 
 
+def test_batch_has_multiagent_and_branch_fields():
+    """Task-08: ogni batch ha status/assigned_to/completed_by/completed_at;
+    ogni file ha branch_operator_count e coverage_mode (default None)."""
+    rules = pb.load_priority_rules()
+    size_data = {
+        "file_list": [
+            {"path": "src/dao/LocaleDao.ts", "tier": "T2", "priority": "P2", "loc": 300}
+        ]
+    }
+    stack_data = {"module_coverage": []}
+    plan = pb.build_plan(size_data, stack_data, rules)
+
+    assert plan["batches"], "nessun batch prodotto"
+    batch = plan["batches"][0]
+
+    # campi multi-agente sul batch
+    assert batch["status"] == "pending", f"status atteso 'pending', trovato {batch.get('status')!r}"
+    assert batch["assigned_to"] is None
+    assert batch["completed_by"] is None
+    assert batch["completed_at"] is None
+
+    # campi branch-aware sul file
+    f = batch["files"][0]
+    assert "branch_operator_count" in f, "branch_operator_count mancante nel file"
+    assert f["branch_operator_count"] is None
+    assert "coverage_mode" in f, "coverage_mode mancante nel file"
+    assert f["coverage_mode"] is None
+
+
+def test_state_schema_declares_multiagent_files():
+    p = Path(__file__).resolve().parents[2] / "lib" / "state-schema.json"
+    text = p.read_text()
+    assert "intractable.json" in text
+    assert "agent-" in text  # agent-N.log o agent-{id}.log
+    # batch-plan deve documentare i campi multi-agente
+    assert "assigned_to" in text
+    assert "completed_by" in text
+
+
 def test_e2e_with_estimate_size_real_output(tmp_path):
     """E2E: verifica che estimate_size.py emetta REALMENTE tier+priority,
     e che plan_batches.py possa consumarli senza fixture hand-written.

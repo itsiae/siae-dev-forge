@@ -1,7 +1,6 @@
 import subprocess
-import pytest
 from lib.release_risk.kg_lookup import (
-    lookup_criticality, service_matches_kg, derive_criticality_from_kg, KG_PREFIXES,
+    lookup_criticality, service_matches_kg, derive_criticality_from_kg,
 )
 
 

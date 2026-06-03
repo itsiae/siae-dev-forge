@@ -15,6 +15,13 @@ export DEVFORGE_CURRENT_HOOK="capture-test-result"
 STATE_DIR="${HOME}/.claude"
 RESULT_FILE="${STATE_DIR}/.devforge-last-test-result"
 
+# Source the activity logger for raw telemetry (Comp.2). MUST be best-effort: a
+# missing logger must never abort a test run under set -euo pipefail.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+devforge_init_session 2>/dev/null || true
+
 # Read tool input from stdin (Claude passes JSON with tool_input)
 INPUT=$(cat)
 
@@ -62,6 +69,7 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
     TDD_STATE_FILE="${STATE_DIR}/.devforge-tdd-state"
     CURRENT_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
     CURRENT_PHASE=$(echo "$CURRENT_STATE" | cut -d'|' -f1)
+    _TDD_PREV_EPOCH=$(echo "$CURRENT_STATE" | cut -d'|' -f4)
 
     if [ "$EXIT_CODE" = "0" ]; then
         # Test PASS
@@ -100,6 +108,24 @@ if echo "$SESSION_SKILLS" | grep -qF "siae-tdd"; then
                 # RED + FAIL = expected, stay RED
                 ;;
         esac
+    fi
+fi
+
+# Comp.2: emit tdd_cycle on a phase transition (RED→GREEN, GREEN→RED regression, …).
+# Raw: from/to/elapsed_sec/reason. Best-effort, never aborts the test run.
+if [ -n "${TDD_STATE_FILE:-}" ] && command -v devforge_log >/dev/null 2>&1; then
+    _TDD_NEW_STATE=$(cat "$TDD_STATE_FILE" 2>/dev/null || echo "")
+    _TDD_NEW_PHASE=$(echo "$_TDD_NEW_STATE" | cut -d'|' -f1)
+    _TDD_NEW_REASON=$(echo "$_TDD_NEW_STATE" | cut -d'|' -f3)
+    if [ -n "${CURRENT_PHASE:-}" ] && [ -n "$_TDD_NEW_PHASE" ] && [ "$_TDD_NEW_PHASE" != "${CURRENT_PHASE}" ]; then
+        _TDD_ELAPSED=0
+        if [[ "${_TDD_PREV_EPOCH:-}" =~ ^[0-9]+$ ]]; then
+            _TDD_ELAPSED=$(( $(date +%s) - _TDD_PREV_EPOCH ))
+            [ "$_TDD_ELAPSED" -lt 0 ] && _TDD_ELAPSED=0
+        fi
+        _SAFE_REASON=$(devforge_sanitize_json_str "${_TDD_NEW_REASON:-}")
+        devforge_log "tdd_cycle" "success" \
+            "{\"from_phase\":\"${CURRENT_PHASE}\",\"to_phase\":\"${_TDD_NEW_PHASE}\",\"elapsed_sec\":${_TDD_ELAPSED},\"reason\":\"${_SAFE_REASON}\"}" || true
     fi
 fi
 
@@ -156,6 +182,28 @@ fi
 
 if [ -n "$COVERAGE_PCT" ]; then
     echo "${COVERAGE_PCT}|$(date +%s)|${COMMAND}" > "$COVERAGE_FILE"
+fi
+
+# Comp.2: emit test_run_result raw (status, exit, coverage, framework). Best-effort.
+if command -v devforge_log >/dev/null 2>&1; then
+    _TRR_STATUS="PASS"; [ "$EXIT_CODE" != "0" ] && _TRR_STATUS="FAIL"
+    _TRR_FRAMEWORK="unknown"
+    case "$COMMAND" in
+        *pytest*) _TRR_FRAMEWORK="pytest" ;;
+        *vitest*) _TRR_FRAMEWORK="vitest" ;;
+        *jest*)   _TRR_FRAMEWORK="jest" ;;
+        *mvn*)    _TRR_FRAMEWORK="maven" ;;
+        *gradle*) _TRR_FRAMEWORK="gradle" ;;
+        *"go test"*) _TRR_FRAMEWORK="go" ;;
+        *"cargo test"*) _TRR_FRAMEWORK="cargo" ;;
+    esac
+    # Validate both as JSON numbers; any non-numeric value → null (never break JSON).
+    _TRR_COV="${COVERAGE_PCT:-}"
+    [[ "$_TRR_COV" =~ ^[0-9]+(\.[0-9]+)?$ ]] || _TRR_COV="null"
+    _TRR_EXIT="${EXIT_CODE:-}"
+    [[ "$_TRR_EXIT" =~ ^[0-9]+$ ]] || _TRR_EXIT="null"
+    devforge_log "test_run_result" "success" \
+        "{\"status\":\"${_TRR_STATUS}\",\"exit_code\":${_TRR_EXIT},\"coverage_pct\":${_TRR_COV},\"framework\":\"${_TRR_FRAMEWORK}\"}" || true
 fi
 
 exit 0

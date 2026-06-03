@@ -1,7 +1,6 @@
 """Cache 3-key per release-risk scorecard."""
 from __future__ import annotations
 
-import json
 import os
 import hashlib
 from pathlib import Path

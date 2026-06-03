@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.2.0",
   "priority_levels": {
     "P1": {
       "label": "Critical Business Logic",
@@ -48,7 +48,7 @@
         "reducer", "reducers"
       ],
       "min_coverage_pct": 80,
-      "min_branch_pct": 70,
+      "min_branch_pct": 80,
       "batch_priority": 1
     },
     "P2": {
@@ -85,7 +85,7 @@
         "validator", "validators"
       ],
       "min_coverage_pct": 70,
-      "min_branch_pct": 60,
+      "min_branch_pct": 70,
       "batch_priority": 2
     },
     "P3": {
@@ -114,7 +114,7 @@
         "dto", "dtos"
       ],
       "min_coverage_pct": 60,
-      "min_branch_pct": 50,
+      "min_branch_pct": 60,
       "batch_priority": 3
     }
   },

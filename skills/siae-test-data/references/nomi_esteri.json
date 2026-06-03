@@ -1,0 +1,51 @@
+{
+  "_meta": {
+    "descrizione": "Pool di nomi/cognomi coerenti per nazionalita estera"
+  },
+  "Germania": {
+    "nomi_maschili": ["Hans", "Klaus", "Stefan", "Andreas", "Michael", "Thomas", "Wolfgang", "Jürgen", "Dieter", "Manfred"],
+    "nomi_femminili": ["Anna", "Petra", "Sabine", "Monika", "Ursula", "Brigitte", "Helga", "Ingrid", "Karin", "Renate"],
+    "cognomi": ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann"]
+  },
+  "Francia": {
+    "nomi_maschili": ["Pierre", "Jean", "Michel", "Philippe", "Alain", "Bernard", "Patrick", "Daniel", "Jacques", "François"],
+    "nomi_femminili": ["Marie", "Anne", "Sophie", "Catherine", "Isabelle", "Nathalie", "Sylvie", "Christine", "Brigitte", "Patricia"],
+    "cognomi": ["Dupont", "Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy"]
+  },
+  "Spagna": {
+    "nomi_maschili": ["Carlos", "José", "Antonio", "Manuel", "Francisco", "Javier", "Juan", "David", "Daniel", "Miguel"],
+    "nomi_femminili": ["Ana", "Maria", "Carmen", "Isabel", "Laura", "Cristina", "Sara", "Marta", "Pilar", "Lucía"],
+    "cognomi": ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín"]
+  },
+  "Regno Unito": {
+    "nomi_maschili": ["John", "James", "David", "Michael", "Paul", "Andrew", "Mark", "Peter", "Richard", "Robert"],
+    "nomi_femminili": ["Sarah", "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Susan", "Margaret", "Karen", "Helen"],
+    "cognomi": ["Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Wilson", "Anderson", "Taylor"]
+  },
+  "Giappone": {
+    "nomi_maschili": ["Hiroshi", "Kenji", "Takashi", "Akira", "Yuki", "Daisuke", "Satoshi", "Ryo", "Kazuki", "Haruto"],
+    "nomi_femminili": ["Yuki", "Hana", "Aiko", "Sakura", "Akiko", "Yumi", "Mio", "Rin", "Kaori", "Hina"],
+    "cognomi": ["Tanaka", "Sato", "Suzuki", "Takahashi", "Watanabe", "Ito", "Yamamoto", "Nakamura", "Kobayashi", "Kato"]
+  },
+  "Romania": {
+    "nomi_maschili": ["Andrei", "Mihai", "Alexandru", "Robert", "Ion", "Florin", "Cristian", "Adrian", "Marius", "Vlad"],
+    "nomi_femminili": ["Elena", "Maria", "Ana", "Ioana", "Andreea", "Cristina", "Mihaela", "Alina", "Gabriela", "Diana"],
+    "cognomi": ["Popescu", "Ionescu", "Popa", "Stan", "Stoica", "Dumitrescu", "Constantinescu", "Marin", "Gheorghe", "Dragomir"]
+  },
+  "Polonia": {
+    "nomi_maschili": ["Jan", "Andrzej", "Krzysztof", "Stanisław", "Tomasz", "Paweł", "Piotr", "Marcin", "Michał", "Łukasz"],
+    "nomi_femminili": ["Anna", "Maria", "Katarzyna", "Małgorzata", "Agnieszka", "Barbara", "Krystyna", "Ewa", "Magdalena", "Joanna"],
+    "cognomi": ["Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Dąbrowski"]
+  },
+  "Stati Uniti": {
+    "nomi_maschili": ["James", "Robert", "John", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles"],
+    "nomi_femminili": ["Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen"],
+    "cognomi": ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]
+  },
+  "Svizzera": {
+    "nomi_maschili": ["Hans", "Peter", "Daniel", "Markus", "Andreas", "Thomas", "Christian", "Martin", "Roger", "Stefan"],
+    "nomi_femminili": ["Maria", "Anna", "Ruth", "Margrit", "Verena", "Heidi", "Beatrice", "Monika", "Susanne", "Claudia"],
+    "cognomi": ["Müller", "Meier", "Schmid", "Keller", "Weber", "Huber", "Schneider", "Steiner", "Meyer", "Brunner"]
+  },
+  "Stati Uniti_alias": "Stati Uniti"
+}

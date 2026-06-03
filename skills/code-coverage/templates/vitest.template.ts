@@ -17,11 +17,34 @@
  * a pre-existing Jest config is detected in Phase 2.
  *
  * Replace all {{PLACEHOLDER}} tokens before use.
+ *
+ * C1 fix — Placeholder cleanup (HIGH severity)
+ * ====================================================================
+ * Quando un SUT esporta SOLO `foo` (no class), il placeholder
+ * `{{ExportedClass}}` resta vuoto post-sostituzione e produce
+ * `import { foo,  }` → SyntaxError → 1 iter Phase 7 sprecata.
+ *
+ * Soluzione: dopo aver fatto le sostituzioni `{{...}}` → valore,
+ * SEMPRE eseguire lo script `clean_template_placeholders` di
+ * `lib/template-cache.sh` (o equivalente) che applica:
+ *   1. Rimuove `, {{...}}` con pattern vuoto
+ *   2. Pulisce trailing comma in import lines: `, }` → ` }`
+ *   3. Pulisce leading comma: `{ ,` → `{ `
+ *   4. Collassa import vuoto: `import { } from '...'` → riga rimossa
+ *   5. Idem per export simbolo singolo: `import { foo, } from` → `import { foo } from`
+ *
+ * Pattern marker `__OPTIONAL_SYMBOL__` (vedi sotto): se un placeholder
+ * potrebbe essere vuoto, prefissare con questo marker. Il cleanup script
+ * rimuove il segmento intero `__OPTIONAL_SYMBOL__:<token>` se il token
+ * è vuoto, oppure mantiene `<token>` se è valorizzato.
+ * ====================================================================
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { MockedFunction } from 'vitest'
 
+// IMPORT_VARIANT: cleanup_template_placeholders sostituirà {{ExportedClass}}
+// vuoto e pulirà trailing comma. Se {{ExportedClass}} valorizzato, resta named.
 import { {{ExportedFunction}}, {{ExportedClass}} } from '{{MODULE_IMPORT_PATH}}'
 import { {{DepMethod}} } from '{{DEP_IMPORT_PATH}}'
 

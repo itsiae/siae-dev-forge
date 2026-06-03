@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 import boto3
-import pytest
 from moto import mock_aws
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

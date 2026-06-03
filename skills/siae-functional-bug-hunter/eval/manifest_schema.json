@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siae.it/functional-bug-hunter/manifest_schema.json",
+  "title": "Functional Bug Hunter Run Manifest",
+  "description": "Validates run_manifest.json emitted by the skill at end of phase 8. Used by Quality Bar #11.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skill_name",
+    "skill_semver",
+    "model_id",
+    "mode",
+    "scope_hash",
+    "run_id",
+    "start_ts",
+    "end_ts",
+    "elapsed_seconds",
+    "args_echo",
+    "phases",
+    "findings_counts",
+    "network_calls",
+    "exit_status"
+  ],
+  "properties": {
+    "skill_name": {
+      "type": "string",
+      "const": "siae-functional-bug-hunter"
+    },
+    "skill_semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$"
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["interactive", "strict", "report-only"]
+    },
+    "scope_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{16,64}$"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "start_ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "end_ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "args_echo": {
+      "type": "object",
+      "required": ["roots", "lang"],
+      "properties": {
+        "roots": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "lang": {
+          "type": "string",
+          "enum": ["en", "it"]
+        },
+        "output_dir": {"type": "string"},
+        "max_wallclock_minutes": {"type": "integer", "minimum": 1},
+        "max_entry_points_per_repo": {"type": "integer", "minimum": 1},
+        "skip_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "phase_number", "duration_seconds", "status"],
+        "properties": {
+          "name": {"type": "string"},
+          "phase_number": {
+            "type": "string",
+            "enum": ["0", "1", "2", "3", "4", "5", "6", "7", "7.5", "8"]
+          },
+          "duration_seconds": {"type": "number", "minimum": 0},
+          "status": {
+            "type": "string",
+            "enum": ["ok", "partial", "skipped", "failed"]
+          },
+          "notes": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "findings_counts": {
+      "type": "object",
+      "required": ["blocker", "critical", "major", "minor", "total"],
+      "properties": {
+        "blocker": {"type": "integer", "minimum": 0},
+        "critical": {"type": "integer", "minimum": 0},
+        "major": {"type": "integer", "minimum": 0},
+        "minor": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "stop_triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["trigger", "phase", "action"],
+        "properties": {
+          "trigger": {"type": "string"},
+          "phase": {"type": "string"},
+          "action": {
+            "type": "string",
+            "enum": ["paused", "continued-low-confidence", "continued-silent", "aborted"]
+          },
+          "details": {"type": "string"}
+        }
+      }
+    },
+    "network_calls": {
+      "type": "integer",
+      "const": 0,
+      "description": "Hard invariant: the skill performs no outbound network calls."
+    },
+    "exit_status": {
+      "type": "string",
+      "enum": ["success", "partial", "failed"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low_partial", "low_model_tier", "low_pattern_match"]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "preflight": {
+      "type": "object",
+      "description": "Verbatim output of scripts/preflight.sh; structure not constrained."
+    },
+    "skip_summary": {
+      "type": "object",
+      "patternProperties": {
+        "^(time-budget|dead-code|generated-code|third-party|no-source-access|unparseable|out-of-scope|file-count-cap|ep-count-cap|no-entry-points|library-only)$": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
