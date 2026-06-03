@@ -4,6 +4,27 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.76.0] - 2026-06-02
+
+### Added — Bundle identità developer raw per risoluzione resiliente a valle
+
+Per rendere estremamente resiliente la risoluzione dei nomi developer a valle
+(`developer-telemetry`), il producer ora emette **tutti i segnali grezzi di identità**
+invece di una sola identità pre-risolta (lossy su macchine condivise / git config errata).
+Tutto additivo (`schema_version` resta 2, eventi e campi esistenti invariati).
+
+- Nuovo helper `lib/logger.sh::devforge_identity_bundle` → oggetto JSON a singola riga con
+  `git_local_email`, `git_local_name`, `git_global_email`, `git_global_name`, `os_user`,
+  `host`. Ogni segnale best-effort (vuoto se assente), sanitizzato, non aborta mai sotto
+  `set -euo pipefail`. `repo_root` escluso (già campo top-level dell'evento).
+- `hooks/session-start` emette il bundle in `session_start.meta` (fonte autorevole su S3) e in
+  `user.json` (cache locale, best-effort python3-only). Catena first-match e `actor_canonical`
+  invariati. Bundle non-parsabile → `user.json` senza `identity` (silent skip), sessione mai
+  bloccata.
+
+Design: `docs/plans/2026-06-02-developer-identity-bundle-design.md`. Test: +6 casi bash in
+`tests/test_telemetry_fixes.sh` (16/16 PASS).
+
 ## [1.73.0] - 2026-05-30
 
 ### Changed — DevForge subagent default model: `inherit` → `sonnet`
