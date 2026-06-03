@@ -268,6 +268,82 @@ assert_eq "partial/garbage bundle coerced to {}" '{}' "$(_guard 'garbage{partial
 assert_eq "empty bundle coerced to {}" '{}' "$(_guard '')"
 
 # ─────────────────────────────────────────────────────────────
+# Test 14 — token-collector fields: 13-field contract + by_skill/by_model_tokens/pricing JSON
+# ─────────────────────────────────────────────────────────────
+echo "Test 14: token-collector fields emits 13 columns with valid by_skill/by_model_tokens/pricing"
+SID14="testsid-fields13"
+SESSION_DIR14="${TEST_TMP}/.claude/devforge-state/${SID14}"
+mkdir -p "${SESSION_DIR14}"
+export DEVFORGE_SESSION_DIR="${SESSION_DIR14}"
+cat > "${SESSION_DIR14}/token-stats.json" <<'JSON'
+{"input":600,"output":200,"cache_read":200,"cache_write_5m":0,"cache_write_1h":0,
+ "cache_write":0,"total":1000,"cost_eur":0.05,
+ "by_model":{"claude-opus-4-8":1000},"by_tool":{"Bash":5},
+ "by_skill":{"siae-devforge:siae-tdd":{"output":200,"input":600,"cache_write_5m":0,"cache_write_1h":0}},
+ "by_model_tokens":{"claude-opus-4-8":{"input":600,"output":200,"cache_read":200,"cache_write_5m":0,"cache_write_1h":0}},
+ "model_prevalent":"claude-opus-4-8","updated_at":"2026-06-03T00:00:00Z"}
+JSON
+FL14=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null)
+nf14=$(printf '%s' "$FL14" | awk -F'\t' '{print NF}')
+assert_eq "fields line has 13 columns" "13" "${nf14}"
+# f11 by_skill, f12 by_model_tokens, f13 pricing — all valid JSON, build a meta and parse
+META14="{\"by_skill\":$(printf '%s' "$FL14" | cut -f11),\"by_model_tokens\":$(printf '%s' "$FL14" | cut -f12),\"pricing\":$(printf '%s' "$FL14" | cut -f13)}"
+parsed14=$(printf '%s' "$META14" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+sk=d['by_skill']['siae-devforge:siae-tdd']
+print('cache_read' not in sk, d['by_model_tokens']['claude-opus-4-8']['cache_read'], d['pricing']['unit'], d['pricing']['by_model']['claude-opus-4-8']['input'])
+" 2>/dev/null || echo "PARSE_FAIL")
+assert_eq "by_skill no cache_read, by_model_tokens has cache_read, pricing unit+rate" "True 200 usd_per_1m_tokens 5.0" "${parsed14}"
+
+# ─────────────────────────────────────────────────────────────
+# Test 15 — capture-test-result emits test_run_result (Comp.2)
+# ─────────────────────────────────────────────────────────────
+echo "Test 15: capture-test-result emits test_run_result (status+framework)"
+CTR_HOME="${TEST_TMP}/ctrhome"; mkdir -p "${CTR_HOME}/.claude"
+CTR_LOG="${CTR_HOME}/ctr.jsonl"; rm -f "$CTR_LOG"
+echo '{"tool_input":{"command":"pytest tests/ -q"},"tool_response":{"is_error":true,"output":"1 failed"}}' \
+  | HOME="$CTR_HOME" DEVFORGE_LOG_FILE="$CTR_LOG" bash "${PLUGIN_ROOT}/hooks/capture-test-result" >/dev/null 2>&1 || true
+trr=$(grep '"event":"test_run_result"' "$CTR_LOG" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    m=json.loads(l).get('meta',{})
+    if 'status' in m: print(m['status'], m.get('framework')); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "test_run_result FAIL + pytest framework" "FAIL pytest" "$trr"
+
+# ─────────────────────────────────────────────────────────────
+# Test 16 — capture-test-result emits tdd_cycle on RED→GREEN (Comp.2)
+# ─────────────────────────────────────────────────────────────
+echo "Test 16: capture-test-result emits tdd_cycle RED->GREEN with elapsed_sec"
+echo "siae-devforge:siae-tdd" > "${CTR_HOME}/.claude/.devforge-session-skills"
+# Seed RED state entered 5s ago
+echo "RED|target|test|$(( $(date +%s) - 5 ))" > "${CTR_HOME}/.claude/.devforge-tdd-state"
+rm -f "$CTR_LOG"
+echo '{"tool_input":{"command":"pytest tests/ -q"},"tool_response":{"is_error":false,"output":"1 passed"}}' \
+  | HOME="$CTR_HOME" DEVFORGE_LOG_FILE="$CTR_LOG" bash "${PLUGIN_ROOT}/hooks/capture-test-result" >/dev/null 2>&1 || true
+tdc=$(grep '"event":"tdd_cycle"' "$CTR_LOG" 2>/dev/null | python3 -c "
+import json,sys
+for l in sys.stdin:
+    m=json.loads(l).get('meta',{})
+    if m.get('to_phase')=='GREEN': print(m['from_phase'], m['to_phase'], m['elapsed_sec']>=5); break
+else: print('MISSING')
+" 2>/dev/null || echo "MISSING")
+assert_eq "tdd_cycle RED->GREEN elapsed>=5" "RED GREEN True" "$tdc"
+
+# ─────────────────────────────────────────────────────────────
+# Test 17 — devforge_session_token_total helper (Comp.3a)
+# ─────────────────────────────────────────────────────────────
+echo "Test 17: devforge_session_token_total reads total, fallback 0"
+SID17="testsid-toktot"; SDIR17="${TEST_TMP}/.claude/devforge-state/${SID17}"; mkdir -p "$SDIR17"
+export DEVFORGE_SESSION_DIR="$SDIR17"
+printf '{"total":12345,"output":100}' > "${SDIR17}/token-stats.json"
+assert_eq "session_token_total reads total" "12345" "$(devforge_session_token_total)"
+rm -f "${SDIR17}/token-stats.json"
+assert_eq "session_token_total fallback 0 when missing" "0" "$(devforge_session_token_total)"
+
+# ─────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────
 echo ""
