@@ -5,8 +5,6 @@ Import del modulo con trattino nel filename via importlib (pattern test_anti_blo
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).parent.parent
 SCRIPT = REPO_ROOT / "lib" / "token-collector.py"
 
