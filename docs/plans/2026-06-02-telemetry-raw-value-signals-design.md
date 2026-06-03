@@ -96,6 +96,20 @@ f13=`json(pricing)`. `cut -f1..f10` di stop-gate invariati. Aggiornare docstring
 - [ ] AC12 (pricing): `session_end.meta.pricing` = `{unit:"usd_per_1m_tokens", eur_rate, by_model:{model:rates}}` per i modelli usati; `cost_eur` esistente invariato. Dato `by_model_tokens` + `pricing`, il consumer ricalcola il costo per qualsiasi vendor.
 - [ ] AC13 (persistenza, I3-BLOCK): `empty_stats` e `normalize_stats` includono `by_skill` e `by_model_tokens` con default `{}`; un ciclo `write_stats` + `read_stats` NON perde i valori accumulati (test persist-reload dedicato, non solo unit in-memory).
 
+## Code-review remediation (2026-06-03)
+
+- **MAJOR#2 [FIXED]**: `test_run_result.coverage_pct` ora validato via regex
+  (`^[0-9]+(\.[0-9]+)?$` → altrimenti `null`), come `exit_code`: una coverage non-numerica
+  non può più rompere il JSON dell'evento.
+- **MAJOR#1 [accettato by-design]**: `by_skill` accumula anche se `model` è vuoto. NON è
+  un'asimmetria-bug: `by_skill` (dimensione skill) e `by_model_tokens` (dimensione modello)
+  sono dimensioni RAW indipendenti — il consumer le usa separatamente, non devono riconciliarsi
+  token-per-token. Coerente con raw-only.
+- **MINOR#2 [accettato]**: `normalize_stats` usa shallow copy dei dict annidati. Path reale
+  safe (`read_stats` rilegge sempre fresh dal disco, nessun aliasing in produzione); rischio
+  solo teorico in usi in-memory dei test. Non si introduce `deepcopy` per evitare ceremony gate
+  su un MINOR senza impatto sul path effettivo.
+
 ## Out of scope
 - `by_agent` (token subagent assenti dal .jsonl) → backlog d'indagine.
 - Derivazioni a valle: by_phase, produttivo/overhead, token→outcome, costo per-vendor, "chi produce meglio".

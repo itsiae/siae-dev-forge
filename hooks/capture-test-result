@@ -197,7 +197,9 @@ if command -v devforge_log >/dev/null 2>&1; then
         *"go test"*) _TRR_FRAMEWORK="go" ;;
         *"cargo test"*) _TRR_FRAMEWORK="cargo" ;;
     esac
-    _TRR_COV="${COVERAGE_PCT:-null}"
+    # Validate both as JSON numbers; any non-numeric value → null (never break JSON).
+    _TRR_COV="${COVERAGE_PCT:-}"
+    [[ "$_TRR_COV" =~ ^[0-9]+(\.[0-9]+)?$ ]] || _TRR_COV="null"
     _TRR_EXIT="${EXIT_CODE:-}"
     [[ "$_TRR_EXIT" =~ ^[0-9]+$ ]] || _TRR_EXIT="null"
     devforge_log "test_run_result" "success" \
