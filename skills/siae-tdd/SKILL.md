@@ -89,6 +89,8 @@ Codice piu' semplice possibile. Niente di piu'.
 ### 3. REFACTOR — Migliora il codice mantenendo i test verdi
 Solo dopo GREEN: rimuovi duplicazioni, migliora nomi, estrai helper, semplifica struttura. Test restano verdi. Non aggiungere comportamento. Operazione 🟡 MEDIO — card pre-flight per refactor non banali.
 
+**Guard anti-premature-abstraction.** Refactor = semplificare cio' che esiste, NON introdurre flessibilita' speculativa. Vietato in questa fase: aggiungere interfaccia astratta per UNA sola implementazione, estrarre Strategy/Factory pattern "in caso domani serva", introdurre flag di configurabilita' non richiesti, aggiungere error handling per scenari impossibili. Regola: l'astrazione si introduce quando arriva la **seconda** implementazione concreta o il **secondo** caso reale, non prima. Domanda: *"un senior engineer direbbe che e' overengineered?"* Se si', annulla il refactor.
+
 ### 4. COMMIT — Un commit per ciclo RED-GREEN-REFACTOR
 Ogni commit contiene sia il test che l'implementazione. **Nessun commit senza test.** Operazione 🟡 MEDIO — card pre-flight richiesta.
 
