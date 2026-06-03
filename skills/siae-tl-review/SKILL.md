@@ -80,10 +80,14 @@ tutte le fasi successive.
 **Lo stesso vincolo si applica ai TC proposti nelle Fasi 4 e 5.**
 Se in F4 (analisi BVA/EP, criterio 4) si identifica l'assenza di un TC per un
 boundary value o una classe di equivalenza, **NON generare il TC come artefatto
-concreto**. Documentare il gap come raccomandazione in F5 con label
-`[IPOTESI — richiede conferma QA]`, ancorandola esplicitamente all'AC che la
-origina. Se l'AC non e' nel materiale fornito, il gap e' "Non verificabile dal
-materiale".
+concreto**. Documentare il gap come raccomandazione in F5 con label:
+- `[IPOTESI — richiede conferma QA]` se il requisito e' in Jira o documento
+  strutturato con AC espliciti.
+- `[IPOTESI — fonte: <tipo> §<rif>]` se il materiale e' wireframe, brief verbale
+  o screenshot (es. `[IPOTESI — fonte: wireframe §3.2]`). L'invariante e' la
+  tracciabilita' della fonte, non la sua formalita'.
+
+Se l'AC non e' nel materiale fornito, il gap e' "Non verificabile dal materiale".
 
 ### **G3 — Autenticazione Jira obbligatoria**
 **Se l'utente sceglie l'opzione Jira ma l'MCP Atlassian non e' configurato,
@@ -116,11 +120,12 @@ sessione (che puo' essere condiviso, salvato, indicizzato) e' un incidente
 di sicurezza non recuperabile per rotazione del token.
 
 ### **G9 — Scope gate per TL multi-team/multi-sprint**
-**In presenza di TL con team distinti (colonna "Team Competenza") o Jira Story /
-Sprint di iterazioni multiple, NON analizzare l'intera TL senza aver prima
-chiesto all'utente quale sottoinsieme esaminare.** Prima di procedere alla Fase
-1, presentare l'elenco dei Team Competenza distinti e delle Jira Story / Sprint
-rilevati, e chiedere se analizzare tutto o un sottoinsieme.
+**Trigger: TL con 2 o piu' Team Competenza distinti OPPURE story su sprint non
+consecutivi (gap >= 2 sprint tra la story piu' vecchia e la piu' recente).
+NON scatta su TL con story multiple sullo stesso team nello stesso sprint o
+sprint consecutivi.** Quando il trigger scatta, presentare prima della Fase 1
+l'elenco dei Team Competenza distinti e delle Jira Story / Sprint rilevati,
+e chiedere se analizzare tutto o un sottoinsieme.
 
 Se l'utente sceglie un sottoinsieme, escludere i TC fuori scope **prima** della
 generazione della RTM. I TC esclusi NON compaiono nella vista inversa: non sono
@@ -473,6 +478,10 @@ Produci una tabella di triage TC:
 nella RTM (`rtm-<data>.md` gia' salvata) applicando la regola di aggregazione
 definita in Fase 3. Mostra la vista inversa aggiornata in chat e conferma il
 salvataggio del file.
+
+> **Check anti-skip:** se nella vista inversa mostrata in chat e' ancora
+> presente il disclaimer `⚠️ Colonna Note preliminare`, l'aggiornamento non
+> e' ancora stato eseguito — farlo adesso prima di procedere a Fase 5.
 
 ---
 
