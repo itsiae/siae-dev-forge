@@ -471,7 +471,7 @@ Produci una tabella di triage TC:
 
 **Al termine della tabella triage**, aggiorna la colonna Note della vista inversa
 nella RTM (`rtm-<data>.md` gia' salvata) applicando la regola di aggregazione
-definita in Fase 3. Mostra la vista inversa aggiornata in chat e confirma il
+definita in Fase 3. Mostra la vista inversa aggiornata in chat e conferma il
 salvataggio del file.
 
 ---
