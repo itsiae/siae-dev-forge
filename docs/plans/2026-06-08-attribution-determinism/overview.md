@@ -21,13 +21,13 @@ bundle con i campi auth. Additivo (schema_version=2 invariato). No-regression su
 
 | # | Task | Stato | File principale |
 |---|------|-------|-----------------|
-| 01 | `devforge_resolve_auth_identity()` legge ~/.claude.json oauthAccount | [PENDING] | lib/logger.sh |
-| 02 | `devforge_identity_bundle()` esteso con 4 campi auth_* | [PENDING] | lib/logger.sh |
-| 03 | session-start esporta `DEVFORGE_AUTH_EMAIL`/`DEVFORGE_AUTH_ACCOUNT_UUID` | [PENDING] | hooks/session-start |
-| 04 | `devforge_init_session()` legge identity.auth_* da user.json + esporta env | [PENDING] | lib/logger.sh |
-| 05 | `devforge_log` + `devforge_log_timed`: top-level auth_email/auth_account_uuid/repo_remote | [PENDING] | lib/logger.sh |
-| 06 | Integration test: `commit_created` porta repo_remote top-level + commit_sha nel meta | [PENDING] | tests/hooks/ |
-| 07 | Docs: handover consumer + ENV_VARS.md | [PENDING] | docs/handover/, hooks/ENV_VARS.md |
+| 01 | `devforge_resolve_auth_identity()` legge ~/.claude.json oauthAccount | [DONE] | lib/logger.sh |
+| 02 | `devforge_identity_bundle()` esteso con 4 campi auth_* | [DONE] | lib/logger.sh |
+| 03 | session-start esporta `DEVFORGE_AUTH_EMAIL`/`DEVFORGE_AUTH_ACCOUNT_UUID` | [DONE] | hooks/session-start |
+| 04 | `devforge_init_session()` legge identity.auth_* da user.json + esporta env | [DONE] | lib/logger.sh |
+| 05 | `devforge_log` + `devforge_log_timed`: top-level auth_email/auth_account_uuid/repo_remote | [DONE] | lib/logger.sh |
+| 06 | Integration test: `commit_created` porta repo_remote top-level + commit_sha nel meta | [DONE] | tests/hooks/ |
+| 07 | Docs: handover consumer + ENV_VARS.md | [DONE] | docs/handover/, hooks/ENV_VARS.md |
 
 ## Ordine & dipendenze
 01 → 02 (bundle usa resolve) → 04 (init_session legge ciò che 02/03 scrivono) → 05 (log usa env di 04).
