@@ -17,6 +17,19 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 |---|---|---|
 | `DEVFORGE_USD_EUR_RATE` | `0.91` | Tasso di conversione USD→EUR usato da `lib/token-collector.py` per stimare `cost_estimate_eur` nella telemetria `session_end`. Valore malformato o `<=0` → fallback al default. Settabile a livello shell/CI per allineare al cambio reale. |
 
+## Attribuzione / Identità autenticata (v1.79+)
+
+Pinnate a `session-start` da `~/.claude.json` → `oauthAccount`; lette da `devforge_init_session`
+e timbrate top-level in ogni evento (`auth_email`/`auth_account_uuid`). Best-effort: vuote se auth
+Bedrock/API-key (no `oauthAccount`) o `~/.claude.json`/python3 assenti. Vedi
+`docs/handover/2026-06-08-attribution-determinism-fields.md`.
+
+| Env var | Default | Description |
+|---|---|---|
+| `DEVFORGE_AUTH_EMAIL` | (da oauthAccount) | Email SSO autenticata pinnata della sessione (`oauthAccount.emailAddress`). Timbrata top-level in ogni evento per attribuzione deterministica. |
+| `DEVFORGE_AUTH_ACCOUNT_UUID` | (da oauthAccount) | UUID account autenticato pinnato (`oauthAccount.accountUuid`). Chiave di join più stabile dell'email. |
+| `DEVFORGE_CLAUDE_JSON` | `~/.claude.json` | Override del path del file oauth letto da `devforge_resolve_auth_identity`. Usato principalmente nei test. |
+
 ## Per-gate bypass (tracked)
 
 | Env var | Default | Gate | Abuse threshold | Notes |

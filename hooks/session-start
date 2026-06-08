@@ -75,6 +75,14 @@ python3 "${PLUGIN_ROOT}/lib/token-collector.py" init 2>/dev/null || true
 # Export session context for logger
 export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER="$USER_CANONICAL" DEVFORGE_PINNED_SID="$DEVFORGE_SID"
 
+# Pin authenticated SSO identity for per-event top-level fields (auth_email/auth_account_uuid).
+# Best-effort: empty if ~/.claude.json/oauthAccount absent (Bedrock/API-key auth).
+AUTH_RESOLVED=$(devforge_resolve_auth_identity 2>/dev/null || printf '|||')
+DEVFORGE_AUTH_EMAIL="${AUTH_RESOLVED%%|*}"
+_AUTH_REST="${AUTH_RESOLVED#*|}"
+DEVFORGE_AUTH_ACCOUNT_UUID="${_AUTH_REST%%|*}"
+export DEVFORGE_AUTH_EMAIL DEVFORGE_AUTH_ACCOUNT_UUID
+
 # Zero-loss PR-A: NTP clock skew check (edge case #7 + #18 del design).
 # Fetch Date header from time.cloudflare.com (HTTPS, no admin required) with
 # 2s timeout. If >1h skew, flag force_received_at in session dir so Lambda
