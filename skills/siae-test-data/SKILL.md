@@ -67,6 +67,11 @@ dove indicato esplicitamente.
 
 #### Tabella preset % distribuzione (Step 2b)
 
+**IMPORTANTE**: lo Step 2b e' **sempre obbligatorio** quando >=2 nazionalita' sono
+selezionate, anche se l'utente ha gia' specificato altri parametri nel messaggio
+iniziale. Non saltarlo: senza distribuzione esplicita il dataset potrebbe risultare
+non rappresentativo.
+
 Mostra le opzioni corrispondenti alla combinazione di nazionalita' selezionate.
 Aggiungi sempre l'opzione **Personalizzata** come ultima voce per input libero.
 
@@ -77,9 +82,16 @@ Aggiungi sempre l'opzione **Personalizzata** come ultima voce per input libero.
 | UE + EXTRA-UE | 70% UE / 30% EXTRA-UE — 60% UE / 40% EXTRA-UE — 50% UE / 50% EXTRA-UE — Personalizzata |
 | ITA + UE + EXTRA-UE | 70% ITA / 20% UE / 10% EXTRA-UE — 60% ITA / 30% UE / 10% EXTRA-UE — 50% ITA / 30% UE / 20% EXTRA-UE — Equa (~33%/33%/34%) — Personalizzata |
 
-Se l'utente sceglie **Personalizzata**, chiedi le percentuali come testo libero
-e verifica che la somma sia 100. Se la somma differisce per errore di arrotondamento
-(±1%), aggiusta autonomamente l'ultima percentuale senza chiedere conferma.
+Se l'utente sceglie **Personalizzata**, chiedi le percentuali come testo libero.
+Prima di processare, **normalizza il formato** accettando:
+- `"33%, 33%, 34%"` → rimuovi `%` e spazi → `[33, 33, 34]`
+- `"33,33,34"` → split su `,` → `[33, 33, 34]`
+- `"un terzo ciascuno"` / `"equa"` → distribuzione equa automatica (vedi preset Equa)
+- `"70 20 10"` → split su spazio → `[70, 20, 10]`
+
+Dopo la normalizzazione, verifica che la somma sia 100. Se differisce per errore
+di arrotondamento (±1%), aggiusta autonomamente l'ultima percentuale senza chiedere
+conferma. Se la differenza supera il ±1%, segnala all'utente e chiedi di correggere.
 
 ### Passo 2 — Carica i reference
 
@@ -94,11 +106,32 @@ Leggi questi file (in `siae-test-data/references/`):
 
 ### Passo 3 — Genera ogni profilo applicando l'algoritmo
 
-Per ciascun profilo richiesto:
+#### Pre-generazione — Calcola la distribuzione per nazionalita'
+
+**Esegui PRIMA di iniziare il loop sui profili.** Se Step 2 ha >=2 nazionalita':
+
+1. **Ordina i gruppi per percentuale DECRESCENTE** (il gruppo con % minore sarà l'ultimo).
+   Invariante: il gruppo con % minore deve essere sempre l'ultimo perche' riceve il
+   residuo; se fosse in posizione intermedia, il suo `floor(N × p/100)` potrebbe
+   essere 0 su dataset piccoli (es. N=5, p=10% → floor=0), svuotando il gruppo.
+2. Calcola i conteggi con l'algoritmo floor + residuo:
+   - Per ogni gruppo NON-ultimo: `count_i = floor(N × p_i / 100)`
+   - Per l'ultimo gruppo: `count_ultimo = N − sum(tutti gli altri count_i)`
+3. Verifica: `sum(tutti i count_i) == N` (sempre vero per costruzione).
+
+Esempio: N=5, gruppi [ITA 70%, UE 20%, EXTRA-UE 10%] già in ordine decrescente:
+- `count_ITA = floor(5 × 70/100) = floor(3.5) = 3`
+- `count_UE = floor(5 × 20/100) = floor(1.0) = 1`
+- `count_EXTRA-UE = 5 − 3 − 1 = 1` (residuo)
+- Risultato: 3 ITA + 1 UE + 1 EXTRA-UE = 5 ✓
+
+Se una sola nazionalita' e' selezionata, tutti gli N profili appartengono a quel gruppo.
+
+#### Loop — Per ciascun profilo (itera gruppo per gruppo: prima tutti N_ITA, poi N_UE, poi N_EXTRA-UE)
 
 1. **Costruisci il `profilo_id`** secondo la convenzione (`P-IT-001`, `B-SDC-IT-001`, ...).
-2. **Scegli i dati anagrafici** dal pool nomi della cittadinanza, una data di
-   nascita tra 1950-2005, comune di nascita coerente con la cittadinanza.
+2. **Scegli i dati anagrafici** dal pool nomi della cittadinanza del gruppo corrente,
+   una data di nascita tra 1950-2005, comune di nascita coerente con la cittadinanza.
 3. **Calcola il CF** seguendo `algoritmi.md` sezione 1 (passi 1-7):
    - codice cognome (3 char)
    - codice nome (3 char, regola consonanti >=4)
@@ -109,12 +142,12 @@ Per ciascun profilo richiesto:
    applica i vincoli di `forme_giuridiche.json` (CF=P.IVA per SDC/SDP/COOP, ecc.).
    Genera il **rappresentante legale** con questi campi obbligatori:
    - `nome`, `cognome`, `genere` (M/F)
-   - `data_nascita` in formato `AAAA-MM-GG` — deve essere **coerente con il CF**: anno da char 7-8, mese dalla tabella A-T (char 9), giorno da char 10-11 con la regola del genere: se genere=M il giorno è il valore diretto; se genere=F il giorno è `valore_char - 40` (es. char="47" → giorno=07)
+   - `data_nascita` in formato `AAAA-MM-GG` — deve essere **coerente con il CF**: anno da char 7-8, mese dalla tabella A-T (char 9), giorno da char 10-11 con la regola del genere: se genere=M il giorno e' il valore diretto; se genere=F il giorno e' `valore_char - 40` (es. cifre_giorno="47", intero 47 → giorno = 47 − 40 = 7, data giorno="07")
    - `comune_nascita` / `stato_nascita` — per soggetti italiani: comune italiano; per UE/EXTRA-UE: nome dello stato di nascita
    - `cf` — calcola il CF del rappresentante seguendo l'algoritmo sezione 1:
      * Rappresentanti nati in Italia: usa codice Belfiore del comune (`belfiore_comuni.json`)
      * Rappresentanti nati all'estero (UE o EXTRA-UE): usa codice Belfiore dello stato (`belfiore_esteri.json`, formato Z-xxx)
-     * Il CF è obbligatorio per TUTTI i rappresentanti legali, indipendentemente dalla nazionalità dell'ente
+     * Il CF e' obbligatorio per TUTTI i rappresentanti legali, indipendentemente dalla nazionalita' dell'ente
 5. **Genera l'indirizzo** (solo se profilo FULL): scegli da `cap_citta.json`.
    Se edge case attivo (S al Step 5), applica un pattern dalla sezione 7 di
    `algoritmi.md` con probabilita' ~50%.
@@ -123,17 +156,11 @@ Per ciascun profilo richiesto:
    `nazione_residenza` e `nazione_residenza_code` (vedi schema LIGHT in `output_schema.md`).
 6. **Genera il telefono** (solo se profilo FULL) in formato E.164
    (`+39 3XX YYYYYYY` per IT, prefisso paese da `belfiore_esteri.json` per altri).
-   Se profilo LIGHT: ometti il campo `telefono`.
+   Se profilo LIGHT: ometti il nodo `contatti` a livello top-level (incluso `telefono`).
+   Per profili BUSINESS/EDITORE in LIGHT: ometti anche `rappresentante_legale.contatti`
+   (vedi sezione C di `output_schema.md`).
 7. **Calcola `data_nascita_serial`** (giorni dal 1899-12-30, vedi sezione 3
    di `algoritmi.md`).
-8. **Applica la distribuzione nazionalita'**: se Step 2 ha piu' nazionalita',
-   distribuisci i profili secondo le percentuali definite al Step 2b.
-   Algoritmo deterministico (floor + residuo):
-   - Per ogni gruppo NON-ultimo: `count_i = floor(N × p_i / 100)`
-   - Per l'ultimo gruppo: `count_ultimo = N − sum(tutti gli altri count_i)`
-   Questo garantisce che la somma sia sempre esattamente N e che nessun gruppo
-   minoritario vada a 0 per effetto dell'arrotondamento su dataset piccoli (N < 20).
-   Esempio: N=5, 70/20/10 → floor(3.5)=3 ITA, floor(1.0)=1 UE, residuo=5−3−1=1 EXTRA-UE.
 
 ### Passo 4 — Auto-validazione obbligatoria
 

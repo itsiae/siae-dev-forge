@@ -142,7 +142,13 @@ In modalita' LIGHT i campi `via`, `civico`, `cap`, `citta`, `provincia`, `stato`
 
 Esempi di `nazione_residenza_code`: `IT`, `DE`, `FR`, `US`, `JP`, ecc. (ISO 3166-1 alpha-2).
 
-In modalita' LIGHT viene omesso anche il nodo `contatti` (incluso `telefono`).
+In modalita' LIGHT viene omesso anche il nodo `contatti` top-level (incluso `telefono`).
+
+Per profili **BUSINESS / EDITORE** in modalita' LIGHT, ometti anche
+`rappresentante_legale.contatti` (il nodo `{"telefono": "..."}` annidato nel
+blocco rappresentante legale). Il blocco `rappresentante_legale` resta presente
+con tutti gli altri campi (nome, cognome, cf, data_nascita, genere, cittadinanza,
+stato_nascita, comune_nascita); solo il sotto-nodo `contatti` viene rimosso.
 
 ---
 
