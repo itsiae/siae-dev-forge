@@ -128,15 +128,39 @@ opzionale.
 
 ---
 
-## C. Convenzioni profilo_id
+## C. Variante LIGHT — oggetto `indirizzo` ridotto
+
+In modalita' LIGHT i campi `via`, `civico`, `cap`, `citta`, `provincia`, `stato`,
+`tipo`, `edge_case` sono omessi. L'oggetto `indirizzo` contiene solo:
+
+```json
+"indirizzo": {
+  "nazione_residenza": "Italia",
+  "nazione_residenza_code": "IT"
+}
+```
+
+Esempi di `nazione_residenza_code`: `IT`, `DE`, `FR`, `US`, `JP`, ecc. (ISO 3166-1 alpha-2).
+
+In modalita' LIGHT viene omesso anche il nodo `contatti` top-level (incluso `telefono`).
+
+Per profili **BUSINESS / EDITORE** in modalita' LIGHT, ometti anche
+`rappresentante_legale.contatti` (il nodo `{"telefono": "..."}` annidato nel
+blocco rappresentante legale). Il blocco `rappresentante_legale` resta presente
+con tutti gli altri campi (nome, cognome, cf, data_nascita, genere, cittadinanza,
+stato_nascita, comune_nascita); solo il sotto-nodo `contatti` viene rimosso.
+
+---
+
+## D. Convenzioni profilo_id
 
 Pattern: `<categoria>-<forma?>-<area>-<NNN>`
 
 | Categoria | Esempio | Forma | Area |
 |-----------|---------|-------|------|
-| PRIVATO | `P-IT-001` | — | IT, UE, EXTRA_UE, MIX |
-| AUTORE | `A-IT-001` | — | IT, UE, EXTRA_UE, MIX |
-| BUSINESS | `B-SDC-IT-001` | SDC | IT |
+| PRIVATO | `P-IT-001` | — | IT, UE, EXTRA-UE |
+| AUTORE | `A-IT-001` | — | IT, UE, EXTRA-UE |
+| BUSINESS | `B-SDC-IT-001` | SDC | IT, UE, EXTRA-UE |
 | EDITORE | `E-COOP-IT-001` | COOP | IT |
 | COMBO | `AE-IT-001` | — | (autore+editore stessa persona) |
 
@@ -145,8 +169,9 @@ come seed per il generatore deterministico: stesso ID -> stesso output.
 
 ---
 
-## D. Formati di output supportati
+## E. Formati di output supportati
 
 - **JSON**: array di oggetti come sopra
 - **CSV**: una riga per profilo, colonne piatte (vedi `to_csv` in `generate_profiles.py`)
-- **Markdown**: tabella riassuntiva con ID/categoria/nome/CF/PIVA/indirizzo/edge
+- **Markdown FULL**: tabella con ID/categoria/tipo/nome/CF/PIVA/indirizzo/edge
+- **Markdown LIGHT**: tabella con ID/categoria/tipo/nome/CF/PIVA/nazionalita'
