@@ -45,7 +45,7 @@ EMAIL=""
 if [ -f "$CJ" ] && command -v python3 >/dev/null 2>&1; then
     EMAIL=$(python3 -c "import json,sys;print((json.load(open(sys.argv[1])).get('oauthAccount') or {}).get('emailAddress','') or '')" "$CJ" 2>/dev/null)
 fi
-EMAIL=$(printf '%s' "$EMAIL" | tr -d '\n\r')
+EMAIL=$(printf '%s' "$EMAIL" | tr -d '\n\r"')
 [ -z "$EMAIL" ] && exit 0
 [ -f "$MSG_FILE" ] || exit 0
 command -v git >/dev/null 2>&1 || exit 0

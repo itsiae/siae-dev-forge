@@ -305,7 +305,7 @@ try:
     o = d.get('oauthAccount') or {}
     vals = [str(o.get('emailAddress', '') or ''), str(o.get('accountUuid', '') or ''),
             str(o.get('organizationUuid', '') or ''), str(o.get('organizationName', '') or '')]
-    vals = [v.replace('|', ' ').replace('\n', ' ').replace('\r', ' ') for v in vals]
+    vals = [v.replace('|', ' ').replace('\n', ' ').replace('\r', ' ').replace('"', ' ') for v in vals]
     sys.stdout.write('|'.join(vals))
 except Exception:
     sys.stdout.write('|||')
