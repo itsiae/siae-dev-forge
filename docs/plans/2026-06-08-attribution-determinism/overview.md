@@ -2,7 +2,7 @@
 
 > Design: `docs/plans/2026-06-08-attribution-determinism-design.md` (spec-review PASS, 2 iter)
 > Branch: `feat/telemetry-raw-value-signals` (corretto — NON creare nuovo branch)
-> Scope: Componenti 1-3. Comp.4 (trailer DevForge-Author) DEFERRED a follow-up (ADR §7 del design).
+> Scope: Componenti 1-4 (TUTTI). Comp.4 (trailer DevForge-Author) implementato 2026-06-09 (design §7 aggiornato).
 
 ## Goal
 Rendere l'attribuzione dev↔commit↔repo un **join** invece di inferenza, emettendo 3 campi RAW
@@ -28,6 +28,7 @@ bundle con i campi auth. Additivo (schema_version=2 invariato). No-regression su
 | 05 | `devforge_log` + `devforge_log_timed`: top-level auth_email/auth_account_uuid/repo_remote | [DONE] | lib/logger.sh |
 | 06 | Integration test: `commit_created` porta repo_remote top-level + commit_sha nel meta | [DONE] | tests/hooks/ |
 | 07 | Docs: handover consumer + ENV_VARS.md | [DONE] | docs/handover/, hooks/ENV_VARS.md |
+| 08 | Trailer `DevForge-Author` (Comp.4): prepare-commit-msg hook + installer + wiring | [DONE] | lib/install-trailer-hook.sh, hooks/session-start |
 
 ## Ordine & dipendenze
 01 → 02 (bundle usa resolve) → 04 (init_session legge ciò che 02/03 scrivono) → 05 (log usa env di 04).

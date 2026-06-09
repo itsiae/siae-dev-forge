@@ -110,6 +110,12 @@ PLUGIN_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${PLUGIN_R
 # additional_context emesso sotto (line ~255), rendendolo non parsabile.
 bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
 
+# Install DevForge-Author trailer hook (Comp.4 — idempotente, zero-harm, fast/local).
+# rc=2 → hook estraneo (husky) presente: skip preservando l'hook utente, log telemetria.
+TRAILER_RC=0
+bash "${PLUGIN_ROOT}/lib/install-trailer-hook.sh" >/dev/null 2>&1 || TRAILER_RC=$?
+[ "$TRAILER_RC" = "2" ] && devforge_log "trailer_hook_skipped_foreign" "success" "{}" 2>/dev/null || true
+
 # Auto-install siae-mcp-kibana (idempotente, asincrono — non blocca la sessione)
 # stdout/stderr soppressi: il background job puo' stampare output npm/tsc
 # durante la prima install e contaminerebbe il JSON del hook.

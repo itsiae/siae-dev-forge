@@ -129,14 +129,69 @@ devforge_log / log_timed ──► ogni evento: + auth_email + auth_account_uuid
 | Caratteri speciali in remote URL/email | `devforge_sanitize_json_str` su tutti i campi |
 | Evento storico pre-feature | consumer legge con `.get(...)` default (contratto additivo) |
 
-## 7. Componente 4 — Trailer `DevForge-Author` — DEFERRED (ADR)
-**Decisione: NON in questo PR. Follow-up dedicato.** Rationale (memory: scope-change needs explicit ADR):
-- Richiede un git hook `prepare-commit-msg` installato in OGNI repo target → footprint cross-repo +
-  rischio di composabilità con hook esistenti (husky, ecc.). Meccanismo diverso (git-level vs Claude Code hook),
-  profilo di rischio diverso → merita PR e test propri.
-- **Il gap mirror è già chiuso da `commit_sha`**: lo SHA non cambia col mirror, quindi il join
-  `commit_sha`↔GitHub attribuisce al 100% il lavoro DevForge anche dopo il mirror. Il trailer è
-  esplicitamente "belt-and-suspenders" (valore per consumer ESTERNI a questa pipeline), non sul percorso critico.
+## 7. Componente 4 — Trailer `DevForge-Author` (IMPLEMENTATO)
+
+Scrive nel commit stesso un trailer `DevForge-Author: <sso-email>` così che l'autore reale
+sopravviva nel commit anche **fuori** dalla telemetria — qualunque consumer (non solo questa
+pipeline) lo recupera dopo il mirror GitLab→GitHub.
+
+### Meccanismo: git `prepare-commit-msg` hook self-contained, installato per-repo a session-start
+- **Perché prepare-commit-msg:** è l'unico punto git-native che modifica il messaggio PRIMA del
+  calcolo dello SHA → il trailer entra nel commit senza rewrite/amend (lo SHA lo include
+  naturalmente). Vale per OGNI stile di messaggio (`-m`, `-F`, heredoc, template) e per i commit
+  di Claude Code E manuali nello stesso repo.
+- **Installer** `lib/install-trailer-hook.sh` (invocato da `hooks/session-start`, foreground, fast,
+  solo file-ops locali, idempotente):
+  - No-op se fuori da un repo git, o se `DEVFORGE_SKIP_TRAILER_HOOK=1` (opt-out).
+  - `HOOKS_DIR=$(git rev-parse --git-path hooks)` (rispetta `core.hooksPath`/husky); `mkdir -p`.
+  - TARGET=`$HOOKS_DIR/prepare-commit-msg`. Marker DevForge: `# DEVFORGE-TRAILER-HOOK v1`.
+  - Se TARGET esiste e NON contiene il marker → **hook estraneo (husky ecc.) → SKIP install**
+    (zero-harm: non clobbera mai un hook utente), log `trailer_hook_skipped_foreign`. Chaining =
+    enhancement futuro.
+  - Se assente o già nostro → scrive l'hook + `chmod +x` (idempotente).
+- **L'hook** (self-contained, `set +e`, exit 0 SEMPRE — non blocca mai un commit):
+  - Skip se `$2` (source) ∈ {merge, squash} (nessun autore singolo significativo).
+  - Risolve l'email da `~/.claude.json` oauthAccount.emailAddress (best-effort, override
+    `DEVFORGE_CLAUDE_JSON`); se vuota (Bedrock/no-python3) → exit 0 senza timbrare. `tr -d '\n\r'` difensivo.
+  - Appende il trailer con **`git interpret-trailers --in-place --if-exists doNothing --trailer
+    "DevForge-Author: ${EMAIL}" "$MSG_FILE"`** (email tra DOUBLE-quote, no eval):
+    - **`--in-place` OBBLIGATORIO** (BLOCK spec-review Q8): se `interpret-trailers` fallisce
+      (es. exit 128) NON tocca il file → `COMMIT_EDITMSG` preservato. Vietato il pattern
+      `RESULT=$(...) && printf > file` che azzererebbe il messaggio su failure (data loss anche con exit 0).
+    - `--if-exists doNothing` → **idempotente per-token** (amend/re-run non duplicano; verificato git 2.50.1).
+
+### Edge case
+| Caso | Comportamento |
+|---|---|
+| Repo con prepare-commit-msg estraneo (husky) | SKIP install, hook utente intatto, log telemetria |
+| `~/.claude.json` assente / Bedrock / no-python3 | commit procede SENZA trailer (no block) |
+| Commit merge/squash | nessun trailer |
+| Amend / hook ri-eseguito | nessun duplicato (`--if-exists doNothing`) |
+| `core.hooksPath` impostato (husky) | install nella dir corretta via `git rev-parse --git-path` |
+| Email con caratteri speciali | `tr -d '\n\r'` + double-quote nell'arg `--trailer` (no eval) |
+| `interpret-trailers` fallisce/assente | `--in-place` non tocca il file → `COMMIT_EDITMSG` invariato, commit procede |
+| Opt-out per-commit (non per-repo) | `DEVFORGE_SKIP_TRAILER_HOOK=1` è check a INSTALL-time; per saltare un singolo commit usare `git commit --no-verify` |
+| Cherry-pick | source=`message` → trailer iniettato (comportamento corretto e intenzionale) |
+
+### Testing (TDD) — Comp.4
+1. Installer crea `prepare-commit-msg` con marker + eseguibile in repo fresco.
+2. Installer idempotente (2ª esecuzione no-error, hook presente).
+3. Installer **skippa** hook estraneo (pre-esistente senza marker resta intatto).
+4. Opt-out `DEVFORGE_SKIP_TRAILER_HOOK=1` → nessun hook.
+5. E2E: `git commit -m x` in repo con hook + fixture → messaggio contiene `DevForge-Author: <email>`.
+6. E2E idempotenza: amend non duplica il trailer.
+7. Best-effort: no `~/.claude.json` → commit OK senza trailer.
+8. session-start invoca l'installer.
+9. **Safety (BLOCK Q8):** con `interpret-trailers` reso indisponibile/fallente, `git commit` procede e
+   il messaggio originale è PRESERVATO (non azzerato).
+
+### Criteri di accettazione — Comp.4
+- [ ] `lib/install-trailer-hook.sh` installa un `prepare-commit-msg` idempotente, marker-guarded, zero-harm su hook estranei.
+- [ ] L'hook timbra `DevForge-Author: <sso-email>` su commit normali, skip merge/squash, mai blocca (exit 0).
+- [ ] Idempotente per-token (no duplicati su amend); usa `--in-place`.
+- [ ] **`COMMIT_EDITMSG` invariato se `interpret-trailers` fallisce/è assente** (no data loss).
+- [ ] Opt-out via `DEVFORGE_SKIP_TRAILER_HOOK=1` (install-time); per-commit via `--no-verify`. Documentato in ENV_VARS.md.
+- [ ] session-start invoca l'installer (foreground, fast).
 
 ## 8. Copertura: la condizione organizzativa (nota, non codice)
 Il 100% vale solo per il lavoro **timbrato** da DevForge. Commit fatti fuori DevForge (git manuale)
