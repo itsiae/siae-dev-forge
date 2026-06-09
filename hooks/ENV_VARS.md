@@ -17,7 +17,7 @@ in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
 |---|---|---|
 | `DEVFORGE_USD_EUR_RATE` | `0.91` | Tasso di conversione USD→EUR usato da `lib/token-collector.py` per stimare `cost_estimate_eur` nella telemetria `session_end`. Valore malformato o `<=0` → fallback al default. Settabile a livello shell/CI per allineare al cambio reale. |
 
-## Attribuzione / Identità autenticata (v1.79+)
+## Attribuzione / Identità autenticata (v1.78+)
 
 Pinnate a `session-start` da `~/.claude.json` → `oauthAccount`; lette da `devforge_init_session`
 e timbrate top-level in ogni evento (`auth_email`/`auth_account_uuid`). Best-effort: vuote se auth
