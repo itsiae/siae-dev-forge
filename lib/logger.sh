@@ -12,6 +12,8 @@ DEVFORGE_SESSION_USER_SOURCE_FILE="${HOME}/.claude/.devforge-session-user-source
 DEVFORGE_SESSION_DIR="${DEVFORGE_SESSION_DIR:-}"
 DEVFORGE_PINNED_USER="${DEVFORGE_PINNED_USER:-}"
 DEVFORGE_PINNED_SID="${DEVFORGE_PINNED_SID:-}"
+DEVFORGE_AUTH_EMAIL="${DEVFORGE_AUTH_EMAIL:-}"
+DEVFORGE_AUTH_ACCOUNT_UUID="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
 
 # Cross-platform epoch nanoseconds.
 # macOS < 26 (Tahoe) lacks %N support: `date +%s%N` emits "1713000000N"
@@ -265,10 +267,49 @@ devforge_identity_bundle() {
     osu="${USER:-}"
     [ -z "$osu" ] && osu=$(whoami 2>/dev/null || echo "")
     host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "")
-    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s"}' \
+
+    # Authenticated SSO identity (see devforge_resolve_auth_identity).
+    # pipe-delimited: email|account_uuid|org_uuid|org_name
+    local auth ae au ou onm rest
+    auth=$(devforge_resolve_auth_identity)
+    ae="${auth%%|*}"; rest="${auth#*|}"
+    au="${rest%%|*}"; rest="${rest#*|}"
+    ou="${rest%%|*}"; onm="${rest#*|}"
+
+    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s","auth_email":"%s","auth_account_uuid":"%s","auth_org_uuid":"%s","auth_org_name":"%s"}' \
         "$(devforge_sanitize_json_str "$gle")" "$(devforge_sanitize_json_str "$gln")" \
         "$(devforge_sanitize_json_str "$gge")" "$(devforge_sanitize_json_str "$ggn")" \
-        "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")"
+        "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")" \
+        "$(devforge_sanitize_json_str "$ae")" "$(devforge_sanitize_json_str "$au")" \
+        "$(devforge_sanitize_json_str "$ou")" "$(devforge_sanitize_json_str "$onm")"
+}
+
+# Resolve authenticated SSO identity from Claude Code's local oauth account file.
+# Reads ~/.claude.json -> oauthAccount.{emailAddress,accountUuid,organizationUuid,organizationName}.
+# This is the only point in the flow that knows the AUTHENTICATED dev identity (SSO login)
+# at action time — stamping it turns attribution from inference into a join.
+# Best-effort: file missing / no oauthAccount (Bedrock/API-key) / no python3 -> all empty.
+# Output: single line "email|account_uuid|org_uuid|org_name" (pipes/newlines in values
+# replaced with spaces to protect the delimiter contract). Override path via
+# DEVFORGE_CLAUDE_JSON for testing.
+devforge_resolve_auth_identity() {
+    local claude_json="${DEVFORGE_CLAUDE_JSON:-${HOME}/.claude.json}"
+    if [ ! -f "$claude_json" ] || ! command -v python3 >/dev/null 2>&1; then
+        printf '|||'
+        return 0
+    fi
+    python3 - "$claude_json" <<'PY' 2>/dev/null || printf '|||'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    o = d.get('oauthAccount') or {}
+    vals = [str(o.get('emailAddress', '') or ''), str(o.get('accountUuid', '') or ''),
+            str(o.get('organizationUuid', '') or ''), str(o.get('organizationName', '') or '')]
+    vals = [v.replace('|', ' ').replace('\n', ' ').replace('\r', ' ').replace('"', ' ') for v in vals]
+    sys.stdout.write('|'.join(vals))
+except Exception:
+    sys.stdout.write('|||')
+PY
 }
 
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
@@ -396,9 +437,12 @@ devforge_init_session() {
     if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
         DEVFORGE_PINNED_USER=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
         [ -n "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_canonicalize_user "$DEVFORGE_PINNED_USER")
+        # Pin authenticated SSO identity from user.json.identity (additive; empty if absent)
+        DEVFORGE_AUTH_EMAIL=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_email','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        DEVFORGE_AUTH_ACCOUNT_UUID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_account_uuid','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
     fi
     [ -z "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_get_user)
-    export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID
+    export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID DEVFORGE_AUTH_EMAIL DEVFORGE_AUTH_ACCOUNT_UUID
 }
 
 # Atomic sequence counter for per-session event ordering
@@ -495,11 +539,23 @@ devforge_log() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
+    # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
+    # repo_remote survives the GitLab->GitHub mirror; auth_* come from session pinning
+    # (DEVFORGE_AUTH_*), no per-event re-read of ~/.claude.json. All best-effort (empty if absent).
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
+    auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
+    safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
+    safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
+    safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+
     # Zero-loss PR-A: build the JSON line once, then atomic append via Python
     # (lock + fsync, cross-OS). Replaces raw `>> file` to eliminate race.
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
+        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
@@ -566,10 +622,21 @@ devforge_log_timed() {
     safe_repo_root=$(devforge_sanitize_json_str "$repo_root")
     safe_project_canonical=$(devforge_sanitize_json_str "$project_canonical")
 
+    # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
+    # See devforge_log for rationale. duration_ms stays between status and meta (unchanged).
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
+    auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
+    safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
+    safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
+    safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+
     # Zero-loss PR-A: atomic append via Python (lock + fsync)
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
+        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
