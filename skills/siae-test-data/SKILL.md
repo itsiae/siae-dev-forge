@@ -34,12 +34,15 @@ Quando questa skill viene attivata, Claude DEVE seguire questi passi nell'ordine
 
 ### Passo 0 — Verifica scorciatoia Python (opzionale)
 
-Se l'utente ha richiesto un dataset di **piu' di 50 profili** O ha esplicitamente
+Se l'utente ha richiesto un dataset di **piu' di 5 profili** O ha esplicitamente
 chiesto "in batch / batch automatico", prova prima questa scorciatoia:
 
 ```bash
-python3 --version 2>/dev/null && echo OK
+(python3 --version 2>/dev/null || python --version 2>/dev/null || py --version 2>/dev/null) && echo OK
 ```
+
+> **Windows:** `python3` potrebbe non essere nel PATH; il comando prova in sequenza
+> `python3`, `python` e il Python Launcher `py` per garantire il rilevamento corretto.
 
 Se Python 3.8+ e' disponibile, salta al **Passo 6 (Esecuzione Python)**.
 Altrimenti continua con la generazione Claude-native (passi 1-5).
@@ -95,6 +98,9 @@ conferma. Se la differenza supera il ±1%, segnala all'utente e chiedi di correg
 
 ### Passo 2 — Carica i reference
 
+**Leggi tutti i file seguenti in un singolo batch parallelo** (emetti tutte le
+Read tool call nello stesso turno di risposta — non sequenzialmente una alla volta):
+
 Leggi questi file (in `siae-test-data/references/`):
 - `algoritmi.md` — algoritmi CF + P.IVA + validazioni
 - `output_schema.md` — schema JSON canonico del profilo
@@ -126,6 +132,10 @@ Esempio: N=5, gruppi [ITA 70%, UE 20%, EXTRA-UE 10%] già in ordine decrescente:
 - Risultato: 3 ITA + 1 UE + 1 EXTRA-UE = 5 ✓
 
 Se una sola nazionalita' e' selezionata, tutti gli N profili appartengono a quel gruppo.
+
+**Genera tutti i profili in un unico blocco di output**: calcola TUTTO il dataset
+e restituiscilo in una sola risposta invece di emettere ogni profilo in round-trip
+separati. Su Windows ogni round-trip al modello costa 300-800ms extra.
 
 #### Loop — Per ciascun profilo (itera gruppo per gruppo: prima tutti N_ITA, poi N_UE, poi N_EXTRA-UE)
 
@@ -219,6 +229,7 @@ python3 generate_profiles.py \
   --quantita <5|10|25|50|100|500> \
   --formato <JSON|CSV|MARKDOWN|ALL> \
   --strict \
+  [--skip-validation] \                                    # performance: salta validazione post-generazione
   --output <path>
 ```
 

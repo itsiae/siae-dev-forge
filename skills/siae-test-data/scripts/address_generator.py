@@ -12,12 +12,13 @@ import json
 import random
 from pathlib import Path
 
+import data_store
+
 REFS = Path(__file__).resolve().parent.parent / "references"
 
 
 def _carica_cap_citta() -> dict:
-    with open(REFS / "cap_citta.json", encoding="utf-8") as f:
-        return json.load(f)
+    return data_store.get("cap_citta.json")
 
 
 CAP_CITTA = _carica_cap_citta()

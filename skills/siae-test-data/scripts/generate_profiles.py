@@ -28,6 +28,7 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+import data_store
 from cf_calculator import (
     calcola_cf_persona_fisica,
     carica_belfiore_comuni,
@@ -50,8 +51,7 @@ REFS = Path(__file__).resolve().parent.parent / "references"
 
 
 def _carica_json(name: str) -> dict:
-    with open(REFS / name, encoding="utf-8") as f:
-        return json.load(f)
+    return data_store.get(name)
 
 
 NOMI_IT = _carica_json("nomi_italiani.json")
@@ -59,6 +59,12 @@ NOMI_ESTERI = _carica_json("nomi_esteri.json")
 FORME_GIURIDICHE = _carica_json("forme_giuridiche.json")
 BELFIORE_COMUNI = carica_belfiore_comuni()
 BELFIORE_ESTERI = carica_belfiore_esteri()
+
+# Pre-computed lookup lists — eliminano allocazioni O(N) in-loop (RC4)
+_BELFIORE_COMUNI_KEYS = list(BELFIORE_COMUNI.keys())
+_CAP_ITALIA_KEYS = list(CAP_CITTA["Italia"].keys())
+_STATI_UE = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "UE"]
+_STATI_EXTRA_UE = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "EXTRA_UE"]
 
 
 def _seed_rng(profilo_id: str) -> random.Random:
@@ -88,7 +94,7 @@ def _stato_random(area: str, rng: random.Random) -> str:
     """Sceglie uno stato dato area (UE/EXTRA_UE/IT)."""
     if area == "IT":
         return "Italia"
-    candidates = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == area]
+    candidates = _STATI_UE if area == "UE" else _STATI_EXTRA_UE
     return rng.choice(candidates) if candidates else "Germania"
 
 
@@ -120,7 +126,7 @@ def _genera_anagrafica_persona_fisica(
 
     # Comune/provincia di nascita
     if stato_nascita == "Italia":
-        comune_nascita = rng.choice(list(BELFIORE_COMUNI.keys()))
+        comune_nascita = rng.choice(_BELFIORE_COMUNI_KEYS)
         provincia_nascita = BELFIORE_COMUNI[comune_nascita]["provincia"]
         codice_belfiore = BELFIORE_COMUNI[comune_nascita]["codice_belfiore"]
     else:
@@ -151,7 +157,7 @@ def _genera_anagrafica_persona_fisica(
     is_residente_it = residenza_kind in ("P-IT", "P-EU-RES", "P-EXT-RES")
     if is_residente_it:
         # Indirizzo italiano
-        citta = rng.choice(list(CAP_CITTA["Italia"].keys()))
+        citta = rng.choice(_CAP_ITALIA_KEYS)
         pool_pattern = edge_pattern_filter if edge_pattern_filter else EDGE_PATTERNS
         if edge_case_flag and rng.random() < edge_probability:
             pattern = rng.choice(pool_pattern)
@@ -207,7 +213,7 @@ def _genera_soggetto_giuridico(
 
     # Sede legale
     if residenza_kind == "ITA":
-        citta = rng.choice(list(CAP_CITTA["Italia"].keys()))
+        citta = rng.choice(_CAP_ITALIA_KEYS)
         sigla_prov = CAP_CITTA["Italia"][citta]["provincia"]
         sede = genera_indirizzo_standard_it(citta, rng)
         sede["tipo"] = "SEDE_LEGALE"
@@ -438,11 +444,18 @@ def genera_dataset(config: dict) -> list[dict]:
     return out
 
 
-def valida_e_filtra(profili: list[dict], strict: bool = True) -> tuple[list[dict], list[dict]]:
+def valida_e_filtra(
+    profili: list[dict],
+    strict: bool = True,
+    skip_validation: bool = False,
+) -> tuple[list[dict], list[dict]]:
     """Valida tutti i profili. Ritorna (validi, invalidi).
 
-    Se strict=True, alza eccezione su invalidi. Altrimenti restituisce le liste.
+    strict=True: alza eccezione su invalidi.
+    skip_validation=True: salta il loop di validazione (profili già corretti per costruzione).
     """
+    if skip_validation:
+        return profili, []
     validi, invalidi = [], []
     for p in profili:
         ok, errs = valida_profilo(p)
@@ -665,6 +678,8 @@ def main() -> int:
     parser.add_argument("--quantita", type=int, default=1, help="Quantita per tipo")
     parser.add_argument("--formato", choices=["JSON", "CSV", "MARKDOWN", "ALL"], default="JSON")
     parser.add_argument("--strict", action="store_true", help="Fallisci se validazione invalidi")
+    parser.add_argument("--skip-validation", action="store_true", dest="skip_validation",
+                        help="Salta validazione post-generazione (profili generati deterministicamente)")
     args = parser.parse_args()
 
     if args.config:
@@ -683,7 +698,7 @@ def main() -> int:
         config = flusso_interattivo()
 
     profili = genera_dataset(config)
-    validi, invalidi = valida_e_filtra(profili, strict=args.strict)
+    validi, invalidi = valida_e_filtra(profili, strict=args.strict, skip_validation=args.skip_validation)
 
     if invalidi and not args.strict:
         print(f"WARNING: {len(invalidi)} profili invalidi (mostrati con _errori)", file=sys.stderr)
