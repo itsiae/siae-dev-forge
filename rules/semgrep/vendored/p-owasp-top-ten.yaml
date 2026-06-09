@@ -13827,6 +13827,44 @@ rules:
   languages:
   - ruby
   severity: ERROR
+- id: terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
+  pattern: acl = "public-read-write"
+  languages:
+  - hcl
+  severity: ERROR
+  message: S3 bucket with public read-write access detected.
+  metadata:
+    references:
+    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#acl
+    - https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
+    cwe:
+    - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+    category: security
+    technology:
+    - terraform
+    - aws
+    owasp:
+    - A01:2021 - Broken Access Control
+    - A01:2025 - Broken Access Control
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: LOW
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Mishandled Sensitive Information
+    source: https://semgrep.dev/r/terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
+    shortlink: https://sg.run/0nok
+    semgrep.dev:
+      rule:
+        r_id: 9754
+        rv_id: 1263900
+        rule_id: 6JUqvn
+        version_id: PkTR3y5
+        url: https://semgrep.dev/playground/r/PkTR3y5/terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
+        origin: community
 - id: ruby.lang.security.force-ssl-false.force-ssl-false
   message: Checks for configuration setting of force_ssl to false. Force_ssl forces
     usage of HTTPS, which could lead to network interception of unencrypted application
@@ -14110,1127 +14148,6 @@ rules:
   - pattern: Digest::SHA1.$FUNC
   - pattern: OpenSSL::Digest::SHA1.$FUNC
   - pattern: OpenSSL::HMAC.$FUNC("sha1",...)
-- id: terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
-  pattern: acl = "public-read-write"
-  languages:
-  - hcl
-  severity: ERROR
-  message: S3 bucket with public read-write access detected.
-  metadata:
-    references:
-    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#acl
-    - https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
-    cwe:
-    - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
-    category: security
-    technology:
-    - terraform
-    - aws
-    owasp:
-    - A01:2021 - Broken Access Control
-    - A01:2025 - Broken Access Control
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: LOW
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Mishandled Sensitive Information
-    source: https://semgrep.dev/r/terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
-    shortlink: https://sg.run/0nok
-    semgrep.dev:
-      rule:
-        r_id: 9754
-        rv_id: 1263900
-        rule_id: 6JUqvn
-        version_id: PkTR3y5
-        url: https://semgrep.dev/playground/r/PkTR3y5/terraform.lang.security.s3-public-rw-bucket.s3-public-rw-bucket
-        origin: community
-- id: typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
-  message: Detected the use of `$TRUST`. This can introduce a Cross-Site-Scripting
-    (XSS) vulnerability if this comes from user-provided input. If you have to use
-    `$TRUST`, ensure it does not come from user-input or use the appropriate prevention
-    mechanism e.g. input validation or sanitization depending on the context.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    references:
-    - https://angular.io/api/platform-browser/DomSanitizer
-    - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    confidence: MEDIUM
-    category: security
-    technology:
-    - angular
-    - browser
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: LOW
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
-    shortlink: https://sg.run/KWxP
-    semgrep.dev:
-      rule:
-        r_id: 9755
-        rv_id: 1263902
-        rule_id: oqUzgA
-        version_id: 5PTo1zk
-        url: https://semgrep.dev/playground/r/5PTo1zk/typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
-        origin: community
-  languages:
-  - typescript
-  severity: WARNING
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          function ...({..., $X: string, ...}) { ... }
-      - pattern-inside: |
-          function ...(..., $X: string, ...) { ... }
-    - focus-metavariable: $X
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - pattern: $X.$TRUST($Y)
-    - focus-metavariable: $Y
-    - pattern-not: |
-        $X.$TRUST(`...`)
-    - pattern-not: |
-        $X.$TRUST("...")
-    - metavariable-regex:
-        metavariable: $TRUST
-        regex: (bypassSecurityTrustHtml|bypassSecurityTrustStyle|bypassSecurityTrustScript|bypassSecurityTrustUrl|bypassSecurityTrustResourceUrl)
-  pattern-sanitizers:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import * as $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          $S = require("underscore.string")
-          ...
-    - pattern-either:
-      - pattern: $S.escapeHTML(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "dompurify"
-          ...
-      - pattern-inside: |
-          import { ..., $S,... } from "dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("dompurify")
-          ...
-      - pattern-inside: |
-          import $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("isomorphic-dompurify")
-          ...
-    - pattern-either:
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S(...)
-            ...
-        - pattern: $VALUE.sanitize(...)
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S.sanitize
-            ...
-        - pattern: $S(...)
-      - pattern: $S.sanitize(...)
-      - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'xss';
-          ...
-      - pattern-inside: |
-          import * as $S from 'xss';
-          ...
-      - pattern-inside: |
-          $S = require("xss")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'sanitize-html';
-          ...
-      - pattern-inside: |
-          import * as $S from "sanitize-html";
-          ...
-      - pattern-inside: |
-          $S = require("sanitize-html")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern: sanitizer.sanitize(...)
-    - pattern-not: sanitizer.sanitize(SecurityContext.NONE, ...);
-- id: typescript.react.security.react-insecure-request.react-insecure-request
-  message: Unencrypted request over HTTP detected.
-  metadata:
-    vulnerability: Insecure Transport
-    owasp:
-    - A03:2017 - Sensitive Data Exposure
-    - A02:2021 - Cryptographic Failures
-    - A04:2025 - Cryptographic Failures
-    cwe:
-    - 'CWE-319: Cleartext Transmission of Sensitive Information'
-    references:
-    - https://www.npmjs.com/package/axios
-    category: security
-    technology:
-    - react
-    subcategory:
-    - vuln
-    likelihood: LOW
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Mishandled Sensitive Information
-    source: https://semgrep.dev/r/typescript.react.security.react-insecure-request.react-insecure-request
-    shortlink: https://sg.run/1n0b
-    semgrep.dev:
-      rule:
-        r_id: 9766
-        rv_id: 1263918
-        rule_id: NbUA3O
-        version_id: A8Tgd2p
-        url: https://semgrep.dev/playground/r/A8Tgd2p/typescript.react.security.react-insecure-request.react-insecure-request
-        origin: community
-  languages:
-  - typescript
-  - javascript
-  severity: ERROR
-  patterns:
-  - pattern-either:
-    - patterns:
-      - pattern-either:
-        - pattern-inside: |
-            import $AXIOS from 'axios';
-            ...
-            $AXIOS.$METHOD(...)
-        - pattern-inside: |
-            $AXIOS = require('axios');
-            ...
-            $AXIOS.$METHOD(...)
-      - pattern: $AXIOS.$VERB("$URL",...)
-      - metavariable-regex:
-          metavariable: $VERB
-          regex: ^(get|post|delete|head|patch|put|options)
-    - patterns:
-      - pattern-either:
-        - pattern-inside: |
-            import $AXIOS from 'axios';
-            ...
-            $AXIOS(...)
-        - pattern-inside: |
-            $AXIOS = require('axios');
-            ...
-            $AXIOS(...)
-      - pattern-either:
-        - pattern: '$AXIOS({url: "$URL"}, ...)'
-        - pattern: |
-            $OPTS = {url: "$URL"}
-            ...
-            $AXIOS($OPTS, ...)
-    - pattern: fetch("$URL", ...)
-  - metavariable-regex:
-      metavariable: $URL
-      regex: ^([Hh][Tt][Tt][Pp]:\/\/(?!localhost).*)
-- id: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
-  message: Detection of dangerouslySetInnerHTML from non-constant definition. This
-    can inadvertently expose users to cross-site scripting (XSS) attacks if this comes
-    from user-provided input. If you have to use dangerouslySetInnerHTML, consider
-    using a sanitization library such as DOMPurify to sanitize your HTML.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    references:
-    - https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html
-    category: security
-    confidence: MEDIUM
-    technology:
-    - react
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
-    shortlink: https://sg.run/rAx6
-    semgrep.dev:
-      rule:
-        r_id: 9769
-        rv_id: 1263912
-        rule_id: x8UWvK
-        version_id: l4TJR0v
-        url: https://semgrep.dev/playground/r/l4TJR0v/typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
-        origin: community
-  languages:
-  - typescript
-  - javascript
-  severity: WARNING
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          function ...({..., $X, ...}) { ... }
-      - pattern-inside: |
-          function ...(..., $X, ...) { ... }
-    - focus-metavariable: $X
-    - pattern-not-inside: |
-        $F. ... .$SANITIZEUNC(...)
-  pattern-sinks:
-  - patterns:
-    - focus-metavariable: $X
-    - pattern-either:
-      - pattern: |
-          {...,dangerouslySetInnerHTML: {__html: $X},...}
-      - pattern: |
-          <$Y ... dangerouslySetInnerHTML={{__html: $X}} />
-    - pattern-not: |
-        <$Y ... dangerouslySetInnerHTML={{__html: "..."}} />
-    - pattern-not: |
-        {...,dangerouslySetInnerHTML:{__html: "..."},...}
-    - metavariable-pattern:
-        patterns:
-        - pattern-not: |
-            {...}
-        metavariable: $X
-    - pattern-not: |
-        <... {__html: "..."} ...>
-    - pattern-not: |
-        <... {__html: `...`} ...>
-  pattern-sanitizers:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import * as $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          $S = require("underscore.string")
-          ...
-    - pattern-either:
-      - pattern: $S.escapeHTML(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "dompurify"
-          ...
-      - pattern-inside: |
-          import { ..., $S,... } from "dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("dompurify")
-          ...
-      - pattern-inside: |
-          import $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("isomorphic-dompurify")
-          ...
-    - pattern-either:
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S(...)
-            ...
-        - pattern: $VALUE.sanitize(...)
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S.sanitize
-            ...
-        - pattern: $S(...)
-      - pattern: $S.sanitize(...)
-      - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'xss';
-          ...
-      - pattern-inside: |
-          import * as $S from 'xss';
-          ...
-      - pattern-inside: |
-          $S = require("xss")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'sanitize-html';
-          ...
-      - pattern-inside: |
-          import * as $S from "sanitize-html";
-          ...
-      - pattern-inside: |
-          $S = require("sanitize-html")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          $S = new Remarkable()
-          ...
-    - pattern: $S.render(...)
-- id: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
-  message: Detection of $HTML from non-constant definition. This can inadvertently
-    expose users to cross-site scripting (XSS) attacks if this comes from user-provided
-    input. If you have to use $HTML, consider using a sanitization library such as
-    DOMPurify to sanitize your HTML.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    references:
-    - https://developer.mozilla.org/en-US/docs/Web/API/Document/writeln
-    - https://developer.mozilla.org/en-US/docs/Web/API/Document/write
-    - https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-    category: security
-    confidence: MEDIUM
-    technology:
-    - react
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: HIGH
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
-    shortlink: https://sg.run/E5x8
-    semgrep.dev:
-      rule:
-        r_id: 9781
-        rv_id: 1263916
-        rule_id: QrU68w
-        version_id: GxTkeRl
-        url: https://semgrep.dev/playground/r/GxTkeRl/typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
-        origin: community
-  languages:
-  - typescript
-  - javascript
-  severity: WARNING
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          function ...({..., $X, ...}) { ... }
-      - pattern-inside: |
-          function ...(..., $X, ...) { ... }
-    - focus-metavariable: $X
-    - pattern-either:
-      - pattern: $X.$Y
-      - pattern: $X[...]
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - pattern: "this.window.document. ... .$HTML('...',$SINK) \n"
-      - pattern: "window.document. ... .$HTML('...',$SINK) \n"
-      - pattern: "document.$HTML($SINK)  \n"
-    - metavariable-regex:
-        metavariable: $HTML
-        regex: (writeln|write)
-    - focus-metavariable: $SINK
-  - patterns:
-    - pattern-either:
-      - pattern: "$PROP. ... .$HTML('...',$SINK) \n"
-    - metavariable-regex:
-        metavariable: $HTML
-        regex: (insertAdjacentHTML)
-    - focus-metavariable: $SINK
-  pattern-sanitizers:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import * as $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          $S = require("underscore.string")
-          ...
-    - pattern-either:
-      - pattern: $S.escapeHTML(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "dompurify"
-          ...
-      - pattern-inside: |
-          import { ..., $S,... } from "dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("dompurify")
-          ...
-      - pattern-inside: |
-          import $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("isomorphic-dompurify")
-          ...
-    - pattern-either:
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S(...)
-            ...
-        - pattern: $VALUE.sanitize(...)
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S.sanitize
-            ...
-        - pattern: $S(...)
-      - pattern: $S.sanitize(...)
-      - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'xss';
-          ...
-      - pattern-inside: |
-          import * as $S from 'xss';
-          ...
-      - pattern-inside: |
-          $S = require("xss")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'sanitize-html';
-          ...
-      - pattern-inside: |
-          import * as $S from "sanitize-html";
-          ...
-      - pattern-inside: |
-          $S = require("sanitize-html")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          $S = new Remarkable()
-          ...
-    - pattern: $S.render(...)
-- id: typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
-  message: Detection of $HTML from non-constant definition. This can inadvertently
-    expose users to cross-site scripting (XSS) attacks if this comes from user-provided
-    input. If you have to use $HTML, consider using a sanitization library such as
-    DOMPurify to sanitize your HTML.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    references:
-    - https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html
-    category: security
-    confidence: MEDIUM
-    technology:
-    - react
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
-    shortlink: https://sg.run/70Zv
-    semgrep.dev:
-      rule:
-        r_id: 9782
-        rv_id: 1263917
-        rule_id: 3qUBl4
-        version_id: RGT0Lln
-        url: https://semgrep.dev/playground/r/RGT0Lln/typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
-        origin: community
-  languages:
-  - typescript
-  - javascript
-  severity: WARNING
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          function ...({..., $X, ...}) { ... }
-      - pattern-inside: |
-          function ...(..., $X, ...) { ... }
-    - focus-metavariable: $X
-    - pattern-either:
-      - pattern: $X.$Y
-      - pattern: $X[...]
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          $BODY = $REACT.useRef(...)
-          ...
-      - pattern-inside: |
-          $BODY = useRef(...)
-          ...
-      - pattern-inside: |
-          $BODY = findDOMNode(...)
-          ...
-      - pattern-inside: |
-          $BODY = createRef(...)
-          ...
-      - pattern-inside: |
-          $BODY = $REACT.findDOMNode(...)
-          ...
-      - pattern-inside: |
-          $BODY = $REACT.createRef(...)
-          ...
-    - pattern-either:
-      - pattern: "$BODY. ... .$HTML = $SINK \n"
-      - pattern: "$BODY.$HTML = $SINK  \n"
-    - metavariable-regex:
-        metavariable: $HTML
-        regex: (innerHTML|outerHTML)
-    - focus-metavariable: $SINK
-  - patterns:
-    - pattern-either:
-      - pattern: ReactDOM.findDOMNode(...).$HTML = $SINK
-    - metavariable-regex:
-        metavariable: $HTML
-        regex: (innerHTML|outerHTML)
-    - focus-metavariable: $SINK
-  pattern-sanitizers:
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import * as $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          import $S from "underscore.string"
-          ...
-      - pattern-inside: |
-          $S = require("underscore.string")
-          ...
-    - pattern-either:
-      - pattern: $S.escapeHTML(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from "dompurify"
-          ...
-      - pattern-inside: |
-          import { ..., $S,... } from "dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("dompurify")
-          ...
-      - pattern-inside: |
-          import $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          import * as $S from "isomorphic-dompurify"
-          ...
-      - pattern-inside: |
-          $S = require("isomorphic-dompurify")
-          ...
-    - pattern-either:
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S(...)
-            ...
-        - pattern: $VALUE.sanitize(...)
-      - patterns:
-        - pattern-inside: |
-            $VALUE = $S.sanitize
-            ...
-        - pattern: $S(...)
-      - pattern: $S.sanitize(...)
-      - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'xss';
-          ...
-      - pattern-inside: |
-          import * as $S from 'xss';
-          ...
-      - pattern-inside: |
-          $S = require("xss")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          import $S from 'sanitize-html';
-          ...
-      - pattern-inside: |
-          import * as $S from "sanitize-html";
-          ...
-      - pattern-inside: |
-          $S = require("sanitize-html")
-          ...
-    - pattern: $S(...)
-  - patterns:
-    - pattern-either:
-      - pattern-inside: |
-          $S = new Remarkable()
-          ...
-    - pattern: $S.render(...)
-- id: ruby.lang.security.dangerous-exec.dangerous-exec
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern: |
-        def $F(...,$ARG,...)
-            ...
-        end
-    - focus-metavariable: $ARG
-  - pattern: params
-  - pattern: cookies
-  pattern-sinks:
-  - patterns:
-    - pattern: |
-        $EXEC(...)
-    - pattern-not: |
-        $EXEC("...","...","...",...)
-    - pattern-not: |
-        $EXEC(["...","...","...",...],...)
-    - pattern-not: |
-        $EXEC({...},"...","...","...",...)
-    - pattern-not: |
-        $EXEC({...},["...","...","...",...],...)
-    - metavariable-regex:
-        metavariable: $EXEC
-        regex: ^(system|exec|spawn|Process.exec|Process.spawn|Open3.capture2|Open3.capture2e|Open3.capture3|Open3.popen2|Open3.popen2e|Open3.popen3|IO.popen|Gem::Util.popen|PTY.spawn)$
-  message: Detected non-static command inside $EXEC. Audit the input to '$EXEC'. If
-    unverified user data can reach this call site, this is a code injection vulnerability.
-    A malicious actor can inject a malicious script to execute arbitrary code.
-  metadata:
-    source-rule-url: https://github.com/presidentbeef/brakeman/blob/main/lib/brakeman/checks/check_execute.rb
-    cwe:
-    - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
-    owasp:
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    category: security
-    technology:
-    - ruby
-    - rails
-    references:
-    - https://guides.rubyonrails.org/security.html#command-line-injection
-    cwe2022-top25: true
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: HIGH
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Code Injection
-    source: https://semgrep.dev/r/ruby.lang.security.dangerous-exec.dangerous-exec
-    shortlink: https://sg.run/R8GY
-    semgrep.dev:
-      rule:
-        r_id: 9805
-        rv_id: 1409405
-        rule_id: WAUZOw
-        version_id: WrT7erb
-        url: https://semgrep.dev/playground/r/WrT7erb/ruby.lang.security.dangerous-exec.dangerous-exec
-        origin: community
-  severity: WARNING
-  languages:
-  - ruby
-- id: javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
-  message: Detected non-literal calls to Deno.run(). This could lead to a command
-    injection vulnerability.
-  metadata:
-    cwe:
-    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS
-      Command Injection'')'
-    owasp:
-    - A01:2017 - Injection
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    category: security
-    technology:
-    - deno
-    references:
-    - https://deno.land/manual/examples/subprocess#simple-example
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: LOW
-    impact: HIGH
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Command Injection
-    source: https://semgrep.dev/r/javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
-    shortlink: https://sg.run/Nrrn
-    semgrep.dev:
-      rule:
-        r_id: 9927
-        rv_id: 1409397
-        rule_id: x8UWWg
-        version_id: PkTe7AP
-        url: https://semgrep.dev/playground/r/PkTe7AP/javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
-        origin: community
-  languages:
-  - javascript
-  - typescript
-  severity: ERROR
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-inside: function ... (..., $ARG,...) {...}
-    - focus-metavariable: $ARG
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - pattern: |
-          Deno.run({cmd: [$INPUT,...]},...)
-      - pattern: |
-          Deno.run({cmd: ["=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$INPUT,...]},...)
-      - patterns:
-        - pattern: |
-            Deno.run({cmd: [$CMD,"-c",$INPUT,...]},...)
-        - pattern-inside: |
-            $CMD = "=~/(sh|bash|ksh|csh|tcsh|zsh)/"
-            ...
-    - focus-metavariable: $INPUT
-- id: yaml.docker-compose.security.privileged-service.privileged-service
-  patterns:
-  - pattern-inside: |
-      version: ...
-      ...
-      services:
-        ...
-        $SERVICE:
-          ...
-          privileged: $TRUE
-  - focus-metavariable: $TRUE
-  - metavariable-regex:
-      metavariable: $TRUE
-      regex: (true)
-  fix: |
-    false
-  message: Service '$SERVICE' is running in privileged mode. This grants the container
-    the equivalent of root capabilities on the host machine. This can lead to container
-    escapes, privilege escalation, and other security concerns. Remove the 'privileged'
-    key to disable this capability.
-  metadata:
-    cwe:
-    - 'CWE-250: Execution with Unnecessary Privileges'
-    owasp:
-    - A06:2017 - Security Misconfiguration
-    - A05:2021 - Security Misconfiguration
-    - A02:2025 - Security Misconfiguration
-    references:
-    - https://www.trendmicro.com/en_us/research/19/l/why-running-a-privileged-container-in-docker-is-a-bad-idea.html
-    - https://containerjournal.com/topics/container-security/why-running-a-privileged-container-is-not-a-good-idea/
-    category: security
-    technology:
-    - docker-compose
-    subcategory:
-    - vuln
-    likelihood: HIGH
-    impact: HIGH
-    confidence: HIGH
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Improper Authorization
-    source: https://semgrep.dev/r/yaml.docker-compose.security.privileged-service.privileged-service
-    shortlink: https://sg.run/AlX0
-    semgrep.dev:
-      rule:
-        r_id: 10006
-        rv_id: 1263922
-        rule_id: DbUW17
-        version_id: 0bTKzXZ
-        url: https://semgrep.dev/playground/r/0bTKzXZ/yaml.docker-compose.security.privileged-service.privileged-service
-        origin: community
-  languages:
-  - yaml
-  severity: WARNING
-- id: yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
-  patterns:
-  - pattern-inside: |
-      containers:
-        ...
-  - pattern-inside: |
-      - name: $CONTAINER
-        ...
-  - pattern: |
-      image: ...
-      ...
-  - pattern-inside: |
-      image: ...
-      ...
-      $SC:
-        ...
-  - metavariable-regex:
-      metavariable: $SC
-      regex: ^(securityContext)$
-  - pattern-not-inside: |
-      image: ...
-      ...
-      securityContext:
-        ...
-        allowPrivilegeEscalation: $VAL
-  - focus-metavariable: $SC
-  fix: |
-    securityContext:
-      allowPrivilegeEscalation: false #
-  message: In Kubernetes, each pod runs in its own isolated environment with its own
-    set of security policies. However, certain container images may contain `setuid`
-    or `setgid` binaries that could allow an attacker to perform privilege escalation
-    and gain access to sensitive resources. To mitigate this risk, it's recommended
-    to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation`
-    set to `false`. This will prevent the container from running any privileged processes
-    and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation`
-    parameter to your the `securityContext`, you can help to ensure that your containerized
-    applications are more secure and less vulnerable to privilege escalation attacks.
-  metadata:
-    cwe:
-    - 'CWE-732: Incorrect Permission Assignment for Critical Resource'
-    owasp:
-    - A05:2021 - Security Misconfiguration
-    - A06:2017 - Security Misconfiguration
-    - A02:2025 - Security Misconfiguration
-    references:
-    - https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation
-    - https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-    - https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
-    - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag
-    category: security
-    technology:
-    - kubernetes
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Improper Authorization
-    source: https://semgrep.dev/r/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
-    shortlink: https://sg.run/ljp6
-    semgrep.dev:
-      rule:
-        r_id: 10057
-        rv_id: 1263933
-        rule_id: 6JUqEO
-        version_id: jQTn527
-        url: https://semgrep.dev/playground/r/jQTn527/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
-        origin: community
-  languages:
-  - yaml
-  severity: WARNING
-- id: yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
-  patterns:
-  - pattern-inside: |
-      containers:
-        ...
-  - pattern: |
-      image: ...
-      ...
-      securityContext:
-        ...
-        seccompProfile: unconfined
-  message: 'Container is explicitly disabling seccomp confinement. This runs the service
-    in an unrestricted state. Remove ''seccompProfile: unconfined'' to prevent this.'
-  metadata:
-    cwe:
-    - 'CWE-284: Improper Access Control'
-    references:
-    - https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp
-    - https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-    category: security
-    technology:
-    - kubernetes
-    owasp:
-    - A05:2017 - Broken Access Control
-    - A01:2021 - Broken Access Control
-    - A01:2025 - Broken Access Control
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Improper Authorization
-    source: https://semgrep.dev/r/yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
-    shortlink: https://sg.run/6rgY
-    semgrep.dev:
-      rule:
-        r_id: 10059
-        rv_id: 1263941
-        rule_id: zdUynw
-        version_id: w8TRoL3
-        url: https://semgrep.dev/playground/r/w8TRoL3/yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
-        origin: community
-  languages:
-  - yaml
-  severity: WARNING
-- id: yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
-  pattern: |
-    cluster:
-      ...
-      insecure-skip-tls-verify: true
-  message: 'Cluster is disabling TLS certificate verification when communicating with
-    the server. This makes your HTTPS connections insecure. Remove the ''insecure-skip-tls-verify:
-    true'' key to secure communication.'
-  metadata:
-    cwe:
-    - 'CWE-319: Cleartext Transmission of Sensitive Information'
-    references:
-    - https://kubernetes.io/docs/reference/config-api/client-authentication.v1beta1/#client-authentication-k8s-io-v1beta1-Cluster
-    category: security
-    technology:
-    - kubernetes
-    owasp:
-    - A03:2017 - Sensitive Data Exposure
-    - A02:2021 - Cryptographic Failures
-    - A04:2025 - Cryptographic Failures
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Mishandled Sensitive Information
-    source: https://semgrep.dev/r/yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
-    shortlink: https://sg.run/okyn
-    semgrep.dev:
-      rule:
-        r_id: 10116
-        rv_id: 1263943
-        rule_id: zdUyWx
-        version_id: O9Tpxbo
-        url: https://semgrep.dev/playground/r/O9Tpxbo/yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
-        origin: community
-  languages:
-  - yaml
-  severity: WARNING
-- id: yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
-  pattern: |
-    spec:
-      ...
-      insecureSkipTLSVerify: true
-  message: 'Service is disabling TLS certificate verification when communicating with
-    the server. This makes your HTTPS connections insecure. Remove the ''insecureSkipTLSVerify:
-    true'' key to secure communication.'
-  metadata:
-    cwe:
-    - 'CWE-319: Cleartext Transmission of Sensitive Information'
-    references:
-    - https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#apiservice-v1-apiregistration-k8s-io
-    category: security
-    technology:
-    - kubernetes
-    owasp:
-    - A03:2017 - Sensitive Data Exposure
-    - A02:2021 - Cryptographic Failures
-    - A04:2025 - Cryptographic Failures
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Mishandled Sensitive Information
-    source: https://semgrep.dev/r/yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
-    shortlink: https://sg.run/zk10
-    semgrep.dev:
-      rule:
-        r_id: 10117
-        rv_id: 1263944
-        rule_id: pKUGXr
-        version_id: e1TyjnR
-        url: https://semgrep.dev/playground/r/e1TyjnR/yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
-        origin: community
-  languages:
-  - yaml
-  severity: WARNING
 - id: ruby.rails.security.audit.sqli.ruby-pg-sqli.ruby-pg-sqli
   mode: taint
   pattern-propagators:
@@ -15727,6 +14644,150 @@ rules:
           ...
         }
   severity: ERROR
+- id: typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
+  message: Detected the use of `$TRUST`. This can introduce a Cross-Site-Scripting
+    (XSS) vulnerability if this comes from user-provided input. If you have to use
+    `$TRUST`, ensure it does not come from user-input or use the appropriate prevention
+    mechanism e.g. input validation or sanitization depending on the context.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    references:
+    - https://angular.io/api/platform-browser/DomSanitizer
+    - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    confidence: MEDIUM
+    category: security
+    technology:
+    - angular
+    - browser
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: LOW
+    impact: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
+    shortlink: https://sg.run/KWxP
+    semgrep.dev:
+      rule:
+        r_id: 9755
+        rv_id: 1263902
+        rule_id: oqUzgA
+        version_id: 5PTo1zk
+        url: https://semgrep.dev/playground/r/5PTo1zk/typescript.angular.security.audit.angular-domsanitizer.angular-bypasssecuritytrust
+        origin: community
+  languages:
+  - typescript
+  severity: WARNING
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          function ...({..., $X: string, ...}) { ... }
+      - pattern-inside: |
+          function ...(..., $X: string, ...) { ... }
+    - focus-metavariable: $X
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $X.$TRUST($Y)
+    - focus-metavariable: $Y
+    - pattern-not: |
+        $X.$TRUST(`...`)
+    - pattern-not: |
+        $X.$TRUST("...")
+    - metavariable-regex:
+        metavariable: $TRUST
+        regex: (bypassSecurityTrustHtml|bypassSecurityTrustStyle|bypassSecurityTrustScript|bypassSecurityTrustUrl|bypassSecurityTrustResourceUrl)
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import * as $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          $S = require("underscore.string")
+          ...
+    - pattern-either:
+      - pattern: $S.escapeHTML(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "dompurify"
+          ...
+      - pattern-inside: |
+          import { ..., $S,... } from "dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("dompurify")
+          ...
+      - pattern-inside: |
+          import $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("isomorphic-dompurify")
+          ...
+    - pattern-either:
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S(...)
+            ...
+        - pattern: $VALUE.sanitize(...)
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S.sanitize
+            ...
+        - pattern: $S(...)
+      - pattern: $S.sanitize(...)
+      - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'xss';
+          ...
+      - pattern-inside: |
+          import * as $S from 'xss';
+          ...
+      - pattern-inside: |
+          $S = require("xss")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'sanitize-html';
+          ...
+      - pattern-inside: |
+          import * as $S from "sanitize-html";
+          ...
+      - pattern-inside: |
+          $S = require("sanitize-html")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern: sanitizer.sanitize(...)
+    - pattern-not: sanitizer.sanitize(SecurityContext.NONE, ...);
 - id: java.lang.security.audit.crypto.gcm-nonce-reuse.gcm-nonce-reuse
   metadata:
     functional-categories:
@@ -17407,6 +16468,429 @@ rules:
         metavariable: $HTMLSTR
         language: generic
         pattern: <$TAG ...
+- id: go.lang.security.injection.tainted-url-host.tainted-url-host
+  languages:
+  - go
+  message: A request was found to be crafted from user-input `$REQUEST`. This can
+    lead to Server-Side Request Forgery (SSRF) vulnerabilities, potentially exposing
+    sensitive data. It is recommend where possible to not allow user-input to craft
+    the base request, but to be treated as part of the path or query parameter. When
+    user-input is necessary to craft the request, it is recommended to follow OWASP
+    best practices to prevent abuse, including using an allowlist.
+  options:
+    interfile: true
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    owasp:
+    - A10:2021 - Server-Side Request Forgery (SSRF)
+    - A01:2025 - Broken Access Control
+    references:
+    - https://goteleport.com/blog/ssrf-attacks/
+    category: security
+    technology:
+    - go
+    confidence: HIGH
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    impact: MEDIUM
+    likelihood: MEDIUM
+    interfile: true
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Server-Side Request Forgery (SSRF)
+    source: https://semgrep.dev/r/go.lang.security.injection.tainted-url-host.tainted-url-host
+    shortlink: https://sg.run/5DjW
+    semgrep.dev:
+      rule:
+        r_id: 14391
+        rv_id: 1262970
+        rule_id: AbUQLr
+        version_id: yeTxpOj
+        url: https://semgrep.dev/playground/r/yeTxpOj/go.lang.security.injection.tainted-url-host.tainted-url-host
+        origin: community
+  mode: taint
+  pattern-sources:
+  - label: INPUT
+    patterns:
+    - pattern-either:
+      - pattern: |
+          ($REQUEST : *http.Request).$ANYTHING
+      - pattern: |
+          ($REQUEST : http.Request).$ANYTHING
+    - metavariable-regex:
+        metavariable: $ANYTHING
+        regex: ^(BasicAuth|Body|Cookie|Cookies|Form|FormValue|GetBody|Host|MultipartReader|ParseForm|ParseMultipartForm|PostForm|PostFormValue|Referer|RequestURI|Trailer|TransferEncoding|UserAgent|URL)$
+  - label: CLEAN
+    requires: INPUT
+    patterns:
+    - pattern-either:
+      - pattern: |
+          "$URLSTR" + $INPUT
+      - patterns:
+        - pattern-either:
+          - pattern: fmt.Fprintf($F, "$URLSTR", $INPUT, ...)
+          - pattern: fmt.Sprintf("$URLSTR", $INPUT, ...)
+          - pattern: fmt.Printf("$URLSTR", $INPUT, ...)
+    - metavariable-regex:
+        metavariable: $URLSTR
+        regex: .*//[a-zA-Z0-10]+\..*
+  pattern-sinks:
+  - requires: INPUT and not CLEAN
+    patterns:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - patterns:
+            - pattern-inside: |
+                $CLIENT := &http.Client{...}
+                ...
+            - pattern: $CLIENT.$METHOD($URL, ...)
+          - pattern: http.$METHOD($URL, ...)
+        - metavariable-regex:
+            metavariable: $METHOD
+            regex: ^(Get|Head|Post|PostForm)$
+      - patterns:
+        - pattern: |
+            http.NewRequest("$METHOD", $URL, ...)
+        - metavariable-regex:
+            metavariable: $METHOD
+            regex: ^(GET|HEAD|POST|POSTFORM)$
+    - focus-metavariable: $URL
+  severity: WARNING
+- id: go.lang.security.injection.raw-html-format.raw-html-format
+  languages:
+  - go
+  severity: WARNING
+  message: Detected user input flowing into a manually constructed HTML string. You
+    may be accidentally bypassing secure methods of rendering HTML by manually constructing
+    HTML and this could create a cross-site scripting vulnerability, which could let
+    attackers steal sensitive user data. Use the `html/template` package which will
+    safely render HTML instead, or inspect that the HTML is rendered safely.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    category: security
+    technology:
+    - go
+    references:
+    - https://blogtitle.github.io/robn-go-security-pearls-cross-site-scripting-xss/
+    confidence: MEDIUM
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: HIGH
+    impact: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/go.lang.security.injection.raw-html-format.raw-html-format
+    shortlink: https://sg.run/3r1G
+    semgrep.dev:
+      rule:
+        r_id: 14443
+        rv_id: 1262968
+        rule_id: PeUonQ
+        version_id: 1QTyp2p
+        url: https://semgrep.dev/playground/r/1QTyp2p/go.lang.security.injection.raw-html-format.raw-html-format
+        origin: community
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: |
+          ($REQUEST : *http.Request).$ANYTHING
+      - pattern: |
+          ($REQUEST : http.Request).$ANYTHING
+    - metavariable-regex:
+        metavariable: $ANYTHING
+        regex: ^(BasicAuth|Body|Cookie|Cookies|Form|FormValue|GetBody|Host|MultipartReader|ParseForm|ParseMultipartForm|PostForm|PostFormValue|Referer|RequestURI|Trailer|TransferEncoding|UserAgent|URL)$
+  pattern-sanitizers:
+  - pattern: html.EscapeString(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: fmt.Printf("$HTMLSTR", ...)
+      - pattern: fmt.Sprintf("$HTMLSTR", ...)
+      - pattern: fmt.Fprintf($W, "$HTMLSTR", ...)
+      - pattern: '"$HTMLSTR" + ...'
+    - metavariable-pattern:
+        metavariable: $HTMLSTR
+        language: generic
+        pattern: <$TAG ...
+- id: ruby.rails.security.injection.raw-html-format.raw-html-format
+  languages:
+  - ruby
+  severity: WARNING
+  message: Detected user input flowing into a manually constructed HTML string. You
+    may be accidentally bypassing secure methods of rendering HTML by manually constructing
+    HTML and this could create a cross-site scripting vulnerability, which could let
+    attackers steal sensitive user data. Use the `render template` and make template
+    files which will safely render HTML instead, or inspect that the HTML is absolutely
+    rendered safely with a function like `sanitize`.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    category: security
+    technology:
+    - rails
+    references:
+    - https://www.netsparker.com/blog/web-security/preventing-xss-ruby-on-rails-web-applications/
+    - https://api.rubyonrails.org/classes/ActionView/Helpers/SanitizeHelper.html
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: HIGH
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/ruby.rails.security.injection.raw-html-format.raw-html-format
+    shortlink: https://sg.run/b2JQ
+    semgrep.dev:
+      rule:
+        r_id: 14470
+        rv_id: 1409408
+        rule_id: kxUwZX
+        version_id: qkTvgYY
+        url: https://semgrep.dev/playground/r/qkTvgYY/ruby.rails.security.injection.raw-html-format.raw-html-format
+        origin: community
+  mode: taint
+  pattern-sanitizers:
+  - pattern-either:
+    - pattern: sanitize(...)
+    - pattern: strip_tags(...)
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: params
+      - pattern: request
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - patterns:
+        - pattern: |
+            $HTMLSTR
+        - pattern-regex: <\w+.*
+      - patterns:
+        - pattern-either:
+          - pattern: Kernel::sprintf("$HTMLSTR", ...)
+          - pattern: |
+              "$HTMLSTR" + $EXPR
+          - pattern: |
+              "$HTMLSTR" % $EXPR
+        - metavariable-pattern:
+            metavariable: $HTMLSTR
+            language: generic
+            pattern: <$TAG ...
+- id: bash.curl.security.curl-eval.curl-eval
+  severity: WARNING
+  languages:
+  - bash
+  message: Data is being eval'd from a `curl` command. An attacker with control of
+    the server in the `curl` command could inject malicious code into the `eval`,
+    resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If
+    you must do this, consider checking the SHA sum of the content returned by the
+    server to verify its integrity.
+  metadata:
+    owasp:
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    cwe:
+    - 'CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code
+      (''Eval Injection'')'
+    category: security
+    technology:
+    - bash
+    - curl
+    confidence: MEDIUM
+    references:
+    - https://owasp.org/Top10/A03_2021-Injection
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Code Injection
+    source: https://semgrep.dev/r/bash.curl.security.curl-eval.curl-eval
+    shortlink: https://sg.run/0yqJ
+    semgrep.dev:
+      rule:
+        r_id: 14554
+        rv_id: 1262601
+        rule_id: KxU7Rq
+        version_id: JdTzxL2
+        url: https://semgrep.dev/playground/r/JdTzxL2/bash.curl.security.curl-eval.curl-eval
+        origin: community
+  mode: taint
+  pattern-sources:
+  - pattern: |
+      $(curl ...)
+  - pattern: |
+      `curl ...`
+  pattern-sinks:
+  - pattern: eval ...
+- id: python.flask.security.injection.tainted-url-host.tainted-url-host
+  languages:
+  - python
+  message: User data flows into the host portion of this manually-constructed URL.
+    This could allow an attacker to send data to their own server, potentially exposing
+    sensitive data such as cookies or authorization information sent with this request.
+    They could also probe internal servers or other resources that the server running
+    this code can access. (This is called server-side request forgery, or SSRF.) Do
+    not allow arbitrary hosts. Instead, create an allowlist for approved hosts, or
+    hardcode the correct host.
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    owasp:
+    - A10:2021 - Server-Side Request Forgery (SSRF)
+    - A01:2025 - Broken Access Control
+    references:
+    - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+    category: security
+    technology:
+    - flask
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    impact: MEDIUM
+    likelihood: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Server-Side Request Forgery (SSRF)
+    source: https://semgrep.dev/r/python.flask.security.injection.tainted-url-host.tainted-url-host
+    shortlink: https://sg.run/RXpK
+    semgrep.dev:
+      rule:
+        r_id: 14649
+        rv_id: 1409403
+        rule_id: ReU3Wb
+        version_id: BjTy42w
+        url: https://semgrep.dev/playground/r/BjTy42w/python.flask.security.injection.tainted-url-host.tainted-url-host
+        origin: community
+  mode: taint
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - patterns:
+        - pattern: '"$URLSTR" % ...'
+        - metavariable-pattern:
+            metavariable: $URLSTR
+            language: generic
+            patterns:
+            - pattern-either:
+              - pattern: $SCHEME://%s
+              - pattern: $SCHEME://%r
+      - patterns:
+        - pattern: '"$URLSTR".format(...)'
+        - metavariable-pattern:
+            metavariable: $URLSTR
+            language: generic
+            pattern: $SCHEME:// { ... }
+      - patterns:
+        - pattern: '"$URLSTR" + ...'
+        - metavariable-regex:
+            metavariable: $URLSTR
+            regex: .*://$
+      - patterns:
+        - pattern: f"$URLSTR{...}..."
+        - metavariable-regex:
+            metavariable: $URLSTR
+            regex: .*://$
+      - patterns:
+        - pattern-inside: |
+            $URL = "$URLSTR"
+            ...
+        - pattern: $URL += ...
+        - metavariable-regex:
+            metavariable: $URLSTR
+            regex: .*://$
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: flask.request.$ANYTHING
+      - patterns:
+        - pattern-inside: |
+            @$APP.route(...)
+            def $FUNC(..., $ROUTEVAR, ...):
+              ...
+        - pattern: $ROUTEVAR
+  severity: WARNING
+- id: go.lang.security.audit.md5-used-as-password.md5-used-as-password
+  languages:
+  - go
+  severity: WARNING
+  message: It looks like MD5 is used as a password hash. MD5 is not considered a secure
+    password hash because it can be cracked by an attacker in a short amount of time.
+    Use a suitable password hashing function such as bcrypt. You can use the `golang.org/x/crypto/bcrypt`
+    package.
+  options:
+    interfile: true
+  metadata:
+    category: security
+    technology:
+    - md5
+    references:
+    - https://tools.ietf.org/id/draft-lvelvindron-tls-md5-sha1-deprecate-01.html
+    - https://security.stackexchange.com/questions/211/how-to-securely-hash-passwords
+    - https://github.com/returntocorp/semgrep-rules/issues/1609
+    - https://pkg.go.dev/golang.org/x/crypto/bcrypt
+    owasp:
+    - A03:2017 - Sensitive Data Exposure
+    - A02:2021 - Cryptographic Failures
+    - A04:2025 - Cryptographic Failures
+    cwe:
+    - 'CWE-327: Use of a Broken or Risky Cryptographic Algorithm'
+    confidence: MEDIUM
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    interfile: true
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cryptographic Issues
+    source: https://semgrep.dev/r/go.lang.security.audit.md5-used-as-password.md5-used-as-password
+    shortlink: https://sg.run/4eOE
+    semgrep.dev:
+      rule:
+        r_id: 14688
+        rv_id: 1262938
+        rule_id: 4bU1Wj
+        version_id: nWT2L9r
+        url: https://semgrep.dev/playground/r/nWT2L9r/go.lang.security.audit.md5-used-as-password.md5-used-as-password
+        origin: community
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: md5.New
+      - pattern: md5.Sum
+  pattern-sinks:
+  - patterns:
+    - pattern: $FUNCTION(...)
+    - metavariable-regex:
+        metavariable: $FUNCTION
+        regex: (?i)(.*password.*)
 - id: go.lang.security.injection.tainted-sql-string.tainted-sql-string
   languages:
   - go
@@ -40043,426 +39527,942 @@ rules:
         var $VAR interface{}
         ...
         xml.Unmarshal($DATA, &$VAR)
-- id: go.lang.security.injection.tainted-url-host.tainted-url-host
-  languages:
-  - go
-  message: A request was found to be crafted from user-input `$REQUEST`. This can
-    lead to Server-Side Request Forgery (SSRF) vulnerabilities, potentially exposing
-    sensitive data. It is recommend where possible to not allow user-input to craft
-    the base request, but to be treated as part of the path or query parameter. When
-    user-input is necessary to craft the request, it is recommended to follow OWASP
-    best practices to prevent abuse, including using an allowlist.
-  options:
-    interfile: true
+- id: typescript.react.security.react-insecure-request.react-insecure-request
+  message: Unencrypted request over HTTP detected.
   metadata:
-    cwe:
-    - 'CWE-918: Server-Side Request Forgery (SSRF)'
-    owasp:
-    - A10:2021 - Server-Side Request Forgery (SSRF)
-    - A01:2025 - Broken Access Control
-    references:
-    - https://goteleport.com/blog/ssrf-attacks/
-    category: security
-    technology:
-    - go
-    confidence: HIGH
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    impact: MEDIUM
-    likelihood: MEDIUM
-    interfile: true
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Server-Side Request Forgery (SSRF)
-    source: https://semgrep.dev/r/go.lang.security.injection.tainted-url-host.tainted-url-host
-    shortlink: https://sg.run/5DjW
-    semgrep.dev:
-      rule:
-        r_id: 14391
-        rv_id: 1262970
-        rule_id: AbUQLr
-        version_id: yeTxpOj
-        url: https://semgrep.dev/playground/r/yeTxpOj/go.lang.security.injection.tainted-url-host.tainted-url-host
-        origin: community
-  mode: taint
-  pattern-sources:
-  - label: INPUT
-    patterns:
-    - pattern-either:
-      - pattern: |
-          ($REQUEST : *http.Request).$ANYTHING
-      - pattern: |
-          ($REQUEST : http.Request).$ANYTHING
-    - metavariable-regex:
-        metavariable: $ANYTHING
-        regex: ^(BasicAuth|Body|Cookie|Cookies|Form|FormValue|GetBody|Host|MultipartReader|ParseForm|ParseMultipartForm|PostForm|PostFormValue|Referer|RequestURI|Trailer|TransferEncoding|UserAgent|URL)$
-  - label: CLEAN
-    requires: INPUT
-    patterns:
-    - pattern-either:
-      - pattern: |
-          "$URLSTR" + $INPUT
-      - patterns:
-        - pattern-either:
-          - pattern: fmt.Fprintf($F, "$URLSTR", $INPUT, ...)
-          - pattern: fmt.Sprintf("$URLSTR", $INPUT, ...)
-          - pattern: fmt.Printf("$URLSTR", $INPUT, ...)
-    - metavariable-regex:
-        metavariable: $URLSTR
-        regex: .*//[a-zA-Z0-10]+\..*
-  pattern-sinks:
-  - requires: INPUT and not CLEAN
-    patterns:
-    - pattern-either:
-      - patterns:
-        - pattern-either:
-          - patterns:
-            - pattern-inside: |
-                $CLIENT := &http.Client{...}
-                ...
-            - pattern: $CLIENT.$METHOD($URL, ...)
-          - pattern: http.$METHOD($URL, ...)
-        - metavariable-regex:
-            metavariable: $METHOD
-            regex: ^(Get|Head|Post|PostForm)$
-      - patterns:
-        - pattern: |
-            http.NewRequest("$METHOD", $URL, ...)
-        - metavariable-regex:
-            metavariable: $METHOD
-            regex: ^(GET|HEAD|POST|POSTFORM)$
-    - focus-metavariable: $URL
-  severity: WARNING
-- id: go.lang.security.injection.raw-html-format.raw-html-format
-  languages:
-  - go
-  severity: WARNING
-  message: Detected user input flowing into a manually constructed HTML string. You
-    may be accidentally bypassing secure methods of rendering HTML by manually constructing
-    HTML and this could create a cross-site scripting vulnerability, which could let
-    attackers steal sensitive user data. Use the `html/template` package which will
-    safely render HTML instead, or inspect that the HTML is rendered safely.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    category: security
-    technology:
-    - go
-    references:
-    - https://blogtitle.github.io/robn-go-security-pearls-cross-site-scripting-xss/
-    confidence: MEDIUM
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: HIGH
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/go.lang.security.injection.raw-html-format.raw-html-format
-    shortlink: https://sg.run/3r1G
-    semgrep.dev:
-      rule:
-        r_id: 14443
-        rv_id: 1262968
-        rule_id: PeUonQ
-        version_id: 1QTyp2p
-        url: https://semgrep.dev/playground/r/1QTyp2p/go.lang.security.injection.raw-html-format.raw-html-format
-        origin: community
-  mode: taint
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern: |
-          ($REQUEST : *http.Request).$ANYTHING
-      - pattern: |
-          ($REQUEST : http.Request).$ANYTHING
-    - metavariable-regex:
-        metavariable: $ANYTHING
-        regex: ^(BasicAuth|Body|Cookie|Cookies|Form|FormValue|GetBody|Host|MultipartReader|ParseForm|ParseMultipartForm|PostForm|PostFormValue|Referer|RequestURI|Trailer|TransferEncoding|UserAgent|URL)$
-  pattern-sanitizers:
-  - pattern: html.EscapeString(...)
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - pattern: fmt.Printf("$HTMLSTR", ...)
-      - pattern: fmt.Sprintf("$HTMLSTR", ...)
-      - pattern: fmt.Fprintf($W, "$HTMLSTR", ...)
-      - pattern: '"$HTMLSTR" + ...'
-    - metavariable-pattern:
-        metavariable: $HTMLSTR
-        language: generic
-        pattern: <$TAG ...
-- id: ruby.rails.security.injection.raw-html-format.raw-html-format
-  languages:
-  - ruby
-  severity: WARNING
-  message: Detected user input flowing into a manually constructed HTML string. You
-    may be accidentally bypassing secure methods of rendering HTML by manually constructing
-    HTML and this could create a cross-site scripting vulnerability, which could let
-    attackers steal sensitive user data. Use the `render template` and make template
-    files which will safely render HTML instead, or inspect that the HTML is absolutely
-    rendered safely with a function like `sanitize`.
-  metadata:
-    cwe:
-    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
-      Scripting'')'
-    owasp:
-    - A07:2017 - Cross-Site Scripting (XSS)
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    category: security
-    technology:
-    - rails
-    references:
-    - https://www.netsparker.com/blog/web-security/preventing-xss-ruby-on-rails-web-applications/
-    - https://api.rubyonrails.org/classes/ActionView/Helpers/SanitizeHelper.html
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    likelihood: HIGH
-    impact: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Cross-Site-Scripting (XSS)
-    source: https://semgrep.dev/r/ruby.rails.security.injection.raw-html-format.raw-html-format
-    shortlink: https://sg.run/b2JQ
-    semgrep.dev:
-      rule:
-        r_id: 14470
-        rv_id: 1409408
-        rule_id: kxUwZX
-        version_id: qkTvgYY
-        url: https://semgrep.dev/playground/r/qkTvgYY/ruby.rails.security.injection.raw-html-format.raw-html-format
-        origin: community
-  mode: taint
-  pattern-sanitizers:
-  - pattern-either:
-    - pattern: sanitize(...)
-    - pattern: strip_tags(...)
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern: params
-      - pattern: request
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - patterns:
-        - pattern: |
-            $HTMLSTR
-        - pattern-regex: <\w+.*
-      - patterns:
-        - pattern-either:
-          - pattern: Kernel::sprintf("$HTMLSTR", ...)
-          - pattern: |
-              "$HTMLSTR" + $EXPR
-          - pattern: |
-              "$HTMLSTR" % $EXPR
-        - metavariable-pattern:
-            metavariable: $HTMLSTR
-            language: generic
-            pattern: <$TAG ...
-- id: bash.curl.security.curl-eval.curl-eval
-  severity: WARNING
-  languages:
-  - bash
-  message: Data is being eval'd from a `curl` command. An attacker with control of
-    the server in the `curl` command could inject malicious code into the `eval`,
-    resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If
-    you must do this, consider checking the SHA sum of the content returned by the
-    server to verify its integrity.
-  metadata:
-    owasp:
-    - A03:2021 - Injection
-    - A05:2025 - Injection
-    cwe:
-    - 'CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code
-      (''Eval Injection'')'
-    category: security
-    technology:
-    - bash
-    - curl
-    confidence: MEDIUM
-    references:
-    - https://owasp.org/Top10/A03_2021-Injection
-    subcategory:
-    - vuln
-    likelihood: MEDIUM
-    impact: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Code Injection
-    source: https://semgrep.dev/r/bash.curl.security.curl-eval.curl-eval
-    shortlink: https://sg.run/0yqJ
-    semgrep.dev:
-      rule:
-        r_id: 14554
-        rv_id: 1262601
-        rule_id: KxU7Rq
-        version_id: JdTzxL2
-        url: https://semgrep.dev/playground/r/JdTzxL2/bash.curl.security.curl-eval.curl-eval
-        origin: community
-  mode: taint
-  pattern-sources:
-  - pattern: |
-      $(curl ...)
-  - pattern: |
-      `curl ...`
-  pattern-sinks:
-  - pattern: eval ...
-- id: python.flask.security.injection.tainted-url-host.tainted-url-host
-  languages:
-  - python
-  message: User data flows into the host portion of this manually-constructed URL.
-    This could allow an attacker to send data to their own server, potentially exposing
-    sensitive data such as cookies or authorization information sent with this request.
-    They could also probe internal servers or other resources that the server running
-    this code can access. (This is called server-side request forgery, or SSRF.) Do
-    not allow arbitrary hosts. Instead, create an allowlist for approved hosts, or
-    hardcode the correct host.
-  metadata:
-    cwe:
-    - 'CWE-918: Server-Side Request Forgery (SSRF)'
-    owasp:
-    - A10:2021 - Server-Side Request Forgery (SSRF)
-    - A01:2025 - Broken Access Control
-    references:
-    - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
-    category: security
-    technology:
-    - flask
-    cwe2022-top25: true
-    cwe2021-top25: true
-    subcategory:
-    - vuln
-    impact: MEDIUM
-    likelihood: MEDIUM
-    confidence: MEDIUM
-    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
-    vulnerability_class:
-    - Server-Side Request Forgery (SSRF)
-    source: https://semgrep.dev/r/python.flask.security.injection.tainted-url-host.tainted-url-host
-    shortlink: https://sg.run/RXpK
-    semgrep.dev:
-      rule:
-        r_id: 14649
-        rv_id: 1409403
-        rule_id: ReU3Wb
-        version_id: BjTy42w
-        url: https://semgrep.dev/playground/r/BjTy42w/python.flask.security.injection.tainted-url-host.tainted-url-host
-        origin: community
-  mode: taint
-  pattern-sinks:
-  - patterns:
-    - pattern-either:
-      - patterns:
-        - pattern: '"$URLSTR" % ...'
-        - metavariable-pattern:
-            metavariable: $URLSTR
-            language: generic
-            patterns:
-            - pattern-either:
-              - pattern: $SCHEME://%s
-              - pattern: $SCHEME://%r
-      - patterns:
-        - pattern: '"$URLSTR".format(...)'
-        - metavariable-pattern:
-            metavariable: $URLSTR
-            language: generic
-            pattern: $SCHEME:// { ... }
-      - patterns:
-        - pattern: '"$URLSTR" + ...'
-        - metavariable-regex:
-            metavariable: $URLSTR
-            regex: .*://$
-      - patterns:
-        - pattern: f"$URLSTR{...}..."
-        - metavariable-regex:
-            metavariable: $URLSTR
-            regex: .*://$
-      - patterns:
-        - pattern-inside: |
-            $URL = "$URLSTR"
-            ...
-        - pattern: $URL += ...
-        - metavariable-regex:
-            metavariable: $URLSTR
-            regex: .*://$
-  pattern-sources:
-  - patterns:
-    - pattern-either:
-      - pattern: flask.request.$ANYTHING
-      - patterns:
-        - pattern-inside: |
-            @$APP.route(...)
-            def $FUNC(..., $ROUTEVAR, ...):
-              ...
-        - pattern: $ROUTEVAR
-  severity: WARNING
-- id: go.lang.security.audit.md5-used-as-password.md5-used-as-password
-  languages:
-  - go
-  severity: WARNING
-  message: It looks like MD5 is used as a password hash. MD5 is not considered a secure
-    password hash because it can be cracked by an attacker in a short amount of time.
-    Use a suitable password hashing function such as bcrypt. You can use the `golang.org/x/crypto/bcrypt`
-    package.
-  options:
-    interfile: true
-  metadata:
-    category: security
-    technology:
-    - md5
-    references:
-    - https://tools.ietf.org/id/draft-lvelvindron-tls-md5-sha1-deprecate-01.html
-    - https://security.stackexchange.com/questions/211/how-to-securely-hash-passwords
-    - https://github.com/returntocorp/semgrep-rules/issues/1609
-    - https://pkg.go.dev/golang.org/x/crypto/bcrypt
+    vulnerability: Insecure Transport
     owasp:
     - A03:2017 - Sensitive Data Exposure
     - A02:2021 - Cryptographic Failures
     - A04:2025 - Cryptographic Failures
     cwe:
-    - 'CWE-327: Use of a Broken or Risky Cryptographic Algorithm'
+    - 'CWE-319: Cleartext Transmission of Sensitive Information'
+    references:
+    - https://www.npmjs.com/package/axios
+    category: security
+    technology:
+    - react
+    subcategory:
+    - vuln
+    likelihood: LOW
+    impact: MEDIUM
     confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Mishandled Sensitive Information
+    source: https://semgrep.dev/r/typescript.react.security.react-insecure-request.react-insecure-request
+    shortlink: https://sg.run/1n0b
+    semgrep.dev:
+      rule:
+        r_id: 9766
+        rv_id: 1263918
+        rule_id: NbUA3O
+        version_id: A8Tgd2p
+        url: https://semgrep.dev/playground/r/A8Tgd2p/typescript.react.security.react-insecure-request.react-insecure-request
+        origin: community
+  languages:
+  - typescript
+  - javascript
+  severity: ERROR
+  patterns:
+  - pattern-either:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: |
+            import $AXIOS from 'axios';
+            ...
+            $AXIOS.$METHOD(...)
+        - pattern-inside: |
+            $AXIOS = require('axios');
+            ...
+            $AXIOS.$METHOD(...)
+      - pattern: $AXIOS.$VERB("$URL",...)
+      - metavariable-regex:
+          metavariable: $VERB
+          regex: ^(get|post|delete|head|patch|put|options)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: |
+            import $AXIOS from 'axios';
+            ...
+            $AXIOS(...)
+        - pattern-inside: |
+            $AXIOS = require('axios');
+            ...
+            $AXIOS(...)
+      - pattern-either:
+        - pattern: '$AXIOS({url: "$URL"}, ...)'
+        - pattern: |
+            $OPTS = {url: "$URL"}
+            ...
+            $AXIOS($OPTS, ...)
+    - pattern: fetch("$URL", ...)
+  - metavariable-regex:
+      metavariable: $URL
+      regex: ^([Hh][Tt][Tt][Pp]:\/\/(?!localhost).*)
+- id: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
+  message: Detection of dangerouslySetInnerHTML from non-constant definition. This
+    can inadvertently expose users to cross-site scripting (XSS) attacks if this comes
+    from user-provided input. If you have to use dangerouslySetInnerHTML, consider
+    using a sanitization library such as DOMPurify to sanitize your HTML.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    references:
+    - https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html
+    category: security
+    confidence: MEDIUM
+    technology:
+    - react
+    cwe2022-top25: true
+    cwe2021-top25: true
     subcategory:
     - vuln
     likelihood: MEDIUM
     impact: MEDIUM
-    interfile: true
     license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
     vulnerability_class:
-    - Cryptographic Issues
-    source: https://semgrep.dev/r/go.lang.security.audit.md5-used-as-password.md5-used-as-password
-    shortlink: https://sg.run/4eOE
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
+    shortlink: https://sg.run/rAx6
     semgrep.dev:
       rule:
-        r_id: 14688
-        rv_id: 1262938
-        rule_id: 4bU1Wj
-        version_id: nWT2L9r
-        url: https://semgrep.dev/playground/r/nWT2L9r/go.lang.security.audit.md5-used-as-password.md5-used-as-password
+        r_id: 9769
+        rv_id: 1263912
+        rule_id: x8UWvK
+        version_id: l4TJR0v
+        url: https://semgrep.dev/playground/r/l4TJR0v/typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
         origin: community
+  languages:
+  - typescript
+  - javascript
+  severity: WARNING
   mode: taint
   pattern-sources:
   - patterns:
     - pattern-either:
-      - pattern: md5.New
-      - pattern: md5.Sum
+      - pattern-inside: |
+          function ...({..., $X, ...}) { ... }
+      - pattern-inside: |
+          function ...(..., $X, ...) { ... }
+    - focus-metavariable: $X
+    - pattern-not-inside: |
+        $F. ... .$SANITIZEUNC(...)
   pattern-sinks:
   - patterns:
-    - pattern: $FUNCTION(...)
+    - focus-metavariable: $X
+    - pattern-either:
+      - pattern: |
+          {...,dangerouslySetInnerHTML: {__html: $X},...}
+      - pattern: |
+          <$Y ... dangerouslySetInnerHTML={{__html: $X}} />
+    - pattern-not: |
+        <$Y ... dangerouslySetInnerHTML={{__html: "..."}} />
+    - pattern-not: |
+        {...,dangerouslySetInnerHTML:{__html: "..."},...}
+    - metavariable-pattern:
+        patterns:
+        - pattern-not: |
+            {...}
+        metavariable: $X
+    - pattern-not: |
+        <... {__html: "..."} ...>
+    - pattern-not: |
+        <... {__html: `...`} ...>
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import * as $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          $S = require("underscore.string")
+          ...
+    - pattern-either:
+      - pattern: $S.escapeHTML(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "dompurify"
+          ...
+      - pattern-inside: |
+          import { ..., $S,... } from "dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("dompurify")
+          ...
+      - pattern-inside: |
+          import $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("isomorphic-dompurify")
+          ...
+    - pattern-either:
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S(...)
+            ...
+        - pattern: $VALUE.sanitize(...)
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S.sanitize
+            ...
+        - pattern: $S(...)
+      - pattern: $S.sanitize(...)
+      - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'xss';
+          ...
+      - pattern-inside: |
+          import * as $S from 'xss';
+          ...
+      - pattern-inside: |
+          $S = require("xss")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'sanitize-html';
+          ...
+      - pattern-inside: |
+          import * as $S from "sanitize-html";
+          ...
+      - pattern-inside: |
+          $S = require("sanitize-html")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          $S = new Remarkable()
+          ...
+    - pattern: $S.render(...)
+- id: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
+  message: Detection of $HTML from non-constant definition. This can inadvertently
+    expose users to cross-site scripting (XSS) attacks if this comes from user-provided
+    input. If you have to use $HTML, consider using a sanitization library such as
+    DOMPurify to sanitize your HTML.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    references:
+    - https://developer.mozilla.org/en-US/docs/Web/API/Document/writeln
+    - https://developer.mozilla.org/en-US/docs/Web/API/Document/write
+    - https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+    category: security
+    confidence: MEDIUM
+    technology:
+    - react
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: HIGH
+    impact: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
+    shortlink: https://sg.run/E5x8
+    semgrep.dev:
+      rule:
+        r_id: 9781
+        rv_id: 1263916
+        rule_id: QrU68w
+        version_id: GxTkeRl
+        url: https://semgrep.dev/playground/r/GxTkeRl/typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
+        origin: community
+  languages:
+  - typescript
+  - javascript
+  severity: WARNING
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          function ...({..., $X, ...}) { ... }
+      - pattern-inside: |
+          function ...(..., $X, ...) { ... }
+    - focus-metavariable: $X
+    - pattern-either:
+      - pattern: $X.$Y
+      - pattern: $X[...]
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: "this.window.document. ... .$HTML('...',$SINK) \n"
+      - pattern: "window.document. ... .$HTML('...',$SINK) \n"
+      - pattern: "document.$HTML($SINK)  \n"
     - metavariable-regex:
-        metavariable: $FUNCTION
-        regex: (?i)(.*password.*)
+        metavariable: $HTML
+        regex: (writeln|write)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-either:
+      - pattern: "$PROP. ... .$HTML('...',$SINK) \n"
+    - metavariable-regex:
+        metavariable: $HTML
+        regex: (insertAdjacentHTML)
+    - focus-metavariable: $SINK
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import * as $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          $S = require("underscore.string")
+          ...
+    - pattern-either:
+      - pattern: $S.escapeHTML(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "dompurify"
+          ...
+      - pattern-inside: |
+          import { ..., $S,... } from "dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("dompurify")
+          ...
+      - pattern-inside: |
+          import $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("isomorphic-dompurify")
+          ...
+    - pattern-either:
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S(...)
+            ...
+        - pattern: $VALUE.sanitize(...)
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S.sanitize
+            ...
+        - pattern: $S(...)
+      - pattern: $S.sanitize(...)
+      - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'xss';
+          ...
+      - pattern-inside: |
+          import * as $S from 'xss';
+          ...
+      - pattern-inside: |
+          $S = require("xss")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'sanitize-html';
+          ...
+      - pattern-inside: |
+          import * as $S from "sanitize-html";
+          ...
+      - pattern-inside: |
+          $S = require("sanitize-html")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          $S = new Remarkable()
+          ...
+    - pattern: $S.render(...)
+- id: typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
+  message: Detection of $HTML from non-constant definition. This can inadvertently
+    expose users to cross-site scripting (XSS) attacks if this comes from user-provided
+    input. If you have to use $HTML, consider using a sanitization library such as
+    DOMPurify to sanitize your HTML.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+      Scripting'')'
+    owasp:
+    - A07:2017 - Cross-Site Scripting (XSS)
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    references:
+    - https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html
+    category: security
+    confidence: MEDIUM
+    technology:
+    - react
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Cross-Site-Scripting (XSS)
+    source: https://semgrep.dev/r/typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
+    shortlink: https://sg.run/70Zv
+    semgrep.dev:
+      rule:
+        r_id: 9782
+        rv_id: 1263917
+        rule_id: 3qUBl4
+        version_id: RGT0Lln
+        url: https://semgrep.dev/playground/r/RGT0Lln/typescript.react.security.audit.react-unsanitized-property.react-unsanitized-property
+        origin: community
+  languages:
+  - typescript
+  - javascript
+  severity: WARNING
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          function ...({..., $X, ...}) { ... }
+      - pattern-inside: |
+          function ...(..., $X, ...) { ... }
+    - focus-metavariable: $X
+    - pattern-either:
+      - pattern: $X.$Y
+      - pattern: $X[...]
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          $BODY = $REACT.useRef(...)
+          ...
+      - pattern-inside: |
+          $BODY = useRef(...)
+          ...
+      - pattern-inside: |
+          $BODY = findDOMNode(...)
+          ...
+      - pattern-inside: |
+          $BODY = createRef(...)
+          ...
+      - pattern-inside: |
+          $BODY = $REACT.findDOMNode(...)
+          ...
+      - pattern-inside: |
+          $BODY = $REACT.createRef(...)
+          ...
+    - pattern-either:
+      - pattern: "$BODY. ... .$HTML = $SINK \n"
+      - pattern: "$BODY.$HTML = $SINK  \n"
+    - metavariable-regex:
+        metavariable: $HTML
+        regex: (innerHTML|outerHTML)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-either:
+      - pattern: ReactDOM.findDOMNode(...).$HTML = $SINK
+    - metavariable-regex:
+        metavariable: $HTML
+        regex: (innerHTML|outerHTML)
+    - focus-metavariable: $SINK
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import * as $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          import $S from "underscore.string"
+          ...
+      - pattern-inside: |
+          $S = require("underscore.string")
+          ...
+    - pattern-either:
+      - pattern: $S.escapeHTML(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from "dompurify"
+          ...
+      - pattern-inside: |
+          import { ..., $S,... } from "dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("dompurify")
+          ...
+      - pattern-inside: |
+          import $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          import * as $S from "isomorphic-dompurify"
+          ...
+      - pattern-inside: |
+          $S = require("isomorphic-dompurify")
+          ...
+    - pattern-either:
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S(...)
+            ...
+        - pattern: $VALUE.sanitize(...)
+      - patterns:
+        - pattern-inside: |
+            $VALUE = $S.sanitize
+            ...
+        - pattern: $S(...)
+      - pattern: $S.sanitize(...)
+      - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'xss';
+          ...
+      - pattern-inside: |
+          import * as $S from 'xss';
+          ...
+      - pattern-inside: |
+          $S = require("xss")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          import $S from 'sanitize-html';
+          ...
+      - pattern-inside: |
+          import * as $S from "sanitize-html";
+          ...
+      - pattern-inside: |
+          $S = require("sanitize-html")
+          ...
+    - pattern: $S(...)
+  - patterns:
+    - pattern-either:
+      - pattern-inside: |
+          $S = new Remarkable()
+          ...
+    - pattern: $S.render(...)
+- id: ruby.lang.security.dangerous-exec.dangerous-exec
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern: |
+        def $F(...,$ARG,...)
+            ...
+        end
+    - focus-metavariable: $ARG
+  - pattern: params
+  - pattern: cookies
+  pattern-sinks:
+  - patterns:
+    - pattern: |
+        $EXEC(...)
+    - pattern-not: |
+        $EXEC("...","...","...",...)
+    - pattern-not: |
+        $EXEC(["...","...","...",...],...)
+    - pattern-not: |
+        $EXEC({...},"...","...","...",...)
+    - pattern-not: |
+        $EXEC({...},["...","...","...",...],...)
+    - metavariable-regex:
+        metavariable: $EXEC
+        regex: ^(system|exec|spawn|Process.exec|Process.spawn|Open3.capture2|Open3.capture2e|Open3.capture3|Open3.popen2|Open3.popen2e|Open3.popen3|IO.popen|Gem::Util.popen|PTY.spawn)$
+  message: Detected non-static command inside $EXEC. Audit the input to '$EXEC'. If
+    unverified user data can reach this call site, this is a code injection vulnerability.
+    A malicious actor can inject a malicious script to execute arbitrary code.
+  metadata:
+    source-rule-url: https://github.com/presidentbeef/brakeman/blob/main/lib/brakeman/checks/check_execute.rb
+    cwe:
+    - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+    owasp:
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    category: security
+    technology:
+    - ruby
+    - rails
+    references:
+    - https://guides.rubyonrails.org/security.html#command-line-injection
+    cwe2022-top25: true
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: HIGH
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Code Injection
+    source: https://semgrep.dev/r/ruby.lang.security.dangerous-exec.dangerous-exec
+    shortlink: https://sg.run/R8GY
+    semgrep.dev:
+      rule:
+        r_id: 9805
+        rv_id: 1409405
+        rule_id: WAUZOw
+        version_id: WrT7erb
+        url: https://semgrep.dev/playground/r/WrT7erb/ruby.lang.security.dangerous-exec.dangerous-exec
+        origin: community
+  severity: WARNING
+  languages:
+  - ruby
+- id: javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
+  message: Detected non-literal calls to Deno.run(). This could lead to a command
+    injection vulnerability.
+  metadata:
+    cwe:
+    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS
+      Command Injection'')'
+    owasp:
+    - A01:2017 - Injection
+    - A03:2021 - Injection
+    - A05:2025 - Injection
+    category: security
+    technology:
+    - deno
+    references:
+    - https://deno.land/manual/examples/subprocess#simple-example
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: LOW
+    impact: HIGH
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Command Injection
+    source: https://semgrep.dev/r/javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
+    shortlink: https://sg.run/Nrrn
+    semgrep.dev:
+      rule:
+        r_id: 9927
+        rv_id: 1409397
+        rule_id: x8UWWg
+        version_id: PkTe7AP
+        url: https://semgrep.dev/playground/r/PkTe7AP/javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run
+        origin: community
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-inside: function ... (..., $ARG,...) {...}
+    - focus-metavariable: $ARG
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: |
+          Deno.run({cmd: [$INPUT,...]},...)
+      - pattern: |
+          Deno.run({cmd: ["=~/(sh|bash|ksh|csh|tcsh|zsh)/","-c",$INPUT,...]},...)
+      - patterns:
+        - pattern: |
+            Deno.run({cmd: [$CMD,"-c",$INPUT,...]},...)
+        - pattern-inside: |
+            $CMD = "=~/(sh|bash|ksh|csh|tcsh|zsh)/"
+            ...
+    - focus-metavariable: $INPUT
+- id: yaml.docker-compose.security.privileged-service.privileged-service
+  patterns:
+  - pattern-inside: |
+      version: ...
+      ...
+      services:
+        ...
+        $SERVICE:
+          ...
+          privileged: $TRUE
+  - focus-metavariable: $TRUE
+  - metavariable-regex:
+      metavariable: $TRUE
+      regex: (true)
+  fix: |
+    false
+  message: Service '$SERVICE' is running in privileged mode. This grants the container
+    the equivalent of root capabilities on the host machine. This can lead to container
+    escapes, privilege escalation, and other security concerns. Remove the 'privileged'
+    key to disable this capability.
+  metadata:
+    cwe:
+    - 'CWE-250: Execution with Unnecessary Privileges'
+    owasp:
+    - A06:2017 - Security Misconfiguration
+    - A05:2021 - Security Misconfiguration
+    - A02:2025 - Security Misconfiguration
+    references:
+    - https://www.trendmicro.com/en_us/research/19/l/why-running-a-privileged-container-in-docker-is-a-bad-idea.html
+    - https://containerjournal.com/topics/container-security/why-running-a-privileged-container-is-not-a-good-idea/
+    category: security
+    technology:
+    - docker-compose
+    subcategory:
+    - vuln
+    likelihood: HIGH
+    impact: HIGH
+    confidence: HIGH
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Improper Authorization
+    source: https://semgrep.dev/r/yaml.docker-compose.security.privileged-service.privileged-service
+    shortlink: https://sg.run/AlX0
+    semgrep.dev:
+      rule:
+        r_id: 10006
+        rv_id: 1263922
+        rule_id: DbUW17
+        version_id: 0bTKzXZ
+        url: https://semgrep.dev/playground/r/0bTKzXZ/yaml.docker-compose.security.privileged-service.privileged-service
+        origin: community
+  languages:
+  - yaml
+  severity: WARNING
+- id: yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
+  patterns:
+  - pattern-inside: |
+      containers:
+        ...
+  - pattern-inside: |
+      - name: $CONTAINER
+        ...
+  - pattern: |
+      image: ...
+      ...
+  - pattern-inside: |
+      image: ...
+      ...
+      $SC:
+        ...
+  - metavariable-regex:
+      metavariable: $SC
+      regex: ^(securityContext)$
+  - pattern-not-inside: |
+      image: ...
+      ...
+      securityContext:
+        ...
+        allowPrivilegeEscalation: $VAL
+  - focus-metavariable: $SC
+  fix: |
+    securityContext:
+      allowPrivilegeEscalation: false #
+  message: In Kubernetes, each pod runs in its own isolated environment with its own
+    set of security policies. However, certain container images may contain `setuid`
+    or `setgid` binaries that could allow an attacker to perform privilege escalation
+    and gain access to sensitive resources. To mitigate this risk, it's recommended
+    to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation`
+    set to `false`. This will prevent the container from running any privileged processes
+    and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation`
+    parameter to your the `securityContext`, you can help to ensure that your containerized
+    applications are more secure and less vulnerable to privilege escalation attacks.
+  metadata:
+    cwe:
+    - 'CWE-732: Incorrect Permission Assignment for Critical Resource'
+    owasp:
+    - A05:2021 - Security Misconfiguration
+    - A06:2017 - Security Misconfiguration
+    - A02:2025 - Security Misconfiguration
+    references:
+    - https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation
+    - https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    - https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
+    - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag
+    category: security
+    technology:
+    - kubernetes
+    cwe2021-top25: true
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Improper Authorization
+    source: https://semgrep.dev/r/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
+    shortlink: https://sg.run/ljp6
+    semgrep.dev:
+      rule:
+        r_id: 10057
+        rv_id: 1263933
+        rule_id: 6JUqEO
+        version_id: jQTn527
+        url: https://semgrep.dev/playground/r/jQTn527/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation
+        origin: community
+  languages:
+  - yaml
+  severity: WARNING
+- id: yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
+  patterns:
+  - pattern-inside: |
+      containers:
+        ...
+  - pattern: |
+      image: ...
+      ...
+      securityContext:
+        ...
+        seccompProfile: unconfined
+  message: 'Container is explicitly disabling seccomp confinement. This runs the service
+    in an unrestricted state. Remove ''seccompProfile: unconfined'' to prevent this.'
+  metadata:
+    cwe:
+    - 'CWE-284: Improper Access Control'
+    references:
+    - https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp
+    - https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    category: security
+    technology:
+    - kubernetes
+    owasp:
+    - A05:2017 - Broken Access Control
+    - A01:2021 - Broken Access Control
+    - A01:2025 - Broken Access Control
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Improper Authorization
+    source: https://semgrep.dev/r/yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
+    shortlink: https://sg.run/6rgY
+    semgrep.dev:
+      rule:
+        r_id: 10059
+        rv_id: 1263941
+        rule_id: zdUynw
+        version_id: w8TRoL3
+        url: https://semgrep.dev/playground/r/w8TRoL3/yaml.kubernetes.security.seccomp-confinement-disabled.seccomp-confinement-disabled
+        origin: community
+  languages:
+  - yaml
+  severity: WARNING
+- id: yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
+  pattern: |
+    cluster:
+      ...
+      insecure-skip-tls-verify: true
+  message: 'Cluster is disabling TLS certificate verification when communicating with
+    the server. This makes your HTTPS connections insecure. Remove the ''insecure-skip-tls-verify:
+    true'' key to secure communication.'
+  metadata:
+    cwe:
+    - 'CWE-319: Cleartext Transmission of Sensitive Information'
+    references:
+    - https://kubernetes.io/docs/reference/config-api/client-authentication.v1beta1/#client-authentication-k8s-io-v1beta1-Cluster
+    category: security
+    technology:
+    - kubernetes
+    owasp:
+    - A03:2017 - Sensitive Data Exposure
+    - A02:2021 - Cryptographic Failures
+    - A04:2025 - Cryptographic Failures
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Mishandled Sensitive Information
+    source: https://semgrep.dev/r/yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
+    shortlink: https://sg.run/okyn
+    semgrep.dev:
+      rule:
+        r_id: 10116
+        rv_id: 1263943
+        rule_id: zdUyWx
+        version_id: O9Tpxbo
+        url: https://semgrep.dev/playground/r/O9Tpxbo/yaml.kubernetes.security.skip-tls-verify-cluster.skip-tls-verify-cluster
+        origin: community
+  languages:
+  - yaml
+  severity: WARNING
+- id: yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
+  pattern: |
+    spec:
+      ...
+      insecureSkipTLSVerify: true
+  message: 'Service is disabling TLS certificate verification when communicating with
+    the server. This makes your HTTPS connections insecure. Remove the ''insecureSkipTLSVerify:
+    true'' key to secure communication.'
+  metadata:
+    cwe:
+    - 'CWE-319: Cleartext Transmission of Sensitive Information'
+    references:
+    - https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#apiservice-v1-apiregistration-k8s-io
+    category: security
+    technology:
+    - kubernetes
+    owasp:
+    - A03:2017 - Sensitive Data Exposure
+    - A02:2021 - Cryptographic Failures
+    - A04:2025 - Cryptographic Failures
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    license: Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license
+    vulnerability_class:
+    - Mishandled Sensitive Information
+    source: https://semgrep.dev/r/yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
+    shortlink: https://sg.run/zk10
+    semgrep.dev:
+      rule:
+        r_id: 10117
+        rv_id: 1263944
+        rule_id: pKUGXr
+        version_id: e1TyjnR
+        url: https://semgrep.dev/playground/r/e1TyjnR/yaml.kubernetes.security.skip-tls-verify-service.skip-tls-verify-service
+        origin: community
+  languages:
+  - yaml
+  severity: WARNING
