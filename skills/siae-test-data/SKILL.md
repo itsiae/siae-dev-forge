@@ -187,7 +187,8 @@ restituire dati invalidi. Non emettere mai un profilo non validato.
 ### Passo 5 — Restituisci nel formato richiesto
 
 - **JSON**: array di oggetti come definito in `output_schema.md`. In modalita' LIGHT
-  ometti le chiavi `indirizzo` (oggetto completo) e `telefono`.
+  ometti `indirizzo` (oggetto completo) e il nodo `contatti` a livello top-level
+  (incluso `telefono`). Per BUSINESS/EDITORE ometti anche `rappresentante_legale.contatti`.
 - **CSV**: una riga per profilo. Intestazioni FULL: `profilo_id, macro_categoria, tipo, nome, cf, piva, via, civico, cap, citta, provincia, telefono, ...`
   Intestazioni LIGHT: le stesse ma senza `via`, `civico`, `cap`, `citta`, `provincia`, `telefono`.
 - **Markdown**: tabella FULL: `| ID | Categoria | Tipo | Nome / Ragione Sociale | CF | P.IVA | Indirizzo | Edge |`
@@ -313,7 +314,10 @@ siae-test-data/
 | T17 | 1 BUSINESS SDC-DE LIGHT | Rep. legale: CF calcolato con Belfiore Z112 (Germania), data_nascita coerente con CF |
 | T18 | 1 BUSINESS SDC-US LIGHT | Rep. legale: CF calcolato con Belfiore Z404 (USA), data_nascita coerente con CF |
 | T19 | Mix 5 BUSINESS ITA+UE+EXTRA-UE LIGHT | Tutti i rep. legali hanno CF valido; data_nascita == data decodificata dal CF per ogni rep. |
+| T20 | Personalizzata formato "33%, 33%, 34%"; N=10; ITA+UE+EXTRA-UE | Normalizzazione: [33,33,34]; somma=100; 3 ITA + 3 UE + 4 EXTRA-UE (floor+residuo) |
+| T21 | Personalizzata formato "70 20 10" (spazio-separato); N=5; ITA+UE+EXTRA-UE | Normalizzazione: [70,20,10]; 3 ITA + 1 UE + 1 EXTRA-UE |
 
 Verificati: T01-T10 PASS (sia via Python script che via esecuzione manuale Claude
 sul caso di riferimento Mario Rossi -> `RSSMRA85A01H501Z`).
 T11-T15: nuovi casi per le feature di distribuzione nazionalita' e profilo LIGHT.
+T16-T21: nuovi casi per rappresentante legale CF+data_nascita e normalizzazione formato Personalizzata.
