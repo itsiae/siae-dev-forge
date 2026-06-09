@@ -44,19 +44,42 @@ python3 --version 2>/dev/null && echo OK
 Se Python 3.8+ e' disponibile, salta al **Passo 6 (Esecuzione Python)**.
 Altrimenti continua con la generazione Claude-native (passi 1-5).
 
-### Passo 1 — Flusso interattivo a 6 step
+### Passo 1 — Flusso interattivo a 7 step
 
-Chiedi all'utente questi 6 step. Usa lo strumento di domande quando possibile;
-se l'utente ha gia' specificato tutto nel messaggio iniziale, salta al passo 2.
+Usa `AskUserQuestion` per raccogliere le scelte seguenti. Se l'utente ha gia'
+specificato tutto nel messaggio iniziale, salta direttamente al passo 2.
+Presenta tutti gli step con opzioni predeterminate; accetta testo libero solo
+dove indicato esplicitamente.
 
 ```
-[Step 1] Tipo soggetti      -> PRIVATO / BUSINESS / AUTORE / EDITORE / COMBO (multipla)
-[Step 2] Residenza/sede     -> IT / UE / EXTRA_UE / MIX
-[Step 3] Forme giuridiche   -> (solo se BUSINESS o EDITORE) DI/ENTEP/ENTE/IST/ONP/COOP/SDC/SDP
-[Step 4] Edge case indir.   -> S / N
-[Step 5] Quantita per tipo  -> intero >= 1
-[Step 6] Formato output     -> JSON / CSV / Markdown / Tutti
+[Step 1] Tipo soggetti      -> multiselect: PRIVATO / BUSINESS / AUTORE / EDITORE / COMBO
+[Step 2] Nazionalita'       -> multiselect: ITA / UE / EXTRA-UE
+[Step 2b] % distribuzione   -> (condizionale: solo se >=2 nazionalita' selezionate)
+                               preset + opzione libera — vedi tabella sotto
+[Step 3] Forme giuridiche   -> (condizionale: solo se BUSINESS o EDITORE)
+                               DI / ENTEP / ENTE / IST / ONP / COOP / SDC / SDP
+[Step 4] Profilo dati       -> FULL (con indirizzo e telefono)
+                               LIGHT (solo anagrafica: CF/P.IVA, nomi, date, residenza citta')
+[Step 5] Edge case indir.   -> S / N  (solo se Step 4 = FULL)
+[Step 6] Quantita'          -> fascia preset: 5 / 10 / 25 / 50 / 100 / 500
+[Step 7] Formato output     -> JSON / CSV / Markdown / Tutti
 ```
+
+#### Tabella preset % distribuzione (Step 2b)
+
+Mostra le opzioni corrispondenti alla combinazione di nazionalita' selezionate.
+Aggiungi sempre l'opzione **Personalizzata** come ultima voce per input libero.
+
+| Combinazione selezionata | Preset proposti |
+|---|---|
+| ITA + UE | 70% ITA / 30% UE — 60% ITA / 40% UE — 50% ITA / 50% UE — Personalizzata |
+| ITA + EXTRA-UE | 70% ITA / 30% EXTRA-UE — 60% ITA / 40% EXTRA-UE — 50% ITA / 50% EXTRA-UE — Personalizzata |
+| UE + EXTRA-UE | 70% UE / 30% EXTRA-UE — 60% UE / 40% EXTRA-UE — 50% UE / 50% EXTRA-UE — Personalizzata |
+| ITA + UE + EXTRA-UE | 70% ITA / 20% UE / 10% EXTRA-UE — 60% ITA / 30% UE / 10% EXTRA-UE — 50% ITA / 30% UE / 20% EXTRA-UE — Equa (~33%/33%/34%) — Personalizzata |
+
+Se l'utente sceglie **Personalizzata**, chiedi le percentuali come testo libero
+e verifica che la somma sia 100. Se la somma differisce per errore di arrotondamento
+(±1%), aggiusta autonomamente l'ultima percentuale senza chiedere conferma.
 
 ### Passo 2 — Carica i reference
 
@@ -84,13 +107,33 @@ Per ciascun profilo richiesto:
    - checksum: somma `DISPARI`+`PARI` mod 26 -> A-Z
 4. **Se persona giuridica**, calcola P.IVA seguendo `algoritmi.md` sezione 2 e
    applica i vincoli di `forme_giuridiche.json` (CF=P.IVA per SDC/SDP/COOP, ecc.).
-5. **Genera l'indirizzo** scegliendo da `cap_citta.json`. Se edge case attivo
-   (S al Step 4), applica un pattern dalla sezione 7 di `algoritmi.md` con
-   probabilita' ~50%.
-6. **Genera il telefono** in formato E.164 (`+39 3XX YYYYYYY` per IT,
-   prefisso paese da `belfiore_esteri.json` per altri).
+   Genera il **rappresentante legale** con questi campi obbligatori:
+   - `nome`, `cognome`, `genere` (M/F)
+   - `data_nascita` in formato `AAAA-MM-GG` — deve essere **coerente con il CF**: anno da char 7-8, mese dalla tabella A-T (char 9), giorno da char 10-11 con la regola del genere: se genere=M il giorno è il valore diretto; se genere=F il giorno è `valore_char - 40` (es. char="47" → giorno=07)
+   - `comune_nascita` / `stato_nascita` — per soggetti italiani: comune italiano; per UE/EXTRA-UE: nome dello stato di nascita
+   - `cf` — calcola il CF del rappresentante seguendo l'algoritmo sezione 1:
+     * Rappresentanti nati in Italia: usa codice Belfiore del comune (`belfiore_comuni.json`)
+     * Rappresentanti nati all'estero (UE o EXTRA-UE): usa codice Belfiore dello stato (`belfiore_esteri.json`, formato Z-xxx)
+     * Il CF è obbligatorio per TUTTI i rappresentanti legali, indipendentemente dalla nazionalità dell'ente
+5. **Genera l'indirizzo** (solo se profilo FULL): scegli da `cap_citta.json`.
+   Se edge case attivo (S al Step 5), applica un pattern dalla sezione 7 di
+   `algoritmi.md` con probabilita' ~50%.
+   Se profilo LIGHT: ometti completamente i campi indirizzo (`via`, `civico`,
+   `cap`, `citta`, `provincia`, `stato`, `tipo`, `edge_case`). Popola solo
+   `nazione_residenza` e `nazione_residenza_code` (vedi schema LIGHT in `output_schema.md`).
+6. **Genera il telefono** (solo se profilo FULL) in formato E.164
+   (`+39 3XX YYYYYYY` per IT, prefisso paese da `belfiore_esteri.json` per altri).
+   Se profilo LIGHT: ometti il campo `telefono`.
 7. **Calcola `data_nascita_serial`** (giorni dal 1899-12-30, vedi sezione 3
    di `algoritmi.md`).
+8. **Applica la distribuzione nazionalita'**: se Step 2 ha piu' nazionalita',
+   distribuisci i profili secondo le percentuali definite al Step 2b.
+   Algoritmo deterministico (floor + residuo):
+   - Per ogni gruppo NON-ultimo: `count_i = floor(N × p_i / 100)`
+   - Per l'ultimo gruppo: `count_ultimo = N − sum(tutti gli altri count_i)`
+   Questo garantisce che la somma sia sempre esattamente N e che nessun gruppo
+   minoritario vada a 0 per effetto dell'arrotondamento su dataset piccoli (N < 20).
+   Esempio: N=5, 70/20/10 → floor(3.5)=3 ITA, floor(1.0)=1 UE, residuo=5−3−1=1 EXTRA-UE.
 
 ### Passo 4 — Auto-validazione obbligatoria
 
@@ -101,21 +144,35 @@ Prima di restituire il dataset, esegui mentalmente questi check su OGNI profilo
 - ✅ P.IVA: ricalcola il checksum Luhn-AdE
 - ✅ Vincolo CF=P.IVA per SDC/SDP/COOP (sede italiana)
 - ✅ Sede estera: VAT Number presente, P.IVA italiana assente
-- ✅ CAP appartenente al `cap_pool` della citta in `cap_citta.json`
-- ✅ Provincia coerente con citta (`cap_citta.json`)
 - ✅ Codice Belfiore nel CF coerente con stato/comune di nascita
-- ✅ Telefono formato `+<prefisso> <cifre>`
 - ✅ Data nascita: `data_nascita_serial` corrisponde alla data ISO
+- ✅ (solo FULL) CAP appartenente al `cap_pool` della citta in `cap_citta.json`
+- ✅ (solo FULL) Provincia coerente con citta (`cap_citta.json`)
+- ✅ (solo FULL) Telefono formato `+<prefisso> <cifre>`
+- ✅ Distribuzione nazionalita': conteggio per ciascun gruppo corrisponde alle % richieste (±1 per arrotondamento)
+- ✅ Rappresentante legale: CF calcolato e presente per TUTTI i profili (ITA, UE, EXTRA-UE)
+- ✅ Rappresentante legale: `data_nascita` AAAA-MM-GG decodificata dal CF — anno (char 7-8) e mese (char 9, tabella A-T) devono coincidere; per il giorno (char 10-11): se genere=F sottrarre 40 prima del confronto (es. CF "62" → giorno 22), se genere=M il valore deve essere il giorno diretto
+- ✅ Rappresentante legale: `stato_nascita` coerente con il codice Belfiore usato nel CF (Z-xxx per esteri, comune italiano per nati in IT)
 
 **Se un check fallisce**: rigenera il campo (cambia il seed mentale) invece di
 restituire dati invalidi. Non emettere mai un profilo non validato.
 
 ### Passo 5 — Restituisci nel formato richiesto
 
-- **JSON**: array di oggetti come definito in `output_schema.md`
-- **CSV**: una riga per profilo (intestazioni: profilo_id, macro_categoria, ...)
-- **Markdown**: tabella `| ID | Categoria | Tipo | Nome / Ragione Sociale | CF | P.IVA | Indirizzo | Edge |`
-- **Tutti**: produci tutte e tre le rappresentazioni in sezioni separate
+- **JSON**: array di oggetti come definito in `output_schema.md`. In modalita' LIGHT
+  ometti le chiavi `indirizzo` (oggetto completo) e `telefono`.
+- **CSV**: una riga per profilo. Intestazioni FULL: `profilo_id, macro_categoria, tipo, nome, cf, piva, via, civico, cap, citta, provincia, telefono, ...`
+  Intestazioni LIGHT: le stesse ma senza `via`, `civico`, `cap`, `citta`, `provincia`, `telefono`.
+- **Markdown**: tabella FULL: `| ID | Categoria | Tipo | Nome / Ragione Sociale | CF | P.IVA | Indirizzo | Edge |`
+  Tabella LIGHT: `| ID | Categoria | Tipo | Nome / Ragione Sociale | CF | P.IVA | Nazionalita' |`
+- **Tutti**: produci tutte e tre le rappresentazioni in sezioni separate.
+
+Includi sempre un header informativo prima del dataset con il riepilogo dei parametri scelti:
+```
+# Dataset generato
+# Tipo: <categorie> | Nazionalita': <nazionalita'> [<% distribuzione>]
+# Profili: <N> | Modalita': FULL/LIGHT | Edge case: S/N
+```
 
 Restituisci il risultato inline nella conversazione, OPPURE scrivilo in un file
 se l'utente specifica un path di output.
@@ -126,10 +183,12 @@ se l'utente specifica un path di output.
 cd siae-test-data/scripts
 python3 generate_profiles.py \
   --categorie <CSV> \
-  --residenza <IT|UE|EXTRA_UE|MIX> \
+  --nazionalita <ITA|UE|EXTRA-UE|ITA,UE|ITA,EXTRA-UE|UE,EXTRA-UE|ITA,UE,EXTRA-UE> \
+  --distribuzione "<pct_ITA>,<pct_UE>,<pct_EXTRA-UE>" \  # opzionale; default equa
   --forme-giuridiche <CSV> \
-  [--edge-case] \
-  --quantita <N> \
+  --profilo <FULL|LIGHT> \
+  [--edge-case] \                                         # ignorato se LIGHT
+  --quantita <5|10|25|50|100|500> \
   --formato <JSON|CSV|MARKDOWN|ALL> \
   --strict \
   --output <path>
@@ -208,16 +267,26 @@ siae-test-data/
 
 | Test | Input | Verifica |
 |---|---|---|
-| T01 | 1 PRIVATO italiano | CF valido, CAP coerente, serial corretto |
-| T02 | 1 PRIVATO straniero residente IT | CF con Z-xxx, indirizzo italiano |
-| T03 | 1 BUSINESS SDC italiana | CF=P.IVA 11 cifre, rapp. legale con CF proprio |
-| T04 | 1 BUSINESS ENTE pubblico | CF 10 cifre, P.IVA opzionale |
-| T05 | 1 BUSINESS DI estera | VAT Number, nessuna P.IVA italiana |
-| T06 | 3 AUTORI italiani | 3 CF diversi tutti validi |
-| T07 | Edge SNC | Civico="SNC" |
-| T08 | Edge km progressivo | Civico="km 12+500" |
-| T09 | BUSINESS con Gruppo IVA | flag + numero gruppo |
-| T10 | COMBO (autore+editore) | Stesso soggetto, 2 ruoli |
+| T01 | 1 PRIVATO italiano, FULL | CF valido, CAP coerente, serial corretto, telefono presente |
+| T02 | 1 PRIVATO straniero UE residente IT, FULL | CF con Z-xxx, indirizzo italiano, telefono presente |
+| T03 | 1 BUSINESS SDC italiana, FULL | CF=P.IVA 11 cifre, rapp. legale con CF proprio |
+| T04 | 1 BUSINESS ENTE pubblico, FULL | CF 10 cifre, P.IVA opzionale |
+| T05 | 1 BUSINESS DI estera, FULL | VAT Number, nessuna P.IVA italiana |
+| T06 | 3 AUTORI italiani, FULL | 3 CF diversi tutti validi |
+| T07 | Edge SNC, FULL | Civico="SNC" |
+| T08 | Edge km progressivo, FULL | Civico="km 12+500" |
+| T09 | BUSINESS con Gruppo IVA, FULL | flag + numero gruppo |
+| T10 | COMBO (autore+editore), FULL | Stesso soggetto, 2 ruoli |
+| T11 | 10 PRIVATI, ITA+UE 70/30, LIGHT | 7 ITA + 3 UE; campi indirizzo e telefono assenti |
+| T12 | 25 PRIVATI, ITA+UE+EXTRA-UE equa, LIGHT | ~8 ITA / ~8 UE / ~9 EXTRA-UE; somma =25; nessun campo indirizzo/telefono |
+| T13 | 50 PRIVATI, solo EXTRA-UE, FULL | 50 profili tutti EXTRA-UE con indirizzo e telefono validi |
+| T14 | 100 PRIVATI, ITA+EXTRA-UE 60/40, LIGHT | 60 ITA + 40 EXTRA-UE; header riepilogo presente; nessun campo indirizzo/telefono |
+| T15 | Personalizzata 55/25/20, totale 10 | Arrotondamento: 5 ITA / 3 UE / 2 EXTRA-UE (somma =10) |
+| T16 | 1 BUSINESS SDC-IT LIGHT | Rep. legale: CF presente, data_nascita AAAA-MM-GG decodibile dal CF, stato_nascita=Italia |
+| T17 | 1 BUSINESS SDC-DE LIGHT | Rep. legale: CF calcolato con Belfiore Z112 (Germania), data_nascita coerente con CF |
+| T18 | 1 BUSINESS SDC-US LIGHT | Rep. legale: CF calcolato con Belfiore Z404 (USA), data_nascita coerente con CF |
+| T19 | Mix 5 BUSINESS ITA+UE+EXTRA-UE LIGHT | Tutti i rep. legali hanno CF valido; data_nascita == data decodificata dal CF per ogni rep. |
 
-Verificati: 10/10 PASS (sia via Python script che via esecuzione manuale Claude
+Verificati: T01-T10 PASS (sia via Python script che via esecuzione manuale Claude
 sul caso di riferimento Mario Rossi -> `RSSMRA85A01H501Z`).
+T11-T15: nuovi casi per le feature di distribuzione nazionalita' e profilo LIGHT.
