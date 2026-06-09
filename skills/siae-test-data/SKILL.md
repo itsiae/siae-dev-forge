@@ -316,8 +316,9 @@ siae-test-data/
 | T19 | Mix 5 BUSINESS ITA+UE+EXTRA-UE LIGHT | Tutti i rep. legali hanno CF valido; data_nascita == data decodificata dal CF per ogni rep. |
 | T20 | Personalizzata formato "33%, 33%, 34%"; N=10; ITA+UE+EXTRA-UE | Normalizzazione: [33,33,34]; somma=100; 3 ITA + 3 UE + 4 EXTRA-UE (floor+residuo) |
 | T21 | Personalizzata formato "70 20 10" (spazio-separato); N=5; ITA+UE+EXTRA-UE | Normalizzazione: [70,20,10]; 3 ITA + 1 UE + 1 EXTRA-UE |
+| T22 | Personalizzata formato "40,40,20" (comma-puro senza %); N=10; ITA+UE+EXTRA-UE | Normalizzazione: [40,40,20]; 4 ITA + 4 UE + 2 EXTRA-UE (floor+residuo) |
 
 Verificati: T01-T10 PASS (sia via Python script che via esecuzione manuale Claude
 sul caso di riferimento Mario Rossi -> `RSSMRA85A01H501Z`).
 T11-T15: nuovi casi per le feature di distribuzione nazionalita' e profilo LIGHT.
-T16-T21: nuovi casi per rappresentante legale CF+data_nascita e normalizzazione formato Personalizzata.
+T16-T22: nuovi casi per rappresentante legale CF+data_nascita e normalizzazione formato Personalizzata (tutti e 4 i formati coperti: %, comma-puro, spazio, linguaggio naturale).
