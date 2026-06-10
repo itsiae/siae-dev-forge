@@ -160,7 +160,7 @@ def _get_head_sha(repo_root: Path) -> str:
 
 def _extract_jira_tickets(repo_root: Path, branch: str) -> list[str]:
     import re
-    pattern = re.compile(r"\b(SPORT|DIRITTI|OASIS|POP|TAU)-\d+\b")
+    pattern = re.compile(r"\b(?:SPORT|DIRITTI|OASIS|POP|TAU)-\d+\b")
     try:
         out = subprocess.check_output(
             ["git", "log", f"origin/main..origin/{branch}", "--pretty=%B"],
