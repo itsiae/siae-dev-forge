@@ -5,12 +5,15 @@ const fs   = require('fs');
 // ── Cache JSON reference ─────────────────────────────────────────────────────
 const _refCache = {};
 function loadRef(name) {
-  if (!_refCache[name]) {
-    _refCache[name] = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '..', 'references', name), 'utf8')
+  const safe = path.basename(name);
+  if (safe !== name || !safe.endsWith('.json'))
+    throw new Error(`Riferimento non valido: ${name}`);
+  if (!_refCache[safe]) {
+    _refCache[safe] = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '..', 'references', safe), 'utf8')
     );
   }
-  return _refCache[name];
+  return _refCache[safe];
 }
 
 // ── CLI parser ───────────────────────────────────────────────────────────────
@@ -85,7 +88,10 @@ function codiceNome(nom) {
   return (_cons(s) + _voc(s) + 'XXX').slice(0,3);
 }
 function codiceData(dataISO, genere) {
-  const [y,m,d] = dataISO.split('-').map(Number);
+  const parts = dataISO.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN))
+    throw new Error(`Data non valida: ${dataISO}`);
+  const [y,m,d] = parts;
   const aa  = String(y % 100).padStart(2,'0');
   const mes = MESI_CF[m - 1];
   const gg  = String(d + (genere.toUpperCase() === 'F' ? 40 : 0)).padStart(2,'0');
@@ -422,7 +428,11 @@ function generaProfiloBusiness(pid, area, fg, mode, rng) {
 
 // ── Task 07 — formatOutput + main ────────────────────────────────────────────
 function calcolaDistribuzione(quantita, distribuzioni) {
-  const tot    = distribuzioni.reduce((a, b) => a + b, 0);
+  if (!distribuzioni || distribuzioni.length === 0)
+    throw new Error('distribuzioni non puo essere vuota');
+  const tot = distribuzioni.reduce((a, b) => a + b, 0);
+  if (!isFinite(tot) || tot <= 0)
+    throw new Error(`distribuzione non valida: somma=${tot}`);
   const counts = distribuzioni.map(p => Math.floor(quantita * p / tot));
   counts[counts.length - 1] += quantita - counts.reduce((a, b) => a + b, 0);
   return counts;
