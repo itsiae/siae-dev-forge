@@ -135,13 +135,23 @@ class TestPrecomputedLists:
         assert isinstance(generate_profiles._STATI_UE, list)
         assert "Germania" in generate_profiles._STATI_UE
 
-    def test_stati_extra_ue_exists(self):
-        """_STATI_EXTRA_UE deve esistere come lista (può essere vuota — bug preesistente:
-        belfiore_esteri.json usa 'EXTRA-UE' ma il codice filtra 'EXTRA_UE'; il comportamento
-        attuale (fallback a 'Germania') è preservato intenzionalmente in questo PR)."""
+    def test_stati_extra_ue_not_empty(self):
+        """_STATI_EXTRA_UE deve contenere stati extra-europei (es. Giappone, USA).
+        Bug fix: belfiore_esteri.json usa 'EXTRA-UE'; il filtro deve usare 'EXTRA-UE' non 'EXTRA_UE'."""
         import generate_profiles
         assert hasattr(generate_profiles, "_STATI_EXTRA_UE")
         assert isinstance(generate_profiles._STATI_EXTRA_UE, list)
+        assert len(generate_profiles._STATI_EXTRA_UE) > 0, (
+            "_STATI_EXTRA_UE è vuota: il filtro usa 'EXTRA_UE' ma il JSON ha 'EXTRA-UE'"
+        )
+
+    def test_stato_random_extra_ue_non_sempre_germania(self):
+        """_stato_random('EXTRA_UE', rng) non deve restituire sempre 'Germania'."""
+        import random
+        from generate_profiles import _stato_random
+        stati = {_stato_random("EXTRA_UE", random.Random(f"seed-{i}")) for i in range(20)}
+        assert len(stati) > 1, f"_stato_random EXTRA_UE restituisce sempre lo stesso stato: {stati}"
+        assert "Germania" not in stati or len(stati) > 1
 
     def test_precomputed_lists_match_dict_iteration(self):
         """Pre-computed lists devono coincidere con la computazione inline (determinismo)."""
@@ -151,7 +161,7 @@ class TestPrecomputedLists:
         assert generate_profiles._CAP_ITALIA_KEYS == list(CAP_CITTA["Italia"].keys())
         expected_ue = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "UE"]
         assert generate_profiles._STATI_UE == expected_ue
-        expected_extra = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "EXTRA_UE"]
+        expected_extra = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "EXTRA-UE"]
         assert generate_profiles._STATI_EXTRA_UE == expected_extra
 
 

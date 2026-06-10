@@ -64,7 +64,7 @@ BELFIORE_ESTERI = carica_belfiore_esteri()
 _BELFIORE_COMUNI_KEYS = list(BELFIORE_COMUNI.keys())
 _CAP_ITALIA_KEYS = list(CAP_CITTA["Italia"].keys())
 _STATI_UE = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "UE"]
-_STATI_EXTRA_UE = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "EXTRA_UE"]
+_STATI_EXTRA_UE = [k for k, v in BELFIORE_ESTERI.items() if v["area"] == "EXTRA-UE"]
 
 
 def _seed_rng(profilo_id: str) -> random.Random:
