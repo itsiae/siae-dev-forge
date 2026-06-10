@@ -54,7 +54,26 @@ Se Python 3.8+ e' disponibile:
   ```
 - Dopo aver raccolto tutti i parametri del wizard, salta al **Passo 6 (Esecuzione Python)**.
 
-Altrimenti (path Claude-native, passi 1-5):
+Altrimenti, se Python non e' disponibile, prova **Node.js**:
+
+```bash
+(node --version 2>/dev/null || nodejs --version 2>/dev/null) && echo NODE_OK
+```
+
+> **Windows:** su alcune installazioni il binario e' `nodejs`; il comando prova entrambi.
+
+Se Node.js 10+ e' disponibile (`NODE_OK`):
+- Avvia il pre-warming emettendo il comando sotto **nello stesso turno** della prima
+  `AskUserQuestion` (non attendere il risultato):
+  ```bash
+  # Eseguire da REPO ROOT (dove risiede skills/)
+  node -e "const p=require('path'),f=require('fs'),r=p.join(process.cwd(),'skills','siae-test-data','references');['nomi_italiani.json','nomi_esteri.json','forme_giuridiche.json','cap_citta.json','belfiore_comuni.json','belfiore_esteri.json'].forEach(n=>JSON.parse(f.readFileSync(p.join(r,n))))" 2>/dev/null
+  ```
+- Dopo aver raccolto tutti i parametri del wizard, salta al **Passo 6-bis (Esecuzione Node.js)**.
+
+Altrimenti (ne' Python ne' Node.js disponibili — path Claude-native, passi 1-5):
+- Se N > 10: avvisa l'utente — "Generazione Claude-native per N={N} profili senza runtime
+  locale richiede ~{N×12}s. Installa Python 3.8+ o Node.js 10+ per ridurre a <2s."
 - Emetti tutte le **Read del Passo 2** nello stesso turno della prima `AskUserQuestion`
   (Step 1 del wizard). I file saranno gia' in contesto quando l'utente risponde,
   eliminando i 3.2s di caricamento dal percorso critico su Windows VPN.
@@ -230,6 +249,25 @@ Includi sempre un header informativo prima del dataset con il riepilogo dei para
 
 Restituisci il risultato inline nella conversazione, OPPURE scrivilo in un file
 se l'utente specifica un path di output.
+
+### Passo 6-bis — Scorciatoia Node.js (solo se Passo 0 ha rilevato NODE_OK)
+
+```bash
+cd siae-test-data/scripts
+node generate_profiles.js \
+  --categorie <CSV> \
+  --nazionalita <ITA|UE|EXTRA-UE|ITA,UE|ITA,EXTRA-UE|UE,EXTRA-UE|ITA,UE,EXTRA-UE> \
+  --distribuzione "<pct_ITA>,<pct_UE>,<pct_EXTRA-UE>" \
+  --forme-giuridiche <CSV> \
+  --profilo <FULL|LIGHT> \
+  --quantita <5|10|25|50|100|500> \
+  --formato <JSON|CSV> \
+  [--skip-validation] \
+  --output <path>
+```
+
+Python ha priorita' se disponibile. Edge case indirizzo (14 pattern) e formato Markdown
+non sono supportati nella versione Node.js — usare il path Claude-native se richiesti.
 
 ### Passo 6 — Scorciatoia Python (solo se Passo 0 ha rilevato Python 3.8+)
 
