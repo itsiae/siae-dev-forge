@@ -9,7 +9,7 @@ description: >
   "mock CF italiano", "dati SIAE per test", "crea anagrafica di prova",
   "fixture SIAE", "test data utilizzatore", "dataset autori editori",
   "genera CF e P.IVA validi", "mock anagrafica italiana", "test profilo SIAE".
-runtime: Claude-native (zero dipendenze locali). Python opzionale per batch >50.
+runtime: Claude-native (zero dipendenze locali). Python opzionale per batch >5.
 ---
 
 # siae-test-data — Generatore profili anagrafici SIAE
@@ -44,8 +44,21 @@ chiesto "in batch / batch automatico", prova prima questa scorciatoia:
 > **Windows:** `python3` potrebbe non essere nel PATH; il comando prova in sequenza
 > `python3`, `python` e il Python Launcher `py` per garantire il rilevamento corretto.
 
-Se Python 3.8+ e' disponibile, salta al **Passo 6 (Esecuzione Python)**.
-Altrimenti continua con la generazione Claude-native (passi 1-5).
+Se Python 3.8+ e' disponibile:
+- Avvia il pre-warming del data_store emettendo il comando sotto **nello stesso turno**
+  in cui mostri il primo step del wizard (Passo 1, Step 1). Non aspettare il risultato
+  prima della prima `AskUserQuestion`: il warm-up avviene mentre l'utente risponde,
+  nascondendo ~480ms di Defender scan su Windows nel tempo di attesa dell'utente.
+  ```bash
+  cd siae-test-data/scripts && python3 -c "import data_store; [data_store.get(f) for f in ['nomi_italiani.json','nomi_esteri.json','forme_giuridiche.json','cap_citta.json','belfiore_comuni.json','belfiore_esteri.json']]; print('warmed')" 2>/dev/null
+  ```
+- Dopo aver raccolto tutti i parametri del wizard, salta al **Passo 6 (Esecuzione Python)**.
+
+Altrimenti (path Claude-native, passi 1-5):
+- Emetti tutte le **Read del Passo 2** nello stesso turno della prima `AskUserQuestion`
+  (Step 1 del wizard). I file saranno gia' in contesto quando l'utente risponde,
+  eliminando i 3.2s di caricamento dal percorso critico su Windows VPN.
+- Al Passo 2 salta le Read gia' emesse al Passo 0.
 
 ### Passo 1 — Flusso interattivo a 7 step
 
@@ -97,6 +110,9 @@ di arrotondamento (±1%), aggiusta autonomamente l'ultima percentuale senza chie
 conferma. Se la differenza supera il ±1%, segnala all'utente e chiedi di correggere.
 
 ### Passo 2 — Carica i reference
+
+> **Skip se pre-caricati al Passo 0** (path Claude-native con Read emesse insieme
+> al primo AskUserQuestion): i file sono gia' in contesto, non ri-leggere.
 
 **Leggi tutti i file seguenti in un singolo batch parallelo** (emetti tutte le
 Read tool call nello stesso turno di risposta — non sequenzialmente una alla volta):
