@@ -46,3 +46,29 @@ class TestScaffold:
         )
         assert r.returncode == 0, r.stderr
         assert r.stdout.strip() == 'true'
+
+
+# ─── Task 02 — cfUtils CF persona fisica ────────────────────────────────────
+
+class TestCfPersonaFisica:
+    def test_cf_mario_rossi_diretto(self):
+        r = subprocess.run(
+            ['node', '-e',
+             "const {calcolaCF}=require('./generate_profiles.js');"
+             "console.log(calcolaCF('Mario','Rossi','1985-01-01','M','H501'))"],
+            cwd=SCRIPTS_DIR, capture_output=True, text=True, timeout=5,
+        )
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip() == 'RSSMRA85A01H501Z'
+
+    def test_cf_checksum_cognome_bianchi(self):
+        r = subprocess.run(
+            ['node', '-e',
+             "const {calcolaCF}=require('./generate_profiles.js');"
+             "console.log(calcolaCF('Alessandra','Bianchi','1990-06-15','F','F205'))"],
+            cwd=SCRIPTS_DIR, capture_output=True, text=True, timeout=5,
+        )
+        assert r.returncode == 0, r.stderr
+        cf = r.stdout.strip()
+        assert len(cf) == 16
+        assert cf[:3] == 'BNC'  # cognome Bianchi → BNC
