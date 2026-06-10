@@ -25,15 +25,15 @@ Stessa interfaccia CLI di `generate_profiles.py`. Legge i medesimi JSON in
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Scaffold: entry point, loadRef, parseArgs, Mulberry32 | `task-01-scaffold.md` | [PENDING] |
-| 2 | cfUtils: tabelle checksum + codice CF persona fisica | `task-02-cf-persona-fisica.md` | [PENDING] |
-| 3 | pivaUtils + CF enti numerici | `task-03-piva-cf-enti.md` | [PENDING] |
-| 4 | addressUtils + _pickNomeCognome | `task-04-address-names.md` | [PENDING] |
-| 5 | profileGen PRIVATO/AUTORE (persona fisica) | `task-05-profile-privato.md` | [PENDING] |
-| 6 | profileGen BUSINESS/EDITORE + rappresentante legale | `task-06-profile-business.md` | [PENDING] |
-| 7 | formatOutput (JSON/CSV) + distribuzione nazionalità + main() | `task-07-format-main.md` | [PENDING] |
-| 8 | test_node_fallback.py (7 test pytest integrazione) | `task-08-tests.md` | [PENDING] |
-| 9 | SKILL.md Passo 0: detection Node.js + pre-warming | `task-09-skill-md.md` | [PENDING] |
+| 1 | Scaffold: entry point, loadRef, parseArgs, Mulberry32 | `task-01-scaffold.md` | [DONE] |
+| 2 | cfUtils: tabelle checksum + codice CF persona fisica | `task-02-cf-persona-fisica.md` | [DONE] |
+| 3 | pivaUtils + CF enti numerici | `task-03-piva-cf-enti.md` | [DONE] |
+| 4 | addressUtils + _pickNomeCognome | `task-04-address-names.md` | [DONE] |
+| 5 | profileGen PRIVATO/AUTORE (persona fisica) | `task-05-profile-privato.md` | [DONE] |
+| 6 | profileGen BUSINESS/EDITORE + rappresentante legale | `task-06-profile-business.md` | [DONE] |
+| 7 | formatOutput (JSON/CSV) + distribuzione nazionalità + main() | `task-07-format-main.md` | [DONE] |
+| 8 | test_node_fallback.py (7 test pytest integrazione) | `task-08-tests.md` | [DONE] |
+| 9 | SKILL.md Passo 0: detection Node.js + pre-warming | `task-09-skill-md.md` | [DONE] |
 
 ## Dipendenze
 
