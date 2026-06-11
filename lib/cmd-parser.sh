@@ -107,7 +107,10 @@ devforge_cmd_matches() {
 # string literal just produces a segment whose first token is not the target
 # command, so it cannot cause a false-positive block.
 _devforge_segments() {
-    printf '%s\n' "$1" | awk '{gsub(/\|\||&&|;|\|/, "\n"); print}'
+    # gsub separati (ordine: || prima di |) — non ambiguo su ogni variante awk.
+    # Il backgrounding `&` singolo NON e' un separatore gestito (limite noto,
+    # irrilevante per i pattern di comando degli hook).
+    printf '%s\n' "$1" | awk '{ gsub(/\|\|/, "\n"); gsub(/&&/, "\n"); gsub(/;/, "\n"); gsub(/\|/, "\n"); print }'
 }
 
 # devforge_cmd_has_subcommand COMMAND TOK1 TOK2 [TOK3]
@@ -117,7 +120,10 @@ _devforge_segments() {
 # (root cause PR #311 — design 2026-06-11-hook-compound-cmd-match).
 devforge_cmd_has_subcommand() {
     local cmd="$1" t1="$2" t2="$3" t3="${4:-}"
-    local seg stripped f s th
+    local seg stripped f s th segments
+    # Materializza prima del heredoc: un fallimento di awk ritorna 1 esplicito
+    # (no-match conservativo) invece di propagarsi al caller.
+    segments=$(_devforge_segments "$cmd") || return 1
     while IFS= read -r seg; do
         case "$seg" in *[![:space:]]*) ;; *) continue ;; esac
         stripped=$(_devforge_strip_prefix "$seg")
@@ -131,7 +137,7 @@ devforge_cmd_has_subcommand() {
         fi
         return 0
     done <<DEVFORGE_SEG_EOF
-$(_devforge_segments "$cmd")
+$segments
 DEVFORGE_SEG_EOF
     return 1
 }

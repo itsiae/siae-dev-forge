@@ -87,11 +87,28 @@ def test_blind_review_gate_ignores_command_inside_string(tmp_home):
     assert out.get("decision") != "block"
 
 
+def test_blind_review_gate_blocks_env_prefix_command(tmp_home):
+    """Simmetria con il caso premortem (spec AC5: 'stessi casi')."""
+    out = run_hook("pr-blind-review-gate", ENV_PREFIX_PR, tmp_home)
+    assert out.get("decision") == "block", f"bypass su env -u: {out}"
+
+
+def test_blind_review_gate_blocks_plain_command(tmp_home):
+    out = run_hook("pr-blind-review-gate", PLAIN_PR, tmp_home)
+    assert out.get("decision") == "block"
+
+
 # --- pre-commit -----------------------------------------------------------------
 
 def test_pre_commit_gate_blocks_compound_git_commit(tmp_home):
     out = run_hook("pre-commit", COMPOUND_COMMIT, tmp_home)
     assert out.get("decision") == "block", f"bypass su comando composto: {out}"
+
+
+def test_pre_commit_gate_blocks_env_prefix_git_commit(tmp_home):
+    """Simmetria env-prefix per il pre-commit gate."""
+    out = run_hook("pre-commit", 'env -u GIT_DIR git commit -m "feat: x"', tmp_home)
+    assert out.get("decision") == "block", f"bypass su env -u: {out}"
 
 
 def test_pre_commit_gate_ignores_git_log_pipe_grep(tmp_home):
