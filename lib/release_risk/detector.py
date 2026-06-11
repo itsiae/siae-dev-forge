@@ -9,9 +9,13 @@ from lib.release_risk.schema import CriterionResult
 
 def criterion_1_db_change(diff_files: list[str], diff_content: str) -> CriterionResult:
     """+3 se DB change (DDL/DML) trovato."""
-    file_pattern = re.compile(r"\.(sql|hql|xml)$|migration|liquibase|flyway|changelog|V\d+__", re.I)
+    # xml solo con hint DB nel path: \.xml$ generico flaggava pom.xml/logback.xml (+3 spurio)
+    file_pattern = re.compile(
+        r"\.(sql|hql)$|migration|liquibase|flyway|changelog|V\d+__|\bdb/.*\.xml$", re.I
+    )
     content_pattern = re.compile(
-        r"CREATE TABLE|ALTER TABLE|DROP TABLE|INSERT INTO|UPDATE .+ SET|DELETE FROM|ADD COLUMN|DROP COLUMN",
+        r"CREATE TABLE|ALTER TABLE|DROP TABLE|INSERT INTO|UPDATE .+ SET|DELETE FROM|ADD COLUMN|DROP COLUMN"
+        r"|<createTable|<addColumn|<dropColumn|<dropTable|<renameColumn|<modifyDataType",
         re.I,
     )
     matched_files = [f for f in diff_files if file_pattern.search(f)]
