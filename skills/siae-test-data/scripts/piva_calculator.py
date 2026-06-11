@@ -14,7 +14,6 @@ Algoritmo cifra di controllo:
 
 from __future__ import annotations
 
-import json
 import random
 import re
 from pathlib import Path

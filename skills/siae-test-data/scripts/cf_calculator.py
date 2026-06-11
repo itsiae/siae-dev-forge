@@ -9,7 +9,6 @@ Riferimento normativo: DM 23/12/1976 e successive modifiche.
 
 from __future__ import annotations
 
-import json
 import random
 import re
 from datetime import date, timedelta
