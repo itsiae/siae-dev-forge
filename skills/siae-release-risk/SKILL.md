@@ -117,6 +117,10 @@ python -m lib.release_risk assess \
 ### Step 7 — Cache check  🟢 SICURO
 CLI gestisce internamente. Se cache hit + `gh pr comment --list` mostra marker `<!-- release-risk:<diff-hash> -->` già presente → skip post.
 
+**Limiti cache (chiave = branch + diff_hash + baseline_main_sha):**
+- L'input KG (Step 4c) NON fa parte della chiave: se il prefetch KG cambia (es. VPN ripristinata dopo un run con KG unavailable) la scorecard cachata resta quella vecchia → ri-esegui con `--no-cache`.
+- `--no-cache` salta solo la lettura: il run ricalcola e sovrascrive comunque la entry in cache.
+
 ### Step 8 — Display scorecard  🟢 SICURO
 Output CLI mostra scorecard markdown. Path file: `docs/releases/<date>-<service>-<branch>.md`.
 
