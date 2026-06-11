@@ -25,6 +25,39 @@ def test_c1_db_change_no():
     assert r.status == "NO"
 
 
+def test_c1_pom_xml_alone_is_not_db_change():
+    """pom.xml e' competenza del criterio 4 (ext deps), non DB change (+3)."""
+    r = criterion_1_db_change(["pom.xml"], "+ <dependency>flyway-core</dependency>")
+    assert r.status == "NO"
+
+
+def test_c1_logback_xml_is_not_db_change():
+    r = criterion_1_db_change(["src/main/resources/logback.xml"], "+ <root level=\"INFO\">")
+    assert r.status == "NO"
+
+
+def test_c1_db_changelog_xml_path_still_yes():
+    """XML liquibase sotto path db/ resta rilevato."""
+    r = criterion_1_db_change(
+        ["src/main/resources/db/changelog/db.changelog-master.xml"], "")
+    assert r.status == "YES"
+
+
+def test_c1_db_xml_at_repo_root_still_yes():
+    """Path che inizia con db/ (root repo): \\b matcha a inizio stringa."""
+    r = criterion_1_db_change(["db/tables.xml"], "")
+    assert r.status == "YES"
+
+
+def test_c1_liquibase_xml_content_is_db_change():
+    """Changelog liquibase con nome non standard: rilevato dal contenuto XML."""
+    r = criterion_1_db_change(
+        ["src/main/resources/updates.xml"],
+        '+    <createTable tableName="licenze">')
+    assert r.status == "YES"
+    assert any("ddl_keyword" in e for e in r.evidence)
+
+
 def test_c2_ocp_yaml_with_deployment_kind():
     diff = "kind: Deployment\nspec:\n  replicas: 3"
     r = criterion_2_ocp_config(["deployment.yaml"], diff)
