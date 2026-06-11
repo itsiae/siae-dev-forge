@@ -65,7 +65,21 @@ escape_for_json() { devforge_sanitize_json_str "$1"; }
 # available — it eliminates false positives on inputs like
 # `git log | grep commit`, `echo "git commit"`, and `python run_git_commit.py`.
 # Fallback to the legacy regex only if cmd-parser failed to source.
-if command -v devforge_cmd_matches >/dev/null 2>&1; then
+if command -v devforge_cmd_has_subcommand >/dev/null 2>&1; then
+    # Segment-aware: matcha anche dentro comandi composti (cd X && git commit)
+    # — il match first-segment-only veniva bypassato (root cause PR #311).
+    if devforge_cmd_has_subcommand "$TOOL_COMMAND" git commit; then
+        IS_GIT_COMMIT=1
+    else
+        IS_GIT_COMMIT=0
+    fi
+    if devforge_cmd_has_subcommand "$TOOL_COMMAND" git checkout \
+       || devforge_cmd_has_subcommand "$TOOL_COMMAND" git switch; then
+        IS_GIT_CHECKOUT=1
+    else
+        IS_GIT_CHECKOUT=0
+    fi
+elif command -v devforge_cmd_matches >/dev/null 2>&1; then
     TC_FIRST=$(devforge_first_token "$TOOL_COMMAND")
     TC_SECOND=$(devforge_second_token "$TOOL_COMMAND")
     if [ "$TC_FIRST" = "git" ] && [ "$TC_SECOND" = "commit" ]; then

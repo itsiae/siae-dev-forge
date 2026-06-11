@@ -49,8 +49,17 @@ _devforge_strip_prefix() {
                 ;;
             env\ *)
                 # `env` may be followed by VAR=val pairs (handled by #1
-                # after we drop the literal `env` word).
+                # after we drop the literal `env` word) and/or option flags:
+                # `-u NAME`/`-C dir` consume a value, others (`-i`, `-0`) are bare.
                 cmd="${cmd#env }"
+                while true; do
+                    cmd="${cmd#"${cmd%%[![:space:]]*}"}"
+                    case "$cmd" in
+                        -u\ *|-C\ *) cmd="${cmd#* }"; cmd="${cmd#* }" ;;
+                        -*\ *)       cmd="${cmd#* }" ;;
+                        *)           break ;;
+                    esac
+                done
                 continue
                 ;;
             timeout\ *)
@@ -90,4 +99,45 @@ devforge_cmd_matches() {
     first=$(devforge_first_token "$cmd")
     second=$(devforge_second_token "$cmd")
     [ "$first" = "$want_first" ] && [ "$second" = "$want_second" ]
+}
+
+# _devforge_segments COMMAND
+# Split a compound command on shell separators (&&, ||, ;, |, newline) and
+# emit one segment per line. Not quote-aware by design: a separator inside a
+# string literal just produces a segment whose first token is not the target
+# command, so it cannot cause a false-positive block.
+_devforge_segments() {
+    # gsub separati (ordine: || prima di |) — non ambiguo su ogni variante awk.
+    # Il backgrounding `&` singolo NON e' un separatore gestito (limite noto,
+    # irrilevante per i pattern di comando degli hook).
+    printf '%s\n' "$1" | awk '{ gsub(/\|\|/, "\n"); gsub(/&&/, "\n"); gsub(/;/, "\n"); gsub(/\|/, "\n"); print }'
+}
+
+# devforge_cmd_has_subcommand COMMAND TOK1 TOK2 [TOK3]
+# Return 0 if ANY segment of a (possibly compound) command starts with the
+# given tokens after wrapper/env stripping. Fixes the bypass where
+# `cd X && env -u P gh pr create` escaped first-segment-only matching
+# (root cause PR #311 — design 2026-06-11-hook-compound-cmd-match).
+devforge_cmd_has_subcommand() {
+    local cmd="$1" t1="$2" t2="$3" t3="${4:-}"
+    local seg stripped f s th segments
+    # Materializza prima del heredoc: un fallimento di awk ritorna 1 esplicito
+    # (no-match conservativo) invece di propagarsi al caller.
+    segments=$(_devforge_segments "$cmd") || return 1
+    while IFS= read -r seg; do
+        case "$seg" in *[![:space:]]*) ;; *) continue ;; esac
+        stripped=$(_devforge_strip_prefix "$seg")
+        f=$(printf '%s' "$stripped" | awk '{print $1; exit}')
+        [ "$f" = "$t1" ] || continue
+        s=$(printf '%s' "$stripped" | awk '{print $2; exit}')
+        [ "$s" = "$t2" ] || continue
+        if [ -n "$t3" ]; then
+            th=$(printf '%s' "$stripped" | awk '{print $3; exit}')
+            [ "$th" = "$t3" ] || continue
+        fi
+        return 0
+    done <<DEVFORGE_SEG_EOF
+$segments
+DEVFORGE_SEG_EOF
+    return 1
 }

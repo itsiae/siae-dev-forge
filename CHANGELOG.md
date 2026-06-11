@@ -4,6 +4,28 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.84.0] - 2026-06-11
+
+### Fixed — Gate token-based scattano anche su comandi composti
+
+I 3 hook PreToolUse token-based (`pr-premortem-gate`, `pr-blind-review-gate`,
+`pre-commit`) venivano silenziosamente bypassati da comandi composti
+(`cd X && env -u P gh pr create`): `_devforge_primary_cmd` taglia al primo
+operatore shell → primo token `cd` → no match → fail-open. Bypass reale: PR #311
+aperta senza premortem né blind-review.
+
+- **`_devforge_segments`** (`lib/cmd-parser.sh`): split su `&&`/`||`/`;`/`|`/newline
+  (gsub awk separati, non ambigui su ogni variante awk).
+- **`devforge_cmd_has_subcommand`**: match token-based su OGNI segmento — immune
+  ai falsi positivi su stringhe (`printf '...gh pr create...'` non scatta).
+- **Strip flag `env`**: `-u VAR`/`-C dir` (2 parole), bare `-x` (1 parola).
+- I 3 hook usano il nuovo matcher; fallback esistenti invariati (additive-only).
+- Test: 11 e2e (`tests/test_hooks_compound_cmd.py`, JSON reale pipato negli hook)
+  + 12 unit shell (`tests/lib/test_cmd_parser.sh` sezione 6). No-regression: 32/32
+  + 8/8 + run-all identico a baseline.
+
+Design: `docs/plans/2026-06-11-hook-compound-cmd-match-design.md`.
+
 ## [1.78.0] - 2026-06-03
 
 ### Added — Segnali raw "chi produce di valore" + pricing multi-vendor (Design A)
