@@ -36,8 +36,15 @@ fi
 
 # Token match: only `gh pr create` or `gh pr edit` trigger the gate.
 # Fallback to substring if cmd-parser unavailable (safety).
+# Segment-aware: matcha anche dentro comandi composti (cd X && env -u P gh pr create)
+# — il match first-segment-only veniva bypassato (root cause PR #311).
 TRIGGERS=0
-if command -v devforge_first_token >/dev/null 2>&1; then
+if command -v devforge_cmd_has_subcommand >/dev/null 2>&1; then
+    if devforge_cmd_has_subcommand "$TOOL_COMMAND" gh pr create \
+       || devforge_cmd_has_subcommand "$TOOL_COMMAND" gh pr edit; then
+        TRIGGERS=1
+    fi
+elif command -v devforge_first_token >/dev/null 2>&1; then
     FIRST=$(devforge_first_token "$TOOL_COMMAND")
     SECOND=$(devforge_second_token "$TOOL_COMMAND")
     THIRD=$(devforge_third_token "$TOOL_COMMAND")
