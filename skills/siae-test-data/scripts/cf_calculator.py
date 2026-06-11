@@ -9,11 +9,12 @@ Riferimento normativo: DM 23/12/1976 e successive modifiche.
 
 from __future__ import annotations
 
-import json
 import random
 import re
 from datetime import date, timedelta
 from pathlib import Path
+
+import data_store
 
 REFS = Path(__file__).resolve().parent.parent / "references"
 
@@ -39,19 +40,19 @@ VOWELS = set("AEIOU")
 # (con il bug del 1900 leap year compensato per date >= 1900-03-01)
 EXCEL_EPOCH = date(1899, 12, 30)
 
+_NORMALIZE_TABLE = str.maketrans({
+    "À": "A", "Á": "A", "Â": "A", "Ä": "A", "Ã": "A",
+    "È": "E", "É": "E", "Ê": "E", "Ë": "E",
+    "Ì": "I", "Í": "I", "Î": "I", "Ï": "I",
+    "Ò": "O", "Ó": "O", "Ô": "O", "Ö": "O", "Õ": "O",
+    "Ù": "U", "Ú": "U", "Û": "U", "Ü": "U",
+    "Ç": "C", "Ñ": "N", "ß": "S",
+})
+
 
 def _normalize(s: str) -> str:
     """Rimuove accenti, spazi e caratteri non alfabetici, ritorna upper."""
-    s = s.upper().strip()
-    repl = str.maketrans({
-        "À": "A", "Á": "A", "Â": "A", "Ä": "A", "Ã": "A",
-        "È": "E", "É": "E", "Ê": "E", "Ë": "E",
-        "Ì": "I", "Í": "I", "Î": "I", "Ï": "I",
-        "Ò": "O", "Ó": "O", "Ô": "O", "Ö": "O", "Õ": "O",
-        "Ù": "U", "Ú": "U", "Û": "U", "Ü": "U",
-        "Ç": "C", "Ñ": "N", "ß": "S",
-    })
-    s = s.translate(repl)
+    s = s.upper().strip().translate(_NORMALIZE_TABLE)
     return re.sub(r"[^A-Z]", "", s)
 
 
@@ -162,14 +163,12 @@ def date_to_excel_serial(d: date) -> int:
 
 
 def carica_belfiore_comuni() -> dict:
-    with open(REFS / "belfiore_comuni.json", encoding="utf-8") as f:
-        data = json.load(f)
+    data = data_store.get("belfiore_comuni.json")
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 
 def carica_belfiore_esteri() -> dict:
-    with open(REFS / "belfiore_esteri.json", encoding="utf-8") as f:
-        data = json.load(f)
+    data = data_store.get("belfiore_esteri.json")
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 

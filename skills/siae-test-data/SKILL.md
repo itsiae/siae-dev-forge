@@ -9,7 +9,7 @@ description: >
   "mock CF italiano", "dati SIAE per test", "crea anagrafica di prova",
   "fixture SIAE", "test data utilizzatore", "dataset autori editori",
   "genera CF e P.IVA validi", "mock anagrafica italiana", "test profilo SIAE".
-runtime: Claude-native (zero dipendenze locali). Python opzionale per batch >50.
+runtime: Claude-native (zero dipendenze locali). Python opzionale per batch >5.
 ---
 
 # siae-test-data — Generatore profili anagrafici SIAE
@@ -34,15 +34,52 @@ Quando questa skill viene attivata, Claude DEVE seguire questi passi nell'ordine
 
 ### Passo 0 — Verifica scorciatoia Python (opzionale)
 
-Se l'utente ha richiesto un dataset di **piu' di 50 profili** O ha esplicitamente
+Se l'utente ha richiesto un dataset di **piu' di 5 profili** O ha esplicitamente
 chiesto "in batch / batch automatico", prova prima questa scorciatoia:
 
 ```bash
-python3 --version 2>/dev/null && echo OK
+(python3 --version 2>/dev/null || python --version 2>/dev/null || py --version 2>/dev/null) && echo OK
 ```
 
-Se Python 3.8+ e' disponibile, salta al **Passo 6 (Esecuzione Python)**.
-Altrimenti continua con la generazione Claude-native (passi 1-5).
+> **Windows:** `python3` potrebbe non essere nel PATH; il comando prova in sequenza
+> `python3`, `python` e il Python Launcher `py` per garantire il rilevamento corretto.
+
+Se Python 3.8+ e' disponibile:
+- Avvia il pre-warming del data_store emettendo il comando sotto **nello stesso turno**
+  in cui mostri il primo step del wizard (Passo 1, Step 1). Non aspettare il risultato
+  prima della prima `AskUserQuestion`: il warm-up avviene mentre l'utente risponde,
+  nascondendo ~480ms di Defender scan su Windows nel tempo di attesa dell'utente.
+  ```bash
+  cd siae-test-data/scripts && python3 -c "import data_store; [data_store.get(f) for f in ['nomi_italiani.json','nomi_esteri.json','forme_giuridiche.json','cap_citta.json','belfiore_comuni.json','belfiore_esteri.json']]; print('warmed')" 2>/dev/null
+  ```
+- Dopo aver raccolto tutti i parametri del wizard, salta al **Passo 6 (Esecuzione Python)**.
+
+Altrimenti, se Python non e' disponibile, prova **Node.js**:
+
+```bash
+(node --version 2>/dev/null || nodejs --version 2>/dev/null) && node -e "if(parseInt(process.version.slice(1))<10)process.exit(1)" 2>/dev/null && echo NODE_OK
+```
+
+> **Windows:** su alcune installazioni il binario e' `nodejs`; il comando prova entrambi.
+
+Se Node.js 10+ e' disponibile (`NODE_OK`):
+- **Memorizza il runtime scelto**: scrivi mentalmente `→ RUNTIME: Node.js` — userai
+  il **Passo 6-bis** (non il Passo 6) al termine del wizard.
+- Avvia il pre-warming emettendo il comando sotto **nello stesso turno** della prima
+  `AskUserQuestion` (non attendere il risultato):
+  ```bash
+  # Eseguire da REPO ROOT (dove risiede skills/)
+  node -e "const p=require('path'),f=require('fs'),r=p.join(process.cwd(),'skills','siae-test-data','references');['nomi_italiani.json','nomi_esteri.json','forme_giuridiche.json','cap_citta.json','belfiore_comuni.json','belfiore_esteri.json'].forEach(n=>JSON.parse(f.readFileSync(p.join(r,n))))" 2>/dev/null
+  ```
+- Dopo aver raccolto tutti i parametri del wizard, salta al **Passo 6-bis (Esecuzione Node.js)**.
+
+Altrimenti (ne' Python ne' Node.js disponibili — path Claude-native, passi 1-5):
+- Se N > 10: avvisa l'utente — "Generazione Claude-native per N={N} profili senza runtime
+  locale richiede ~{N×12}s. Installa Python 3.8+ o Node.js 10+ per ridurre a <2s."
+- Emetti tutte le **Read del Passo 2** nello stesso turno della prima `AskUserQuestion`
+  (Step 1 del wizard). I file saranno gia' in contesto quando l'utente risponde,
+  eliminando i 3.2s di caricamento dal percorso critico su Windows VPN.
+- Al Passo 2 salta le Read gia' emesse al Passo 0.
 
 ### Passo 1 — Flusso interattivo a 7 step
 
@@ -95,6 +132,12 @@ conferma. Se la differenza supera il ±1%, segnala all'utente e chiedi di correg
 
 ### Passo 2 — Carica i reference
 
+> **Skip se pre-caricati al Passo 0** (path Claude-native con Read emesse insieme
+> al primo AskUserQuestion): i file sono gia' in contesto, non ri-leggere.
+
+**Leggi tutti i file seguenti in un singolo batch parallelo** (emetti tutte le
+Read tool call nello stesso turno di risposta — non sequenzialmente una alla volta):
+
 Leggi questi file (in `siae-test-data/references/`):
 - `algoritmi.md` — algoritmi CF + P.IVA + validazioni
 - `output_schema.md` — schema JSON canonico del profilo
@@ -126,6 +169,10 @@ Esempio: N=5, gruppi [ITA 70%, UE 20%, EXTRA-UE 10%] già in ordine decrescente:
 - Risultato: 3 ITA + 1 UE + 1 EXTRA-UE = 5 ✓
 
 Se una sola nazionalita' e' selezionata, tutti gli N profili appartengono a quel gruppo.
+
+**Genera tutti i profili in un unico blocco di output**: calcola TUTTO il dataset
+e restituiscilo in una sola risposta invece di emettere ogni profilo in round-trip
+separati. Su Windows ogni round-trip al modello costa 300-800ms extra.
 
 #### Loop — Per ciascun profilo (itera gruppo per gruppo: prima tutti N_ITA, poi N_UE, poi N_EXTRA-UE)
 
@@ -205,6 +252,24 @@ Includi sempre un header informativo prima del dataset con il riepilogo dei para
 Restituisci il risultato inline nella conversazione, OPPURE scrivilo in un file
 se l'utente specifica un path di output.
 
+### Passo 6-bis — Scorciatoia Node.js (solo se Passo 0 ha rilevato NODE_OK)
+
+```bash
+cd siae-test-data/scripts
+node generate_profiles.js \
+  --categorie <CSV> \
+  --nazionalita <ITA|UE|EXTRA-UE|ITA,UE|ITA,EXTRA-UE|UE,EXTRA-UE|ITA,UE,EXTRA-UE> \
+  --distribuzione "<pct_ITA>,<pct_UE>,<pct_EXTRA-UE>" \
+  --forme-giuridiche <CSV> \
+  --profilo <FULL|LIGHT> \
+  --quantita <5|10|25|50|100|500> \
+  --formato <JSON|CSV> \
+  --output <path>
+```
+
+Python ha priorita' se disponibile. Edge case indirizzo (14 pattern) e formato Markdown
+non sono supportati nella versione Node.js — usare il path Claude-native se richiesti.
+
 ### Passo 6 — Scorciatoia Python (solo se Passo 0 ha rilevato Python 3.8+)
 
 ```bash
@@ -219,6 +284,7 @@ python3 generate_profiles.py \
   --quantita <5|10|25|50|100|500> \
   --formato <JSON|CSV|MARKDOWN|ALL> \
   --strict \
+  [--skip-validation] \                                    # performance: salta validazione post-generazione
   --output <path>
 ```
 

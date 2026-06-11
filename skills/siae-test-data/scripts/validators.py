@@ -15,11 +15,11 @@ Check implementati:
 
 from __future__ import annotations
 
-import json
 import re
 from datetime import date
 from pathlib import Path
 
+import data_store
 from cf_calculator import (
     carica_belfiore_comuni,
     carica_belfiore_esteri,
@@ -33,8 +33,7 @@ REFS = Path(__file__).resolve().parent.parent / "references"
 
 
 def _carica_cap_citta() -> dict:
-    with open(REFS / "cap_citta.json", encoding="utf-8") as f:
-        return json.load(f)
+    return data_store.get("cap_citta.json")
 
 
 CAP_CITTA = _carica_cap_citta()
