@@ -57,12 +57,14 @@ Se Python 3.8+ e' disponibile:
 Altrimenti, se Python non e' disponibile, prova **Node.js**:
 
 ```bash
-(node --version 2>/dev/null || nodejs --version 2>/dev/null) && echo NODE_OK
+(node --version 2>/dev/null || nodejs --version 2>/dev/null) && node -e "if(parseInt(process.version.slice(1))<10)process.exit(1)" 2>/dev/null && echo NODE_OK
 ```
 
 > **Windows:** su alcune installazioni il binario e' `nodejs`; il comando prova entrambi.
 
 Se Node.js 10+ e' disponibile (`NODE_OK`):
+- **Memorizza il runtime scelto**: scrivi mentalmente `→ RUNTIME: Node.js` — userai
+  il **Passo 6-bis** (non il Passo 6) al termine del wizard.
 - Avvia il pre-warming emettendo il comando sotto **nello stesso turno** della prima
   `AskUserQuestion` (non attendere il risultato):
   ```bash
