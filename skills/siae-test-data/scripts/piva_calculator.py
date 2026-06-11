@@ -19,14 +19,14 @@ import random
 import re
 from pathlib import Path
 
+import data_store
+
 REFS = Path(__file__).resolve().parent.parent / "references"
 
 
 def _carica_codici_provincia() -> dict:
     """Carica mapping sigla_provincia -> codice ISTAT 3 cifre."""
-    with open(REFS / "forme_giuridiche.json", encoding="utf-8") as f:
-        data = json.load(f)
-    raw = data["_codici_provincia_istat"]
+    raw = data_store.get("forme_giuridiche.json")["_codici_provincia_istat"]
     return {k: v for k, v in raw.items() if not k.startswith("_")}
 
 
