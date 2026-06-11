@@ -262,7 +262,6 @@ node generate_profiles.js \
   --profilo <FULL|LIGHT> \
   --quantita <5|10|25|50|100|500> \
   --formato <JSON|CSV> \
-  [--skip-validation] \
   --output <path>
 ```
 
