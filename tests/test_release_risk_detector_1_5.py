@@ -43,6 +43,12 @@ def test_c1_db_changelog_xml_path_still_yes():
     assert r.status == "YES"
 
 
+def test_c1_db_xml_at_repo_root_still_yes():
+    """Path che inizia con db/ (root repo): \\b matcha a inizio stringa."""
+    r = criterion_1_db_change(["db/tables.xml"], "")
+    assert r.status == "YES"
+
+
 def test_c1_liquibase_xml_content_is_db_change():
     """Changelog liquibase con nome non standard: rilevato dal contenuto XML."""
     r = criterion_1_db_change(

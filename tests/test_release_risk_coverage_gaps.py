@@ -118,6 +118,9 @@ def test_assess_in_process_full_run(git_repo_with_origin, tmp_path, monkeypatch,
 def test_assess_cache_hit_second_run(git_repo_with_origin, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cache_mod, "CACHE_DIR", tmp_path / "cache")
     monkeypatch.delenv("CLAUDE_PLUGIN_ROOT", raising=False)
+    # genesis_confirmed + genesis_declined insieme: combinazione semanticamente
+    # contraddittoria ma intenzionale — copre entrambi i rami di parsing args
+    # in un solo run; la cache key non dipende dallo stato genesis.
     args = _assess_args(git_repo_with_origin, no_cache=False,
                         genesis_confirmed="feat/a", genesis_declined=True)
     assert assess(args) == 0

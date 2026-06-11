@@ -36,9 +36,11 @@ servizio è mappato, e invoca la CLI deterministica che calcola i 18 criteri.
 Il calcolo è **deterministico** (codice Python in `lib/release_risk/`, non il modello).
 Pesi positivi = fattori di rischio; pesi negativi = mitigazioni (sottraggono dallo score).
 
+I pattern nella colonna "Come viene rilevato" sono regex Python (case-insensitive).
+
 | # | Criterio | Peso | Come viene rilevato |
 |---|---|---|---|
-| 1 | Database change (DDL/DML) | +3 | diff: file `.sql`/`.hql`, path `migration|liquibase|flyway|changelog|V\d+__|db/*.xml`, keyword DDL o tag liquibase (`<createTable`, ...) |
+| 1 | Database change (DDL/DML) | +3 | diff: file `.sql`/`.hql`, path `migration|liquibase|flyway|changelog|V\d+__|\bdb/.*\.xml$`, keyword DDL o tag liquibase (`<createTable`, ...) |
 | 2 | OCP/K8s config change | +2 | diff: file yaml/k8s/helm o `kind: Deployment\|Route\|Secret\|ConfigMap` |
 | 3 | Breaking API changes | +3 | diff: righe rimosse con `@*Mapping` |
 | 4 | External dependencies | +2 | diff: `pom.xml`, `package.json`, `requirements.txt`, `build.gradle`, `go.mod`, ... |
