@@ -7,7 +7,7 @@ PASS=0; FAIL=0
 ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 ko(){ echo "  FAIL: $1 ($2)"; FAIL=$((FAIL+1)); }
 
-PATTERN='(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|/__tests__/|conftest|^test_|^tests/)'
+PATTERN='(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|/__tests__/|conftest\.py|^test_|^tests/)'
 detect(){ echo "$1" | grep -qE "$PATTERN" && echo true || echo false; }
 count(){ echo "$1" | grep -cE "$PATTERN" || true; }
 

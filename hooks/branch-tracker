@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # PostToolUse Bash: emette branch_created su git checkout -b / git switch -c.
 # Additivo, best-effort, mai bloccante.
+# set -e OMESSO di proposito: hook best-effort, nessun errore deve terminare male
+# o propagarsi al comando dell'utente; ogni step ha 2>/dev/null || true/exit 0.
 set -uo pipefail
 export DEVFORGE_CURRENT_HOOK="branch-tracker"
 
@@ -30,6 +32,10 @@ TARGET=$(printf '%s' "$CMD" | sed -nE 's/.*[[:space:]](-b|-c|--branch)[[:space:]
 [ -z "$TARGET" ] && exit 0
 
 # Guard: il branch deve essere stato EFFETTIVAMENTE creato (HEAD == target).
+# Limite noto (best-effort): se l'utente e' GIA' su TARGET e rilancia 'checkout -b TARGET'
+# (che fallisce perche' esiste), HEAD resta su TARGET e il guard passa -> raro evento spurio.
+# Mitigazione downstream: la pipeline usa MIN(ts) per branch, quindi un branch_created
+# piu' recente NON sovrascrive il primo (lead time calcolato sul primo). Impatto nullo sul KPI.
 CUR=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 [ "$CUR" = "$TARGET" ] || exit 0
 
