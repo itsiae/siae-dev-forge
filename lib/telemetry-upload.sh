@@ -215,3 +215,49 @@ devforge_pending_count() {
     done
     echo "$count"
 }
+
+# devforge_gc_dead_outboxes — archive (never delete) outboxes of dead sessions.
+# Atomic unit = the session directory (WARN-5): never GC a single batch by file age.
+# A session is eligible iff: (a) not the current $DEVFORGE_SID, AND
+# (b) the newest mtime anywhere under its outbox is older than DEVFORGE_FLUSH_GC_DAYS.
+devforge_gc_dead_outboxes() {
+    local state_root="${HOME}/.claude/devforge-state"
+    [ -d "$state_root" ] || return 0
+    local archive_root="${HOME}/.claude/devforge-state-archive"
+    local gc_days="${DEVFORGE_FLUSH_GC_DAYS:-14}"
+    local current_sid="${DEVFORGE_SID:-}"
+    local now_s threshold
+    now_s=$(date +%s)
+    threshold=$((gc_days * 86400))
+
+    local sess_dir sid newest mtime f
+    for sess_dir in "$state_root"/*/; do
+        [ -d "${sess_dir}outbox" ] || continue
+        sid=$(basename "$sess_dir")
+        [ "$sid" = "$current_sid" ] && continue   # never GC current session
+        # Newest mtime anywhere under the outbox (batches, acked, failed, cursors).
+        newest=0
+        for f in $(find "${sess_dir}outbox" -type f 2>/dev/null); do
+            mtime=$(stat -f%m "$f" 2>/dev/null || stat -c%Y "$f" 2>/dev/null || echo 0)
+            [ "$mtime" -gt "$newest" ] 2>/dev/null && newest=$mtime
+        done
+        [ "$newest" -eq 0 ] && continue   # empty outbox, leave for next pass
+        if [ "$((now_s - newest))" -ge "$threshold" ] 2>/dev/null; then
+            mkdir -p "$archive_root" 2>/dev/null
+            mv "$sess_dir" "${archive_root}/" 2>/dev/null || true
+        fi
+    done
+}
+
+# devforge_gc_maybe — run GC at most once per day via a sentinel.
+devforge_gc_maybe() {
+    local sentinel="${HOME}/.claude/.devforge-last-gc"
+    local now_s last
+    now_s=$(date +%s)
+    last=$(cat "$sentinel" 2>/dev/null || echo "0")
+    if [ "$last" -gt 0 ] 2>/dev/null && [ "$((now_s - last))" -lt 86400 ] 2>/dev/null; then
+        return 0
+    fi
+    echo "$now_s" > "$sentinel"
+    devforge_gc_dead_outboxes 2>/dev/null || true
+}

@@ -166,6 +166,58 @@ sidecar_gone=$([ -f "${ob}/.tries-${batch_name}" ] && echo "no" || echo "yes")
 assert_eq "tries sidecar removed on success" "yes" "$sidecar_gone"
 cleanup_env
 
+# Helper: backdate every file under a dir to N seconds ago (portable BSD/GNU)
+backdate_dir() {
+    local dir="$1" secs_ago="$2"
+    local ep=$(( $(date +%s) - secs_ago ))
+    local f
+    find "$dir" -exec sh -c '
+        if touch -d "@'"$ep"'" "$1" 2>/dev/null; then :; else
+            touch -t "$(date -r '"$ep"' +%Y%m%d%H%M.%S 2>/dev/null)" "$1" 2>/dev/null || true
+        fi
+    ' _ {} \; 2>/dev/null
+}
+
+# ── Test 10: dead session (mtime > GC_DAYS) archived as a unit ──
+echo "Test 10: dead-session outbox archived"
+new_env
+export DEVFORGE_FLUSH_GC_DAYS=14
+export DEVFORGE_SID="sess-CURRENT"
+ob=$(seed_outbox "sess-DEAD" 3)
+backdate_dir "${HOME}/.claude/devforge-state/sess-DEAD" $(( 15 * 86400 ))
+devforge_gc_dead_outboxes
+archived=$([ -d "${HOME}/.claude/devforge-state-archive/sess-DEAD" ] && echo "yes" || echo "no")
+gone_from_state=$([ -d "${HOME}/.claude/devforge-state/sess-DEAD" ] && echo "no" || echo "yes")
+assert_eq "dead session archived" "yes" "$archived"
+assert_eq "dead session removed from state" "yes" "$gone_from_state"
+unset DEVFORGE_FLUSH_GC_DAYS DEVFORGE_SID
+cleanup_env
+
+# ── Test 11: recent session NOT archived ──
+echo "Test 11: recent session preserved"
+new_env
+export DEVFORGE_FLUSH_GC_DAYS=14
+export DEVFORGE_SID="sess-CURRENT"
+seed_outbox "sess-RECENT" 2 >/dev/null   # fresh mtime
+devforge_gc_dead_outboxes
+still_there=$([ -d "${HOME}/.claude/devforge-state/sess-RECENT" ] && echo "yes" || echo "no")
+assert_eq "recent session NOT archived" "yes" "$still_there"
+unset DEVFORGE_FLUSH_GC_DAYS DEVFORGE_SID
+cleanup_env
+
+# ── Test 12: current session NEVER archived even if old ──
+echo "Test 12: current session never archived"
+new_env
+export DEVFORGE_FLUSH_GC_DAYS=14
+export DEVFORGE_SID="sess-CURRENT"
+ob=$(seed_outbox "sess-CURRENT" 1)
+backdate_dir "${HOME}/.claude/devforge-state/sess-CURRENT" $(( 30 * 86400 ))
+devforge_gc_dead_outboxes
+current_safe=$([ -d "${HOME}/.claude/devforge-state/sess-CURRENT" ] && echo "yes" || echo "no")
+assert_eq "current session preserved despite age" "yes" "$current_safe"
+unset DEVFORGE_FLUSH_GC_DAYS DEVFORGE_SID
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
