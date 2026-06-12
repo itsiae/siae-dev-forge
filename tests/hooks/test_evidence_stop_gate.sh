@@ -46,12 +46,12 @@ else
 fi
 
 echo ""
-echo "=== 3. DEVFORGE_FORCE_STOP=1 → allow + tracked ==="
+echo "=== 3. DEVFORGE_FORCE_STOP NON bypassa (var rimossa) ==="
 OUT=$(_run_hook 1 1 "siae-retrospective")
-if ! echo "$OUT" | grep -q '"decision": "block"'; then
-    echo "  PASS  force-stop allowed"; PASS=$((PASS+1))
+if echo "$OUT" | grep -q '"decision": "block"'; then
+    echo "  PASS  var ignorata, verification gate blocca"; PASS=$((PASS+1))
 else
-    echo "  FAIL  force-stop still blocked"; FAIL=$((FAIL+1))
+    echo "  FAIL  FORCE_STOP ancora onorata (bypass)"; FAIL=$((FAIL+1))
 fi
 
 echo ""
@@ -68,6 +68,19 @@ else
     echo "  FAIL  auto-escape still present"; FAIL=$((FAIL+1))
 fi
 rm -rf "$TMPH"
+
+echo ""
+echo "=== 5. DEVFORGE_SKIP_RETRO_GATE NON bypassa (var rimossa) ==="
+TMPH5=$(mktemp -d); mkdir -p "$TMPH5/.claude"
+# Sessione produttiva (skill non-retro) SENZA siae-retrospective → retro gate
+printf 'siae-brainstorming\n' > "$TMPH5/.claude/.devforge-session-skills"
+OUT=$(_invoke_with_completion | HOME="$TMPH5" env DEVFORGE_USE_SESSION_SCOPE=1 DEVFORGE_SKIP_RETRO_GATE=1 bash "$HOOK" 2>/dev/null || true)
+if echo "$OUT" | grep -q '"decision": "block"'; then
+    echo "  PASS  var ignorata, retro/verification gate blocca"; PASS=$((PASS+1))
+else
+    echo "  FAIL  SKIP_RETRO_GATE ancora onorata (bypass)"; FAIL=$((FAIL+1))
+fi
+rm -rf "$TMPH5"
 
 echo ""
 echo "Total: $((PASS+FAIL)) — PASS: $PASS — FAIL: $FAIL"

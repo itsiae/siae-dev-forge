@@ -184,14 +184,8 @@ fi
 # --- BLOCCO 4: Retrospective gate ---
 # DESIGN DECISION: hard-block deterministico (rimosso soft-block a 2 tentativi).
 # Il gate scatta su qualsiasi sessione produttiva (skills>0 OR commits>0).
-# Ambienti non interattivi (CI/CD, agent headless) possono bypassare via: DEVFORGE_SKIP_RETRO_GATE=1
 if [ "$SKILLS_USED_COUNT" -gt 0 ] || [ "$COMMITS_COUNT" -gt 0 ]; then
     if ! echo "$SKILLS_LIST" | grep -qF "siae-retrospective"; then
-        if [ "${DEVFORGE_SKIP_RETRO_GATE:-0}" = "1" ]; then
-            devforge_log "stop_gate" "skipped_retro" "{\"reason\":\"DEVFORGE_SKIP_RETRO_GATE=1\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
-            _devforge_emit_session_end
-            exit 0
-        fi
         devforge_log "stop_gate" "blocked_retro" "{\"reason\":\"retrospective_missing\",\"skills\":${SKILLS_USED_COUNT},\"commits\":${COMMITS_COUNT}}"
         cat <<RETRO_EOF
 {
@@ -212,10 +206,8 @@ fi
 #   session-scoped (rollback, DEVFORGE_USE_SESSION_SCOPE=1):
 #                          legacy grep of session-skills file
 #
-# The old 2-block auto-escape is gone (ADR-006). The only way past the gate
-# without invoking verification is an EXPLICIT bypass:
-#   DEVFORGE_FORCE_STOP=1 <command>
-# which is tracked daily and logs bypass_abuse_suspected on the 3rd use.
+# The old 2-block auto-escape is gone (ADR-006). There is no discretionary
+# bypass: the only way past the gate is invoking siae-verification.
 
 source "${PLUGIN_ROOT}/lib/block-explainer.sh" 2>/dev/null || true
 if ! source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null \
@@ -249,25 +241,6 @@ if [ "$VERIFICATION_OK" = "1" ]; then
     exit 0
 fi
 
-# Explicit bypass — DEVFORGE_FORCE_STOP=1 (tracked, daily abuse counter)
-if [ "${DEVFORGE_FORCE_STOP:-0}" = "1" ]; then
-    FORCE_COUNT_FILE="${HOME}/.claude/.devforge-force-stop-count"
-    TODAY=$(date -u +%Y-%m-%d)
-    DATA=$(cat "$FORCE_COUNT_FILE" 2>/dev/null || echo "")
-    STORED_DATE="${DATA%%|*}"
-    STORED_N="${DATA##*|}"
-    if [ "$STORED_DATE" != "$TODAY" ] || [ -z "$STORED_N" ]; then
-        STORED_N=0
-    fi
-    NEW_N=$((STORED_N + 1))
-    echo "${TODAY}|${NEW_N}" > "${FORCE_COUNT_FILE}.tmp" && mv "${FORCE_COUNT_FILE}.tmp" "$FORCE_COUNT_FILE"
-    devforge_log "stop_gate_forced" "warning" "{\"count_today\":${NEW_N}}"
-    if [ "$NEW_N" -ge 3 ]; then
-        devforge_log "force_stop_abuse_suspected" "warning" "{\"count_today\":${NEW_N}}"
-    fi
-    _devforge_emit_session_end
-    exit 0
-fi
 
 # Hard block — no auto-escape.
 devforge_log "stop_gate" "blocked" "{\"reason\":\"completion_claim_without_verification\",\"task_id\":\"${TASK_ID_STOP:-}\"}"
@@ -281,7 +254,7 @@ fi
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA.${_SG_EXPL} Escape esplicito (tracciato 3/giorno): DEVFORGE_FORCE_STOP=1 <comando>."
+  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA.${_SG_EXPL}"
 }
 EOF
 
