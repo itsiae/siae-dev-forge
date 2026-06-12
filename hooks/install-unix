@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# install-unix.sh
+# Restores the original Unix/bash hook configuration for siae-dev-forge.
+# Use this on Mac/Linux, or to revert a previous install-windows.ps1 run.
+
+set -euo pipefail
+
+HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
+UNIX_SRC="${HOOKS_DIR}/hooks.unix.json"
+TARGET="${HOOKS_DIR}/hooks.json"
+
+if [ ! -f "$UNIX_SRC" ]; then
+    echo "ERROR: hooks.unix.json not found in ${HOOKS_DIR}." >&2
+    echo "       Run install-windows.ps1 first to create the backup, or restore from git." >&2
+    exit 1
+fi
+
+cp "$UNIX_SRC" "$TARGET"
+echo "OK  hooks.json <- hooks.unix.json (bash/run-hook.cmd variant)"
+echo ""
+echo "siae-dev-forge Unix hooks active."
+echo "To switch to Windows: run install-windows.ps1"

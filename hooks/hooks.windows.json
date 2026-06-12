@@ -1,0 +1,210 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ps1\"",
+            "async": false
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start-tiered-advisor.ps1\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/devforge-context.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/batch-reset.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/sport-task-detect.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pr-blind-review-gate.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pr-premortem-gate.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pr-gate.ps1\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/review-evidence.ps1\"",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/tdd-gate.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/brainstorming-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/plan-gate-write.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/tdd-gate.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/brainstorming-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/plan-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/sub-skill-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/post-skill.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/skill-advisory.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/state-writer.ps1\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/post-commit-review.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/review-evidence.ps1\"",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/capture-test-result.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/batch-checkpoint.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pr-release-gate.ps1\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/devforge-flusher.ps1\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
