@@ -88,6 +88,36 @@ lock_present=$([ -d "${HOME}/.claude/.devforge-flush.lock" ] && echo "yes" || ec
 assert_eq "lock removed after flush" "no" "$lock_present"
 cleanup_env
 
+# ── Test 5: cap limits batches processed per invocation ──
+echo "Test 5: cap caps processed batches"
+new_env
+export DEVFORGE_FLUSH_MAX_BATCHES=3
+seed_outbox "sess-E" 10 >/dev/null
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog
+acked=$(ls "${HOME}/.claude/devforge-state/sess-E/outbox/acked"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+remaining=$(ls "${HOME}/.claude/devforge-state/sess-E/outbox"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "cap: exactly 3 acked" "3" "$acked"
+assert_eq "cap: 7 remaining" "7" "$remaining"
+unset DEVFORGE_FLUSH_MAX_BATCHES
+cleanup_env
+
+# ── Test 6: oldest-first ordering (lowest epoch in filename acked first) ──
+echo "Test 6: oldest-first drain"
+new_env
+export DEVFORGE_FLUSH_MAX_BATCHES=1
+ob="${HOME}/.claude/devforge-state/sess-F/outbox"
+mkdir -p "$ob"
+printf '{"old":1}\n' > "${ob}/batch-0000000001-pid.jsonl"
+printf '{"new":1}\n' > "${ob}/batch-0000000009-pid.jsonl"
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog
+# The oldest (epoch ...001) must be the one acked
+oldest_acked=$([ -f "${ob}/acked/batch-0000000001-pid.jsonl" ] && echo "yes" || echo "no")
+assert_eq "oldest batch acked first" "yes" "$oldest_acked"
+unset DEVFORGE_FLUSH_MAX_BATCHES
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

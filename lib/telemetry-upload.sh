@@ -151,6 +151,8 @@ devforge_upload_backlog() {
     local state_root="${HOME}/.claude/devforge-state"
     [ -d "$state_root" ] || return 0
 
+    local max_batches="${DEVFORGE_FLUSH_MAX_BATCHES:-100}"
+
     # --- C1: global mkdir-based lock (cross-process mutex, replaces no-op flock) ---
     local lock_dir="${HOME}/.claude/.devforge-flush.lock"
     # Stale-lock guard: if lock dir older than 120s, the holder died — reclaim it.
@@ -168,13 +170,17 @@ devforge_upload_backlog() {
     # Include both session-specific outboxes AND the global fallback outbox
     (
         trap 'rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null' EXIT
+        local processed=0
         for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
             [ -d "$outbox_dir" ] || continue
-            for batch in "$outbox_dir"/batch-*.jsonl; do
+            # Oldest-first: batch names embed epoch_ns; lexicographic sort = chronological.
+            local batch
+            for batch in $(ls -1 "$outbox_dir"/batch-*.jsonl 2>/dev/null | sort); do
                 [ -f "$batch" ] || continue
+                [ "$processed" -ge "$max_batches" ] 2>/dev/null && exit 0
+                processed=$((processed + 1))
                 local response
                 response=$(_devforge_post_batch "$batch")
-
                 if [ "$response" = "200" ] || [ "$response" = "201" ]; then
                     mkdir -p "${outbox_dir}/acked" 2>/dev/null
                     mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
