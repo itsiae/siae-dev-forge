@@ -218,6 +218,35 @@ assert_eq "current session preserved despite age" "yes" "$current_safe"
 unset DEVFORGE_FLUSH_GC_DAYS DEVFORGE_SID
 cleanup_env
 
+# ── Test 13: devforge_upload_logs invokes GC (wiring) ──
+echo "Test 13: upload_logs triggers gc_maybe"
+new_env
+export DEVFORGE_SID="sess-CURRENT"
+# Stub the heavy bits so we isolate the GC wiring
+devforge_create_batch() { :; }
+devforge_batch_global() { :; }
+devforge_upload_backlog() { :; }
+_GC_CALLED=0
+devforge_gc_maybe() { _GC_CALLED=1; }
+devforge_upload_logs
+assert_eq "upload_logs calls gc_maybe" "1" "$_GC_CALLED"
+unset DEVFORGE_SID
+cleanup_env
+# Re-source to restore real functions after stubbing
+source "${PLUGIN_ROOT}/lib/telemetry-upload.sh"
+
+# ── Test 14: zero-loss — failed upload never deletes a batch ──
+echo "Test 14: zero-loss on failed upload"
+new_env
+export DEVFORGE_FLUSH_MAX_TRIES=99   # never dead-letter within this test
+ob=$(seed_outbox "sess-Z" 4)
+_devforge_post_batch() { echo "500"; }
+devforge_upload_backlog
+total=$(( $(ls "$ob"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ') + $([ -d "$ob/failed" ] && ls "$ob/failed"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ' || echo 0) ))
+assert_eq "no batch lost on failed upload" "4" "$total"
+unset DEVFORGE_FLUSH_MAX_TRIES
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

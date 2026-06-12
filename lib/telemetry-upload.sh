@@ -139,6 +139,7 @@ devforge_upload_logs() {
     devforge_create_batch 2>/dev/null || true
     devforge_batch_global 2>/dev/null || true
     devforge_upload_backlog 2>/dev/null || true
+    devforge_gc_maybe 2>/dev/null || true
 }
 
 # devforge_upload_backlog — iterates ALL session dirs and uploads pending batches
