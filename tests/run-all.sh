@@ -796,7 +796,7 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 # Verify session-start resets counter
-DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
+bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
 COUNTER_AFTER_RESET=$(cat "${HOME}/.claude/.devforge-tool-counter" 2>/dev/null || echo "X")
 if [ "$COUNTER_AFTER_RESET" = "0" ]; then
   echo "  PASS  hooks/session-start: resetta tool counter a 0"
@@ -977,7 +977,7 @@ rm -f "$EMPTY_SKILL_LOG" "${HOME}/.claude/.devforge-skill-start"
 # Test: session-start cleans up stale guard directory
 rm -rf "${HOME}/.claude/.devforge-session-end-guard"
 mkdir -p "${HOME}/.claude/.devforge-session-end-guard"  # simulate stale guard
-DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
+bash "${PLUGIN_ROOT}/hooks/session-start" >/dev/null 2>&1 || true
 if [ ! -d "${HOME}/.claude/.devforge-session-end-guard" ]; then
   echo "  PASS  session-start: cleans up stale session_end guard"
   telfunc_ok=$((telfunc_ok + 1))
@@ -988,7 +988,7 @@ else
 fi
 
 # Test: session-start injects VERSION_STATUS into additional_context JSON
-SESSION_JSON=$(DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+SESSION_JSON=$(bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
 if echo "$SESSION_JSON" | grep -q "DevForge v"; then
   echo "  PASS  session-start: VERSION_STATUS injected in additional_context"
   telfunc_ok=$((telfunc_ok + 1))
@@ -1013,7 +1013,7 @@ TEST_TMP=$(mktemp -d)
 TEST_MEM_DIR="${TEST_TMP}/.claude/devforge-global-memory"
 mkdir -p "$TEST_MEM_DIR"
 printf '# Test memory\nContenuto-globale-test-fixture' > "${TEST_MEM_DIR}/feedback-test.md"
-SESSION_JSON_GM=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+SESSION_JSON_GM=$(HOME="${TEST_TMP}" bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
 # Extract only the JSON block (skip npm/tsc noise from background processes)
 SESSION_JSON_GM_CLEAN=$(echo "$SESSION_JSON_GM" | awk '/^\{/{f=1} f')
 if echo "$SESSION_JSON_GM_CLEAN" | grep -q "Contenuto-globale-test-fixture"; then
@@ -1026,7 +1026,7 @@ fi
 
 # Test Fix4-B: MEMORY.md index file is NOT injected (case-insensitive skip)
 printf '# Index\n- entry' > "${TEST_MEM_DIR}/MEMORY.md"
-SESSION_JSON_IDX=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+SESSION_JSON_IDX=$(HOME="${TEST_TMP}" bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
 SESSION_JSON_IDX_CLEAN=$(echo "$SESSION_JSON_IDX" | awk '/^\{/{f=1} f')
 if ! echo "$SESSION_JSON_IDX_CLEAN" | grep -q "# Index"; then
   echo "  PASS  session-start Fix4: MEMORY.md index file skipped"
@@ -1037,7 +1037,7 @@ else
 fi
 
 # Test Fix4-C: exit 0 without crash when global memory directory does not exist
-SESSION_JSON_NODIR=$(HOME="${TEST_TMP}/no-such-dir" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null; echo "exit:$?") || true
+SESSION_JSON_NODIR=$(HOME="${TEST_TMP}/no-such-dir" bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null; echo "exit:$?") || true
 # Use raw variable: "exit:0" is appended after the JSON block, so awk (from first '{') may strip it.
 if echo "$SESSION_JSON_NODIR" | grep -q "exit:0"; then
   echo "  PASS  session-start Fix4: exits cleanly when devforge-global-memory dir absent"
@@ -1053,7 +1053,7 @@ if command -v ln >/dev/null 2>&1; then
   SYMLINK_TARGET="${TEST_TMP}/fake-secret.txt"
   printf 'DEVFORGE_SYMLINK_LEAK_MARKER_XYZ' > "$SYMLINK_TARGET"
   ln -sf "$SYMLINK_TARGET" "${TEST_MEM_DIR}/evil-symlink.md" 2>/dev/null || true
-  SESSION_JSON_SYM=$(HOME="${TEST_TMP}" DEVFORGE_SKIP_UPDATE=1 bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
+  SESSION_JSON_SYM=$(HOME="${TEST_TMP}" bash "${PLUGIN_ROOT}/hooks/session-start" 2>/dev/null) || true
   SESSION_JSON_SYM_CLEAN=$(echo "$SESSION_JSON_SYM" | awk '/^\{/{f=1} f')
   if ! echo "$SESSION_JSON_SYM_CLEAN" | grep -q "DEVFORGE_SYMLINK_LEAK_MARKER_XYZ"; then
     echo "  PASS  session-start Fix4: symlinks in global memory dir skipped"

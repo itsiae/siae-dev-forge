@@ -6,12 +6,11 @@
 # even outside telemetry — any consumer can recover the real author from the commit.
 #
 # Idempotent, zero-harm (never clobbers a foreign prepare-commit-msg), best-effort.
-# Invoked from hooks/session-start. Opt-out: DEVFORGE_SKIP_TRAILER_HOOK=1.
+# Invoked from hooks/session-start. Per saltare un singolo commit: git commit --no-verify.
 #
 # Return codes: 0 = installed/refreshed/not-applicable; 2 = skipped (foreign hook present).
 
 devforge_install_trailer_hook() {
-    [ "${DEVFORGE_SKIP_TRAILER_HOOK:-}" = "1" ] && return 0
     command -v git >/dev/null 2>&1 || return 0
     git rev-parse --git-dir >/dev/null 2>&1 || return 0   # not inside a git repo
 
