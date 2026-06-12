@@ -29,12 +29,15 @@ STRING_ONLY = "printf '{\"command\":\"gh pr create --base main\"}' > /tmp/x.json
 COMPOUND_COMMIT = 'cd "/Users/x/repo" && git commit -m "feat: x"'
 
 
-def run_hook(hook_name: str, command: str, tmp_home: Path) -> dict:
+def run_hook(hook_name: str, command: str, tmp_home: Path,
+             extra_env: dict | None = None) -> dict:
     """Pipe l'input JSON PreToolUse nell'hook reale, HOME isolata."""
     env = {k: v for k, v in os.environ.items()
            if not k.startswith("DEVFORGE_SKIP")}
     env["HOME"] = str(tmp_home)
     env.pop("DEVFORGE_CURRENT_HOOK", None)
+    if extra_env:
+        env.update(extra_env)
     payload = json.dumps({"tool_input": {"command": command}})
     r = subprocess.run(
         ["bash", str(REPO_ROOT / "hooks" / hook_name)],
@@ -73,6 +76,13 @@ def test_premortem_gate_ignores_command_inside_string(tmp_home):
     """Anti falso positivo: 'gh pr create' come STRINGA non deve bloccare."""
     out = run_hook("pr-premortem-gate", STRING_ONLY, tmp_home)
     assert out.get("decision") != "block", f"falso positivo su stringa: {out}"
+
+
+def test_premortem_gate_skip_var_does_not_bypass(tmp_home):
+    """DEVFORGE_SKIP_PREMORTEM rimosso: la var non deve più bypassare il gate."""
+    out = run_hook("pr-premortem-gate", PLAIN_PR, tmp_home,
+                   extra_env={"DEVFORGE_SKIP_PREMORTEM": "1"})
+    assert out.get("decision") == "block", f"var ancora onorata (bypass): {out}"
 
 
 # --- pr-blind-review-gate -------------------------------------------------------
