@@ -58,9 +58,11 @@ if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$SAVED_HASH" ]; then
 
     CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
     HAS_TESTS="false"
-    if echo "$CHANGED_FILES" | grep -qE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|^test_|^tests/)'; then
+    if echo "$CHANGED_FILES" | grep -qE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|/__tests__/|conftest\.py|^test_|^tests/)'; then
         HAS_TESTS="true"
     fi
+    TESTS_FILES_COUNT=$(echo "$CHANGED_FILES" | grep -cE '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|/__tests__/|conftest\.py|^test_|^tests/)' 2>/dev/null || true)
+    TESTS_FILES_COUNT=${TESTS_FILES_COUNT:-0}
 
     # Token update and delta for commit
     python3 "${PLUGIN_ROOT}/lib/token-collector.py" update 2>/dev/null || true
@@ -81,7 +83,7 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     fi
 
     devforge_log "commit_created" "success" \
-        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS}${TOKEN_META}}"
+        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META}}"
 
     # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
