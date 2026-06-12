@@ -23,9 +23,9 @@ Migliorare la qualità dei KPI #3 (lead time, via nuovo evento `branch_created`)
 
 | # | Task | Stato |
 |---|------|-------|
-| 01 | `hooks/branch-tracker` + entry `hooks.json` (TDD: T1,T2,T3,T3b,T3c,T3d,T4) | [PENDING] |
-| 02 | `hooks/post-commit-review`: pattern has_tests + `tests_files_changed` (TDD: T5,T6,T7,T8) | [PENDING] |
-| 03 | No-regression payload `commit_created` + verifica integrazione hooks.json (TDD: T9) | [PENDING] |
+| 01 | `hooks/branch-tracker` + entry `hooks.json` (TDD: T1,T2,T3,T3b,T3c,T3d,T4) | [DONE] |
+| 02 | `hooks/post-commit-review`: pattern has_tests + `tests_files_changed` (TDD: T5,T6,T7,T8) | [DONE] |
+| 03 | No-regression payload `commit_created` + verifica integrazione hooks.json (TDD: T9) | [DONE] |
 
 ## Dipendenze
 
