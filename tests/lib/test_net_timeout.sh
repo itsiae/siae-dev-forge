@@ -56,5 +56,33 @@ rm -f "$marker"
   bash -c 'case ",${NO_PROXY}," in *,github.com,*) exit 0 ;; *) exit 1 ;; esac' )
 [ $? -eq 0 ] && ok "T-NP4 NO_PROXY esportato al subprocess" || ko "T-NP4" "non ereditato"
 
+# ─── proxy autoconfig VPN-aware (_devforge_proxy_autoconfig) ──────────────────
+
+# T-AC1 — on-net (probe ok): proxy preservato + github escluso
+( export https_proxy="http://10.255.1.241:8080" HTTP_PROXY="http://10.255.1.241:8080"
+  unset NO_PROXY no_proxy
+  _devforge_on_siae_net() { return 0; }          # stub: rete SIAE raggiungibile
+  _devforge_proxy_autoconfig
+  [ -n "${https_proxy:-}" ] || exit 1            # proxy NON strippato
+  case ",${NO_PROXY:-}," in *,github.com,*) exit 0 ;; *) exit 1 ;; esac )
+[ $? -eq 0 ] && ok "T-AC1 on-net: proxy attivo + github DIRECT" || ko "T-AC1" "proxy strippato o github assente"
+
+# T-AC2 — off-net (probe ko): tutte le var proxy strippate
+( export https_proxy="x" http_proxy="x" HTTPS_PROXY="x" HTTP_PROXY="x" ALL_PROXY="x" all_proxy="x" NO_PROXY="x" no_proxy="x"
+  _devforge_on_siae_net() { return 1; }          # stub: fuori VPN, proxy irraggiungibile
+  _devforge_proxy_autoconfig
+  [ -z "${https_proxy:-}${http_proxy:-}${HTTPS_PROXY:-}${HTTP_PROXY:-}${ALL_PROXY:-}${all_proxy:-}${NO_PROXY:-}${no_proxy:-}" ] && exit 0 || exit 1 )
+[ $? -eq 0 ] && ok "T-AC2 off-net: tutte le var proxy strippate" || ko "T-AC2" "var proxy residue"
+
+# T-AC3 — endpoint: parsing host:port da https_proxy (strip scheme + path)
+( export https_proxy="http://10.255.1.241:8080/"
+  [ "$(_devforge_proxy_endpoint)" = "10.255.1.241:8080" ] && exit 0 || exit 1 )
+[ $? -eq 0 ] && ok "T-AC3 endpoint da env (scheme+path strip)" || ko "T-AC3" "parsing errato"
+
+# T-AC4 — endpoint: fallback al proxy SIAE noto quando env vuoto
+( unset https_proxy HTTPS_PROXY http_proxy HTTP_PROXY
+  [ "$(_devforge_proxy_endpoint)" = "10.255.1.241:8080" ] && exit 0 || exit 1 )
+[ $? -eq 0 ] && ok "T-AC4 endpoint fallback SIAE" || ko "T-AC4" "fallback assente"
+
 echo "net_run: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

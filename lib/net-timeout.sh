@@ -15,7 +15,6 @@ _devforge_no_proxy_github() {
     export NO_PROXY="${NO_PROXY:+${NO_PROXY},}${domains}"
     export no_proxy="${no_proxy:+${no_proxy},}${domains}"
 }
-_devforge_no_proxy_github
 
 # _net_kill_tree <pid> — termina pid e figli (best-effort sui nipoti via pgrep -P ricorsivo)
 _net_kill_tree() {
@@ -34,9 +33,9 @@ _net_kill_tree() {
 net_run() {
     local secs="$1"; shift
     local tmp; tmp=$(mktemp 2>/dev/null) || tmp="${TMPDIR:-/tmp}/net_run.$$"
-    # Expand-at-invocation ('...' non "...") → safe anche con path che contengono
-    # spazi (es. repo in iCloud). $tmp è local ma resta in scope nel RETURN trap.
-    trap 'rm -f "$tmp"' RETURN
+    # Cleanup esplicito (non RETURN trap): net_run può essere annidato dentro altre
+    # funzioni e un trap RETURN resterebbe registrato, rifacendo fire al ritorno dei
+    # chiamanti dove $tmp non è più in scope → unbound sotto set -u.
 
     "$@" >"$tmp" 2>/dev/null &
     local pid=$!
@@ -48,7 +47,7 @@ net_run() {
             sleep 0.1
             kill -KILL "$pid" 2>/dev/null || true
             wait "$pid" 2>/dev/null || true
-            cat "$tmp"
+            cat "$tmp"; rm -f "$tmp"
             return 124
         fi
         sleep 0.2
@@ -56,6 +55,39 @@ net_run() {
     done
 
     wait "$pid"; local rc=$?
-    cat "$tmp"
+    cat "$tmp"; rm -f "$tmp"
     return "$rc"
 }
+
+# ─── proxy autoconfig VPN-aware ───────────────────────────────────────────────
+# Su rete/VPN SIAE il proxy corporate è raggiungibile (github va escluso, resta
+# DIRECT). Fuori VPN lo stesso proxy è IRRAGGIUNGIBILE → ogni call non-github si
+# appende ~30s prima di morire. Rileviamo dove siamo con un probe TCP a tempo e
+# instradiamo di conseguenza. Nessuna env var di override (i gate non si bypassano).
+
+# _devforge_proxy_endpoint — host:port del proxy corporate, da env o default SIAE.
+_devforge_proxy_endpoint() {
+    local p="${https_proxy:-${HTTPS_PROXY:-${http_proxy:-${HTTP_PROXY:-}}}}"
+    p="${p#*://}"; p="${p%%/*}"          # strip scheme + eventuale path
+    [ -n "$p" ] && { printf '%s' "$p"; return 0; }
+    printf '10.255.1.241:8080'           # fallback: proxy SIAE noto
+}
+
+# _devforge_on_siae_net — proxy corporate raggiungibile entro 1s → rete/VPN SIAE.
+# /dev/tcp è socket raw (ignora il proxy): è un test di raggiungibilità diretto.
+_devforge_on_siae_net() {
+    local ep host port; ep="$(_devforge_proxy_endpoint)"
+    host="${ep%%:*}"; port="${ep##*:}"
+    [ -n "$host" ] && [ -n "$port" ] || return 1
+    net_run 1 bash -c 'exec 3<>/dev/tcp/'"$host"'/'"$port" >/dev/null 2>&1
+}
+
+# _devforge_proxy_autoconfig — instrada in base alla rete rilevata.
+_devforge_proxy_autoconfig() {
+    if _devforge_on_siae_net; then
+        _devforge_no_proxy_github        # rete SIAE: proxy attivo, github DIRECT
+    else
+        unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy NO_PROXY no_proxy
+    fi
+}
+_devforge_proxy_autoconfig
