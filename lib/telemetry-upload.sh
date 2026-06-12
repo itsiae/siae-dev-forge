@@ -121,11 +121,25 @@ devforge_batch_global() {
     fi
 }
 
+# _devforge_post_batch <batch_file> — POST one batch, echo HTTP code.
+# Extracted for testability: tests override this to inject codes without network.
+# Returns "000" on curl transport failure (timeout/DNS/connection).
+_devforge_post_batch() {
+    local batch="$1"
+    curl -s -o /dev/null -w "%{http_code}" \
+        -X POST "$DEVFORGE_TELEMETRY_ENDPOINT" \
+        -H "x-api-key: $DEVFORGE_TELEMETRY_KEY" \
+        -H "Content-Type: application/jsonl" \
+        --data-binary "@${batch}" \
+        --max-time 10 2>/dev/null || echo "000"
+}
+
 # devforge_upload_logs — creates a batch from current session + uploads all pending
 devforge_upload_logs() {
     devforge_create_batch 2>/dev/null || true
     devforge_batch_global 2>/dev/null || true
     devforge_upload_backlog 2>/dev/null || true
+    devforge_gc_maybe 2>/dev/null || true
 }
 
 # devforge_upload_backlog — iterates ALL session dirs and uploads pending batches
@@ -138,25 +152,58 @@ devforge_upload_backlog() {
     local state_root="${HOME}/.claude/devforge-state"
     [ -d "$state_root" ] || return 0
 
-    # Include both session-specific outboxes AND the global fallback outbox
-    for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
-        [ -d "$outbox_dir" ] || continue
-        for batch in "$outbox_dir"/batch-*.jsonl; do
-            [ -f "$batch" ] || continue
-            local response
-            response=$(curl -s -o /dev/null -w "%{http_code}" \
-                -X POST "$DEVFORGE_TELEMETRY_ENDPOINT" \
-                -H "x-api-key: $DEVFORGE_TELEMETRY_KEY" \
-                -H "Content-Type: application/jsonl" \
-                --data-binary "@${batch}" \
-                --max-time 10 2>/dev/null) || continue
+    local max_batches="${DEVFORGE_FLUSH_MAX_BATCHES:-100}"
+    local max_tries="${DEVFORGE_FLUSH_MAX_TRIES:-5}"
 
-            if [ "$response" = "200" ] || [ "$response" = "201" ]; then
-                mkdir -p "${outbox_dir}/acked" 2>/dev/null
-                mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
-            fi
+    # --- C1: global mkdir-based lock (cross-process mutex, replaces no-op flock) ---
+    local lock_dir="${HOME}/.claude/.devforge-flush.lock"
+    # Stale-lock guard: if lock dir older than 120s, the holder died — reclaim it.
+    if [ -d "$lock_dir" ]; then
+        local now_s lock_mtime
+        now_s=$(date +%s)
+        lock_mtime=$(stat -f%m "$lock_dir" 2>/dev/null || stat -c%Y "$lock_dir" 2>/dev/null || echo "$now_s")
+        if [ "$((now_s - lock_mtime))" -ge 120 ] 2>/dev/null; then
+            rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null
+        fi
+    fi
+    # Acquire: mkdir is atomic. If it fails, another flush is already running → bail.
+    mkdir "$lock_dir" 2>/dev/null || return 0
+
+    # Include both session-specific outboxes AND the global fallback outbox
+    (
+        trap 'rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null' EXIT
+        local processed=0
+        for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
+            [ -d "$outbox_dir" ] || continue
+            # Oldest-first: batch names embed epoch_ns; lexicographic sort = chronological.
+            local batch
+            for batch in $(ls -1 "$outbox_dir"/batch-*.jsonl 2>/dev/null | sort); do
+                [ -f "$batch" ] || continue
+                [ "$processed" -ge "$max_batches" ] 2>/dev/null && exit 0
+                processed=$((processed + 1))
+                local response
+                response=$(_devforge_post_batch "$batch")
+                if [ "$response" = "200" ] || [ "$response" = "201" ]; then
+                    mkdir -p "${outbox_dir}/acked" 2>/dev/null
+                    mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
+                    rm -f "${outbox_dir}/.tries-$(basename "$batch")" 2>/dev/null
+                else
+                    # Non-200 (incl. "000" transport fail, 4xx, 5xx): count the attempt.
+                    local tries_file tries
+                    tries_file="${outbox_dir}/.tries-$(basename "$batch")"
+                    tries=$(cat "$tries_file" 2>/dev/null || echo "0")
+                    tries=$((tries + 1))
+                    echo "$tries" > "$tries_file"
+                    if [ "$tries" -ge "$max_tries" ] 2>/dev/null; then
+                        # Dead-letter: isolate, never delete (zero-loss).
+                        mkdir -p "${outbox_dir}/failed" 2>/dev/null
+                        mv "$batch" "${outbox_dir}/failed/" 2>/dev/null || true
+                        rm -f "$tries_file" 2>/dev/null
+                    fi
+                fi
+            done
         done
-    done
+    )
 }
 
 # devforge_pending_count — counts un-acked batch files across all sessions
@@ -168,4 +215,61 @@ devforge_pending_count() {
         [ -f "$batch" ] && count=$((count + 1))
     done
     echo "$count"
+}
+
+# devforge_gc_dead_outboxes — archive (never delete) outboxes of dead sessions.
+# Atomic unit = the session directory (WARN-5): never GC a single batch by file age.
+# A session is eligible iff: (a) not the current $DEVFORGE_SID, AND
+# (b) the newest mtime anywhere under its outbox is older than DEVFORGE_FLUSH_GC_DAYS.
+devforge_gc_dead_outboxes() {
+    local state_root="${HOME}/.claude/devforge-state"
+    [ -d "$state_root" ] || return 0
+    local archive_root="${HOME}/.claude/devforge-state-archive"
+    local gc_days="${DEVFORGE_FLUSH_GC_DAYS:-14}"
+    local current_sid="${DEVFORGE_SID:-}"
+    # DEVFORGE_SID is not exported by all callers (flusher/stop-gate); fall back
+    # to the session-id file so the "never GC current session" guard works at runtime.
+    [ -z "$current_sid" ] && current_sid=$(cat "${HOME}/.claude/.devforge-session-id" 2>/dev/null || echo "")
+    local now_s threshold
+    now_s=$(date +%s)
+    threshold=$((gc_days * 86400))
+
+    local sess_dir sid newest mtime f
+    for sess_dir in "$state_root"/*/; do
+        [ -d "${sess_dir}outbox" ] || continue
+        sid=$(basename "$sess_dir")
+        [ "$sid" = "$current_sid" ] && continue   # never GC current session
+        # Newest mtime anywhere under the outbox (batches, acked, failed, cursors).
+        newest=0
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            mtime=$(stat -f%m "$f" 2>/dev/null || stat -c%Y "$f" 2>/dev/null || echo 0)
+            [ "$mtime" -gt "$newest" ] 2>/dev/null && newest=$mtime
+        done < <(find "${sess_dir}outbox" -type f 2>/dev/null)
+        [ "$newest" -eq 0 ] && continue   # empty outbox, leave for next pass
+        if [ "$((now_s - newest))" -ge "$threshold" ] 2>/dev/null; then
+            mkdir -p "$archive_root" 2>/dev/null
+            local dest="${archive_root}/${sid}"
+            # Avoid silent mv failure on pre-existing archive dir (would leave the
+            # session in state/ and keep it re-scanned, defeating C4). Suffix on clash.
+            if [ -e "$dest" ]; then
+                dest="${dest}-$(date +%s)"
+            fi
+            # zero-loss: mv to archive only, never rm
+            mv "$sess_dir" "$dest" 2>/dev/null || true
+        fi
+    done
+}
+
+# devforge_gc_maybe — run GC at most once per day via a sentinel.
+devforge_gc_maybe() {
+    local sentinel="${HOME}/.claude/.devforge-last-gc"
+    local now_s last
+    now_s=$(date +%s)
+    last=$(cat "$sentinel" 2>/dev/null || echo "0")
+    if [ "$last" -gt 0 ] 2>/dev/null && [ "$((now_s - last))" -lt 86400 ] 2>/dev/null; then
+        return 0
+    fi
+    echo "$now_s" > "$sentinel"
+    devforge_gc_dead_outboxes 2>/dev/null || true
 }
