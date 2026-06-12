@@ -15,16 +15,16 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Rimuovi `SKIP_BRAINSTORMING` da brainstorming-gate | `task-01-brainstorming-gate.md` | [PENDING] |
-| 2 | Rimuovi `SKIP_BLIND_REVIEW` da pr-blind-review-gate | `task-02-blind-review-gate.md` | [PENDING] |
-| 3 | Rimuovi `SKIP_PREMORTEM` da pr-premortem-gate | `task-03-premortem-gate.md` | [PENDING] |
-| 4 | Rimuovi `SKIP_GIT_GATE` da pre-commit | `task-04-pre-commit-git-gate.md` | [PENDING] |
-| 5 | Rimuovi `SKIP_RETRO_GATE` + `FORCE_STOP` da stop-gate | `task-05-stop-gate.md` | [PENDING] |
-| 6 | Rimuovi skip discrezionale da review-evidence | `task-06-review-evidence-remove.md` | [PENDING] |
-| 7 | Aggiungi breakglass ibrido scoped (5 path tool-fail) | `task-07-review-evidence-breakglass.md` | [PENDING] |
-| 8 | Rimuovi `SKIP_UPDATE` + timeout + `SKIP_TRAILER_HOOK` | `task-08-session-start-trailer.md` | [PENDING] |
-| 9 | Pulisci `ENV_VARS.md` + nuovo test doc↔code | `task-09-env-vars-doc.md` | [PENDING] |
-| 10 | Suite completa verde (verification gate) | `task-10-suite-green.md` | [PENDING] |
+| 1 | Rimuovi `SKIP_BRAINSTORMING` da brainstorming-gate | `task-01-brainstorming-gate.md` | [DONE] |
+| 2 | Rimuovi `SKIP_BLIND_REVIEW` da pr-blind-review-gate | `task-02-blind-review-gate.md` | [DONE] |
+| 3 | Rimuovi `SKIP_PREMORTEM` da pr-premortem-gate | `task-03-premortem-gate.md` | [DONE] |
+| 4 | Rimuovi `SKIP_GIT_GATE` da pre-commit | `task-04-pre-commit-git-gate.md` | [DONE] |
+| 5 | Rimuovi `SKIP_RETRO_GATE` + `FORCE_STOP` da stop-gate | `task-05-stop-gate.md` | [DONE] |
+| 6 | Rimuovi skip discrezionale da review-evidence | `task-06-review-evidence-remove.md` | [DONE] |
+| 7 | Aggiungi breakglass ibrido scoped (5 path tool-fail) | `task-07-review-evidence-breakglass.md` | [DONE] |
+| 8 | Rimuovi `SKIP_UPDATE` + timeout + `SKIP_TRAILER_HOOK` | `task-08-session-start-trailer.md` | [DONE] |
+| 9 | Pulisci `ENV_VARS.md` + nuovo test doc↔code | `task-09-env-vars-doc.md` | [DONE] |
+| 10 | Suite completa verde (verification gate) | `task-10-suite-green.md` | [DONE] |
 
 ## Dipendenze
 
