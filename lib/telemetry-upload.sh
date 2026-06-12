@@ -151,20 +151,37 @@ devforge_upload_backlog() {
     local state_root="${HOME}/.claude/devforge-state"
     [ -d "$state_root" ] || return 0
 
-    # Include both session-specific outboxes AND the global fallback outbox
-    for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
-        [ -d "$outbox_dir" ] || continue
-        for batch in "$outbox_dir"/batch-*.jsonl; do
-            [ -f "$batch" ] || continue
-            local response
-            response=$(_devforge_post_batch "$batch")
+    # --- C1: global mkdir-based lock (cross-process mutex, replaces no-op flock) ---
+    local lock_dir="${HOME}/.claude/.devforge-flush.lock"
+    # Stale-lock guard: if lock dir older than 120s, the holder died — reclaim it.
+    if [ -d "$lock_dir" ]; then
+        local now_s lock_mtime
+        now_s=$(date +%s)
+        lock_mtime=$(stat -f%m "$lock_dir" 2>/dev/null || stat -c%Y "$lock_dir" 2>/dev/null || echo "$now_s")
+        if [ "$((now_s - lock_mtime))" -ge 120 ] 2>/dev/null; then
+            rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null
+        fi
+    fi
+    # Acquire: mkdir is atomic. If it fails, another flush is already running → bail.
+    mkdir "$lock_dir" 2>/dev/null || return 0
 
-            if [ "$response" = "200" ] || [ "$response" = "201" ]; then
-                mkdir -p "${outbox_dir}/acked" 2>/dev/null
-                mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
-            fi
+    # Include both session-specific outboxes AND the global fallback outbox
+    (
+        trap 'rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null' EXIT
+        for outbox_dir in "$state_root"/*/outbox "$state_root/.global-outbox"; do
+            [ -d "$outbox_dir" ] || continue
+            for batch in "$outbox_dir"/batch-*.jsonl; do
+                [ -f "$batch" ] || continue
+                local response
+                response=$(_devforge_post_batch "$batch")
+
+                if [ "$response" = "200" ] || [ "$response" = "201" ]; then
+                    mkdir -p "${outbox_dir}/acked" 2>/dev/null
+                    mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
+                fi
+            done
         done
-    done
+    )
 }
 
 # devforge_pending_count — counts un-acked batch files across all sessions

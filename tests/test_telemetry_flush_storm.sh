@@ -48,6 +48,46 @@ acked=$(ls "${HOME}/.claude/devforge-state/sess-A/outbox/acked"/batch-*.jsonl 2>
 assert_eq "all batches acked on 200" "2" "$acked"
 cleanup_env
 
+# ── Test 2: lock held → second invocation returns 0 without processing ──
+echo "Test 2: lock blocks concurrent invocation"
+new_env
+lock="${HOME}/.claude/.devforge-flush.lock"
+mkdir -p "$lock"   # simulate a flush already in progress (fresh mtime)
+seed_outbox "sess-B" 3 >/dev/null
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog
+pending=$(ls "${HOME}/.claude/devforge-state/sess-B/outbox"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "locked: batches untouched" "3" "$pending"
+cleanup_env
+
+# ── Test 3: stale lock (>120s) recovered, flush proceeds ──
+echo "Test 3: stale lock recovered"
+new_env
+lock="${HOME}/.claude/.devforge-flush.lock"
+mkdir -p "$lock"
+# Backdate lock dir mtime to 121s ago (portable: touch -t needs a timestamp; use -A on BSD / -d on GNU)
+old_epoch=$(( $(date +%s) - 121 ))
+if touch -d "@${old_epoch}" "$lock" 2>/dev/null; then :; else
+    # BSD touch: -t CCYYMMDDhhmm.SS
+    touch -t "$(date -r "${old_epoch}" +%Y%m%d%H%M.%S 2>/dev/null)" "$lock" 2>/dev/null || true
+fi
+seed_outbox "sess-C" 2 >/dev/null
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog
+acked=$(ls "${HOME}/.claude/devforge-state/sess-C/outbox/acked"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "stale lock: flush proceeded" "2" "$acked"
+cleanup_env
+
+# ── Test 4: lock released after successful flush ──
+echo "Test 4: lock released on exit"
+new_env
+seed_outbox "sess-D" 1 >/dev/null
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog
+lock_present=$([ -d "${HOME}/.claude/.devforge-flush.lock" ] && echo "yes" || echo "no")
+assert_eq "lock removed after flush" "no" "$lock_present"
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
