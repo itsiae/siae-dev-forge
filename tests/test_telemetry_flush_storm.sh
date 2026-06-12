@@ -118,6 +118,54 @@ assert_eq "oldest batch acked first" "yes" "$oldest_acked"
 unset DEVFORGE_FLUSH_MAX_BATCHES
 cleanup_env
 
+# ── Test 7: non-200 increments tries, batch stays until K reached ──
+echo "Test 7: tries counter increments, no premature failed/"
+new_env
+export DEVFORGE_FLUSH_MAX_TRIES=5
+ob=$(seed_outbox "sess-G" 1)
+_devforge_post_batch() { echo "500"; }
+devforge_upload_backlog   # try 1
+devforge_upload_backlog   # try 2
+still_pending=$(ls "$ob"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+no_failed=$([ -d "$ob/failed" ] && ls "$ob/failed"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+assert_eq "after 2 non-200: still pending" "1" "$still_pending"
+assert_eq "after 2 non-200: failed/ empty" "0" "$no_failed"
+unset DEVFORGE_FLUSH_MAX_TRIES
+cleanup_env
+
+# ── Test 8: after K non-200, batch moves to failed/ and is not retried ──
+echo "Test 8: dead-letter after K tries"
+new_env
+export DEVFORGE_FLUSH_MAX_TRIES=3
+ob=$(seed_outbox "sess-H" 1)
+_devforge_post_batch() { echo "500"; }
+devforge_upload_backlog; devforge_upload_backlog; devforge_upload_backlog   # 3 tries
+in_failed=$(ls "$ob/failed"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+in_outbox=$(ls "$ob"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "batch in failed/ after K" "1" "$in_failed"
+assert_eq "batch no longer in outbox" "0" "$in_outbox"
+# Not retried: a 4th call must not touch failed/ count
+devforge_upload_backlog
+still_failed=$(ls "$ob/failed"/batch-*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "failed batch not retried" "1" "$still_failed"
+unset DEVFORGE_FLUSH_MAX_TRIES
+cleanup_env
+
+# ── Test 9: success resets/removes the tries sidecar ──
+echo "Test 9: 200 clears tries sidecar"
+new_env
+ob=$(seed_outbox "sess-I" 1)
+batch_name=$(basename "$(ls "$ob"/batch-*.jsonl)")
+_devforge_post_batch() { echo "500"; }
+devforge_upload_backlog   # creates .tries-<name>
+tries_after_fail=$([ -f "${ob}/.tries-${batch_name}" ] && echo "yes" || echo "no")
+assert_eq "tries sidecar created on fail" "yes" "$tries_after_fail"
+_devforge_post_batch() { echo "200"; }
+devforge_upload_backlog   # success → ack + remove sidecar
+sidecar_gone=$([ -f "${ob}/.tries-${batch_name}" ] && echo "no" || echo "yes")
+assert_eq "tries sidecar removed on success" "yes" "$sidecar_gone"
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

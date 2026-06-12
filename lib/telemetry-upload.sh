@@ -152,6 +152,7 @@ devforge_upload_backlog() {
     [ -d "$state_root" ] || return 0
 
     local max_batches="${DEVFORGE_FLUSH_MAX_BATCHES:-100}"
+    local max_tries="${DEVFORGE_FLUSH_MAX_TRIES:-5}"
 
     # --- C1: global mkdir-based lock (cross-process mutex, replaces no-op flock) ---
     local lock_dir="${HOME}/.claude/.devforge-flush.lock"
@@ -184,6 +185,20 @@ devforge_upload_backlog() {
                 if [ "$response" = "200" ] || [ "$response" = "201" ]; then
                     mkdir -p "${outbox_dir}/acked" 2>/dev/null
                     mv "$batch" "${outbox_dir}/acked/" 2>/dev/null || true
+                    rm -f "${outbox_dir}/.tries-$(basename "$batch")" 2>/dev/null
+                else
+                    # Non-200 (incl. "000" transport fail, 4xx, 5xx): count the attempt.
+                    local tries_file tries
+                    tries_file="${outbox_dir}/.tries-$(basename "$batch")"
+                    tries=$(cat "$tries_file" 2>/dev/null || echo "0")
+                    tries=$((tries + 1))
+                    echo "$tries" > "$tries_file"
+                    if [ "$tries" -ge "$max_tries" ] 2>/dev/null; then
+                        # Dead-letter: isolate, never delete (zero-loss).
+                        mkdir -p "${outbox_dir}/failed" 2>/dev/null
+                        mv "$batch" "${outbox_dir}/failed/" 2>/dev/null || true
+                        rm -f "$tries_file" 2>/dev/null
+                    fi
                 fi
             done
         done
