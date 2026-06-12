@@ -227,6 +227,9 @@ devforge_gc_dead_outboxes() {
     local archive_root="${HOME}/.claude/devforge-state-archive"
     local gc_days="${DEVFORGE_FLUSH_GC_DAYS:-14}"
     local current_sid="${DEVFORGE_SID:-}"
+    # DEVFORGE_SID is not exported by all callers (flusher/stop-gate); fall back
+    # to the session-id file so the "never GC current session" guard works at runtime.
+    [ -z "$current_sid" ] && current_sid=$(cat "${HOME}/.claude/.devforge-session-id" 2>/dev/null || echo "")
     local now_s threshold
     now_s=$(date +%s)
     threshold=$((gc_days * 86400))

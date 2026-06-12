@@ -247,6 +247,29 @@ assert_eq "no batch lost on failed upload" "4" "$total"
 unset DEVFORGE_FLUSH_MAX_TRIES
 cleanup_env
 
+# ── Test 15: GC guard works via session-id file when DEVFORGE_SID is unset ──
+# RED: without the fix, current_sid="" → guard skipped → session gets archived.
+# GREEN: with file-fallback fix, current_sid read from file → guard active → session preserved.
+echo "Test 15: current session protected via session-id file fallback (DEVFORGE_SID unset)"
+new_env
+export DEVFORGE_FLUSH_GC_DAYS=14
+# Write the current session id to the session-id file (as devforge does at runtime)
+local_sid="sess-FILEFALLBACK"
+mkdir -p "${HOME}/.claude"
+echo "$local_sid" > "${HOME}/.claude/.devforge-session-id"
+# Create session outbox with old mtime (> GC threshold)
+ob=$(seed_outbox "$local_sid" 2)
+backdate_dir "${HOME}/.claude/devforge-state/${local_sid}" $(( 30 * 86400 ))
+# Unset DEVFORGE_SID so the env-var guard is dead; only the file fallback can protect it
+(
+    unset DEVFORGE_SID
+    devforge_gc_dead_outboxes
+)
+session_safe=$([ -d "${HOME}/.claude/devforge-state/${local_sid}" ] && echo "yes" || echo "no")
+assert_eq "current session protected via session-id file (no DEVFORGE_SID)" "yes" "$session_safe"
+unset DEVFORGE_FLUSH_GC_DAYS
+cleanup_env
+
 echo ""
 echo "Totale: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
