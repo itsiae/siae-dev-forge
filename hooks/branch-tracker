@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# PostToolUse Bash: emette branch_created su git checkout -b / git switch -c.
+# Additivo, best-effort, mai bloccante.
+set -uo pipefail
+export DEVFORGE_CURRENT_HOOK="branch-tracker"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/cmd-parser.sh" 2>/dev/null || exit 0
+
+INPUT=$(cat 2>/dev/null || echo "")
+CMD=$(printf '%s' "$INPUT" | python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("tool_input",{}).get("command",""))
+except Exception:
+    print("")' 2>/dev/null || echo "")
+[ -z "$CMD" ] && exit 0
+
+# Fase 1: detect git checkout/switch (2-token, compound-safe via cmd-parser)
+if devforge_cmd_has_subcommand "$CMD" git checkout \
+   || devforge_cmd_has_subcommand "$CMD" git switch; then
+    :
+else
+    exit 0
+fi
+
+# Fase 2: estrai nome target dopo flag di creazione (-b|-c|--branch),
+# tollerando flag intermedi (es. 'git checkout -q -b feature/x').
+TARGET=$(printf '%s' "$CMD" | sed -nE 's/.*[[:space:]](-b|-c|--branch)[[:space:]]+([^[:space:]]+).*/\2/p' | head -1)
+[ -z "$TARGET" ] && exit 0
+
+# Guard: il branch deve essere stato EFFETTIVAMENTE creato (HEAD == target).
+CUR=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+[ "$CUR" = "$TARGET" ] || exit 0
+
+BASE_BRANCH=$(git rev-parse --abbrev-ref @{-1} 2>/dev/null || echo "")
+
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || exit 0
+devforge_init_session 2>/dev/null || true
+SAFE_BASE=$(devforge_sanitize_json_str "$BASE_BRANCH")
+devforge_log "branch_created" "success" "{\"base_branch\":\"${SAFE_BASE}\"}" 2>/dev/null || true
+exit 0
