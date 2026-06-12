@@ -15,8 +15,8 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Refactor: estrai `_devforge_post_batch` (abilita injection nei test) | `task-01-refactor-post-batch.md` | [PENDING] |
-| 2 | C1 — Lock globale mkdir-based su `devforge_upload_backlog` | `task-02-global-lock.md` | [PENDING] |
+| 1 | Refactor: estrai `_devforge_post_batch` (abilita injection nei test) | `task-01-refactor-post-batch.md` | [DONE] |
+| 2 | C1 — Lock globale mkdir-based su `devforge_upload_backlog` | `task-02-global-lock.md` | [DONE] |
 | 3 | C2 — Cap per invocazione (oldest-first) | `task-03-cap-per-invocation.md` | [PENDING] |
 | 4 | C3 — Dead-letter dopo K tentativi → `failed/` | `task-04-dead-letter.md` | [PENDING] |
 | 5 | C4 — GC sessioni morte (archivia, unità per-sessione) | `task-05-gc-dead-outboxes.md` | [PENDING] |
