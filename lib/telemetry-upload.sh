@@ -237,14 +237,22 @@ devforge_gc_dead_outboxes() {
         [ "$sid" = "$current_sid" ] && continue   # never GC current session
         # Newest mtime anywhere under the outbox (batches, acked, failed, cursors).
         newest=0
-        for f in $(find "${sess_dir}outbox" -type f 2>/dev/null); do
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
             mtime=$(stat -f%m "$f" 2>/dev/null || stat -c%Y "$f" 2>/dev/null || echo 0)
             [ "$mtime" -gt "$newest" ] 2>/dev/null && newest=$mtime
-        done
+        done < <(find "${sess_dir}outbox" -type f 2>/dev/null)
         [ "$newest" -eq 0 ] && continue   # empty outbox, leave for next pass
         if [ "$((now_s - newest))" -ge "$threshold" ] 2>/dev/null; then
             mkdir -p "$archive_root" 2>/dev/null
-            mv "$sess_dir" "${archive_root}/" 2>/dev/null || true
+            local dest="${archive_root}/${sid}"
+            # Avoid silent mv failure on pre-existing archive dir (would leave the
+            # session in state/ and keep it re-scanned, defeating C4). Suffix on clash.
+            if [ -e "$dest" ]; then
+                dest="${dest}-$(date +%s)"
+            fi
+            # zero-loss: mv to archive only, never rm
+            mv "$sess_dir" "$dest" 2>/dev/null || true
         fi
     done
 }
