@@ -34,8 +34,9 @@ _net_kill_tree() {
 net_run() {
     local secs="$1"; shift
     local tmp; tmp=$(mktemp 2>/dev/null) || tmp="${TMPDIR:-/tmp}/net_run.$$"
-    # shellcheck disable=SC2064
-    trap "rm -f '$tmp'" RETURN
+    # Expand-at-invocation ('...' non "...") → safe anche con path che contengono
+    # spazi (es. repo in iCloud). $tmp è local ma resta in scope nel RETURN trap.
+    trap 'rm -f "$tmp"' RETURN
 
     "$@" >"$tmp" 2>/dev/null &
     local pid=$!

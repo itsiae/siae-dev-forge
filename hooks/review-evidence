@@ -42,6 +42,7 @@ devforge_init_session 2>/dev/null || true
 # ~/.claude/.devforge-evidence-toolfail con auto-decremento `N=count`.
 # Il branch env var usa soli builtin (test/echo) → funziona anche senza jq.
 _devforge_evidence_toolfail_breakglass() {
+    local _bg_file _bg_data _bg_n
     if [ "${DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS:-0}" = "1" ]; then
         return 0
     fi
