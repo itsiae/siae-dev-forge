@@ -1156,6 +1156,24 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+# Test net-timeout: timeout hard portabile + NO_PROXY-github hardening
+if bash "${PLUGIN_ROOT}/tests/lib/test_net_timeout.sh" >/dev/null 2>&1; then
+  echo "  PASS  net-timeout: net_run cappa al budget + _devforge_no_proxy_github idempotente/exported"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  net-timeout: net_run o NO_PROXY hardening non funzionano"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
+# T-WIRE: i 3 hook con call di rete sorgiano net-timeout.sh e avvolgono ogni call github in net_run
+if bash "${PLUGIN_ROOT}/tests/hooks/test_net_resilience_wiring.sh" >/dev/null 2>&1; then
+  echo "  PASS  net-resilience-wiring: session-start/pr-release-gate/post-commit-review avvolgono gh/git in net_run"
+  telfunc_ok=$((telfunc_ok + 1))
+else
+  echo "  FAIL  net-resilience-wiring: call github nuda o source net-timeout.sh mancante"
+  telfunc_fail=$((telfunc_fail + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""
