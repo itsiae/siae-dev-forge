@@ -121,6 +121,19 @@ devforge_batch_global() {
     fi
 }
 
+# _devforge_post_batch <batch_file> — POST one batch, echo HTTP code.
+# Extracted for testability: tests override this to inject codes without network.
+# Returns "000" on curl transport failure (timeout/DNS/connection).
+_devforge_post_batch() {
+    local batch="$1"
+    curl -s -o /dev/null -w "%{http_code}" \
+        -X POST "$DEVFORGE_TELEMETRY_ENDPOINT" \
+        -H "x-api-key: $DEVFORGE_TELEMETRY_KEY" \
+        -H "Content-Type: application/jsonl" \
+        --data-binary "@${batch}" \
+        --max-time 10 2>/dev/null || echo "000"
+}
+
 # devforge_upload_logs — creates a batch from current session + uploads all pending
 devforge_upload_logs() {
     devforge_create_batch 2>/dev/null || true
@@ -144,12 +157,7 @@ devforge_upload_backlog() {
         for batch in "$outbox_dir"/batch-*.jsonl; do
             [ -f "$batch" ] || continue
             local response
-            response=$(curl -s -o /dev/null -w "%{http_code}" \
-                -X POST "$DEVFORGE_TELEMETRY_ENDPOINT" \
-                -H "x-api-key: $DEVFORGE_TELEMETRY_KEY" \
-                -H "Content-Type: application/jsonl" \
-                --data-binary "@${batch}" \
-                --max-time 10 2>/dev/null) || continue
+            response=$(_devforge_post_batch "$batch")
 
             if [ "$response" = "200" ] || [ "$response" = "201" ]; then
                 mkdir -p "${outbox_dir}/acked" 2>/dev/null
