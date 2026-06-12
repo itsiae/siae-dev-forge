@@ -118,21 +118,26 @@ fi
 echo "PASS scenario 5: siae-brainstorming presente → no enforcement"
 rm -f "${HOME}/.claude/.devforge-session-skills"
 
-# ─── Scenario 4: DEVFORGE_SKIP_BRAINSTORMING=1 → bypass + log ───
+# ─── Scenario 4: DEVFORGE_SKIP_BRAINSTORMING NON bypassa (var rimossa) ───
 rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-bypass-count" "${HOME}/.claude/.devforge-session-skills"
 BYPASS_BEFORE=$(count_events brainstorming_gate_bypassed)
+NUDGE_BEFORE=$(count_events brainstorming_nudge_soft)
 DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
 BYPASS_AFTER=$(count_events brainstorming_gate_bypassed)
-if [ $((BYPASS_AFTER - BYPASS_BEFORE)) != "1" ]; then
-    echo "FAIL scenario 4: bypass event non emesso"
+NUDGE_AFTER=$(count_events brainstorming_nudge_soft)
+if [ $((BYPASS_AFTER - BYPASS_BEFORE)) != "0" ]; then
+    echo "FAIL scenario 4: bypass event emesso nonostante var rimossa"
     exit 1
 fi
-COUNTER=$(read_counter)
-if echo "$COUNTER" | grep -qE "\|[1-9]"; then
-    echo "FAIL scenario 4: counter incrementato su bypass ($COUNTER)"
+if [ $((NUDGE_AFTER - NUDGE_BEFORE)) != "1" ]; then
+    echo "FAIL scenario 4: gate non ha fatto enforce (nudge) con var settata"
     exit 1
 fi
-echo "PASS scenario 4: bypass emette gate_bypassed + no counter increment"
+if [ -f "${HOME}/.claude/.devforge-bypass-count" ]; then
+    echo "FAIL scenario 4: counter bypass creato nonostante var rimossa"
+    exit 1
+fi
+echo "PASS scenario 4: DEVFORGE_SKIP_BRAINSTORMING ignorata → gate enforce"
 
 # ─── Scenario 5b: post-skill reset su siae-brainstorming ───
 # Seed counter in OLD format (post-skill v1.45 reads raw SID and writes back)
@@ -156,35 +161,8 @@ if ! grep -q '"trigger":"warn"' "$DEVFORGE_LOG_FILE"; then
 fi
 echo "PASS scenario 5b: post-skill reset + invoked_post_gate trigger=warn"
 
-# ─── Scenario 11: anti-abuse > 5/giorno → abuse_suspected ───
-# Clear session-skills: scenario 5b leaves siae-brainstorming in the session
-# file (post-skill writes it), which would short-circuit the gate before the
-# bypass branch can emit abuse_suspected.
-rm -f "${HOME}/.claude/.devforge-session-skills"
-for i in 2 3 4 5 6; do
-    DEVFORGE_SKIP_BRAINSTORMING=1 invoke_gate "${TEST_REPO}/hello.ts"
-done
-ABUSE_COUNT=$(count_events brainstorming_bypass_abuse_suspected)
-if [ "$ABUSE_COUNT" = "0" ]; then
-    echo "FAIL scenario 11: nessun abuse_suspected dopo 6 bypass"
-    cat "${HOME}/.claude/.devforge-bypass-count"
-    exit 1
-fi
-echo "PASS scenario 11: abuse_suspected emesso dopo 6 bypass"
-
-# ─── Scenario 12: bypass file format YYYY-MM-DD|count ───
-BYPASS_FILE="${HOME}/.claude/.devforge-bypass-count"
-if [ ! -f "$BYPASS_FILE" ]; then
-    echo "FAIL scenario 12: bypass file non creato"
-    exit 1
-fi
-CONTENT=$(cat "$BYPASS_FILE")
-TODAY=$(date -u +%Y-%m-%d)
-if ! echo "$CONTENT" | grep -qE "^${TODAY}\|[0-9]+$"; then
-    echo "FAIL scenario 12: format errato: '$CONTENT'"
-    exit 1
-fi
-echo "PASS scenario 12: bypass file format YYYY-MM-DD|count"
+# ─── Scenari 11-12 rimossi: il bypass DEVFORGE_SKIP_BRAINSTORMING e il
+#     counter .devforge-bypass-count non esistono più (gate non-bypassabile). ───
 
 # ─── Scenario 6: file docs (.md) → out of scope (delta check) ───
 BEFORE_6=$(count_events brainstorming_nudge_soft)
