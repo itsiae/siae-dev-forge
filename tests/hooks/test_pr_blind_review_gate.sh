@@ -84,12 +84,12 @@ else
 fi
 
 echo ""
-echo "=== 7. DEVFORGE_SKIP_BLIND_REVIEW=1 → allow + tracked ==="
+echo "=== 7. DEVFORGE_SKIP_BLIND_REVIEW NON bypassa (var rimossa) ==="
 OUT=$(EXTRA_ENV="DEVFORGE_SKIP_BLIND_REVIEW=1" _run "gh pr create --title z")
-if ! echo "$OUT" | grep -q '"decision": "block"'; then
-    echo "  PASS  bypass allowed"; PASS=$((PASS+1))
+if echo "$OUT" | grep -q '"decision": "block"'; then
+    echo "  PASS  var ignorata, gate blocca"; PASS=$((PASS+1))
 else
-    echo "  FAIL  bypass still blocked"; FAIL=$((FAIL+1))
+    echo "  FAIL  var ancora onorata (bypass non rimosso)"; FAIL=$((FAIL+1))
 fi
 
 echo ""
