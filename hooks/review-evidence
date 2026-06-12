@@ -65,30 +65,6 @@ fi
 #   il drift è giustificato — la PR documenta esplicitamente i cambiamenti.
 #   Hard-block diventa advisory-only. Vedi check piu' avanti su DRIFT_SEVERITY.
 #
-# Legacy global state file `~/.claude/.devforge-skip-evidence` auto-rimosso.
-SKIP_STATE_FILE="${HOME}/.claude/.devforge-skip-evidence"
-if [ -f "$SKIP_STATE_FILE" ]; then
-    rm -f "$SKIP_STATE_FILE" 2>/dev/null || true
-    devforge_log "evidence_bypass_legacy_removed" "warn" \
-        "{\"path\":\"${SKIP_STATE_FILE}\",\"reason\":\"state_file_bypass_removed_v1.63.3\"}" 2>/dev/null || true
-fi
-# BUG A fix: session-scoped marker (subprocess-safe, session-end cleanup)
-_DEVFORGE_SID=$(cat "${HOME}/.claude/.devforge-sid" 2>/dev/null || echo "")
-if [ -n "$_DEVFORGE_SID" ]; then
-    _BYPASS_FILE="${HOME}/.claude/devforge-state/${_DEVFORGE_SID}/.bypass-evidence"
-    if [ -f "$_BYPASS_FILE" ]; then
-        devforge_log "evidence_bypass_used" "info" \
-            "{\"source\":\"session_marker\",\"sid\":\"${_DEVFORGE_SID}\",\"note\":\"session_scoped_breakglass\"}" 2>/dev/null || true
-        echo '{}'
-        exit 0
-    fi
-fi
-if [ "${DEVFORGE_SKIP_EVIDENCE:-0}" = "1" ]; then
-    devforge_log "evidence_bypass_used" "info" \
-        "{\"source\":\"env_var\",\"note\":\"breakglass_session_scoped\"}" 2>/dev/null || true
-    echo '{}'
-    exit 0
-fi
 
 # ── E05: pre-check jq before any envelope parsing ──────────────
 # If jq is missing we cannot read HOOK_EVENT_NAME or TOOL_COMMAND from the
@@ -457,7 +433,7 @@ JSON
             fi
         fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass) (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
+{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Risolvi con un fix reale o /forge-fix-evidence (nessun override discrezionale).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
 JSON
         devforge_log "evidence_v2_block_regression" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
         exit 0
@@ -497,7 +473,7 @@ if [ "$IS_BLOCKING" = "1" ] && [ "$BLOCK" = "true" ]; then
     cat <<JSON
 {
   "decision": "block",
-  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"
+  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Hard-floor non-overridable (solo fix reale o admin BREAK-GLASS via commit message)."
 }
 JSON
     exit 0
