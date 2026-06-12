@@ -27,6 +27,7 @@ ENV_PREFIX_PR = "env -u http_proxy gh pr create --base main"
 PLAIN_PR = "gh pr create --base main --title t"
 STRING_ONLY = "printf '{\"command\":\"gh pr create --base main\"}' > /tmp/x.json"
 COMPOUND_COMMIT = 'cd "/Users/x/repo" && git commit -m "feat: x"'
+PLAIN_COMMIT = 'git commit -m "feat: x"'
 
 
 def run_hook(hook_name: str, command: str, tmp_home: Path,
@@ -125,3 +126,10 @@ def test_pre_commit_gate_ignores_git_log_pipe_grep(tmp_home):
     """Anti falso positivo storico: `git log | grep commit` non e' un commit."""
     out = run_hook("pre-commit", "git log --oneline | grep commit", tmp_home)
     assert out.get("decision") != "block"
+
+
+def test_pre_commit_gate_skip_var_does_not_bypass(tmp_home):
+    """DEVFORGE_SKIP_GIT_GATE rimosso: la var non deve più bypassare il gate."""
+    out = run_hook("pre-commit", PLAIN_COMMIT, tmp_home,
+                   extra_env={"DEVFORGE_SKIP_GIT_GATE": "1"})
+    assert out.get("decision") == "block", f"var ancora onorata (bypass): {out}"

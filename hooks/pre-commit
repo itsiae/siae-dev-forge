@@ -106,29 +106,8 @@ else
 fi
 
 if [ "$IS_GIT_COMMIT" = "1" ]; then
-    # Explicit bypass (tracked abuse) — for emergency cases when session-skills
-    # file is corrupted/reset by upstream bug (see fix in hooks/session-start
-    # on matcher resume|clear|compact).
-    if [ "${DEVFORGE_SKIP_GIT_GATE:-0}" = "1" ]; then
-        BYPASS_FILE="${HOME}/.claude/.devforge-git-gate-bypass-count"
-        TODAY=$(date -u +%Y-%m-%d)
-        BYPASS_DATA=$(cat "$BYPASS_FILE" 2>/dev/null || echo "")
-        BYPASS_DATE="${BYPASS_DATA%%|*}"
-        BYPASS_COUNT="${BYPASS_DATA##*|}"
-        if [ "$BYPASS_DATE" != "$TODAY" ] || [ -z "$BYPASS_COUNT" ]; then
-            BYPASS_COUNT=0
-        fi
-        NEW_BYPASS_COUNT=$((BYPASS_COUNT + 1))
-        echo "${TODAY}|${NEW_BYPASS_COUNT}" > "${BYPASS_FILE}.tmp" && mv "${BYPASS_FILE}.tmp" "$BYPASS_FILE"
-        devforge_log "pre_commit_git_gate_bypassed" "warning" "{\"bypass_count_today\":${NEW_BYPASS_COUNT}}"
-        if [ "$NEW_BYPASS_COUNT" -ge 5 ]; then
-            devforge_log "pre_commit_git_gate_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT}}"
-        fi
-        # Bypass branch: no block, no early exit. Control continues past the
-        # if/elif chain below into the quality-gate instructions emitted at the
-        # bottom of the file (secret scan / naming / tests / file size / lint).
     # Check if siae-git-workflow was invoked this session — HARD GATE
-    elif ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
+    if ! echo "$SESSION_SKILLS" | grep -qF "siae-git-workflow"; then
         SAFE_TOOL_COMMAND=$(devforge_sanitize_json_str "$TOOL_COMMAND")
         devforge_log "pre_commit" "blocked" "{\"command\":\"${SAFE_TOOL_COMMAND}\",\"skill_missing\":\"siae-git-workflow\"}"
         _PC_EXPL=""
@@ -139,7 +118,7 @@ if [ "$IS_GIT_COMMIT" = "1" ]; then
         cat <<BLOCK_EOF
 {
   "decision": "block",
-  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.${_PC_EXPL}\n\nEmergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
+  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.${_PC_EXPL}"
 }
 BLOCK_EOF
         exit 0
@@ -157,7 +136,7 @@ BLOCK_EOF
             if [ -f "$_PC_INVOKED" ] && grep -qxF "siae-git-workflow" "$_PC_INVOKED" 2>/dev/null; then
                 _PC_TASK_OK=1
             fi
-            # session_ok = 1 here by construction (we're past the elif)
+            # session_ok = 1 here by construction (we're past the gate if)
             if [ "$_PC_TASK_OK" = "0" ]; then
                 devforge_log "pre_commit_task_divergence" "info" \
                     "{\"task_id\":\"${_PC_TASK_ID}\",\"session\":1,\"task\":0}" 2>/dev/null || true
