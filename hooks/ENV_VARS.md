@@ -1,8 +1,11 @@
 # DevForge Hooks — Environment Variables
 
 Reference for all environment variables that control hook behaviour.
-Bypass vars are tracked and log `*_abuse_suspected` when used >= 5 times
-in a single UTC day (3× for `DEVFORGE_FORCE_STOP`).
+I gate di qualità (brainstorming, git-workflow, blind-review, premortem,
+retrospective, verification, evidence) **non hanno bypass discrezionali**: le
+vecchie env var di skip/force per-gate sono state rimosse. Restano solo i
+kill-switch globali/admin (sotto) e il breakglass tool-fail di review-evidence
+(solo fallimenti di tooling).
 
 ## Global
 
@@ -29,17 +32,19 @@ Bedrock/API-key (no `oauthAccount`) o `~/.claude.json`/python3 assenti. Vedi
 | `DEVFORGE_AUTH_EMAIL` | (da oauthAccount) | Email SSO autenticata pinnata della sessione (`oauthAccount.emailAddress`). Timbrata top-level in ogni evento per attribuzione deterministica. |
 | `DEVFORGE_AUTH_ACCOUNT_UUID` | (da oauthAccount) | UUID account autenticato pinnato (`oauthAccount.accountUuid`). Chiave di join più stabile dell'email. |
 | `DEVFORGE_CLAUDE_JSON` | `~/.claude.json` | Override del path del file oauth letto da `devforge_resolve_auth_identity` e dal trailer hook. Usato principalmente nei test. |
-| `DEVFORGE_SKIP_TRAILER_HOOK` | `0` | Opt-out (install-time) dell'hook `prepare-commit-msg` che timbra il trailer `DevForge-Author` (Comp.4). `=1` → session-start non installa l'hook. Per saltare un singolo commit in un repo già con hook: `git commit --no-verify`. L'installer è zero-harm: salta i repo con un `prepare-commit-msg` estraneo (es. husky) senza clobberarlo. |
 
-## Per-gate bypass (tracked)
+> Il trailer `prepare-commit-msg` (`DevForge-Author`, Comp.4) è installato sempre
+> da session-start (installer zero-harm: salta repo con un `prepare-commit-msg`
+> estraneo). Per saltare un singolo commit: `git commit --no-verify`.
 
-| Env var | Default | Gate | Abuse threshold | Notes |
-|---|---|---|---|---|
-| `DEVFORGE_SKIP_BRAINSTORMING` | `0` | brainstorming-gate | 5 / day | Emits `brainstorming_bypass_abuse_suspected` on threshold. |
-| `DEVFORGE_SKIP_GIT_GATE` | `0` | pre-commit (git-workflow check) | 5 / day | Emergency bypass introduced to unblock users affected by the session-skills reset bug. |
-| `DEVFORGE_SKIP_RETRO_GATE` | `0` | stop-gate (retrospective) | — | For non-interactive CI/agent sessions. |
-| `DEVFORGE_SKIP_BLIND_REVIEW` | `0` | pr-blind-review-gate | 5 / day | **v1.47 NEW.** Allows `gh pr create` / `gh pr edit` without siae-blind-review validation. |
-| `DEVFORGE_FORCE_STOP` | `0` | stop-gate (verification) | **3 / day** | **v1.47 NEW.** Explicit replacement for the old 2-block auto-escape (ADR-006). Lower threshold because Stop is high-impact. |
+## Per-gate bypass — RIMOSSI
+
+I bypass discrezionali per-gate **non esistono più** (con i relativi counter di
+abuse). Gate interessati: brainstorming-gate, pre-commit (git-workflow),
+stop-gate (retrospective + verification), pr-blind-review-gate,
+pr-premortem-gate. Per sbloccare un gate si soddisfa il prerequisito (si invoca
+la skill richiesta). Per disattivazioni di emergenza esistono solo i kill-switch
+globali/admin (sezione *Global* + *Rollout and rollback*).
 
 ## Review Evidence (v1.54+)
 
@@ -52,16 +57,18 @@ Bedrock/API-key (no `oauthAccount`) o `~/.claude.json`/python3 assenti. Vedi
 | `DEVFORGE_EVIDENCE_CI_SARIF_BLOCK_LEVEL` | `critical` | `critical` / `high` / `off` per findings SARIF CI |
 | `DEVFORGE_EVIDENCE_SPEC_DRIFT_BLOCK` | `1` | Block se `drift_severity == high` |
 | `DEVFORGE_EVIDENCE_DESIGN_DOC` | (auto) | Override path design doc (default: file piu' recente in `docs/plans/`) |
-| `DEVFORGE_SKIP_EVIDENCE` | `0` | Bypass fallback. Preferito: ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)` (state file piu' affidabile in subprocess hook). Tracked, abuse log a 5/day. |
+| `DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS` | `0` | **Breakglass SOLO tool-fail.** `=1` rilascia il block sui 5 fallimenti di tooling (jq assente, lock contention, collector crash, evidence assente/illeggibile), **mai** sui verdetti di qualità (`BLOCK_REGRESSION`, hard-floor). Alternativa subprocess-safe: state-file (sotto). |
 | `DEVFORGE_EVIDENCE_ICLOUD_WARN` | `1` | Emit warning se repo in iCloudDocs (atomic rename fragile) |
 | `DEVFORGE_EVIDENCE_COLLECTOR_PATH` | (auto) | Override path al collector.py (default: `lib/review_evidence/collector.py`). Usato in chaos test E41 per inject fake collector + power-user override. |
 | `DEVFORGE_EVIDENCE_ICLOUD_WARNING` | (auto) | Internal env exported dal hook bash quando cwd matcha pattern iCloudDocs; collector legge questa per emit warning in `verdict.warnings`. Non settare manualmente. |
 
-**State file bypass primario:** `~/.claude/.devforge-skip-evidence` — l'hook
-controlla l'esistenza del file PRIMA di compute. Il file puo' contenere
-`N=<count>` per auto-decremento. Pattern raccomandato vs env var perche' le
-env var possono non propagare a subprocess hook Claude Code (vedi memory
-`feedback_env_var_not_propagated_to_hooks`).
+**Breakglass tool-fail (state-file, subprocess-safe):**
+`~/.claude/.devforge-evidence-toolfail` — controllato SOLO nei 5 path di
+tool-failure. Può contenere `N=<count>` per auto-decremento (default 1 uso). Da
+preferire all'env var quando questa non propaga al subprocess hook (vedi memory
+`feedback_env_var_not_propagated_to_hooks`). **Non** rilascia i verdetti di
+qualità: il vecchio skip discrezionale dell'evidence (env var + state-file) è
+stato rimosso.
 
 **Pattern operativo CI:** vedi `commands/forge-evidence.md` per il flow
 `gh pr create` -> CI completes -> `gh pr edit` per pickup SARIF.
@@ -98,9 +105,10 @@ per test/staging o ambienti dev offline.
 | `DEVFORGE_ACTIVITY_PROJECT` | (auto, derivato da repo root) | Project name per lookup `~/.claude/projects/<X>/devforge-state/activity.jsonl` nel check `skill_adoption` (4-tier fallback signal). Override per test multi-project. |
 
 **Bypass behaviour:**
-- `BLOCK_REGRESSION` (delta sotto hard_block budget) -> overridable via ``export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)` (tracked, abuse 5/day).
+- `BLOCK_REGRESSION` (delta sotto hard_block budget) -> **NON** overridable da utente. Risolvi con un fix reale o `/forge-fix-evidence` (auto-loop).
 - `BLOCK_HARD_FLOOR` (score sotto hard_floors) -> **NON** overridable da reviewer agent. Solo admin BREAK-GLASS via commit message regex.
 - `SEVERELY_DEGRADED` (< 2 dim disponibili) -> fail-closed, no bypass. Fix tooling prima di re-run.
+- Tool-fail (jq/lock/collector/evidence illeggibile) -> overridable SOLO via breakglass tool-fail (`DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS` o state-file).
 
 ### Mutation Testing (v1.58+)
 
@@ -197,15 +205,11 @@ task-keyed ledger at `~/.claude/.devforge-task-skills/<task_id>/`.
 
 ## Abuse-tracking data files
 
-These files are rewritten atomically by the hooks; they are safe to delete
-to reset counters.
-
-| File | Written by | Purpose |
-|---|---|---|
-| `~/.claude/.devforge-bypass-count` | brainstorming-gate | Daily bypass counter |
-| `~/.claude/.devforge-git-gate-bypass-count` | pre-commit | Daily bypass counter |
-| `~/.claude/.devforge-blind-review-bypass-count` | pr-blind-review-gate | Daily bypass counter |
-| `~/.claude/.devforge-force-stop-count` | stop-gate | Daily force-stop counter |
+Rimossi: i counter giornalieri di bypass (`.devforge-bypass-count`,
+`.devforge-git-gate-bypass-count`, `.devforge-blind-review-bypass-count`,
+`.devforge-force-stop-count`, `.devforge-premortem-bypass-count`) non sono più
+scritti — i bypass discrezionali per-gate non esistono più. Eventuali file
+residui su disco sono inerti e safe da eliminare.
 
 ## Plugin root resolution
 
