@@ -72,18 +72,22 @@ export DEVFORGE_EVIDENCE_DESIGN_DOC=docs/plans/my-design.md
 bash hooks/review-evidence
 ```
 
-## Bypass
+## Breakglass tool-fail
+
+Lo skip discrezionale è stato **rimosso**: i verdetti di qualità
+(`BLOCK_REGRESSION`, hard-floor) non sono più aggirabili (risolvi con un fix
+reale o `/forge-fix-evidence`). Esiste solo un breakglass per i **fallimenti di
+tooling** (jq assente, lock contention, collector crash, evidence illeggibile):
 
 ```bash
-# Primary (state file — affidabile in subprocess hook)
-`export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)
+# env var (se propaga al subprocess hook)
+export DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1
 
-# Secondary (env var — fallback)
-export DEVFORGE_SKIP_EVIDENCE=1
+# state-file subprocess-safe (auto-decremento N=count, default 1 uso)
+echo 'N=1' > ~/.claude/.devforge-evidence-toolfail
 ```
 
-Il bypass è tracked: `evidence_bypass_abuse_suspected` viene loggato se usato
->= 5 volte/giorno (cfr. pattern DEVFORGE_SKIP_* esistenti).
+Uso loggato: `evidence_toolfail_breakglass_used`.
 
 ## Output di esempio
 
@@ -96,6 +100,6 @@ Block:
 ```
 review-evidence abc12345: BLOCK
 Reasons: coverage_below_threshold:55<60, lint_errors:5>0
-Override: `export DEVFORGE_SKIP_EVIDENCE=1` (breakglass session-scoped)
+Risolvi: fix reale o /forge-fix-evidence (nessun override discrezionale)
 File: .claude/review-evidence/abc12345....json
 ```

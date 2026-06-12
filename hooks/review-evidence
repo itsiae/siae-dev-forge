@@ -6,9 +6,10 @@
 #           PostToolUse (Bash, commit detected)  — async, warms cache
 #           Skill   (/forge-evidence)            — on-demand, sync, human-readable
 # Output:   additional_context (standard DevForge), decision:block only on
-#           PreToolUse + verdict.block=true AND no bypass.
-# Bypass:   state file ~/.claude/.devforge-skip-evidence (primary)
-#           env var DEVFORGE_SKIP_EVIDENCE=1 (fallback)
+#           PreToolUse + verdict.block=true.
+# Breakglass: SOLO sui fallimenti di tooling (jq/lock/collector/evidence), MAI
+#           sui verdetti di qualità. Sorgenti: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1
+#           o state-file ~/.claude/.devforge-evidence-toolfail (N=count).
 #
 # Hardening (Task 16):
 #   Q03-M1  guard CWD envelope (absolute + inside git worktree)
@@ -33,6 +34,39 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
 devforge_init_session 2>/dev/null || true
 
+# ── Tool-fail breakglass (ADR-1 Opzione C) ──────────────────────
+# Rilascia il block SOLO sui fallimenti di tooling ambientali (jq assente, lock
+# contention, collector crash, evidence assente/illeggibile), MAI sui verdetti
+# di qualità (BLOCK_REGRESSION / hard-floor: helper NON chiamato lì).
+# Sorgenti: env var DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 OPPURE state-file
+# ~/.claude/.devforge-evidence-toolfail con auto-decremento `N=count`.
+# Il branch env var usa soli builtin (test/echo) → funziona anche senza jq.
+_devforge_evidence_toolfail_breakglass() {
+    local _bg_file _bg_data _bg_n
+    if [ "${DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS:-0}" = "1" ]; then
+        return 0
+    fi
+    _bg_file="${HOME}/.claude/.devforge-evidence-toolfail"
+    [ -f "$_bg_file" ] || return 1
+    _bg_data=$(cat "$_bg_file" 2>/dev/null || echo "")
+    case "$_bg_data" in
+        N=*) _bg_n="${_bg_data#N=}" ;;
+        *)   _bg_n=1 ;;
+    esac
+    case "$_bg_n" in (*[!0-9]*|"") _bg_n=0 ;; esac
+    if [ "$_bg_n" -lt 1 ]; then
+        rm -f "$_bg_file" 2>/dev/null || true
+        return 1
+    fi
+    _bg_n=$((_bg_n - 1))
+    if [ "$_bg_n" -le 0 ]; then
+        rm -f "$_bg_file" 2>/dev/null || true
+    else
+        echo "N=${_bg_n}" > "${_bg_file}.tmp" && mv "${_bg_file}.tmp" "$_bg_file"
+    fi
+    return 0
+}
+
 # ── Runner auto-bootstrap v1.63.5 ──────────────────────────────
 # Ensure runner OSS security (semgrep, gitleaks, bandit, pip-audit, tfsec, checkov)
 # disponibili. Lancia in background con cooldown 1h. Non-blocking: i runner
@@ -41,54 +75,17 @@ if [ -x "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" ]; then
     "${PLUGIN_ROOT}/scripts/runner-bootstrap.sh" >/dev/null 2>&1 &
 fi
 
-# ── Bypass HARDENED v1.63.4 ─────────────────────────────────────
+# ── Note comportamentali ────────────────────────────────────────
 #
-# Audit S3 telemetry 2026-05-20: evidence_bypass_used emesso 5786 volte in 6gg.
-# v1.63.3 ha rimosso state file persistente. v1.63.4 chiude 2 bug residui:
-#
-# BUG A (env var non propagata a subprocess hook):
-#   Claude Code invoca hook in subprocess che NON eredita env var della shell
-#   utente. `DEVFORGE_SKIP_EVIDENCE=1 gh pr create` => env var settata solo nel
-#   processo gh, mai propagata al hook PreToolUse. Risultato: env var bypass
-#   inutilizzabile come breakglass. Memory: feedback_env_var_not_propagated_to_hooks
-#
-#   Fix: oltre a env var, accetta SESSION-SCOPED file marker in
-#   ~/.claude/devforge-state/<sid>/.bypass-evidence. È session-scoped (rimosso
-#   automaticamente da session-end hook), NO set-and-forget, ma propagabile
-#   a subprocess. Workflow utente per breakglass:
-#       1) Crea: touch ~/.claude/devforge-state/$(cat ~/.claude/.devforge-sid)/.bypass-evidence
-#       2) Esegui comando bloccante (es. gh pr create)
-#       3) Auto-cleanup a fine sessione (session-end hook lo rimuove)
+# Skip discrezionale RIMOSSO (vecchia env var + state-file):
+# i verdetti di qualità non sono più aggirabili dall'utente. L'unico rilascio
+# è il breakglass tool-fail definito sopra, attivo solo sui fallimenti di tooling.
 #
 # BUG B (drift_severity_high blocca anche bug fix tracciati):
 #   Se CHANGELOG.md ha entry strutturata per current version (plugin.json),
 #   il drift è giustificato — la PR documenta esplicitamente i cambiamenti.
 #   Hard-block diventa advisory-only. Vedi check piu' avanti su DRIFT_SEVERITY.
 #
-# Legacy global state file `~/.claude/.devforge-skip-evidence` auto-rimosso.
-SKIP_STATE_FILE="${HOME}/.claude/.devforge-skip-evidence"
-if [ -f "$SKIP_STATE_FILE" ]; then
-    rm -f "$SKIP_STATE_FILE" 2>/dev/null || true
-    devforge_log "evidence_bypass_legacy_removed" "warn" \
-        "{\"path\":\"${SKIP_STATE_FILE}\",\"reason\":\"state_file_bypass_removed_v1.63.3\"}" 2>/dev/null || true
-fi
-# BUG A fix: session-scoped marker (subprocess-safe, session-end cleanup)
-_DEVFORGE_SID=$(cat "${HOME}/.claude/.devforge-sid" 2>/dev/null || echo "")
-if [ -n "$_DEVFORGE_SID" ]; then
-    _BYPASS_FILE="${HOME}/.claude/devforge-state/${_DEVFORGE_SID}/.bypass-evidence"
-    if [ -f "$_BYPASS_FILE" ]; then
-        devforge_log "evidence_bypass_used" "info" \
-            "{\"source\":\"session_marker\",\"sid\":\"${_DEVFORGE_SID}\",\"note\":\"session_scoped_breakglass\"}" 2>/dev/null || true
-        echo '{}'
-        exit 0
-    fi
-fi
-if [ "${DEVFORGE_SKIP_EVIDENCE:-0}" = "1" ]; then
-    devforge_log "evidence_bypass_used" "info" \
-        "{\"source\":\"env_var\",\"note\":\"breakglass_session_scoped\"}" 2>/dev/null || true
-    echo '{}'
-    exit 0
-fi
 
 # ── E05: pre-check jq before any envelope parsing ──────────────
 # If jq is missing we cannot read HOOK_EVENT_NAME or TOOL_COMMAND from the
@@ -98,8 +95,13 @@ fi
 if ! command -v jq >/dev/null 2>&1; then
     case "$HOOK_INPUT" in
         *'"PreToolUse"'*'gh pr create'*|*'"PreToolUse"'*'gh pr edit'*)
+            if _devforge_evidence_toolfail_breakglass; then
+                devforge_log "evidence_toolfail_breakglass_used" "warn" "{\"path\":\"jq_missing\"}" 2>/dev/null || true
+                echo '{}'
+                exit 0
+            fi
             cat <<'JSON'
-{"decision":"block","reason":"review-evidence: jq is required but not installed on PATH. Install with 'brew install jq' (macOS) or 'apt install jq' (Debian/Ubuntu). Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: jq is required but not installed on PATH. Install with 'brew install jq' (macOS) or 'apt install jq' (Debian/Ubuntu). Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 JSON
             exit 0
             ;;
@@ -301,8 +303,13 @@ if [ "$NEEDS_COMPUTE" = "1" ]; then
         # 30s elapsed and still no evidence — the other process is wedged.
         # On a blocking trigger we MUST fail-CLOSED.
         if [ "$IS_BLOCKING" = "1" ]; then
+            if _devforge_evidence_toolfail_breakglass; then
+                devforge_log "evidence_toolfail_breakglass_used" "warn" "{\"path\":\"lock_contention\"}" 2>/dev/null || true
+                echo '{}'
+                exit 0
+            fi
             cat <<JSON
-{"decision":"block","reason":"review-evidence: lock contention on ${SHA:0:8}, cannot verify quality. Retry, or override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: lock contention on ${SHA:0:8}, cannot verify quality. Retry, or breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 JSON
             exit 0
         fi
@@ -347,8 +354,13 @@ if [ "$NEEDS_COMPUTE" = "1" ]; then
             fi
             devforge_log "evidence_block_compute_failed" "error" \
                 "{\"sha\":\"${SHA}\",\"rc\":${COLLECTOR_RC}}" 2>/dev/null || true
+            if _devforge_evidence_toolfail_breakglass; then
+                devforge_log "evidence_toolfail_breakglass_used" "warn" "{\"path\":\"collector_crash\"}" 2>/dev/null || true
+                echo '{}'
+                exit 0
+            fi
             cat <<JSON
-{"decision":"block","reason":"review-evidence: ${BLOCK_REASON}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: ${BLOCK_REASON}. Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 JSON
             exit 0
         fi
@@ -382,8 +394,13 @@ fi
 if [ ! -f "$EVIDENCE_FILE" ]; then
     # Evidence not found anywhere — on blocking trigger fail-CLOSED.
     if [ "$IS_BLOCKING" = "1" ]; then
+        if _devforge_evidence_toolfail_breakglass; then
+            devforge_log "evidence_toolfail_breakglass_used" "warn" "{\"path\":\"no_evidence\"}" 2>/dev/null || true
+            echo '{}'
+            exit 0
+        fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence: no evidence file for ${SHA:0:8} after compute. Cannot verify quality. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: no evidence file for ${SHA:0:8} after compute. Cannot verify quality. Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 JSON
         exit 0
     fi
@@ -394,8 +411,13 @@ fi
 # Final JSON sanity check before reading verdict.
 if ! jq empty "$EVIDENCE_FILE" >/dev/null 2>&1; then
     if [ "$IS_BLOCKING" = "1" ]; then
+        if _devforge_evidence_toolfail_breakglass; then
+            devforge_log "evidence_toolfail_breakglass_used" "warn" "{\"path\":\"invalid_json\"}" 2>/dev/null || true
+            echo '{}'
+            exit 0
+        fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence: evidence file ${EVIDENCE_FILE} is not valid JSON (likely iCloud placeholder). Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: evidence file ${EVIDENCE_FILE} is not valid JSON (likely iCloud placeholder). Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 JSON
         exit 0
     fi
@@ -457,7 +479,7 @@ JSON
             fi
         fi
         cat <<JSON
-{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass) (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
+{"decision":"block","reason":"review-evidence v2: regression block — ${ESCAPED_REASON}. Risolvi con un fix reale o /forge-fix-evidence (nessun override discrezionale).","additional_context":"review-evidence v2: BLOCK_REGRESSION ${SHA:0:8} — ${ESCAPED_REASON}.${AUTO_SIGNAL}"}
 JSON
         devforge_log "evidence_v2_block_regression" "warn" "{\"sha\":\"${SHA}\",\"reason\":\"$ESCAPED_REASON\"}" 2>/dev/null || true
         exit 0
@@ -497,7 +519,7 @@ if [ "$IS_BLOCKING" = "1" ] && [ "$BLOCK" = "true" ]; then
     cat <<JSON
 {
   "decision": "block",
-  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"
+  "reason": "review-evidence: hard-block triggered. Reasons: ${SAFE_REASONS}. Evidence: ${EVIDENCE_FILE}. Hard-floor non-overridable (solo fix reale o admin BREAK-GLASS via commit message)."
 }
 JSON
     exit 0

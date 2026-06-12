@@ -106,34 +106,6 @@ if [ -f "$SESSION_SKILLS_FILE" ] && grep -qF "siae-brainstorming" "$SESSION_SKIL
     exit 0
 fi
 
-# Explicit bypass with daily abuse tracking (unchanged from PR #1)
-if [ "${DEVFORGE_SKIP_BRAINSTORMING:-0}" = "1" ]; then
-    SAFE_FILE_PATH=$(devforge_sanitize_json_str "$FILE_PATH")
-
-    BYPASS_FILE="${HOME}/.claude/.devforge-bypass-count"
-    TODAY=$(date -u +%Y-%m-%d)
-    BYPASS_DATA=$(cat "$BYPASS_FILE" 2>/dev/null || echo "")
-    BYPASS_DATE="${BYPASS_DATA%%|*}"
-    BYPASS_COUNT="${BYPASS_DATA##*|}"
-    if [ "$BYPASS_DATE" != "$TODAY" ] || [ -z "$BYPASS_COUNT" ]; then
-        BYPASS_COUNT=0
-    fi
-    NEW_BYPASS_COUNT=$((BYPASS_COUNT + 1))
-    echo "${TODAY}|${NEW_BYPASS_COUNT}" > "${BYPASS_FILE}.tmp" && mv "${BYPASS_FILE}.tmp" "$BYPASS_FILE"
-
-    devforge_log "brainstorming_gate_bypassed" "success" "{\"file_path\":\"${SAFE_FILE_PATH}\",\"reason\":\"env_var\",\"bypass_count_today\":${NEW_BYPASS_COUNT}}"
-
-    if [ "$NEW_BYPASS_COUNT" -gt 5 ]; then
-        PATTERN="frequent_bypass"
-        if [ "$NEW_BYPASS_COUNT" -ge 10 ]; then
-            PATTERN="always_on"
-        fi
-        devforge_log "brainstorming_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_BYPASS_COUNT},\"estimated_pattern\":\"${PATTERN}\"}"
-    fi
-
-    echo '{}'
-    exit 0
-fi
 
 # Progressive counter — task-scoped by default, SID-anchored on rollback
 USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
@@ -183,7 +155,7 @@ elif [ "$NEW_N" -le 3 ]; then
     cat <<EOF_WARN
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>.${EXPLAINER}"
+  "reason": "DevForge Brainstorming Nudge — ${NEW_N}° edit senza design. Hai modificato ${BASENAME} senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°.${EXPLAINER}"
 }
 EOF_WARN
     exit 0
@@ -192,7 +164,7 @@ else
     cat <<EOF_BLOCK
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support.${EXPLAINER}"
+  "reason": "DevForge Brainstorming Gate — BLOCCATO. ${NEW_N} edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Se ritieni il gate inappropriato per questo caso, segnala a #devforge-support.${EXPLAINER}"
 }
 EOF_BLOCK
     exit 0

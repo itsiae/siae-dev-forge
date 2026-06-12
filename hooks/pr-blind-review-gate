@@ -81,25 +81,6 @@ fi
 
 devforge_init_session 2>/dev/null || true
 
-# Explicit bypass with daily abuse tracking
-if [ "${DEVFORGE_SKIP_BLIND_REVIEW:-0}" = "1" ]; then
-    BYPASS_FILE="${HOME}/.claude/.devforge-blind-review-bypass-count"
-    TODAY=$(date -u +%Y-%m-%d)
-    DATA=$(cat "$BYPASS_FILE" 2>/dev/null || echo "")
-    STORED_DATE="${DATA%%|*}"
-    STORED_N="${DATA##*|}"
-    if [ "$STORED_DATE" != "$TODAY" ] || [ -z "$STORED_N" ]; then
-        STORED_N=0
-    fi
-    NEW_N=$((STORED_N + 1))
-    echo "${TODAY}|${NEW_N}" > "${BYPASS_FILE}.tmp" && mv "${BYPASS_FILE}.tmp" "$BYPASS_FILE"
-    devforge_log "pr_blind_review_bypassed" "warning" "{\"count_today\":${NEW_N}}"
-    if [ "$NEW_N" -ge 5 ]; then
-        devforge_log "pr_blind_review_bypass_abuse_suspected" "warning" "{\"count_today\":${NEW_N}}"
-    fi
-    echo '{}'
-    exit 0
-fi
 
 # Validation check: task-scoped first, session-scoped fallback
 USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
@@ -136,7 +117,7 @@ fi
 cat <<EOF
 {
   "decision": "block",
-  "reason": "DevForge Blind Review Gate — BLOCCATO. Stai aprendo o modificando una PR ma NON risulta evidenza di siae-blind-review per questo task. Il blind review verifica l'allineamento spec ↔ codice con atteggiamento da auditor ostile. Invoca siae-blind-review, completa il verdict, poi riprova.${_BR_EXPL} Bypass tracked (5/giorno): DEVFORGE_SKIP_BLIND_REVIEW=1 <comando>."
+  "reason": "DevForge Blind Review Gate — BLOCCATO. Stai aprendo o modificando una PR ma NON risulta evidenza di siae-blind-review per questo task. Il blind review verifica l'allineamento spec ↔ codice con atteggiamento da auditor ostile. Invoca siae-blind-review, completa il verdict, poi riprova.${_BR_EXPL}"
 }
 EOF
 exit 0

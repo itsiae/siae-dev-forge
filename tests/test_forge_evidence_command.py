@@ -33,6 +33,9 @@ def test_command_documents_ci_lifecycle():
     assert "SARIF" in content or "CI quality" in content
 
 
-def test_command_documents_bypass():
+def test_command_documents_toolfail_breakglass():
+    """Lo skip discrezionale è rimosso; il comando documenta il breakglass tool-fail."""
     content = COMMAND.read_text()
-    assert ".devforge-skip-evidence" in content or "DEVFORGE_SKIP_EVIDENCE" in content
+    assert "DEVFORGE_SKIP_EVIDENCE" not in content, "vecchio skip discrezionale ancora documentato"
+    assert (".devforge-evidence-toolfail" in content
+            or "DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS" in content)

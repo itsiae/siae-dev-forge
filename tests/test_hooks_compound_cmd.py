@@ -27,14 +27,18 @@ ENV_PREFIX_PR = "env -u http_proxy gh pr create --base main"
 PLAIN_PR = "gh pr create --base main --title t"
 STRING_ONLY = "printf '{\"command\":\"gh pr create --base main\"}' > /tmp/x.json"
 COMPOUND_COMMIT = 'cd "/Users/x/repo" && git commit -m "feat: x"'
+PLAIN_COMMIT = 'git commit -m "feat: x"'
 
 
-def run_hook(hook_name: str, command: str, tmp_home: Path) -> dict:
+def run_hook(hook_name: str, command: str, tmp_home: Path,
+             extra_env: dict | None = None) -> dict:
     """Pipe l'input JSON PreToolUse nell'hook reale, HOME isolata."""
     env = {k: v for k, v in os.environ.items()
            if not k.startswith("DEVFORGE_SKIP")}
     env["HOME"] = str(tmp_home)
     env.pop("DEVFORGE_CURRENT_HOOK", None)
+    if extra_env:
+        env.update(extra_env)
     payload = json.dumps({"tool_input": {"command": command}})
     r = subprocess.run(
         ["bash", str(REPO_ROOT / "hooks" / hook_name)],
@@ -73,6 +77,13 @@ def test_premortem_gate_ignores_command_inside_string(tmp_home):
     """Anti falso positivo: 'gh pr create' come STRINGA non deve bloccare."""
     out = run_hook("pr-premortem-gate", STRING_ONLY, tmp_home)
     assert out.get("decision") != "block", f"falso positivo su stringa: {out}"
+
+
+def test_premortem_gate_skip_var_does_not_bypass(tmp_home):
+    """DEVFORGE_SKIP_PREMORTEM rimosso: la var non deve più bypassare il gate."""
+    out = run_hook("pr-premortem-gate", PLAIN_PR, tmp_home,
+                   extra_env={"DEVFORGE_SKIP_PREMORTEM": "1"})
+    assert out.get("decision") == "block", f"var ancora onorata (bypass): {out}"
 
 
 # --- pr-blind-review-gate -------------------------------------------------------
@@ -115,3 +126,10 @@ def test_pre_commit_gate_ignores_git_log_pipe_grep(tmp_home):
     """Anti falso positivo storico: `git log | grep commit` non e' un commit."""
     out = run_hook("pre-commit", "git log --oneline | grep commit", tmp_home)
     assert out.get("decision") != "block"
+
+
+def test_pre_commit_gate_skip_var_does_not_bypass(tmp_home):
+    """DEVFORGE_SKIP_GIT_GATE rimosso: la var non deve più bypassare il gate."""
+    out = run_hook("pre-commit", PLAIN_COMMIT, tmp_home,
+                   extra_env={"DEVFORGE_SKIP_GIT_GATE": "1"})
+    assert out.get("decision") == "block", f"var ancora onorata (bypass): {out}"

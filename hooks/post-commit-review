@@ -20,6 +20,12 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Network resilience: NO_PROXY-github + net_run, a top-level incondizionato (il
+# logger qui è sourcato dentro i branch git-push/gh-pr-merge: il source di
+# net-timeout deve coprire ENTRAMBI i path delle call gh pr view).
+source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
+    || { echo "[devforge] net-timeout.sh non sourcabile" >&2; }
+
 # Extract the command that was executed (jq handles escaped quotes in paths with spaces)
 if command -v jq >/dev/null 2>&1; then
     TOOL_COMMAND=$(echo "$HOOK_INPUT" | jq -r '.command // .tool_input.command // empty' 2>/dev/null || true)
@@ -98,11 +104,7 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
     source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
     devforge_init_session 2>/dev/null || true
     if command -v gh >/dev/null 2>&1; then
-        if command -v timeout >/dev/null 2>&1; then
-            PR_JSON=$(timeout 3 gh pr view --json number,baseRefName,changedFiles,commits,reviewDecision,state 2>/dev/null || echo "")
-        else
-            PR_JSON=$(gh pr view --json number,baseRefName,changedFiles,commits,reviewDecision,state 2>/dev/null || echo "")
-        fi
+        PR_JSON=$(net_run 5 gh pr view --json number,baseRefName,changedFiles,commits,reviewDecision,state 2>/dev/null || echo "")
         if [ -n "$PR_JSON" ]; then
             PR_NUMBER=$(echo "$PR_JSON" | grep -o '"number":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")
             if [ "${PR_NUMBER:-0}" -gt 0 ]; then
@@ -165,11 +167,7 @@ EOF_SNAP
             fi
             [ "${ORPHAN_PR:-0}" -eq 0 ] && continue
 
-            if command -v timeout >/dev/null 2>&1; then
-                ORPHAN_JSON=$(timeout 3 gh pr view "$ORPHAN_PR" --json state,mergedAt,commits 2>/dev/null || echo "")
-            else
-                ORPHAN_JSON=$(gh pr view "$ORPHAN_PR" --json state,mergedAt,commits 2>/dev/null || echo "")
-            fi
+            ORPHAN_JSON=$(net_run 5 gh pr view "$ORPHAN_PR" --json state,mergedAt,commits 2>/dev/null || echo "")
             [ -z "$ORPHAN_JSON" ] && continue
 
             ORPHAN_STATE=$(echo "$ORPHAN_JSON" | grep -o '"state":"[^"]*"' | sed 's/.*"state":"//;s/"$//' || echo "")
@@ -216,11 +214,7 @@ if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
     source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
     devforge_init_session 2>/dev/null || true
     if command -v gh >/dev/null 2>&1; then
-        if command -v timeout >/dev/null 2>&1; then
-            PR_JSON=$(timeout 3 gh pr view --json number,commits 2>/dev/null || echo "")
-        else
-            PR_JSON=$(gh pr view --json number,commits 2>/dev/null || echo "")
-        fi
+        PR_JSON=$(net_run 5 gh pr view --json number,commits 2>/dev/null || echo "")
         if [ -n "$PR_JSON" ]; then
             PR_NUMBER=$(echo "$PR_JSON" | grep -o '"number":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")
             TOTAL_COMMITS=$(echo "$PR_JSON" | grep -o '"totalCount":[0-9]*' | grep -oE '[0-9]+' | head -1 || echo "0")

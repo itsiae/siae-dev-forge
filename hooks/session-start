@@ -17,6 +17,10 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source activity logger and start session
 source "${PLUGIN_ROOT}/lib/logger.sh"
+# Network resilience: NO_PROXY-github (correttezza) + net_run (timeout hard portabile).
+# Il source applica già il fix NO_PROXY; net_run avvolge le call gh/git sotto.
+source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
+    || { echo "[devforge] net-timeout.sh non sourcabile" >&2; }
 START_NS=$(_devforge_epoch_ns)
 DEVFORGE_SID=$(devforge_new_sid)
 
@@ -143,8 +147,12 @@ BANNER
 # Auto-update check: compare installed version with latest GitHub release
 # VERSION_STATUS is injected into additional_context so Claude can display it
 VERSION_STATUS=""
-if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ] && [ "${DEVFORGE_SKIP_UPDATE:-}" != "1" ]; then
-    LATEST_TAG=$(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ]; then
+    # Timeout hard portabile (net_run): cappa SEMPRE al budget su macOS/Linux/Git-Bash,
+    # senza dipendere da `timeout`/`gtimeout` (assenti su BSD) o perl (deprecato).
+    # NO_PROXY-github (applicato dal source di net-timeout.sh) rende la call DIRECT.
+    _REL_ARGS=(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName')
+    LATEST_TAG=$(net_run 5 "${_REL_ARGS[@]}" 2>/dev/null || echo "")
     LATEST_VERSION="${LATEST_TAG#v}"
 
     # Validate tag format (semver with optional -suffix)
@@ -209,9 +217,9 @@ version_status_escaped=$(escape_for_json "$VERSION_STATUS")
 # --- Branching compliance check (repo corrente) ---
 BRANCHING_SUMMARY=""
 if command -v gh >/dev/null 2>&1; then
-    CURRENT_REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")
+    CURRENT_REPO=$(net_run 5 gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")
     if [ -n "$CURRENT_REPO" ]; then
-        DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo "main")
+        DEFAULT_BRANCH=$(net_run 5 gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo "main")
         VIOLS=0
         VIOL_DETAILS=""
 
@@ -219,7 +227,7 @@ if command -v gh >/dev/null 2>&1; then
             VIOLS=$((VIOLS + 1))
             VIOL_DETAILS="default branch is \`${DEFAULT_BRANCH}\` (atteso: \`main\`)"
         else
-            BAD_PRS=$(gh pr list --base main --state open \
+            BAD_PRS=$(net_run 8 gh pr list --base main --state open \
                 --json number,headRefName \
                 --jq '[.[] | select(.headRefName | test("^release/") | not) | "#\(.number) (\(.headRefName))"] | join(", ")' 2>/dev/null || echo "")
             if [ -n "$BAD_PRS" ]; then
@@ -317,7 +325,7 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 
     if [ -n "$GH_REPO" ]; then
         USER_EMAIL="$RESOLVED_USER_RAW"
-        MERGED_PRS=$(gh pr list --repo "$GH_REPO" --state merged --author "@me" \
+        MERGED_PRS=$(net_run 8 gh pr list --repo "$GH_REPO" --state merged --author "@me" \
             --json number,mergedAt,createdAt,reviews \
             --jq '[.[] | select((.mergedAt | fromdateiso8601) > (now - 86400))]' 2>/dev/null || echo "[]")
 

@@ -91,31 +91,54 @@ def test_hook_blocks_on_gh_pr_edit_with_blocking_evidence(tmp_path):
     assert parsed.get("decision") == "block"
 
 
-def test_hook_bypass_state_file(tmp_path):
-    """When the bypass state file exists, hook must skip processing."""
+def _setup_blocking_repo(tmp_path):
+    """Crea un repo con evidence verdict.block=true per il SHA corrente."""
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "x@x"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "x"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=tmp_path, check=True)
+    (tmp_path / "f.txt").write_text("x")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "x"], cwd=tmp_path, check=True, capture_output=True)
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path).decode().strip()
+    ev_dir = tmp_path / ".claude" / "review-evidence"
+    ev_dir.mkdir(parents=True)
+    (ev_dir / f"{sha}.json").write_text(json.dumps({
+        "schema_version": "1.0",
+        "sha": sha,
+        "verdict": {
+            "block": True,
+            "block_reasons": ["coverage_below_threshold:45<60"],
+            "warnings": [],
+        },
+    }))
+    return sha
+
+
+def test_skip_state_file_no_longer_bypasses(tmp_path):
+    """Il legacy state file .devforge-skip-evidence NON bypassa più un block reale."""
+    _setup_blocking_repo(tmp_path)
     skip_file = tmp_path / ".claude" / ".devforge-skip-evidence"
-    skip_file.parent.mkdir(parents=True)
     skip_file.write_text("")
     rc, out, _ = _run_hook(
-        {"command": "gh pr create --title x"},
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash",
+         "command": "gh pr edit 123 --add-label x", "cwd": str(tmp_path)},
         env={"HOME": str(tmp_path)},
     )
     parsed = json.loads(out or "{}")
-    assert rc == 0
-    # bypassed: no block decision
-    assert parsed.get("decision") != "block"
+    assert parsed.get("decision") == "block", f"state file ancora onorato: {parsed}"
 
 
-def test_hook_bypass_env_var_fallback(tmp_path):
-    """When state file is absent but DEVFORGE_SKIP_EVIDENCE=1, hook still bypasses."""
+def test_skip_env_var_no_longer_bypasses(tmp_path):
+    """DEVFORGE_SKIP_EVIDENCE=1 NON bypassa più un block reale (var rimossa)."""
+    _setup_blocking_repo(tmp_path)
     rc, out, _ = _run_hook(
-        {"command": "gh pr create --title x"},
-        # Force HOME to a path without the skip file to prove env-var fallback fires.
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash",
+         "command": "gh pr edit 123 --add-label x", "cwd": str(tmp_path)},
         env={"DEVFORGE_SKIP_EVIDENCE": "1", "HOME": str(tmp_path)},
     )
     parsed = json.loads(out or "{}")
-    assert rc == 0
-    assert parsed.get("decision") != "block"
+    assert parsed.get("decision") == "block", f"env var ancora onorata: {parsed}"
 
 
 def test_hook_registered_in_hooks_json():

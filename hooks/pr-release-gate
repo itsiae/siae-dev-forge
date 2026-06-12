@@ -46,12 +46,17 @@ SERVICE=$(basename "$REPO_ROOT")
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-git fetch origin main --quiet 2>/dev/null || true
+# Network resilience: NO_PROXY-github + net_run (timeout hard portabile) PRIMA
+# di qualsiasi call gh/git di rete (memory: github-proxy-bypass, macos-timeout).
+source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
+    || { echo "[devforge] net-timeout.sh non sourcabile" >&2; }
+
+net_run 8 git fetch origin main --quiet 2>/dev/null || true
 git diff "origin/main...origin/$CURRENT_BRANCH" --name-only > "$TMPDIR/diff-files.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-files.txt"
 git diff "origin/main...origin/$CURRENT_BRANCH" > "$TMPDIR/diff-content.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-content.txt"
 
 # Find PR number (just created by gh pr create)
-PR_NUMBER=$(gh pr list --head "$CURRENT_BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
+PR_NUMBER=$(net_run 5 gh pr list --head "$CURRENT_BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
 
 # Detect timeout cmd portatile (macOS BSD non ha `timeout` di default)
 # Vedi memory feedback_macos_timeout_portability.md
@@ -87,12 +92,12 @@ DIFF_HASH=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.diff_hash // empty' 2>/dev
 
 # Idempotency check via gh api repos/{owner}/{repo}/issues/<pr>/comments
 if [ -n "$PR_NUMBER" ] && [ -n "$DIFF_HASH" ]; then
-    REPO_FULL=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "")
+    REPO_FULL=$(net_run 5 gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "")
     if [ -n "$REPO_FULL" ]; then
-        EXISTING=$(gh api "repos/$REPO_FULL/issues/$PR_NUMBER/comments" --jq ".[].body" 2>/dev/null | grep -F "<!-- release-risk:$DIFF_HASH -->" || echo "")
+        EXISTING=$(net_run 8 gh api "repos/$REPO_FULL/issues/$PR_NUMBER/comments" --jq ".[].body" 2>/dev/null | grep -F "<!-- release-risk:$DIFF_HASH -->" || echo "")
         if [ -z "$EXISTING" ]; then
             # Post scorecard to PR
-            gh pr comment "$PR_NUMBER" --body-file "$OUTPUT_PATH" 2>/dev/null || true
+            net_run 8 gh pr comment "$PR_NUMBER" --body-file "$OUTPUT_PATH" 2>/dev/null || true
         fi
     fi
 fi
