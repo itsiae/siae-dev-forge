@@ -20,7 +20,7 @@
 | 3 | C2 — Cap per invocazione (oldest-first) | `task-03-cap-per-invocation.md` | [DONE] |
 | 4 | C3 — Dead-letter dopo K tentativi → `failed/` | `task-04-dead-letter.md` | [DONE] |
 | 5 | C4 — GC sessioni morte (archivia, unità per-sessione) | `task-05-gc-dead-outboxes.md` | [DONE] |
-| 6 | No-regression + wiring (cooldown invariato, suite verde) | `task-06-no-regression-wiring.md` | [PENDING] |
+| 6 | No-regression + wiring (cooldown invariato, suite verde) | `task-06-no-regression-wiring.md` | [DONE] |
 
 ## Dipendenze
 
