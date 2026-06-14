@@ -691,3 +691,30 @@ devforge_tdd_get_phase() {
 devforge_tdd_reset() {
     rm -f "${HOME}/.claude/.devforge-tdd-state"
 }
+
+# Portable JSON field reader: node first (Claude Code runs on Node), python3 fallback.
+# Empty string + observable telemetry_degraded if no interpreter. Never aborts.
+# Supports dotted paths (e.g. "oauthAccount.emailAddress", "identity.auth_email").
+#
+# IMPORTANTE — solo campi STRINGA identità:
+#   Valori falsy (0, false, stringa vuota, null) sono INDISTINGUIBILI da chiave mancante
+#   in entrambi i rami (node: `v||""` → ""; python3: `str(v or "")` → "").
+#   Non usare questa funzione per campi booleani o numerici: il risultato sarà sempre "".
+#
+# Anti-ricorsione: devforge_log legge l'identità da env var pinnate (DEVFORGE_AUTH_EMAIL),
+# NON da devforge_json_field → l'emissione di telemetry_degraded non rientra nella funzione.
+devforge_json_field() {
+    local file="$1" path="$2" out=""
+    [ -f "$file" ] || { printf ''; return 0; }
+    if command -v node >/dev/null 2>&1; then
+        out=$(node -e 'try{const fs=require("fs");const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=process.argv[2].split(".").reduce((o,k)=>(o&&o[k]!=null)?o[k]:"",d);process.stdout.write(String(v||""))}catch(e){process.exit(3)}' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        out=$(python3 -c 'import json,sys,functools
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+v=functools.reduce(lambda o,k:(o.get(k,"") if isinstance(o,dict) else ""),sys.argv[2].split("."),d)
+sys.stdout.write(str(v or ""))' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+    fi
+    devforge_log "telemetry_degraded" "warning" '{"reason":"no_json_interpreter"}' 2>/dev/null || true
+    printf ''
+}
