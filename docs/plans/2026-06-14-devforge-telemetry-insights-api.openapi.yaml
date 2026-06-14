@@ -1,79 +1,92 @@
 openapi: 3.1.0
 info:
-  title: DevForge Telemetry Insights API
-  version: 0.1.0-draft
+  title: DevForge Telemetry API — contratto completo
+  version: 0.2.0-draft
   description: >
-    API di sola lettura che espone online gli insight per-developer derivati dalla
-    telemetria DevForge su S3 (prefisso `derived/insights/`). Modellata sull'Analytics
-    Admin API di Claude Code (`GET /v1/organizations/usage_report/claude_code`), che NON
-    è disponibile per il deployment SIAE su Amazon Bedrock — la telemetria DevForge è
-    l'unica fonte di insight per-developer in SIAE.
+    Contratto COMPLETO di tutto ciò che la telemetria DevForge espone:
+    (1) endpoint di INGEST (`POST /v1/logs`) verso cui gli hook inviano i batch di eventi raw;
+    (2) il CATALOGO degli eventi raw (~40 tipi, envelope schema v2 + meta per evento) scritti su
+    S3 `siae-devforge-telemetry/devforge-logs/`;
+    (3) la READ API degli insight per-developer (`GET /v1/devforge/usage_report`) derivati
+    server-side e scritti in `derived/insights/`, modellata sull'Analytics API di Claude Code
+    (non disponibile su Amazon Bedrock → la telemetria DevForge è l'unica fonte per-developer in SIAE).
 
-    Aggregazione **server-side, daily, per-developer**. Gli insight sono raggruppati in tre
-    dimensioni: COSA (produttività), COME (aderenza al metodo DevForge), VALORE (outcome + ROI).
-
-    Questo file è il CONTRATTO (specifica di interfaccia) per il Layer 2 del design
-    `2026-06-14-devforge-adoption-telemetry-design.md`. L'implementazione (Lambda + API
-    Gateway + Terraform) è iniziativa successiva.
+    Aggregazione insight: server-side, daily, per-developer (auth_email). Tre dimensioni:
+    COSA (produttività) / COME (aderenza al metodo DevForge) / VALORE (outcome + ROI).
   contact:
     name: DevForge / SIAE
+    email: ai-cc@siae.it
   x-status: draft
   x-source-of-truth: docs/plans/2026-06-14-devforge-adoption-telemetry-design.md
+  x-json-schema: docs/plans/2026-06-14-devforge-telemetry-insights.schema.json
 
 servers:
+  - url: https://5o6tu3hcei.execute-api.eu-west-1.amazonaws.com/v1
+    description: API Gateway INGEST (eu-west-1) — endpoint reale di scrittura eventi (DEVFORGE_TELEMETRY_ENDPOINT)
   - url: https://{apiId}.execute-api.eu-west-1.amazonaws.com/v1
     description: >
-      API Gateway (eu-west-1) — read API insight. NON ancora provisionata: `apiId` viene
-      assegnato al provisioning Terraform in Layer 2 (sostituire il default).
+      API Gateway READ insight (eu-west-1). NON ancora provisionata: `apiId` assegnato al
+      provisioning Terraform in Layer 2 (sostituire il default).
     x-status: not-provisioned
     variables:
       apiId:
         default: REPLACE_ME
 
-security:
-  - adminApiKey: []
-
 tags:
+  - name: ingest
+    description: Scrittura eventi raw (producer → telemetria)
+  - name: raw-events
+    description: Catalogo degli eventi raw esposti su S3 devforge-logs/
   - name: insights
-    description: Insight per-developer derivati (cosa/come/valore)
+    description: Read API insight per-developer derivati (cosa/come/valore)
 
 paths:
+  /v1/logs:
+    post:
+      operationId: ingestTelemetryBatch
+      tags: [ingest]
+      summary: Ingest di un batch di eventi telemetria raw
+      description: >
+        Riceve un batch di eventi (uno per riga, JSON Lines). Il Lambda fa dedup per `event_id`
+        (DynamoDB, exactly-once) e scrive su S3 partizionato per `sid`/data. Non filtra per
+        `event`: qualunque event type del catalogo passa trasparente.
+      security:
+        - ingestApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/x-ndjson:
+            schema:
+              type: string
+              description: Una riga JSON per evento (vedi TelemetryEvent).
+            example: |
+              {"event_id":"abcd1234-7","schema_version":2,"event":"task_adoption","status":"success","ts":"2026-06-14T10:00:00.000Z","auth_email":"lorenzo.detomasi@siae.it","sid":"abcd1234","meta":{"task_id":"abc123def456","skills_invoked":["siae-tdd"],"skills_validated":["siae-tdd"],"core_skills_validated":{"siae-brainstorming":false,"siae-tdd":true,"siae-git-workflow":false,"siae-verification":false,"siae-blind-review":false}}}
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/TelemetryEvent" }
+      responses:
+        "200": { description: Batch accettato (eventi nuovi scritti, duplicati ignorati). }
+        "201": { description: Batch accettato. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
   /v1/devforge/usage_report:
     get:
       operationId: getDevforgeUsageReport
       tags: [insights]
       summary: Insight DevForge+Claude per-developer per un singolo giorno
       description: >
-        Ritorna i record di insight aggregati per ogni developer per il giorno UTC
-        specificato in `starting_at`. Un record = attività di un developer in un giorno.
-        Paginazione a cursore stabile (`has_more` / `next_page`). Freschezza: solo dati
-        più vecchi di ~1h sono inclusi (coerenza paginazione), come l'API CC.
+        Record di insight aggregati per developer per il giorno UTC `starting_at`. Cursor
+        pagination (`has_more`/`next_page`). Freschezza ~1h (come l'API CC).
+      security:
+        - adminApiKey: []
       parameters:
-        - name: starting_at
-          in: query
-          required: true
-          description: Data UTC in formato YYYY-MM-DD; ritorna le metriche di quel singolo giorno.
-          schema: { type: string, format: date, example: "2026-06-14" }
-        - name: actor_email
-          in: query
-          required: false
-          description: Filtra su un singolo developer (email SSO / `auth_email`). Omesso = tutti.
-          schema: { type: string, format: email, example: "lorenzo.detomasi@siae.it" }
-        - name: anonymize
-          in: query
-          required: false
-          description: Se true, `actor.email_address` è sostituito da `actor.pseudonym` (hash SHA256). Default false (richiede ruolo admin).
-          schema: { type: boolean, default: false }
-        - name: limit
-          in: query
-          required: false
-          description: Record per pagina.
-          schema: { type: integer, default: 20, minimum: 1, maximum: 1000 }
-        - name: page
-          in: query
-          required: false
-          description: Cursore opaco dal `next_page` della risposta precedente.
-          schema: { type: string }
+        - { name: starting_at, in: query, required: true, schema: { type: string, format: date, example: "2026-06-14" } }
+        - { name: actor_email, in: query, required: false, schema: { type: string, format: email } }
+        - { name: anonymize, in: query, required: false, schema: { type: boolean, default: false } }
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 20, minimum: 1, maximum: 1000 } }
+        - { name: page, in: query, required: false, schema: { type: string } }
       responses:
         "200":
           description: Pagina di record di insight.
@@ -81,8 +94,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/UsageReportPage" }
               examples:
-                singleDeveloper:
-                  $ref: "#/components/examples/SingleDeveloperDay"
+                singleDeveloper: { $ref: "#/components/examples/SingleDeveloperDay" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -91,26 +103,14 @@ paths:
     get:
       operationId: getDevforgeUsageReportForActor
       tags: [insights]
-      summary: Serie temporale degli insight di un singolo developer
-      description: Ritorna i record giornalieri di un developer in un intervallo `[starting_at, ending_at]`.
+      summary: Serie temporale insight di un singolo developer
+      security:
+        - adminApiKey: []
       parameters:
-        - name: actor_email
-          in: path
-          required: true
-          schema: { type: string, format: email }
-        - name: starting_at
-          in: query
-          required: true
-          schema: { type: string, format: date }
-        - name: ending_at
-          in: query
-          required: false
-          description: Data UTC di fine intervallo (inclusiva). Default = `starting_at`.
-          schema: { type: string, format: date }
-        - name: anonymize
-          in: query
-          required: false
-          schema: { type: boolean, default: false }
+        - { name: actor_email, in: path, required: true, schema: { type: string, format: email } }
+        - { name: starting_at, in: query, required: true, schema: { type: string, format: date } }
+        - { name: ending_at, in: query, required: false, schema: { type: string, format: date } }
+        - { name: anonymize, in: query, required: false, schema: { type: boolean, default: false } }
       responses:
         "200":
           description: Record giornalieri del developer nell'intervallo.
@@ -123,165 +123,361 @@ paths:
 
 components:
   securitySchemes:
+    ingestApiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key di ingest (header `x-api-key`).
     adminApiKey:
       type: apiKey
       in: header
       name: x-api-key
       description: >
-        Chiave admin (analoga all'Admin API key di Anthropic). Gli insight per-developer
-        sono dati nominativi (GDPR): accesso ristretto a ruolo admin. Usare `anonymize=true`
-        per export pseudonimizzati.
+        Chiave admin per la read API. Gli insight per-developer sono dati nominativi (GDPR):
+        accesso ristretto a ruolo admin; usare `anonymize=true` per export pseudonimizzati.
 
   responses:
     BadRequest:
-      description: Parametri non validi (es. data malformata, range invertito).
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+      description: Parametri non validi.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     Unauthorized:
       description: API key mancante o non autorizzata.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     NotFound:
       description: Nessun dato per i criteri richiesti.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
 
   schemas:
+    # ──────────────────────────────────────────────────────────────
+    # RAW EVENTS — envelope v2 comune + catalogo per evento
+    # ──────────────────────────────────────────────────────────────
+    BaseEnvelopeV2:
+      type: object
+      description: Campi top-level presenti su OGNI evento raw (lib/logger.sh). `duration_ms` solo nei *_timed (session_start/session_end/skill_completed).
+      required: [event_id, schema_version, event, status, ts, sid, meta]
+      properties:
+        event_id: { type: string, description: "${sid}-${seq}, identificatore univoco." }
+        schema_version: { const: 2 }
+        session_seq: { type: integer, description: Contatore atomico per sessione. }
+        hook_name: { type: string }
+        actor_canonical: { type: string, description: Alias di user (email canonicalizzata). }
+        repo_root: { type: string }
+        project_canonical: { type: string }
+        project: { type: string }
+        repo_remote: { type: [string, "null"] }
+        auth_email: { type: [string, "null"], format: email, description: Email SSO oauthAccount (chiave di join per-developer). }
+        auth_account_uuid: { type: [string, "null"] }
+        ts: { type: string, format: date-time, description: ISO 8601 UTC con millisecondi. }
+        user: { type: string }
+        user_raw: { type: string }
+        user_source: { type: string, enum: [session_cache, git_repo_email, git_global_email, legacy_cache, os_user] }
+        sid: { type: string, description: Session id (8-hex). }
+        branch: { type: [string, "null"] }
+        jira_id: { type: [string, "null"], description: Derivato dal branch (feature|bugfix|hotfix)/JIRA-123. }
+        event: { $ref: "#/components/schemas/EventName" }
+        status: { type: string, enum: [success, warning, blocked, blocked_retro, info, triggered, reset, fail, error, warn] }
+        duration_ms: { type: integer, description: Solo eventi *_timed. }
+        meta: { type: object }
+
+    EventName:
+      type: string
+      description: Catalogo completo degli event type emessi (~40).
+      enum:
+        - session_start
+        - session_end
+        - session_conflict
+        - session_start_preserved_skills
+        - session_start_cleanup
+        - commit_created
+        - gate_bypassed
+        - pr_opened
+        - pr_commit_after_open
+        - pr_review_cycle
+        - pr_merged
+        - pr_metrics
+        - pr_auto_review
+        - branch_created
+        - quality_gate
+        - pre_commit
+        - pre_commit_task_divergence
+        - coverage_gate
+        - coverage_force_run
+        - tdd_gate
+        - tdd_gate_task_divergence
+        - plan_gate
+        - plan_gate_task_divergence
+        - plan_gate_write
+        - stop_gate
+        - pr_gate
+        - pr_blind_review_gate
+        - pr_premortem_gate
+        - sub_skill_gate
+        - brainstorming_gate_blocked
+        - brainstorming_gate_warn
+        - brainstorming_nudge_soft
+        - skill_invoked
+        - skill_completed
+        - skill_catalog
+        - brainstorming_invoked_post_gate
+        - plan_created
+        - plan_revised
+        - plan_approved
+        - plan_metrics
+        - tdd_cycle
+        - test_run_result
+        - task_adoption
+        - task_id_transition
+        - evidence_block
+        - evidence_v2_block_hard_floor
+        - evidence_v2_block_regression
+        - evidence_block_compute_failed
+        - evidence_toolfail_breakglass_used
+        - evidence_icloud_placeholder
+        - evidence_invalid_json
+        - evidence_skip_no_head
+        - evidence_auto_fix_trigger_emitted
+        - evidence_auto_fix_trigger_skipped
+        - batch_checkpoint
+        - prompt_injection_emitted
+        - sport_domain_detected
+        - hook_degraded
+        - trailer_hook_skipped_foreign
+        - user_prompt_context
+
+    TelemetryEvent:
+      description: Un evento raw = envelope v2 + meta specifico per `event` (discriminato).
+      allOf: [{ $ref: "#/components/schemas/BaseEnvelopeV2" }]
+      discriminator:
+        propertyName: event
+      x-meta-by-event:
+        description: Forma di `meta` per i principali event type (gli insight derivano da questi).
+        session_start: { $ref: "#/components/schemas/MetaSessionStart" }
+        session_end: { $ref: "#/components/schemas/MetaSessionEnd" }
+        commit_created: { $ref: "#/components/schemas/MetaCommitCreated" }
+        task_adoption: { $ref: "#/components/schemas/MetaTaskAdoption" }
+        gate_bypassed: { $ref: "#/components/schemas/MetaGateBypassed" }
+        pr_opened: { $ref: "#/components/schemas/MetaPrOpened" }
+        pr_merged: { $ref: "#/components/schemas/MetaPrMerged" }
+        pr_metrics: { $ref: "#/components/schemas/MetaPrMetrics" }
+        plan_metrics: { $ref: "#/components/schemas/MetaPlanMetrics" }
+        skill_invoked: { $ref: "#/components/schemas/MetaSkillInvoked" }
+        test_run_result: { $ref: "#/components/schemas/MetaTestRunResult" }
+        tdd_cycle: { $ref: "#/components/schemas/MetaTddCycle" }
+        branch_created: { $ref: "#/components/schemas/MetaBranchCreated" }
+
+    MetaSessionStart:
+      type: object
+      properties:
+        project_dir: { type: string }
+        plugin_version: { type: string }
+        identity:
+          type: object
+          properties:
+            git_local_email: { type: string }
+            git_local_name: { type: string }
+            git_global_email: { type: string }
+            git_global_name: { type: string }
+            os_user: { type: string }
+            host: { type: string }
+            auth_email: { type: [string, "null"] }
+            auth_account_uuid: { type: [string, "null"] }
+            auth_org_uuid: { type: [string, "null"] }
+            auth_org_name: { type: [string, "null"] }
+    MetaSessionEnd:
+      type: object
+      properties:
+        skills_used_count: { type: integer }
+        commits_count: { type: integer }
+        total_tokens: { type: integer }
+        output_tokens: { type: integer }
+        input_tokens: { type: integer }
+        cache_read_tokens: { type: integer }
+        cache_write_5m_tokens: { type: integer }
+        cache_write_1h_tokens: { type: integer }
+        cost_estimate_eur: { type: number }
+        model_prevalent: { type: string }
+        by_model: { type: object }
+        by_tool: { type: object }
+        by_skill: { type: object, description: "Token per skill (no cache_read, anti-inflation)." }
+        by_model_tokens: { type: object }
+        pricing: { type: object }
+    MetaCommitCreated:
+      type: object
+      properties:
+        commit_sha: { type: string }
+        files_changed: { type: integer }
+        insertions: { type: integer }
+        deletions: { type: integer }
+        has_tests: { type: boolean }
+        tests_files_changed: { type: integer }
+        output_tokens_delta: { type: integer }
+        total_tokens_delta: { type: integer }
+        cost_delta_eur: { type: number }
+        session_tokens_cumulative: { type: integer }
+        task_id: { type: string, description: "12-hex in scope itsiae/*, '' fuori scope." }
+    MetaTaskAdoption:
+      type: object
+      required: [task_id, skills_invoked, skills_validated, core_skills_validated]
+      properties:
+        task_id: { type: string, pattern: "^[0-9a-f]{12}$" }
+        task_branch: { type: string }
+        design_doc: { type: string }
+        skills_invoked: { type: array, items: { type: string } }
+        skills_validated: { type: array, items: { type: string } }
+        core_skills_validated:
+          type: object
+          properties:
+            siae-brainstorming: { type: boolean }
+            siae-tdd: { type: boolean }
+            siae-git-workflow: { type: boolean }
+            siae-verification: { type: boolean }
+            siae-blind-review: { type: boolean }
+    MetaGateBypassed:
+      type: object
+      required: [mechanism]
+      properties:
+        mechanism: { type: string, enum: [enforcement_off, git_no_verify] }
+        scope: { type: string, enum: [session] }
+        commit_sha: { type: string, description: "Best-effort (HEAD al PostToolUse)." }
+    MetaPrOpened:
+      type: object
+      properties:
+        pr_number: { type: integer }
+        base_branch: { type: string }
+        files_changed: { type: integer }
+        commits_count: { type: integer }
+        task_id: { type: string }
+    MetaPrMerged:
+      type: object
+      properties:
+        pr_number: { type: integer }
+        merge_method: { type: string, enum: [web, cli, closed] }
+        total_commits: { type: integer }
+        delta_from_open: { type: integer }
+        session_tokens_cumulative: { type: integer }
+        review_cycle_hours: { type: number, description: "Variante session-start (PR mergeate <24h)." }
+        reviewers_count: { type: integer }
+        task_id: { type: string }
+    MetaPrMetrics:
+      type: object
+      properties:
+        pr_number: { type: integer }
+        rework_commits: { type: integer }
+        review_cycles: { type: integer }
+        time_to_merge_sec: { type: integer }
+        first_push_to_merge_sec: { type: integer }
+        task_id: { type: string }
+    MetaPlanMetrics:
+      type: object
+      properties:
+        plan_path: { type: string }
+        iterations: { type: integer }
+        duration_sec: { type: integer }
+        origin_skill: { type: string }
+    MetaSkillInvoked:
+      type: object
+      properties:
+        skill_name: { type: string }
+        sdlc_phase: { type: string }
+    MetaTestRunResult:
+      type: object
+      properties:
+        status: { type: string, enum: [PASS, FAIL] }
+        exit_code: { type: integer }
+        coverage_pct: { type: [number, "null"] }
+        framework: { type: string, enum: [pytest, vitest, jest, maven, gradle, go, cargo, unknown] }
+    MetaTddCycle:
+      type: object
+      properties:
+        from_phase: { type: string }
+        to_phase: { type: string }
+        elapsed_sec: { type: integer }
+        reason: { type: string }
+    MetaBranchCreated:
+      type: object
+      properties:
+        base_branch: { type: string }
+
+    # ──────────────────────────────────────────────────────────────
+    # INSIGHT — read API (Layer 2 derivato)
+    # ──────────────────────────────────────────────────────────────
     UsageReportPage:
       type: object
       required: [data, has_more, next_page]
       properties:
-        data:
-          type: array
-          items: { $ref: "#/components/schemas/DeveloperDayInsight" }
-        has_more:
-          type: boolean
-          description: true se esistono altre pagine.
-        next_page:
-          type: [string, "null"]
-          description: Cursore per la pagina successiva, o null se ultima pagina.
+        data: { type: array, items: { $ref: "#/components/schemas/DeveloperDayInsight" } }
+        has_more: { type: boolean }
+        next_page: { type: [string, "null"] }
 
     DeveloperDayInsight:
       type: object
-      description: Insight di un developer in un singolo giorno UTC. Aggregazione server-side.
       required: [date, actor, kind, core_metrics, workflow_metrics, value_metrics]
       properties:
-        date:
-          type: string
-          format: date-time
-          description: Giorno UTC (RFC 3339, mezzanotte).
-          example: "2026-06-14T00:00:00Z"
-        actor:
-          $ref: "#/components/schemas/Actor"
-        kind:
-          type: string
-          enum: [derived]
-          description: Marca il record come derivato (non raw). Mai confondere con gli eventi `devforge-logs/`.
-        repo_scope:
-          type: array
-          description: Repository (remote) toccati nel giorno, se disponibili.
-          items: { type: string, example: "github.com/itsiae/sport-gestione-licenze-service" }
-        core_metrics:
-          $ref: "#/components/schemas/CoreMetrics"
-        workflow_metrics:
-          $ref: "#/components/schemas/WorkflowMetrics"
-        value_metrics:
-          $ref: "#/components/schemas/ValueMetrics"
+        date: { type: string, format: date-time }
+        kind: { const: derived }
+        actor: { $ref: "#/components/schemas/Actor" }
+        repo_scope: { type: array, items: { type: string } }
+        core_metrics: { $ref: "#/components/schemas/CoreMetrics" }
+        workflow_metrics: { $ref: "#/components/schemas/WorkflowMetrics" }
+        value_metrics: { $ref: "#/components/schemas/ValueMetrics" }
 
     Actor:
       type: object
-      description: Identità del developer. `email_address` in chiaro o `pseudonym` se anonymize.
+      required: [type]
       properties:
-        type:
-          type: string
-          enum: [user_actor]
-        email_address:
-          type: [string, "null"]
-          format: email
-          description: Email SSO (`auth_email`). null se anonymize=true.
-        account_uuid:
-          type: [string, "null"]
-          description: "`auth_account_uuid` (OAuth). null se anonymize=true."
-        pseudonym:
-          type: [string, "null"]
-          description: Hash SHA256 dell'email, presente solo se anonymize=true.
+        type: { const: user_actor }
+        email_address: { type: [string, "null"], format: email }
+        account_uuid: { type: [string, "null"] }
+        pseudonym: { type: [string, "null"], description: "Hash SHA256 dell'email (solo anonymize=true)." }
 
     CoreMetrics:
       type: object
-      description: COSA — composizione della produttività. Fonti telemetria fra parentesi.
+      description: COSA — produttività.
       properties:
-        num_sessions: { type: integer, description: "Sessioni distinte (session_start/session_end)." }
-        commits: { type: integer, description: "Commit creati (commit_created)." }
-        prs_opened: { type: integer, description: "PR aperte (pr_opened)." }
-        prs_merged: { type: integer, description: "PR mergeate (pr_merged)." }
-        tasks_tracked: { type: integer, description: "Task distinti osservati (task_adoption.task_id)." }
-        skills_used:
-          type: object
-          additionalProperties: { type: integer }
-          description: "Conteggio invocazioni per skill DevForge (skill_invoked.meta.skill_name)."
-          example: { "siae-brainstorming": 2, "siae-tdd": 4, "siae-verification": 1 }
+        num_sessions: { type: integer }
+        commits: { type: integer }
+        prs_opened: { type: integer }
+        prs_merged: { type: integer }
+        tasks_tracked: { type: integer }
+        skills_used: { type: object, additionalProperties: { type: integer } }
         lines_changed:
           type: object
-          description: "Righe modificate (commit_created insertions/deletions). NON usato come metrica di valore (anti-pattern DORA), solo volume informativo."
+          description: "Volume informativo (NON metrica di valore — anti-pattern DORA)."
           properties:
             added: { type: integer }
             removed: { type: integer }
 
     WorkflowMetrics:
       type: object
-      description: >
-        COME — aderenza al metodo DevForge. Dimensione assente negli analytics nativi di
-        Claude Code. Fonte primaria: task_adoption + gate_bypassed + plan_metrics + pr_metrics.
+      description: COME — aderenza al metodo DevForge (assente negli analytics nativi CC).
       properties:
         core_skill_adoption:
           type: object
-          description: "Frazione [0..1] di task in cui ciascuna core skill è stata validata (da task_adoption.core_skills_validated)."
           properties:
-            siae-brainstorming: { type: number, format: float, minimum: 0, maximum: 1 }
-            siae-tdd: { type: number, format: float, minimum: 0, maximum: 1 }
-            siae-git-workflow: { type: number, format: float, minimum: 0, maximum: 1 }
-            siae-verification: { type: number, format: float, minimum: 0, maximum: 1 }
-            siae-blind-review: { type: number, format: float, minimum: 0, maximum: 1 }
-        plan_iterations_avg:
-          type: [number, "null"]
-          description: "Media iterazioni di piano (plan_metrics.iterations)."
-        review_cycles_avg:
-          type: [number, "null"]
-          description: "Media cicli di review per PR (pr_metrics.review_cycles)."
+            siae-brainstorming: { type: number, minimum: 0, maximum: 1 }
+            siae-tdd: { type: number, minimum: 0, maximum: 1 }
+            siae-git-workflow: { type: number, minimum: 0, maximum: 1 }
+            siae-verification: { type: number, minimum: 0, maximum: 1 }
+            siae-blind-review: { type: number, minimum: 0, maximum: 1 }
+        plan_iterations_avg: { type: [number, "null"] }
+        review_cycles_avg: { type: [number, "null"] }
         gate_bypasses:
           type: object
-          description: "Conteggio bypass dei gate (gate_bypassed.meta.mechanism)."
           properties:
             enforcement_off: { type: integer }
             git_no_verify: { type: integer }
-        tool_acceptance_rate:
-          type: [number, "null"]
-          description: >
-            Suggestion accept rate in stile CC. NON raggiungibile dagli hook DevForge
-            (segnale interno di Claude Code): sempre null su deployment Bedrock/DevForge.
+        tool_acceptance_rate: { type: [number, "null"], description: "Non raggiungibile dagli hook DevForge → sempre null su Bedrock." }
 
     ValueMetrics:
       type: object
-      description: VALORE — outcome + ROI. DORA-allineato; nessuna metrica LOC/giorno.
+      description: VALORE — outcome + ROI (DORA-allineato).
       properties:
-        lead_time_p50_sec:
-          type: [integer, "null"]
-          description: "Mediana time-to-merge (pr_metrics.time_to_merge_sec)."
-        rework_commits:
-          type: [integer, "null"]
-          description: "Commit di rework post-apertura PR (pr_metrics.rework_commits)."
-        has_tests_rate:
-          type: [number, "null"]
-          description: "Frazione [0..1] di commit con test (commit_created.has_tests)."
-        coverage_avg:
-          type: [number, "null"]
-          description: "Copertura media (test_run_result.coverage_pct)."
+        lead_time_p50_sec: { type: [integer, "null"] }
+        rework_commits: { type: [integer, "null"] }
+        has_tests_rate: { type: [number, "null"], minimum: 0, maximum: 1 }
+        coverage_avg: { type: [number, "null"], minimum: 0, maximum: 100 }
         cost:
           type: object
-          description: "Efficienza: token e costo stimato per modello (session_end.by_model/pricing)."
           properties:
             tokens:
               type: object
@@ -293,33 +489,19 @@ components:
             estimated_cost:
               type: object
               properties:
-                amount: { type: number, description: "Costo stimato." }
-                currency: { type: string, enum: [EUR], default: EUR }
-            by_model:
-              type: object
-              additionalProperties:
-                type: object
-                properties:
-                  output: { type: integer }
-                  input: { type: integer }
-        workflow_vs_nonworkflow:
-          $ref: "#/components/schemas/RoiComparison"
+                amount: { type: number }
+                currency: { const: EUR }
+            by_model: { type: object, additionalProperties: { type: object } }
+        workflow_vs_nonworkflow: { $ref: "#/components/schemas/RoiComparison" }
 
     RoiComparison:
       type: object
-      description: >
-        ROI del metodo: outcome dei task in cui il developer ha seguito il workflow DevForge
-        vs quelli in cui non lo ha seguito (join via task_id/branch). Equivalente DevForge del
-        confronto "PR con CC vs senza" dell'analytics nativo.
+      description: ROI del metodo — task con-workflow vs senza (join via task_id/branch).
+      required: [status]
       properties:
-        status:
-          type: string
-          enum: [ok, insufficient_data]
-          description: "insufficient_data se la numerosità è sotto soglia (nessun claim spurio)."
-        with_workflow:
-          $ref: "#/components/schemas/RoiBucket"
-        without_workflow:
-          $ref: "#/components/schemas/RoiBucket"
+        status: { type: string, enum: [ok, insufficient_data] }
+        with_workflow: { $ref: "#/components/schemas/RoiBucket" }
+        without_workflow: { $ref: "#/components/schemas/RoiBucket" }
 
     RoiBucket:
       type: object
@@ -327,13 +509,13 @@ components:
         tasks: { type: integer }
         lead_time_p50_sec: { type: [integer, "null"] }
         rework_commits_avg: { type: [number, "null"] }
-        has_tests_rate: { type: [number, "null"] }
+        has_tests_rate: { type: [number, "null"], minimum: 0, maximum: 1 }
 
     Error:
       type: object
       required: [type, message]
       properties:
-        type: { type: string, example: "invalid_request_error" }
+        type: { type: string, example: invalid_request_error }
         message: { type: string }
 
   examples:
@@ -342,28 +524,12 @@ components:
       value:
         data:
           - date: "2026-06-14T00:00:00Z"
-            actor:
-              type: user_actor
-              email_address: "lorenzo.detomasi@siae.it"
-              account_uuid: "dc9f6c26-b22c-4831-8d01-0446bada88f1"
-              pseudonym: null
             kind: derived
+            actor: { type: user_actor, email_address: "lorenzo.detomasi@siae.it", account_uuid: "dc9f6c26-b22c-4831-8d01-0446bada88f1", pseudonym: null }
             repo_scope: ["github.com/itsiae/sport-gestione-licenze-service"]
-            core_metrics:
-              num_sessions: 3
-              commits: 7
-              prs_opened: 1
-              prs_merged: 1
-              tasks_tracked: 2
-              skills_used: { "siae-brainstorming": 1, "siae-tdd": 4, "siae-verification": 1 }
-              lines_changed: { added: 312, removed: 88 }
+            core_metrics: { num_sessions: 3, commits: 7, prs_opened: 1, prs_merged: 1, tasks_tracked: 2, skills_used: { siae-brainstorming: 1, siae-tdd: 4 }, lines_changed: { added: 312, removed: 88 } }
             workflow_metrics:
-              core_skill_adoption:
-                siae-brainstorming: 1.0
-                siae-tdd: 1.0
-                siae-git-workflow: 1.0
-                siae-verification: 0.5
-                siae-blind-review: 0.5
+              core_skill_adoption: { siae-brainstorming: 1.0, siae-tdd: 1.0, siae-git-workflow: 1.0, siae-verification: 0.5, siae-blind-review: 0.5 }
               plan_iterations_avg: 2.0
               review_cycles_avg: 1.0
               gate_bypasses: { enforcement_off: 0, git_no_verify: 0 }
@@ -373,10 +539,7 @@ components:
               rework_commits: 1
               has_tests_rate: 0.86
               coverage_avg: 91.0
-              cost:
-                tokens: { input: 420000, output: 58000, cache_read: 1200000, cache_creation: 90000 }
-                estimated_cost: { amount: 3.74, currency: EUR }
-                by_model: { "claude-opus-4-8": { output: 58000, input: 420000 } }
+              cost: { tokens: { input: 420000, output: 58000, cache_read: 1200000, cache_creation: 90000 }, estimated_cost: { amount: 3.74, currency: EUR }, by_model: { claude-opus-4-8: { output: 58000 } } }
               workflow_vs_nonworkflow:
                 status: ok
                 with_workflow: { tasks: 1, lead_time_p50_sec: 26400, rework_commits_avg: 1.0, has_tests_rate: 1.0 }
