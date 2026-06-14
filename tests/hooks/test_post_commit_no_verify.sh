@@ -31,6 +31,14 @@ ok "POS --no-verify emette git_no_verify" "has_bypass '$A'"
 B=$(run_with_cmd 'git commit -nm "msg"')
 ok "POS -nm emette git_no_verify" "has_bypass '$B'"
 
+# POS 3: -n standalone (forma più comune) — chiude AC5
+D=$(run_with_cmd 'git commit -n -m "msg"')
+ok "POS -n standalone emette git_no_verify" "has_bypass '$D'"
+
+# NEG 2: -am (=-a -m, nessun 'n') non deve matchare
+E=$(run_with_cmd 'git commit -am "msg"')
+ok "NEG -am (-a -m): nessun git_no_verify" "! has_bypass '$E'"
+
 # NEG: -n dentro il messaggio (deve emettere commit_created ma NON gate_bypassed)
 C=$(run_with_cmd 'git commit -m "fix -n test"')
 ok "NEG '-n' nel messaggio: commit_created presente" "[ -s '$C' ] && grep -q 'commit_created' '$C'"

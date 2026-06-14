@@ -11,7 +11,7 @@ check() { if [ "$2" = "$3" ]; then echo "  PASS  $1"; PASS=$((PASS+1)); else ech
 [ -f "$LIB" ] || { echo "FAIL: $LIB mancante"; exit 1; }
 
 # Stub: cattura la chiamata a devforge_log su file
-CAP="$(mktemp)"
+CAP="$(mktemp)"; [ -n "$CAP" ] || { echo "FAIL: mktemp CAP"; exit 1; }
 devforge_log() { printf '%s|%s|%s\n' "$1" "$2" "$3" >> "$CAP"; }
 export -f devforge_log 2>/dev/null || true
 
@@ -24,7 +24,8 @@ devforge_compute_task_id() { echo "abc123def456"; }
 adoption_meta_stub() { echo '{"task_id":"abc123def456","core_skills_validated":{}}'; }
 # Override interno: la fn deve usare PLUGIN_ROOT/lib/adoption-analyzer.py; per il test
 # sovrascriviamo PLUGIN_ROOT con una dir che contiene uno stub eseguibile.
-STUBDIR="$(mktemp -d)"; mkdir -p "$STUBDIR/lib"
+STUBDIR="$(mktemp -d)"; [ -n "$STUBDIR" ] || { echo "FAIL: mktemp STUBDIR"; exit 1; }
+mkdir -p "$STUBDIR/lib"
 cat > "$STUBDIR/lib/adoption-analyzer.py" <<'PY'
 import sys
 if "--task-adoption-meta" in sys.argv:
@@ -53,6 +54,12 @@ unset -f devforge_log
 devforge_compute_task_id() { echo "abc123def456"; }
 PLUGIN_ROOT="$STUBDIR" devforge_emit_task_adoption; rc=$?
 check "Caso D best-effort (devforge_log assente) exit 0" "$rc" "0"
+
+# Caso E: best-effort — devforge_compute_task_id assente non fa fallire (guard indipendente)
+devforge_log() { :; }   # ripristina devforge_log per isolare il guard su compute_task_id
+unset -f devforge_compute_task_id
+PLUGIN_ROOT="$STUBDIR" devforge_emit_task_adoption; rc=$?
+check "Caso E best-effort (compute_task_id assente) exit 0" "$rc" "0"
 
 echo ""; echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
