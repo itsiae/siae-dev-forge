@@ -20,9 +20,9 @@ installazione e recovery da cache-miss.
 
 | # | Task | Stato |
 |---|------|-------|
-| 01 | Test strutturale `setup_github_network` (TDD red) | [PENDING] |
-| 02 | Implementa `setup_github_network()` + call site in install.sh (green) | [PENDING] |
-| 03 | README: nota rete SIAE + rollback nella sezione Installazione | [PENDING] |
+| 01 | Test strutturale `setup_github_network` (TDD red) | [DONE] |
+| 02 | Implementa `setup_github_network()` + call site in install.sh (green) | [DONE] |
+| 03 | README: nota rete SIAE + rollback nella sezione Installazione | [DONE] |
 
 ## Note esecuzione
 - TDD: Task 01 prima (test fallisce), Task 02 fa passare.
