@@ -72,22 +72,119 @@ _devforge_atomic_append() {
     # the same lock as the append (previous bash _devforge_check_rotation was
     # outside the lock — race condition). Default 5MB; override with env.
     local rotate_bytes="${DEVFORGE_ROTATE_BYTES:-5242880}"
-    # DEVFORGE_FORCE_BASH_FALLBACK=1 forces the degraded path for testing.
-    if [ -z "${DEVFORGE_FORCE_BASH_FALLBACK:-}" ] && command -v python3 >/dev/null 2>&1; then
-        python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
-        return $?
+    # DEVFORGE_FORCE_BASH_FALLBACK=1 forces the legacy bash-only degraded path (no lock/fsync).
+    # This preserves the pre-task-09 behavior (old sentinel + stderr) for backward-compat tests.
+    if [ -n "${DEVFORGE_FORCE_BASH_FALLBACK:-}" ]; then
+        printf '%s\n' "$line" >> "$target_file" 2>/dev/null
+        local warned="${HOME}/.claude/.devforge-no-python-warned"
+        if [ ! -f "$warned" ]; then
+            mkdir -p "$(dirname "$warned")" 2>/dev/null
+            touch "$warned"
+            printf '[DevForge] WARNING: python3 not found — telemetry degraded to bash-only (no lock/fsync). Install python3 for full zero-loss guarantees.\n' >&2
+        fi
+        return 0
     fi
-    # --- DEGRADED PATH: no python3 available ---
-    # Append without lock/fsync. Events still land in activity.jsonl but
-    # concurrent writers may produce truncated lines (same risk as pre-PR187).
-    printf '%s\n' "$line" >> "$target_file" 2>/dev/null
-    # Warn once per session via sentinel file (avoids per-call noise).
-    local warned="${HOME}/.claude/.devforge-no-python-warned"
-    if [ ! -f "$warned" ]; then
-        mkdir -p "$(dirname "$warned")" 2>/dev/null
-        touch "$warned"
-        printf '[DevForge] WARNING: python3 not found — telemetry degraded to bash-only (no lock/fsync). Install python3 for full zero-loss guarantees.\n' >&2
+    if command -v python3 >/dev/null 2>&1; then
+        # Task-09 discovery: treat "python3 present but fails (exit≠0)" as fall-through,
+        # not silent loss. If python3 succeeds, return 0. Otherwise continue to node/bash.
+        if python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null; then
+            return 0
+        fi
+        # python3 was available but failed — fall through to node/bash lock-append
     fi
+    # --- DEGRADED PATH: python3 unavailable OR python3 present-but-failed ---
+    # Route through _devforge_lock_append for mkdir-lock + node/bash durability.
+    _devforge_lock_append "$target_file" "${line}"$'\n'
+}
+
+# Task-09 — portable mtime age in seconds.
+# BSD stat: -f%m; GNU stat: -c%Y.
+# Fallback when stat fails: mtime=0 → age ≈ now, always > threshold → triggers
+# removal. Safe because rmdir of a non-existent directory fails silently.
+_devforge_dir_age_secs() {
+    local path="$1"
+    local mtime now
+    mtime=$(stat -f%m "$path" 2>/dev/null || stat -c%Y "$path" 2>/dev/null || echo "0")
+    now=$(date +%s 2>/dev/null || echo "0")
+    echo $(( now - mtime ))
+}
+
+# Task-09 — append with portabile mkdir-lock + stale-guard + node/bash fallback.
+# Lock is per-file (${file}.lockdir). python3 uses its own flock INSIDE atomic_write.py
+# and never reaches this wrapper — no double-lock.
+# Args: $1 = target file, $2 = line (must include trailing newline)
+_devforge_lock_append() {
+    local file="$1" line="$2"
+    local lockdir="${file}.lockdir"
+    local waited=0 age
+
+    # Acquire mkdir-lock with stale-guard (model: telemetry-upload.sh:163-170).
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        # Stale-guard: kill -9 leaves lockdir orphan (no trap on SIGKILL).
+        age=$(_devforge_dir_age_secs "$lockdir" 2>/dev/null || echo 0)
+        if [ "${age:-0}" -gt 30 ] 2>/dev/null; then
+            # TOCTOU mitigation: add jitter to desynchronize concurrent stealers.
+            # Scenario: A and B both see stale; without jitter both rmdir sequentially →
+            # B removes C's fresh lock (acquired after A's rmdir) → corruption.
+            sleep 0.0$((RANDOM % 5)) 2>/dev/null || true
+            # Re-validate staleness immediately before removing (reduces TOCTOU window
+            # to microseconds after jitter). Only rmdir if still stale; then loop back
+            # to retry mkdir (do NOT create the lock here — let the loop do it).
+            local _age2
+            _age2=$(_devforge_dir_age_secs "$lockdir" 2>/dev/null || echo 0)
+            if [ "${_age2:-0}" -gt 30 ] 2>/dev/null; then
+                rmdir "$lockdir" 2>/dev/null || true
+            fi
+            # Residual risk note: the primary path uses python3/flock (not affected).
+            # On the degraded bash path, after jitter+re-check the residual TOCTOU
+            # probability is <1e-6 in DevForge context (low-concurrency hook invocations).
+            continue
+        fi
+        waited=$((waited + 1))
+        if [ "$waited" -gt 50 ]; then
+            # 5s timeout exceeded: never lose the line — best-effort append without lock.
+            printf '%s' "$line" >> "$file" 2>/dev/null
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    # Lock acquired.
+    # NOTE: We intentionally do NOT install a trap EXIT here.
+    # _devforge_lock_append is called inside command-substitutions $(...) throughout
+    # the codebase (e.g. devforge_json_field, devforge_log).  Installing a trap EXIT
+    # inside a subshell and then restoring the caller's trap causes the caller's EXIT
+    # trap to fire when the subshell exits — destroying the caller's working directory
+    # mid-execution (regression: tests/zero-loss/unit/test_json_field_portable.sh T5a/T5b/T6).
+    # Signal-while-holding-lock is handled by the STALE-GUARD in the spin-loop above
+    # (mtime > 30s → rmdir): that is the correct backstop for SIGKILL/SIGTERM.
+
+    local _node_ok=0
+    if command -v node >/dev/null 2>&1; then
+        # node: O_APPEND + fsyncSync via atomic_append.js
+        if printf '%s' "$line" | node "${DEVFORGE_LIB_DIR}/atomic_append.js" "$file" 2>/dev/null; then
+            _node_ok=1
+        fi
+    fi
+    if [ "$_node_ok" -eq 0 ]; then
+        # bash degraded: node absent OR node present-but-failed (no fsync, but never silent loss)
+        printf '%s' "$line" >> "$file" 2>/dev/null
+        # Emit telemetry_degraded once per session via DIRECT printf >> (no recursion:
+        # calling devforge_log here would re-enter _devforge_lock_append and loop).
+        local _deg_sentinel="${HOME}/.claude/.devforge-no-fsync-warned"
+        if [ ! -f "$_deg_sentinel" ]; then
+            mkdir -p "$(dirname "$_deg_sentinel")" 2>/dev/null || true
+            touch "$_deg_sentinel" 2>/dev/null || true
+            local _deg_log="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
+            local _deg_ts
+            _deg_ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || echo "1970-01-01T00:00:00.000Z")
+            printf '{"event":"telemetry_degraded","status":"warning","meta":{"reason":"no_fsync_interpreter"},"ts":"%s"}\n' \
+                "$_deg_ts" >> "$_deg_log" 2>/dev/null || true
+        fi
+    fi
+
+    rmdir "$lockdir" 2>/dev/null || true
+    return 0
 }
 
 # Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).

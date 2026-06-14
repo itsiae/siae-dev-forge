@@ -10,6 +10,12 @@
 cade sul fallback `printf >>` (`logger.sh:62-90`) **senza lock né fsync** → perdita dati sotto
 concorrenza (hook/subagent paralleli) o crash. F2 espone questo path: va chiuso.
 
+**Discovery task-02 (allarga il vettore):** l'attuale `_devforge_atomic_append` fa il fallback bash SOLO
+quando `command -v python3` NON trova nulla. Se `python3` ESISTE ma **fallisce** (binario rotto, JSON env
+corrotto, `return 127`), NON cade sul fallback → **la riga può andare persa in silenzio**. Esiste già
+`DEVFORGE_FORCE_BASH_FALLBACK=1` come override. Il wrapper di questo task DEVE trattare "interprete presente
+ma exit≠0" come fall-through (python3→node→bash), non solo "interprete assente". Caso di test dedicato sotto.
+
 ## Fix — fallback chain durabile (ADDITIVO, NON tocca il path python3 shipped)
 **Il lock è UNO solo, acquisito dal wrapper bash** `_devforge_atomic_append` PRIMA di scegliere
 l'interprete (no doppio lock — BLOCK-1). Mutua esclusione per-interprete: il path python3 (flock
@@ -82,9 +88,12 @@ Estendere la suite esistente con i casi cross-platform (eseguibili anche forzand
 8. **Stale lock da kill -9 (BLOCK-2):** creare manualmente `${file}.lockdir` con mtime vecchio (> 30s),
    poi lanciare un writer → la stale-guard rimuove il lock orfano e l'evento viene scritto (NON perso, NON bloccato).
    Variante: lock recente tenuto da un PID vivo → il writer attende e poi scrive (nessuna perdita).
+9. **python3 presente ma fallisce (discovery task-02):** shim `python3` che esce 127 mentre `node` è
+   disponibile → l'evento viene comunque scritto via node (fall-through), NON perso. Variante: sia python3
+   (shim 127) sia node (shim 127) presenti-ma-rotti → scrittura via bash `printf` + `telemetry_degraded`.
 
 ## Criteri di accettazione (design AC 14)
-- Tutti e 8 i casi verdi sui path applicabili.
+- Tutti e 9 i casi verdi sui path applicabili.
 - La suite zero-loss esistente resta verde (no-regression sul path python3).
 - Conteggio righe = conteggio eventi emessi in OGNI scenario (zero perdita verificata numericamente).
 - Lock orfano da kill -9 NON causa perdita né deadlock (caso 8).
