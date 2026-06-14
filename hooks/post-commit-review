@@ -85,6 +85,15 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     devforge_log "commit_created" "success" \
         "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META}}"
 
+    # gate_bypassed (Layer 1): git commit con --no-verify / -n salta i git hook.
+    # Strip dei segmenti quotati per non matchare "-n" dentro il messaggio del commit.
+    CMD_NOQUOTES=$(printf '%s' "$TOOL_COMMAND" | sed "s/'[^']*'//g; s/\"[^\"]*\"//g")
+    if printf '%s' "$CMD_NOQUOTES" | grep -qE 'git[[:space:]]+commit' \
+       && printf '%s' "$CMD_NOQUOTES" | grep -qE -- '(--no-verify)|([[:space:]]-[A-Za-z]*n[A-Za-z]*([[:space:]]|$))'; then
+        devforge_log "gate_bypassed" "warning" \
+            "{\"mechanism\":\"git_no_verify\",\"commit_sha\":\"${CURRENT_HEAD}\"}" 2>/dev/null || true
+    fi
+
     # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
     CURRENT_COMMITS=$(cat "$SESSION_COMMITS_FILE" 2>/dev/null || echo "0")
