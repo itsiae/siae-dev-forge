@@ -21,7 +21,7 @@ degrado sempre osservabile (mai silenzioso).
 
 ## Task
 - [ ] task-00 — Spike verifica bloccante cross-platform (node PATH + CLAUDE_CONFIG_DIR) [PENDING]
-- [ ] task-01 — F1: .gitattributes eol=lf + renormalize + test no-CR [PENDING]
+- [x] task-01 — F1: .gitattributes eol=lf + renormalize + test no-CR [DONE]
 - [ ] task-02 — F2a: helper devforge_json_field (node→python3→degraded) + segnale telemetry_degraded [PENDING]
 - [ ] task-03 — F2b: instrada i siti identità-critici su devforge_json_field (no-regression auth_*) [PENDING]
 - [ ] task-04 — F2c: hardening trailer hook (marker v2 + node→python3 + guard git≥2.15 + emissione install-time) [PENDING]
