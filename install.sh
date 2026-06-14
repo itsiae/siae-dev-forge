@@ -24,9 +24,14 @@ setup_github_network() {
   local gh_domains="github.com,api.github.com,.github.com,codeload.github.com,objects.githubusercontent.com,uploads.github.com"
   case ",${NO_PROXY:-}," in *,github.com,*) : ;; *) export NO_PROXY="${NO_PROXY:+${NO_PROXY},}${gh_domains}" ;; esac
   case ",${no_proxy:-}," in *,github.com,*) : ;; *) export no_proxy="${no_proxy:+${no_proxy},}${gh_domains}" ;; esac
-  git config --global url."https://github.com/".insteadOf "git@github.com:"
-  git config --global http."https://github.com/".proxy ""
-  info "Rete github configurata (HTTPS direct) — git config globale aggiornata"
+  # Degradazione graceful: con set -euo pipefail un git config non scrivibile
+  # (es. HOME read-only in CI) abortirebbe l'installer con errore criptico.
+  if git config --global url."https://github.com/".insteadOf "git@github.com:" \
+     && git config --global http."https://github.com/".proxy ""; then
+    info "Rete github configurata (HTTPS direct) — git config globale aggiornata"
+  else
+    warning "git config globale non modificabile — github potrebbe usare SSH/proxy (vedi README: Rete SIAE)"
+  fi
 }
 
 echo ""

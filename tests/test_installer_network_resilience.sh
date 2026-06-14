@@ -2,6 +2,9 @@
 # Test strutturale — install.sh resiliente alla rete SIAE (github DIRECT).
 # Verifica: funzione setup_github_network esiste, è chiamata prima di gh auth
 # status, è idempotente sul NO_PROXY, e install.sh ha sintassi valida.
+# NB: niente 'set -e' — gli assert (es. call_ln=$(grep|head|cut)) devono riportare
+# FAIL pulito anche quando un grep non matcha, non abortire il test (convenzione
+# allineata a tests/lib/test_net_timeout.sh).
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
