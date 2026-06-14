@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siae.it/devforge/telemetry/insights.schema.json",
+  "title": "DevForge Telemetry — Info Esposte",
+  "description": "Schema canonico di tutte le informazioni esposte dalla telemetria DevForge per misurare e valutare l'utilizzo di DevForge+Claude Code per-developer. Copre (1) gli eventi raw additivi del Layer 1 scritti su S3 (task_adoption, gate_bypassed) e la join-key task_id sugli outcome, e (2) il record derivato per-developer/per-giorno esposto online dalla read API (cosa/come/valore), modellato sull'Analytics API di Claude Code (non disponibile su Bedrock).",
+  "x-design-doc": "docs/plans/2026-06-14-devforge-adoption-telemetry-design.md",
+  "x-api-contract": "docs/plans/2026-06-14-devforge-telemetry-insights-api.openapi.yaml",
+  "oneOf": [
+    { "$ref": "#/$defs/TaskAdoptionEvent" },
+    { "$ref": "#/$defs/GateBypassedEvent" },
+    { "$ref": "#/$defs/DeveloperDayInsight" }
+  ],
+  "$defs": {
+    "EventEnvelopeV2": {
+      "type": "object",
+      "description": "Envelope comune schema v2 presente su OGNI evento raw (lib/logger.sh). Sotto solo i campi load-bearing per gli insight; gli altri (event_id, session_seq, hook_name, ...) restano opzionali.",
+      "required": ["schema_version", "event", "status", "ts", "auth_email", "sid", "meta"],
+      "properties": {
+        "schema_version": { "const": 2 },
+        "event": { "type": "string", "description": "Tipo evento (es. task_adoption, gate_bypassed)." },
+        "status": { "type": "string", "enum": ["success", "warning", "blocked", "info"] },
+        "ts": { "type": "string", "format": "date-time", "description": "Timestamp UTC ISO 8601 'Z'." },
+        "actor_canonical": { "type": "string", "description": "Identità canonicalizzata (lowercase, no GitHub noreply prefix)." },
+        "auth_email": { "type": ["string", "null"], "format": "email", "description": "Email SSO da ~/.claude.json oauthAccount (chiave di join per-developer)." },
+        "auth_account_uuid": { "type": ["string", "null"], "description": "accountUuid OAuth." },
+        "repo_remote": { "type": ["string", "null"], "description": "git remote origin." },
+        "sid": { "type": "string", "description": "Session id (8-hex)." },
+        "branch": { "type": ["string", "null"] },
+        "jira_id": { "type": ["string", "null"], "description": "JIRA id derivato dal branch." },
+        "meta": { "type": "object" }
+      }
+    },
+
+    "CoreSkill": {
+      "type": "string",
+      "enum": ["siae-brainstorming", "siae-tdd", "siae-git-workflow", "siae-verification", "siae-blind-review"],
+      "description": "Le 5 core skill del workflow DevForge (single source: lib/adoption-analyzer.py CORE_SKILLS)."
+    },
+
+    "TaskAdoptionEvent": {
+      "type": "object",
+      "description": "Layer 1 RAW — aderenza al workflow DevForge per task. Emesso da hooks/stop-gate a session_end per il task_id corrente (scope itsiae/*, ledger non vuoto). Nessuna percentuale: solo fatti grezzi.",
+      "allOf": [{ "$ref": "#/$defs/EventEnvelopeV2" }],
+      "properties": {
+        "event": { "const": "task_adoption" },
+        "meta": {
+          "type": "object",
+          "required": ["task_id", "skills_invoked", "skills_validated", "core_skills_validated"],
+          "additionalProperties": false,
+          "properties": {
+            "task_id": { "type": "string", "pattern": "^[0-9a-f]{12}$", "description": "Identità task = sha256(branch|design_doc|mtime)[:12]." },
+            "task_branch": { "type": "string", "description": "Branch del task (da ledger metadata; '' se assente)." },
+            "design_doc": { "type": "string", "description": "Path design doc (da ledger metadata; '' se assente)." },
+            "skills_invoked": { "type": "array", "items": { "type": "string" }, "description": "Skill invocate nello scope del task (ordinate, deduplicate)." },
+            "skills_validated": { "type": "array", "items": { "type": "string" }, "description": "Skill validate (evidenza load-bearing)." },
+            "core_skills_validated": {
+              "type": "object",
+              "description": "Per ciascuna delle 5 core skill: validata nel task (true/false). Downstream calcola adoption = validate/applicabili.",
+              "required": ["siae-brainstorming", "siae-tdd", "siae-git-workflow", "siae-verification", "siae-blind-review"],
+              "additionalProperties": false,
+              "properties": {
+                "siae-brainstorming": { "type": "boolean" },
+                "siae-tdd": { "type": "boolean" },
+                "siae-git-workflow": { "type": "boolean" },
+                "siae-verification": { "type": "boolean" },
+                "siae-blind-review": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "GateBypassedEvent": {
+      "type": "object",
+      "description": "Layer 1 RAW — un gate DevForge è stato aggirato. enforcement_off: kill-switch globale (hooks/session-start). git_no_verify: commit con --no-verify/-n (hooks/post-commit-review).",
+      "allOf": [{ "$ref": "#/$defs/EventEnvelopeV2" }],
+      "properties": {
+        "event": { "const": "gate_bypassed" },
+        "status": { "const": "warning" },
+        "meta": {
+          "type": "object",
+          "required": ["mechanism"],
+          "additionalProperties": false,
+          "properties": {
+            "mechanism": { "type": "string", "enum": ["enforcement_off", "git_no_verify"] },
+            "scope": { "type": "string", "enum": ["session"], "description": "Presente per mechanism=enforcement_off." },
+            "commit_sha": { "type": "string", "description": "Presente per mechanism=git_no_verify. Best-effort (HEAD al PostToolUse), non linkage autoritativo." }
+          }
+        }
+      }
+    },
+
+    "OutcomeJoinKey": {
+      "type": "object",
+      "description": "Layer 1 — campo meta.task_id aggiunto a commit_created/pr_opened/pr_merged/pr_metrics per correlare adesione↔outcome a valle. Vuoto fuori scope itsiae/*.",
+      "properties": {
+        "task_id": { "type": "string", "pattern": "^([0-9a-f]{12})?$", "description": "12-hex in scope, '' fuori scope." }
+      }
+    },
+
+    "DeveloperDayInsight": {
+      "type": "object",
+      "description": "Layer 2 DERIVATO — insight per-developer/per-giorno esposto online dalla read API. Aggregazione server-side dai raw. kind=derived, MAI mischiato con devforge-logs/. Tre dimensioni: cosa/come/valore.",
+      "required": ["date", "actor", "kind", "core_metrics", "workflow_metrics", "value_metrics"],
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date-time", "description": "Giorno UTC (RFC 3339, mezzanotte)." },
+        "kind": { "const": "derived" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "repo_scope": { "type": "array", "items": { "type": "string" }, "description": "Repository (remote) toccati nel giorno." },
+        "core_metrics": { "$ref": "#/$defs/CoreMetrics" },
+        "workflow_metrics": { "$ref": "#/$defs/WorkflowMetrics" },
+        "value_metrics": { "$ref": "#/$defs/ValueMetrics" }
+      }
+    },
+
+    "Actor": {
+      "type": "object",
+      "description": "Identità developer. email_address in chiaro o pseudonym (hash SHA256) se anonymize. Dati nominativi → GDPR.",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "user_actor" },
+        "email_address": { "type": ["string", "null"], "format": "email" },
+        "account_uuid": { "type": ["string", "null"] },
+        "pseudonym": { "type": ["string", "null"], "description": "Hash SHA256 dell'email (solo se anonymize=true)." }
+      }
+    },
+
+    "CoreMetrics": {
+      "type": "object",
+      "description": "COSA — composizione produttività (paradigma core CC).",
+      "properties": {
+        "num_sessions": { "type": "integer", "minimum": 0, "description": "Sessioni distinte (session_start/session_end)." },
+        "commits": { "type": "integer", "minimum": 0, "description": "commit_created." },
+        "prs_opened": { "type": "integer", "minimum": 0, "description": "pr_opened." },
+        "prs_merged": { "type": "integer", "minimum": 0, "description": "pr_merged." },
+        "tasks_tracked": { "type": "integer", "minimum": 0, "description": "task_id distinti (task_adoption)." },
+        "skills_used": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 }, "description": "Conteggio invocazioni per skill (skill_invoked)." },
+        "lines_changed": {
+          "type": "object",
+          "description": "Volume informativo (commit_created insertions/deletions). NON metrica di valore (anti-pattern DORA LOC/giorno).",
+          "properties": {
+            "added": { "type": "integer", "minimum": 0 },
+            "removed": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "WorkflowMetrics": {
+      "type": "object",
+      "description": "COME — aderenza al metodo DevForge. Dimensione assente negli analytics nativi di Claude Code. Fonte: task_adoption + gate_bypassed + plan_metrics + pr_metrics.",
+      "properties": {
+        "core_skill_adoption": {
+          "type": "object",
+          "description": "Frazione [0..1] di task in cui ciascuna core skill è validata.",
+          "additionalProperties": false,
+          "properties": {
+            "siae-brainstorming": { "type": "number", "minimum": 0, "maximum": 1 },
+            "siae-tdd": { "type": "number", "minimum": 0, "maximum": 1 },
+            "siae-git-workflow": { "type": "number", "minimum": 0, "maximum": 1 },
+            "siae-verification": { "type": "number", "minimum": 0, "maximum": 1 },
+            "siae-blind-review": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "plan_iterations_avg": { "type": ["number", "null"], "minimum": 0, "description": "Media iterazioni piano (plan_metrics.iterations)." },
+        "review_cycles_avg": { "type": ["number", "null"], "minimum": 0, "description": "Media cicli review per PR (pr_metrics.review_cycles)." },
+        "gate_bypasses": {
+          "type": "object",
+          "description": "Conteggio bypass (gate_bypassed.mechanism).",
+          "properties": {
+            "enforcement_off": { "type": "integer", "minimum": 0 },
+            "git_no_verify": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "tool_acceptance_rate": { "type": ["number", "null"], "description": "Suggestion accept rate stile CC: NON raggiungibile dagli hook DevForge → sempre null su Bedrock." }
+      }
+    },
+
+    "ValueMetrics": {
+      "type": "object",
+      "description": "VALORE — outcome + ROI. DORA-allineato, nessuna metrica LOC/giorno.",
+      "properties": {
+        "lead_time_p50_sec": { "type": ["integer", "null"], "minimum": 0, "description": "Mediana time-to-merge (pr_metrics.time_to_merge_sec)." },
+        "rework_commits": { "type": ["integer", "null"], "minimum": 0, "description": "Commit di rework post-apertura PR (pr_metrics.rework_commits)." },
+        "has_tests_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Frazione commit con test (commit_created.has_tests)." },
+        "coverage_avg": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Copertura media (test_run_result.coverage_pct)." },
+        "cost": {
+          "type": "object",
+          "description": "Efficienza: token + costo per modello (session_end.by_model/pricing).",
+          "properties": {
+            "tokens": {
+              "type": "object",
+              "properties": {
+                "input": { "type": "integer", "minimum": 0 },
+                "output": { "type": "integer", "minimum": 0 },
+                "cache_read": { "type": "integer", "minimum": 0 },
+                "cache_creation": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "estimated_cost": {
+              "type": "object",
+              "properties": {
+                "amount": { "type": "number", "minimum": 0 },
+                "currency": { "const": "EUR" }
+              }
+            },
+            "by_model": { "type": "object", "additionalProperties": { "type": "object" } }
+          }
+        },
+        "workflow_vs_nonworkflow": { "$ref": "#/$defs/RoiComparison" }
+      }
+    },
+
+    "RoiComparison": {
+      "type": "object",
+      "description": "ROI del metodo: outcome dei task con-workflow vs senza (join via task_id/branch). Equivalente DevForge del confronto CC 'PR con CC vs senza'.",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ok", "insufficient_data"], "description": "insufficient_data se n sotto soglia (nessun claim spurio)." },
+        "with_workflow": { "$ref": "#/$defs/RoiBucket" },
+        "without_workflow": { "$ref": "#/$defs/RoiBucket" }
+      }
+    },
+
+    "RoiBucket": {
+      "type": "object",
+      "properties": {
+        "tasks": { "type": "integer", "minimum": 0 },
+        "lead_time_p50_sec": { "type": ["integer", "null"], "minimum": 0 },
+        "rework_commits_avg": { "type": ["number", "null"], "minimum": 0 },
+        "has_tests_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
