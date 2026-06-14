@@ -33,13 +33,13 @@ separato.
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | `adoption-analyzer.py --task-adoption-meta` (read ledger + meta JSON, riuso CORE_SKILLS) | `task-01-task-adoption-meta-python.md` | [PENDING] |
-| 2 | `lib/adoption-emit.sh` — `devforge_emit_task_adoption` (wrapper best-effort) | `task-02-adoption-emit-lib.md` | [PENDING] |
-| 3 | Wiring in `hooks/stop-gate` `_devforge_emit_session_end` | `task-03-stop-gate-wiring.md` | [PENDING] |
-| 4 | `hooks/session-start` — `gate_bypassed` enforcement_off (pipefail-safe) | `task-04-session-start-enforcement-off.md` | [PENDING] |
-| 5 | `hooks/post-commit-review` — detection `--no-verify`/`-n` → `gate_bypassed` | `task-05-post-commit-no-verify.md` | [PENDING] |
-| 6 | `hooks/post-commit-review` — `task_id` su commit_created/pr_* | `task-06-post-commit-task-id-joinkey.md` | [PENDING] |
-| 7 | No-regression + registrazione test + version bump | `task-07-no-regression-and-release.md` | [PENDING] |
+| 1 | `adoption-analyzer.py --task-adoption-meta` (read ledger + meta JSON, riuso CORE_SKILLS) | `task-01-task-adoption-meta-python.md` | [DONE] |
+| 2 | `lib/adoption-emit.sh` — `devforge_emit_task_adoption` (wrapper best-effort) | `task-02-adoption-emit-lib.md` | [DONE] |
+| 3 | Wiring in `hooks/stop-gate` `_devforge_emit_session_end` | `task-03-stop-gate-wiring.md` | [DONE] |
+| 4 | `hooks/session-start` — `gate_bypassed` enforcement_off (pipefail-safe) | `task-04-session-start-enforcement-off.md` | [DONE] |
+| 5 | `hooks/post-commit-review` — detection `--no-verify`/`-n` → `gate_bypassed` | `task-05-post-commit-no-verify.md` | [DONE] |
+| 6 | `hooks/post-commit-review` — `task_id` su commit_created/pr_* | `task-06-post-commit-task-id-joinkey.md` | [DONE] |
+| 7 | No-regression + registrazione test + version bump | `task-07-no-regression-and-release.md` | [DONE] |
 
 ## Dipendenze
 
