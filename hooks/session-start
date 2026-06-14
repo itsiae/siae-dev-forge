@@ -311,6 +311,14 @@ SAFE_PROJECT_DIR=$(devforge_sanitize_json_str "$(pwd)")
 SAFE_PLUGIN_VERSION=$(devforge_sanitize_json_str "$PLUGIN_VERSION")
 devforge_log_timed "session_start" "success" "$START_NS" "{\"project_dir\":\"${SAFE_PROJECT_DIR}\",\"plugin_version\":\"${SAFE_PLUGIN_VERSION}\",\"identity\":${IDENTITY_BUNDLE}}"
 
+# gate_bypassed (Layer 1) — il kill-switch globale altrimenti non lascia traccia.
+# DOPO l'emissione dello stdout additional_context (riga ~291): nessun rischio di
+# abortire il JSON. best-effort + pipefail-safe + nessun output su stdout.
+if [ "${DEVFORGE_ENFORCEMENT_OFF:-0}" = "1" ]; then
+    devforge_log "gate_bypassed" "warning" \
+        '{"mechanism":"enforcement_off","scope":"session"}' >/dev/null 2>&1 || true
+fi
+
 # Save session start timestamp for duration calculation in session_end
 echo "$START_NS" > "${HOME}/.claude/.devforge-session-start-ns"
 
