@@ -20,6 +20,13 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# task_id join-key (Layer 1): correlazione adesione↔outcome a valle. Vuoto fuori itsiae/*.
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+TASK_ID=""
+if command -v devforge_compute_task_id >/dev/null 2>&1; then
+    TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+fi
+
 # Network resilience: NO_PROXY-github + net_run, a top-level incondizionato (il
 # logger qui è sourcato dentro i branch git-push/gh-pr-merge: il source di
 # net-timeout deve coprire ENTRAMBI i path delle call gh pr view).
@@ -83,7 +90,7 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     fi
 
     devforge_log "commit_created" "success" \
-        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META}}"
+        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META},\"task_id\":\"${TASK_ID}\"}"
 
     # gate_bypassed (Layer 1): git commit con --no-verify / -n salta i git hook.
     # Strip dei segmenti quotati per non matchare "-n" dentro il messaggio del commit.
@@ -127,7 +134,7 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
                 if [ ! -f "$SNAPSHOT_FILE" ]; then
                     # Primo push con PR → emit pr_opened + crea snapshot
                     devforge_log "pr_opened" "success" \
-                        "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT}}"
+                        "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT},\"task_id\":\"${TASK_ID}\"}"
 
                     OPENED_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                     cat > "${SNAPSHOT_FILE}.tmp" << EOF_SNAP
@@ -190,7 +197,7 @@ EOF_SNAP
                 [ "$ORPHAN_STATE" = "CLOSED" ] && MERGE_METHOD="closed"
 
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
+                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total),\"task_id\":\"${TASK_ID}\"}"
 
                 ORPHAN_REWORK=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${ORPHAN_PR}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
                 ORPHAN_REWORK=${ORPHAN_REWORK:-0}
@@ -208,7 +215,7 @@ print(max(0, int((now - t).total_seconds())))
 " "$ORPHAN_OPENED_TS" 2>/dev/null || echo 0)
                 fi
                 devforge_log "pr_metrics" "success" \
-                    "{\"pr_number\":${ORPHAN_PR},\"rework_commits\":${ORPHAN_REWORK},\"review_cycles\":${ORPHAN_CYCLES},\"time_to_merge_sec\":${ORPHAN_TTM},\"first_push_to_merge_sec\":${ORPHAN_TTM}}"
+                    "{\"pr_number\":${ORPHAN_PR},\"rework_commits\":${ORPHAN_REWORK},\"review_cycles\":${ORPHAN_CYCLES},\"time_to_merge_sec\":${ORPHAN_TTM},\"first_push_to_merge_sec\":${ORPHAN_TTM},\"task_id\":\"${TASK_ID}\"}"
 
                 rm -f "$snapshot"
                 CATCH_UP_COUNT=$(( CATCH_UP_COUNT + 1 ))
@@ -237,7 +244,7 @@ if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
                 [ "$DELTA" -lt 0 ] && DELTA=0
 
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
+                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total),\"task_id\":\"${TASK_ID}\"}"
 
                 # pr_metrics aggregato (legge snapshot PRIMA del cleanup)
                 REWORK_COUNT=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
@@ -258,7 +265,7 @@ print(max(0, int((now - t).total_seconds())))
                     fi
                 fi
                 devforge_log "pr_metrics" "success" \
-                    "{\"pr_number\":${PR_NUMBER},\"rework_commits\":${REWORK_COUNT},\"review_cycles\":${CYCLES_COUNT},\"time_to_merge_sec\":${TTM_SEC},\"first_push_to_merge_sec\":${TTM_SEC}}"
+                    "{\"pr_number\":${PR_NUMBER},\"rework_commits\":${REWORK_COUNT},\"review_cycles\":${CYCLES_COUNT},\"time_to_merge_sec\":${TTM_SEC},\"first_push_to_merge_sec\":${TTM_SEC},\"task_id\":\"${TASK_ID}\"}"
 
                 # Cleanup snapshot
                 rm -f "$SNAPSHOT_FILE"
