@@ -1,0 +1,10 @@
+* text=auto
+*.sh text eol=lf
+hooks/* text eol=lf
+# run-hook.cmd is a bash+CMD polyglot but is ALWAYS invoked via "bash run-hook.cmd"
+# (see hooks/hooks.json — every entry uses "bash \"...run-hook.cmd\"").
+# On Windows, cmd.exe is never the direct caller, so LF is the correct EOL.
+# This rule comes AFTER hooks/* so it overrides the glob (last-match-wins).
+hooks/run-hook.cmd text eol=lf
+lib/*.sh text eol=lf
+*.py text eol=lf

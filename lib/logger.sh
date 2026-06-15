@@ -72,22 +72,119 @@ _devforge_atomic_append() {
     # the same lock as the append (previous bash _devforge_check_rotation was
     # outside the lock — race condition). Default 5MB; override with env.
     local rotate_bytes="${DEVFORGE_ROTATE_BYTES:-5242880}"
-    # DEVFORGE_FORCE_BASH_FALLBACK=1 forces the degraded path for testing.
-    if [ -z "${DEVFORGE_FORCE_BASH_FALLBACK:-}" ] && command -v python3 >/dev/null 2>&1; then
-        python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null
-        return $?
+    # DEVFORGE_FORCE_BASH_FALLBACK=1 forces the legacy bash-only degraded path (no lock/fsync).
+    # This preserves the pre-task-09 behavior (old sentinel + stderr) for backward-compat tests.
+    if [ -n "${DEVFORGE_FORCE_BASH_FALLBACK:-}" ]; then
+        printf '%s\n' "$line" >> "$target_file" 2>/dev/null
+        local warned="${HOME}/.claude/.devforge-no-python-warned"
+        if [ ! -f "$warned" ]; then
+            mkdir -p "$(dirname "$warned")" 2>/dev/null
+            touch "$warned"
+            printf '[DevForge] WARNING: python3 not found — telemetry degraded to bash-only (no lock/fsync). Install python3 for full zero-loss guarantees.\n' >&2
+        fi
+        return 0
     fi
-    # --- DEGRADED PATH: no python3 available ---
-    # Append without lock/fsync. Events still land in activity.jsonl but
-    # concurrent writers may produce truncated lines (same risk as pre-PR187).
-    printf '%s\n' "$line" >> "$target_file" 2>/dev/null
-    # Warn once per session via sentinel file (avoids per-call noise).
-    local warned="${HOME}/.claude/.devforge-no-python-warned"
-    if [ ! -f "$warned" ]; then
-        mkdir -p "$(dirname "$warned")" 2>/dev/null
-        touch "$warned"
-        printf '[DevForge] WARNING: python3 not found — telemetry degraded to bash-only (no lock/fsync). Install python3 for full zero-loss guarantees.\n' >&2
+    if command -v python3 >/dev/null 2>&1; then
+        # Task-09 discovery: treat "python3 present but fails (exit≠0)" as fall-through,
+        # not silent loss. If python3 succeeds, return 0. Otherwise continue to node/bash.
+        if python3 "${DEVFORGE_LIB_DIR}/atomic_write.py" append "$target_file" "$line" "$rotate_bytes" 2>/dev/null; then
+            return 0
+        fi
+        # python3 was available but failed — fall through to node/bash lock-append
     fi
+    # --- DEGRADED PATH: python3 unavailable OR python3 present-but-failed ---
+    # Route through _devforge_lock_append for mkdir-lock + node/bash durability.
+    _devforge_lock_append "$target_file" "${line}"$'\n'
+}
+
+# Task-09 — portable mtime age in seconds.
+# BSD stat: -f%m; GNU stat: -c%Y.
+# Fallback when stat fails: mtime=0 → age ≈ now, always > threshold → triggers
+# removal. Safe because rmdir of a non-existent directory fails silently.
+_devforge_dir_age_secs() {
+    local path="$1"
+    local mtime now
+    mtime=$(stat -f%m "$path" 2>/dev/null || stat -c%Y "$path" 2>/dev/null || echo "0")
+    now=$(date +%s 2>/dev/null || echo "0")
+    echo $(( now - mtime ))
+}
+
+# Task-09 — append with portabile mkdir-lock + stale-guard + node/bash fallback.
+# Lock is per-file (${file}.lockdir). python3 uses its own flock INSIDE atomic_write.py
+# and never reaches this wrapper — no double-lock.
+# Args: $1 = target file, $2 = line (must include trailing newline)
+_devforge_lock_append() {
+    local file="$1" line="$2"
+    local lockdir="${file}.lockdir"
+    local waited=0 age
+
+    # Acquire mkdir-lock with stale-guard (model: telemetry-upload.sh:163-170).
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        # Stale-guard: kill -9 leaves lockdir orphan (no trap on SIGKILL).
+        age=$(_devforge_dir_age_secs "$lockdir" 2>/dev/null || echo 0)
+        if [ "${age:-0}" -gt 30 ] 2>/dev/null; then
+            # TOCTOU mitigation: add jitter to desynchronize concurrent stealers.
+            # Scenario: A and B both see stale; without jitter both rmdir sequentially →
+            # B removes C's fresh lock (acquired after A's rmdir) → corruption.
+            sleep 0.0$((RANDOM % 5)) 2>/dev/null || true
+            # Re-validate staleness immediately before removing (reduces TOCTOU window
+            # to microseconds after jitter). Only rmdir if still stale; then loop back
+            # to retry mkdir (do NOT create the lock here — let the loop do it).
+            local _age2
+            _age2=$(_devforge_dir_age_secs "$lockdir" 2>/dev/null || echo 0)
+            if [ "${_age2:-0}" -gt 30 ] 2>/dev/null; then
+                rmdir "$lockdir" 2>/dev/null || true
+            fi
+            # Residual risk note: the primary path uses python3/flock (not affected).
+            # On the degraded bash path, after jitter+re-check the residual TOCTOU
+            # probability is <1e-6 in DevForge context (low-concurrency hook invocations).
+            continue
+        fi
+        waited=$((waited + 1))
+        if [ "$waited" -gt 50 ]; then
+            # 5s timeout exceeded: never lose the line — best-effort append without lock.
+            printf '%s' "$line" >> "$file" 2>/dev/null
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    # Lock acquired.
+    # NOTE: We intentionally do NOT install a trap EXIT here.
+    # _devforge_lock_append is called inside command-substitutions $(...) throughout
+    # the codebase (e.g. devforge_json_field, devforge_log).  Installing a trap EXIT
+    # inside a subshell and then restoring the caller's trap causes the caller's EXIT
+    # trap to fire when the subshell exits — destroying the caller's working directory
+    # mid-execution (regression: tests/zero-loss/unit/test_json_field_portable.sh T5a/T5b/T6).
+    # Signal-while-holding-lock is handled by the STALE-GUARD in the spin-loop above
+    # (mtime > 30s → rmdir): that is the correct backstop for SIGKILL/SIGTERM.
+
+    local _node_ok=0
+    if command -v node >/dev/null 2>&1; then
+        # node: O_APPEND + fsyncSync via atomic_append.js
+        if printf '%s' "$line" | node "${DEVFORGE_LIB_DIR}/atomic_append.js" "$file" 2>/dev/null; then
+            _node_ok=1
+        fi
+    fi
+    if [ "$_node_ok" -eq 0 ]; then
+        # bash degraded: node absent OR node present-but-failed (no fsync, but never silent loss)
+        printf '%s' "$line" >> "$file" 2>/dev/null
+        # Emit telemetry_degraded once per session via DIRECT printf >> (no recursion:
+        # calling devforge_log here would re-enter _devforge_lock_append and loop).
+        local _deg_sentinel="${HOME}/.claude/.devforge-no-fsync-warned"
+        if [ ! -f "$_deg_sentinel" ]; then
+            mkdir -p "$(dirname "$_deg_sentinel")" 2>/dev/null || true
+            touch "$_deg_sentinel" 2>/dev/null || true
+            local _deg_log="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
+            local _deg_ts
+            _deg_ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || echo "1970-01-01T00:00:00.000Z")
+            printf '{"event":"telemetry_degraded","status":"warning","meta":{"reason":"no_fsync_interpreter"},"ts":"%s"}\n' \
+                "$_deg_ts" >> "$_deg_log" 2>/dev/null || true
+        fi
+    fi
+
+    rmdir "$lockdir" 2>/dev/null || true
+    return 0
 }
 
 # Zero-loss PR-A: NTP clock skew detection (edge cases #7 + #18).
@@ -267,6 +364,7 @@ devforge_identity_bundle() {
     osu="${USER:-}"
     [ -z "$osu" ] && osu=$(whoami 2>/dev/null || echo "")
     host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "")
+    host="${host%%.*}"
 
     # Authenticated SSO identity (see devforge_resolve_auth_identity).
     # pipe-delimited: email|account_uuid|org_uuid|org_name
@@ -288,37 +386,43 @@ devforge_identity_bundle() {
 # Reads ~/.claude.json -> oauthAccount.{emailAddress,accountUuid,organizationUuid,organizationName}.
 # This is the only point in the flow that knows the AUTHENTICATED dev identity (SSO login)
 # at action time — stamping it turns attribution from inference into a join.
-# Best-effort: file missing / no oauthAccount (Bedrock/API-key) / no python3 -> all empty.
+# Best-effort: file missing / no oauthAccount (Bedrock/API-key) / no node+python3 -> all empty.
 # Output: single line "email|account_uuid|org_uuid|org_name" (pipes/newlines in values
 # replaced with spaces to protect the delimiter contract). Override path via
 # DEVFORGE_CLAUDE_JSON for testing.
+# Cross-platform: usa devforge_json_field (node→python3→degraded) per ogni campo.
 devforge_resolve_auth_identity() {
     local claude_json="${DEVFORGE_CLAUDE_JSON:-${HOME}/.claude.json}"
-    if [ ! -f "$claude_json" ] || ! command -v python3 >/dev/null 2>&1; then
-        printf '|||'
-        return 0
-    fi
-    python3 - "$claude_json" <<'PY' 2>/dev/null || printf '|||'
-import json, sys
-try:
-    d = json.load(open(sys.argv[1]))
-    o = d.get('oauthAccount') or {}
-    vals = [str(o.get('emailAddress', '') or ''), str(o.get('accountUuid', '') or ''),
-            str(o.get('organizationUuid', '') or ''), str(o.get('organizationName', '') or '')]
-    vals = [v.replace('|', ' ').replace('\n', ' ').replace('\r', ' ').replace('"', ' ') for v in vals]
-    sys.stdout.write('|'.join(vals))
-except Exception:
-    sys.stdout.write('|||')
-PY
+    [ -f "$claude_json" ] || { printf '|||'; return 0; }
+    local ae au ou onm
+    ae=$(devforge_json_field "$claude_json" "oauthAccount.emailAddress" 2>/dev/null)
+    au=$(devforge_json_field "$claude_json" "oauthAccount.accountUuid" 2>/dev/null)
+    ou=$(devforge_json_field "$claude_json" "oauthAccount.organizationUuid" 2>/dev/null)
+    onm=$(devforge_json_field "$claude_json" "oauthAccount.organizationName" 2>/dev/null)
+    # Replace pipe/newline/CR/quote chars to protect the delimiter contract
+    ae="${ae//|/ }"; ae="${ae//$'\n'/ }"; ae="${ae//$'\r'/ }"; ae="${ae//\"/ }"
+    au="${au//|/ }"; au="${au//$'\n'/ }"; au="${au//$'\r'/ }"; au="${au//\"/ }"
+    ou="${ou//|/ }"; ou="${ou//$'\n'/ }"; ou="${ou//$'\r'/ }"; ou="${ou//\"/ }"
+    onm="${onm//|/ }"; onm="${onm//$'\n'/ }"; onm="${onm//$'\r'/ }"; onm="${onm//\"/ }"
+    printf '%s|%s|%s|%s' "$ae" "$au" "$ou" "$onm"
 }
 
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
-# file/session dir is absent or python3 is unavailable. Used to anchor token spend
+# file/session dir is absent or no interpreter is available. Used to anchor token spend
 # to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
+# Cross-platform: usa devforge_json_field (node→python3→degraded); degrado a 0 già atteso.
 devforge_session_token_total() {
     local f="${DEVFORGE_SESSION_DIR:-}/token-stats.json"
-    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ] && command -v python3 >/dev/null 2>&1; then
-        python3 -c "import json,sys; print(int(json.load(open(sys.argv[1])).get('total',0) or 0))" "$f" 2>/dev/null || echo 0
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ]; then
+        local v
+        v=$(devforge_json_field "$f" "total" 2>/dev/null)
+        # devforge_json_field ora restituisce "0" per total=0 (0 è distinto da chiave assente).
+        # Se il valore è vuoto (chiave mancante/null) o non-numerico ricadiamo a 0.
+        if [[ "$v" =~ ^[0-9]+$ ]]; then
+            echo "$v"
+        else
+            echo 0
+        fi
     else
         echo 0
     fi
@@ -377,10 +481,10 @@ devforge_get_user() {
 }
 
 devforge_get_user_raw() {
-    # Prefer pinned session user.json
-    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+    # Prefer pinned session user.json — cross-platform via devforge_json_field (node→python3→degraded)
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
         local raw
-        raw=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        raw=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "raw" 2>/dev/null)
         if [ -n "$raw" ]; then
             printf '%s' "$raw"
             return
@@ -392,10 +496,10 @@ devforge_get_user_raw() {
 }
 
 devforge_get_user_source() {
-    # Prefer pinned session user.json
-    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+    # Prefer pinned session user.json — cross-platform via devforge_json_field (node→python3→degraded)
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
         local src
-        src=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('source',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        src=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "source" 2>/dev/null)
         if [ -n "$src" ]; then
             printf '%s' "$src"
             return
@@ -429,17 +533,19 @@ devforge_new_sid() {
     echo "$sid"
 }
 
-# Initialize per-session state directory and pin identity for the session lifetime
+# Initialize per-session state directory and pin identity for the session lifetime.
+# Cross-platform: usa devforge_json_field (node→python3→degraded) per leggere user.json.
 devforge_init_session() {
-    local sid=$(devforge_get_sid)
+    local sid
+    sid=$(devforge_get_sid)
     DEVFORGE_SESSION_DIR="${HOME}/.claude/devforge-state/${sid}"
     DEVFORGE_PINNED_SID="$sid"
-    if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
-        DEVFORGE_PINNED_USER=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+    if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
+        DEVFORGE_PINNED_USER=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "raw" 2>/dev/null)
         [ -n "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_canonicalize_user "$DEVFORGE_PINNED_USER")
         # Pin authenticated SSO identity from user.json.identity (additive; empty if absent)
-        DEVFORGE_AUTH_EMAIL=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_email','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
-        DEVFORGE_AUTH_ACCOUNT_UUID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_account_uuid','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        DEVFORGE_AUTH_EMAIL=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "identity.auth_email" 2>/dev/null)
+        DEVFORGE_AUTH_ACCOUNT_UUID=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "identity.auth_account_uuid" 2>/dev/null)
     fi
     [ -z "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_get_user)
     export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID DEVFORGE_AUTH_EMAIL DEVFORGE_AUTH_ACCOUNT_UUID
@@ -493,6 +599,32 @@ devforge_sanitize_json_str() {
     printf '%s' "$s"
 }
 
+# Derive org/repo slug from a git remote URL (SSH scp-form or HTTPS).
+# Returns empty string if the slug cannot be derived (no URL, single-segment, etc.).
+# Usage: devforge_repo_slug "<remote_url>"
+# Examples:
+#   git@gitlab.itsiae.it:itsiae/diritti-api.git  → itsiae/diritti-api
+#   https://github.com/itsiae/diritti-api.git    → itsiae/diritti-api
+#   https://github.com/itsiae/diritti-api        → itsiae/diritti-api
+#   ""                                           → ""
+devforge_repo_slug() {
+    local url="$1"
+    [ -n "$url" ] || { printf ''; return 0; }
+    url="${url%.git}"             # strip trailing .git
+    url="${url#*://}"             # strip scheme (https://, ssh://)
+    url="${url#*@}"               # strip user@ (SSH)
+    url="${url/://}"              # first ':' → '/' (SSH scp-form host:org/repo)
+    local repo rest org
+    repo="${url##*/}"
+    rest="${url%/*}"
+    org="${rest##*/}"
+    if [ -n "$org" ] && [ -n "$repo" ] && [ "$org" != "$repo" ]; then
+        printf '%s/%s' "$org" "$repo"
+    else
+        printf ''
+    fi
+}
+
 # Log an event to the JSONL file
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'
@@ -542,20 +674,22 @@ devforge_log() {
     # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
     # repo_remote survives the GitLab->GitHub mirror; auth_* come from session pinning
     # (DEVFORGE_AUTH_*), no per-event re-read of ~/.claude.json. All best-effort (empty if absent).
-    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    # repo_slug (org/repo) derived from repo_remote for join-key use at the consumer.
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
     safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
     safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+    safe_repo_slug=$(devforge_sanitize_json_str "$(devforge_repo_slug "$repo_remote")")
 
     # Zero-loss PR-A: build the JSON line once, then atomic append via Python
     # (lock + fsync, cross-OS). Replaces raw `>> file` to eliminate race.
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","repo_slug":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
+        "$safe_repo_remote" "$safe_repo_slug" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
@@ -624,19 +758,22 @@ devforge_log_timed() {
 
     # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
     # See devforge_log for rationale. duration_ms stays between status and meta (unchanged).
-    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    # repo_slug (org/repo) derived from repo_remote; duration_source="wallclock" is a
+    # static marker that tells the consumer this duration was measured via epoch_ns wallclock.
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
     safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
     safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+    safe_repo_slug=$(devforge_sanitize_json_str "$(devforge_repo_slug "$repo_remote")")
 
     # Zero-loss PR-A: atomic append via Python (lock + fsync)
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","repo_slug":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"duration_source":"wallclock","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
+        "$safe_repo_remote" "$safe_repo_slug" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
@@ -690,4 +827,52 @@ devforge_tdd_get_phase() {
 # TDD State Machine — reset (end of cycle or session)
 devforge_tdd_reset() {
     rm -f "${HOME}/.claude/.devforge-tdd-state"
+}
+
+# Portable JSON field reader: node first (Claude Code runs on Node), python3 fallback.
+# Empty string + observable telemetry_degraded if no interpreter. Never aborts.
+# Supports dotted paths (e.g. "oauthAccount.emailAddress", "identity.auth_email").
+#
+# Semantica valore restituito:
+#   - Chiave assente / valore null / stringa vuota  → "" (stringa vuota)
+#   - Valore numerico 0                             → "0"
+#   - Valore booleano false                         → "false"
+#   I valori falsy 0/false sono ora distinti da chiave mancante/null/"" in entrambi
+#   i rami (node: sentinel undefined su chiave mancante; python3: oggetto _MISSING).
+#
+# Anti-ricorsione: nel percorso DEGRADED (node e python3 entrambi assenti), la chiamata
+# a devforge_log("telemetry_degraded") raggiunge devforge_get_user_raw e
+# devforge_get_user_source, che a loro volta chiamano devforge_json_field di nuovo se
+# DEVFORGE_SESSION_DIR è impostato e user.json esiste — producendo un loop infinito.
+# Scenario reale: Windows senza node E senza python3 con user.json presente.
+# La guardia _DEVFORGE_JF_DEGRADING=1 (inline env-var scoping) interrompe il ciclo:
+# qualsiasi chiamata rientrante vede la variabile impostata e salta l'emissione,
+# restituendo stringa vuota immediatamente senza ulteriori ricorsioni.
+devforge_json_field() {
+    local file="$1" path="$2" out=""
+    [ -f "$file" ] || { printf ''; return 0; }
+    if command -v node >/dev/null 2>&1; then
+        # FIX: distinguish missing/null/"" (→ "") from falsy-but-present values like 0/false (→ String(v)).
+        # The reduce returns undefined on missing key (sentinel); null/undefined/"" → ""; 0/false → "0"/"false".
+        out=$(node -e 'try{const fs=require("fs");const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=process.argv[2].split(".").reduce((o,k)=>(o!=null&&typeof o==="object"&&k in o)?o[k]:undefined,d);process.stdout.write(v==null||v===""?"":String(v))}catch(e){process.exit(3)}' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        # FIX: distinguish missing/null/"" (→ "") from falsy-but-present values like 0/False (→ str(v)).
+        # Use a sentinel object to detect missing key vs explicit None/"".
+        out=$(python3 -c 'import json,sys,functools
+_MISSING=object()
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+v=functools.reduce(lambda o,k:(o.get(k,_MISSING) if isinstance(o,dict) else _MISSING),sys.argv[2].split("."),d)
+sys.stdout.write("" if v is _MISSING or v is None or v=="" else str(v))' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+    fi
+    # DEGRADED: neither node nor python3 available.
+    # Re-entry guard: if we are already inside the degraded-log emission path
+    # (devforge_log → get_user_raw/get_user_source → devforge_json_field),
+    # skip the log call to break the infinite recursion cycle.
+    # The guard uses inline env-var scoping so every child call in this subshell
+    # chain sees _DEVFORGE_JF_DEGRADING=1 and returns immediately.
+    if [ -z "${_DEVFORGE_JF_DEGRADING:-}" ]; then
+        _DEVFORGE_JF_DEGRADING=1 devforge_log "telemetry_degraded" "warning" '{"reason":"no_json_interpreter"}' 2>/dev/null || true
+    fi
+    printf ''
 }

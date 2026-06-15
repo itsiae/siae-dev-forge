@@ -4,6 +4,34 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.88.0] - 2026-06-15
+
+### Added — Attribuzione identità dev root-cause, cross-platform (Windows + macOS/Linux)
+
+Rende il meccanismo di attribuzione identità (auth_email/auth_account_uuid +
+trailer DevForge-Author, già attivo su mac/Linux) **completo e cross-platform**,
+chiudendo i 6 problemi di spacchettamento identità. Design+piano:
+`docs/plans/2026-06-14-dev-identity-rootcause-crossplatform-design.md`.
+
+- **F1** — `.gitattributes` con `eol=lf` su shell/hook: i CRLF non rompono più gli
+  hook bash su Windows (Git Bash). `hooks/run-hook.cmd` (polyglot, sempre via bash) reso `eol=lf` esplicito.
+- **F2** — reader JSON portabile `devforge_json_field` (node→python3→degraded): l'identità
+  risolve su Windows senza python3. Instradati tutti i siti identità-critici
+  (`resolve_auth`, `init_session`, `get_user_raw/source`, `session_token_total`), con guard anti-ricorsione.
+- **F3** — `host` normalizzato a short name nel bundle identità (join `(host, os_user)` stabile cross-OS).
+- **F4** — write-path zero-loss su Windows senza python3: fallback `python3(flock)→node(mkdir-lock+O_APPEND+fsync)→bash`,
+  stale-guard anti-`kill -9`, fall-through su interprete presente-ma-fallito, segnale osservabile `telemetry_degraded`.
+  `lib/atomic_write.py` invariato.
+- **Trailer hook** hardening: marker v1→v2 (re-deploy automatico), lettura email node→python3 self-contained,
+  guard `git interpret-trailers` ≥2.15 con segnale `trailer_hook_skipped_old_git`.
+- **`repo_slug`** (org/repo da SSH+HTTPS) e **`pr_author_emails[]`** (autori reali della PR dai trailer) negli eventi;
+  marker `duration_source="wallclock"`.
+- `scripts/diagnose-identity.sh` (probe account condivisi, VERDICT ISOLATED/SHARED-DEGENERATE/NO-AUTH) +
+  guida isolamento per-persona. Handover consumer in `docs/handover/2026-06-14-identity-rootcause-consumer.md`.
+
+Additivo e no-regression: `user`/`actor_canonical`/`auth_*` invariati. Nuova suite data-loss
+cross-platform (concorrenza 50-writer, crash, no-interprete) con assert numerico righe==eventi.
+
 ## [1.84.0] - 2026-06-11
 
 ### Fixed — Gate token-based scattano anche su comandi composti

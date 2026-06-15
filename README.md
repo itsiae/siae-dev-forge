@@ -19,7 +19,7 @@
 
 | Metadato | Valore |
 |---|---|
-| Versione | `1.87.0` |
+| Versione | `1.88.0` |
 | Autore | SIAE AI Competence Center · `ai-cc@siae.it` |
 | Licenza | Proprietary |
 | Target | Claude Code CLI ≥ 0.x, Anthropic SDK |
