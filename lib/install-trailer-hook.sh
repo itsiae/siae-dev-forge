@@ -85,6 +85,10 @@ fi
 # Strip control chars and quotes. Also strip ':' to prevent colon-injection into the
 # trailer value from a tampered ~/.claude.json (local file, best-effort defence).
 # Valid email addresses never contain ':', so this does not affect legitimate values.
+# NOTA: questa difesa colon-strip è presente dalla versione 2 di questo hook.
+# Hook precedenti (versione 1, non ancora ri-deployati) ne sono privi fino al prossimo
+# session-start che sovrascrive l'hook con la versione corrente.
+# Rischio residuo: locale e accettato — richiede tampering del file ~/.claude.json locale.
 EMAIL=$(printf '%s' "$EMAIL" | tr -d '\n\r":')
 [ -z "$EMAIL" ] && exit 0
 [ -f "$MSG_FILE" ] || exit 0

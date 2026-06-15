@@ -416,9 +416,8 @@ devforge_session_token_total() {
     if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ]; then
         local v
         v=$(devforge_json_field "$f" "total" 2>/dev/null)
-        # devforge_json_field è solo per campi stringa; total è numerico ma
-        # entrambi i rami (node+python3) lo convertono a stringa via String(v||"").
-        # Se il valore è vuoto o non-numerico ricadiamo a 0.
+        # devforge_json_field ora restituisce "0" per total=0 (0 è distinto da chiave assente).
+        # Se il valore è vuoto (chiave mancante/null) o non-numerico ricadiamo a 0.
         if [[ "$v" =~ ^[0-9]+$ ]]; then
             echo "$v"
         else
@@ -834,10 +833,12 @@ devforge_tdd_reset() {
 # Empty string + observable telemetry_degraded if no interpreter. Never aborts.
 # Supports dotted paths (e.g. "oauthAccount.emailAddress", "identity.auth_email").
 #
-# IMPORTANTE — solo campi STRINGA identità:
-#   Valori falsy (0, false, stringa vuota, null) sono INDISTINGUIBILI da chiave mancante
-#   in entrambi i rami (node: `v||""` → ""; python3: `str(v or "")` → "").
-#   Non usare questa funzione per campi booleani o numerici: il risultato sarà sempre "".
+# Semantica valore restituito:
+#   - Chiave assente / valore null / stringa vuota  → "" (stringa vuota)
+#   - Valore numerico 0                             → "0"
+#   - Valore booleano false                         → "false"
+#   I valori falsy 0/false sono ora distinti da chiave mancante/null/"" in entrambi
+#   i rami (node: sentinel undefined su chiave mancante; python3: oggetto _MISSING).
 #
 # Anti-ricorsione: nel percorso DEGRADED (node e python3 entrambi assenti), la chiamata
 # a devforge_log("telemetry_degraded") raggiunge devforge_get_user_raw e
@@ -851,13 +852,18 @@ devforge_json_field() {
     local file="$1" path="$2" out=""
     [ -f "$file" ] || { printf ''; return 0; }
     if command -v node >/dev/null 2>&1; then
-        out=$(node -e 'try{const fs=require("fs");const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=process.argv[2].split(".").reduce((o,k)=>(o&&o[k]!=null)?o[k]:"",d);process.stdout.write(String(v||""))}catch(e){process.exit(3)}' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+        # FIX: distinguish missing/null/"" (→ "") from falsy-but-present values like 0/false (→ String(v)).
+        # The reduce returns undefined on missing key (sentinel); null/undefined/"" → ""; 0/false → "0"/"false".
+        out=$(node -e 'try{const fs=require("fs");const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=process.argv[2].split(".").reduce((o,k)=>(o!=null&&typeof o==="object"&&k in o)?o[k]:undefined,d);process.stdout.write(v==null||v===""?"":String(v))}catch(e){process.exit(3)}' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
     fi
     if command -v python3 >/dev/null 2>&1; then
+        # FIX: distinguish missing/null/"" (→ "") from falsy-but-present values like 0/False (→ str(v)).
+        # Use a sentinel object to detect missing key vs explicit None/"".
         out=$(python3 -c 'import json,sys,functools
+_MISSING=object()
 d=json.load(open(sys.argv[1], encoding="utf-8"))
-v=functools.reduce(lambda o,k:(o.get(k,"") if isinstance(o,dict) else ""),sys.argv[2].split("."),d)
-sys.stdout.write(str(v or ""))' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
+v=functools.reduce(lambda o,k:(o.get(k,_MISSING) if isinstance(o,dict) else _MISSING),sys.argv[2].split("."),d)
+sys.stdout.write("" if v is _MISSING or v is None or v=="" else str(v))' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
     fi
     # DEGRADED: neither node nor python3 available.
     # Re-entry guard: if we are already inside the degraded-log emission path

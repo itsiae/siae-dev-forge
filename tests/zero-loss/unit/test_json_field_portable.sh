@@ -275,6 +275,21 @@ assert "T12 (T5b): token total=0 returns '0' not empty" "$zero_total" "0"
 export DEVFORGE_SESSION_DIR="$old_session_dir"
 
 # --------------------------------------------------------------
+echo "TEST 13 — numeric zero value: devforge_json_field returns '0' not empty"
+# Regression guard for FIX: node `String(v||"")` and python3 `str(v or "")` both
+# returned "" for 0 (falsy). After fix: 0 → "0", null → "".
+ZERO_JSON="$WORK/zero_field.json"
+echo '{"n":0,"b":false,"s":"","nul":null}' > "$ZERO_JSON"
+result_n=$(devforge_json_field "$ZERO_JSON" "n" 2>/dev/null)
+assert "T13a: numeric 0 → '0' (not empty)" "$result_n" "0"
+result_b=$(devforge_json_field "$ZERO_JSON" "b" 2>/dev/null)
+assert "T13b: boolean false → 'false' (not empty)" "$result_b" "false"
+result_s=$(devforge_json_field "$ZERO_JSON" "s" 2>/dev/null)
+assert "T13c: empty string → '' (still empty)" "$result_s" ""
+result_nul=$(devforge_json_field "$ZERO_JSON" "nul" 2>/dev/null)
+assert "T13d: null → '' (still empty)" "$result_nul" ""
+
+# --------------------------------------------------------------
 echo ""
 echo "SUMMARY: $pass passed, $fail failed"
 exit $fail
