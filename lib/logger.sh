@@ -364,6 +364,7 @@ devforge_identity_bundle() {
     osu="${USER:-}"
     [ -z "$osu" ] && osu=$(whoami 2>/dev/null || echo "")
     host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "")
+    host="${host%%.*}"
 
     # Authenticated SSO identity (see devforge_resolve_auth_identity).
     # pipe-delimited: email|account_uuid|org_uuid|org_name
