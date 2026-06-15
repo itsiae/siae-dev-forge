@@ -28,7 +28,7 @@ degrado sempre osservabile (mai silenzioso).
 - [x] task-05 — F3: normalizzazione host short-name nel bundle identità [DONE]
 - [x] task-06 — 6b+6d: campo repo_slug (org/repo) da SSH+HTTPS + marker duration_source [DONE]
 - [x] task-07 — P5: pr_author_emails[] in post-commit-review [DONE]
-- [ ] task-08 — P2: probe diagnose-identity.sh + guida isolamento per-persona [PENDING]
+- [x] task-08 — P2: probe diagnose-identity.sh + guida isolamento per-persona [DONE]
 - [x] task-09 — Write-path zero-loss cross-platform + suite data-loss esaustiva (ALTA priorità) [DONE]
 - [ ] task-10 — Handover consumer (developer-telemetry) [PENDING]
 - [ ] task-11 — No-regression + verifica criteri di accettazione + registrazione test [PENDING]
