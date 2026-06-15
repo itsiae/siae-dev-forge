@@ -7,10 +7,12 @@
     <style>body { margin: 0; padding: 0; }</style>
   </head>
   <body>
-    <!-- spec-url is RELATIVE (same-origin): the contract is served by the private
-         GitHub Pages site, never fetched from an external origin. Redoc JS is a
-         public library loaded from CDN (no sensitive data). -->
+    <!-- BOTH the spec AND the Redoc bundle are served SAME-ORIGIN from the private
+         Pages site. The SIAE corporate network blocks external CDNs (cdn.redocly.com
+         times out) at view-time → a CDN <script> would leave a blank page. The Redoc
+         bundle is vendored into the site at BUILD time by the Pages workflow (the
+         GitHub-hosted runner has internet), so the served page has ZERO external deps. -->
     <redoc spec-url="./telemetry-insights-api.openapi.yaml"></redoc>
-    <script src="https://cdn.redocly.com/redoc/latest/bundle/redoc.standalone.js"></script>
+    <script src="./redoc.standalone.js"></script>
   </body>
 </html>

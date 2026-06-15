@@ -30,9 +30,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Assemble self-contained site (vendor Redoc at build time)
+        # The GitHub-hosted runner has internet; the SIAE corporate network does NOT
+        # reach external CDNs (cdn.redocly.com/jsdelivr/unpkg) at view-time. So vendor the
+        # Redoc bundle into the site HERE from the npm package (deterministic path), and
+        # serve it same-origin → the served page has ZERO external deps → renders on SIAE.
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp docs/api/index.html _site/index.html
+          cp docs/api/telemetry-insights-api.openapi.yaml _site/telemetry-insights-api.openapi.yaml
+          npm install --no-save --no-audit --no-fund redoc@2.5.0
+          cp node_modules/redoc/bundles/redoc.standalone.js _site/redoc.standalone.js
+          test -s _site/redoc.standalone.js
+          # Fail-closed: the served page must have NO external script/spec (SIAE blocks CDNs).
+          if grep -Eq '(src|spec-url)="https?://' _site/index.html; then
+            echo "ERROR: index.html references an external URL — would be blank on SIAE network"; exit 1
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/api
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
