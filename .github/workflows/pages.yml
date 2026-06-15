@@ -1,0 +1,38 @@
+name: Deploy API docs (private Pages)
+
+# Pubblica docs/api/ (Redoc + OpenAPI insights) su GitHub Pages.
+# Visibility PRIVATE (org itsiae Enterprise): sito accessibile solo ai membri,
+# nessuna esposizione pubblica del contract. Visibility impostata fuori dal
+# workflow (repo Settings -> Pages, o gh api), vedi docs/plans/2026-06-15-api-docs-private-pages/task-03.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/api/**'
+      - 'docs/plans/2026-06-14-devforge-telemetry-insights-api.openapi.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/api
+      - id: deployment
+        uses: actions/deploy-pages@v4
