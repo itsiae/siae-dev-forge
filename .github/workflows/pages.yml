@@ -30,19 +30,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Assemble self-contained site (vendor Redoc at build time)
         # The GitHub-hosted runner has internet; the SIAE corporate network does NOT
-        # reach cdn.redocly.com at view-time. So vendor the Redoc bundle into the site
-        # here → the served page is fully same-origin (no external deps) → renders on SIAE.
-        env:
-          REDOC_VERSION: v2.5.0
+        # reach external CDNs (cdn.redocly.com/jsdelivr/unpkg) at view-time. So vendor the
+        # Redoc bundle into the site HERE from the npm package (deterministic path), and
+        # serve it same-origin → the served page has ZERO external deps → renders on SIAE.
         run: |
           set -euo pipefail
           mkdir -p _site
           cp docs/api/index.html _site/index.html
           cp docs/api/telemetry-insights-api.openapi.yaml _site/telemetry-insights-api.openapi.yaml
-          curl -fsSL -o _site/redoc.standalone.js \
-            "https://cdn.redocly.com/redoc/${REDOC_VERSION}/bundles/redoc.standalone.js"
+          npm install --no-save --no-audit --no-fund redoc@2.5.0
+          cp node_modules/redoc/bundles/redoc.standalone.js _site/redoc.standalone.js
           test -s _site/redoc.standalone.js
           # Fail-closed: the served page must have NO external script/spec (SIAE blocks CDNs).
           if grep -Eq '(src|spec-url)="https?://' _site/index.html; then
