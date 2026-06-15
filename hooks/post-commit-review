@@ -20,6 +20,13 @@ HOOK_INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# task_id join-key (Layer 1): correlazione adesione↔outcome a valle. Vuoto fuori itsiae/*.
+source "${PLUGIN_ROOT}/lib/task-id.sh" 2>/dev/null || true
+TASK_ID=""
+if command -v devforge_compute_task_id >/dev/null 2>&1; then
+    TASK_ID=$(devforge_compute_task_id 2>/dev/null || echo "")
+fi
+
 # Network resilience: NO_PROXY-github + net_run, a top-level incondizionato (il
 # logger qui è sourcato dentro i branch git-push/gh-pr-merge: il source di
 # net-timeout deve coprire ENTRAMBI i path delle call gh pr view).
@@ -83,7 +90,16 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     fi
 
     devforge_log "commit_created" "success" \
-        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META}}"
+        "{\"commit_sha\":\"${CURRENT_HEAD}\",\"files_changed\":${FILES_CHANGED:-0},\"insertions\":${INSERTIONS:-0},\"deletions\":${DELETIONS:-0},\"has_tests\":${HAS_TESTS},\"tests_files_changed\":${TESTS_FILES_COUNT}${TOKEN_META},\"task_id\":\"${TASK_ID}\"}"
+
+    # gate_bypassed (Layer 1): git commit con --no-verify / -n salta i git hook.
+    # Strip dei segmenti quotati per non matchare "-n" dentro il messaggio del commit.
+    CMD_NOQUOTES=$(printf '%s' "$TOOL_COMMAND" | sed "s/'[^']*'//g; s/\"[^\"]*\"//g")
+    if printf '%s' "$CMD_NOQUOTES" | grep -qE 'git[[:space:]]+commit' \
+       && printf '%s' "$CMD_NOQUOTES" | grep -qE -- '(--no-verify)|([[:space:]]-[A-Za-z]*n[A-Za-z]*([[:space:]]|$))'; then
+        devforge_log "gate_bypassed" "warning" \
+            "{\"mechanism\":\"git_no_verify\",\"commit_sha\":\"${CURRENT_HEAD}\"}" 2>/dev/null || true
+    fi
 
     # Increment session commit counter (atomic via temp file)
     SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
@@ -258,7 +274,7 @@ print(max(0, int((now - t).total_seconds())))
 " "$ORPHAN_OPENED_TS" 2>/dev/null || echo 0)
                 fi
                 devforge_log "pr_metrics" "success" \
-                    "{\"pr_number\":${ORPHAN_PR},\"rework_commits\":${ORPHAN_REWORK},\"review_cycles\":${ORPHAN_CYCLES},\"time_to_merge_sec\":${ORPHAN_TTM},\"first_push_to_merge_sec\":${ORPHAN_TTM}}"
+                    "{\"pr_number\":${ORPHAN_PR},\"rework_commits\":${ORPHAN_REWORK},\"review_cycles\":${ORPHAN_CYCLES},\"time_to_merge_sec\":${ORPHAN_TTM},\"first_push_to_merge_sec\":${ORPHAN_TTM},\"task_id\":\"${TASK_ID}\"}"
 
                 rm -f "$snapshot"
                 CATCH_UP_COUNT=$(( CATCH_UP_COUNT + 1 ))
@@ -309,7 +325,7 @@ print(max(0, int((now - t).total_seconds())))
                     fi
                 fi
                 devforge_log "pr_metrics" "success" \
-                    "{\"pr_number\":${PR_NUMBER},\"rework_commits\":${REWORK_COUNT},\"review_cycles\":${CYCLES_COUNT},\"time_to_merge_sec\":${TTM_SEC},\"first_push_to_merge_sec\":${TTM_SEC}}"
+                    "{\"pr_number\":${PR_NUMBER},\"rework_commits\":${REWORK_COUNT},\"review_cycles\":${CYCLES_COUNT},\"time_to_merge_sec\":${TTM_SEC},\"first_push_to_merge_sec\":${TTM_SEC},\"task_id\":\"${TASK_ID}\"}"
 
                 # Cleanup snapshot
                 rm -f "$SNAPSHOT_FILE"

@@ -64,6 +64,25 @@ DevForge è un plugin Claude Code distribuito tramite marketplace privato SIAE.
 /plugin install siae-devforge
 ```
 
+> **Rete SIAE:** il comando `/plugin marketplace add` sopra usa SSH (bloccato
+> dalla rete SIAE) e instrada sul proxy corporate (irraggiungibile fuori VPN).
+> Su macchina SIAE usa invece lo script di installazione, che configura `github`
+> in DIRECT (`NO_PROXY` + SSH→HTTPS) prima di registrare il marketplace:
+>
+> ```bash
+> bash <(gh api repos/itsiae/siae-dev-forge/contents/install.sh -q .content | base64 -d)
+> ```
+>
+> Lo stesso vale per il **recovery** da cache-miss del plugin
+> (`claude plugin marketplace update siae-devforge` che fallisce su SSH/proxy):
+> rieseguire `install.sh`.
+>
+> **Rollback** della config git globale impostata dall'installer:
+> ```bash
+> git config --global --unset url."https://github.com/".insteadOf
+> git config --global --unset http."https://github.com/".proxy
+> ```
+
 A primo avvio il hook `session-start` esegue `siae-onboarding` e mostra il welcome message
 con il catalog delle skill disponibili. Verifica installazione:
 
