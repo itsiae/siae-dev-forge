@@ -194,6 +194,87 @@ result=$(devforge_json_field "$FAKE_CLAUDE_JSON" "top.missing.deep" 2>/dev/null)
 assert "T9: missing intermediate key returns empty string" "$result" ""
 
 # --------------------------------------------------------------
+echo "TEST 10 — anti-hang: devforge_json_field no-hang when node+python3 both absent + user.json present"
+# Scenario: Windows without node AND without python3, DEVFORGE_SESSION_DIR set, user.json present.
+# The DEGRADED path calls devforge_log → get_user_raw/get_user_source → devforge_json_field again.
+# Without the _DEVFORGE_JF_DEGRADING guard this is an infinite loop / hang.
+# Test is bounded: launch in background, wait 5s, kill if still alive.
+HANG_SESSION_DIR="$WORK/hangsession"
+mkdir -p "$HANG_SESSION_DIR"
+cat > "$HANG_SESSION_DIR/user.json" <<'EOF'
+{"raw":"hang.test@example.com","source":"auth_sso"}
+EOF
+# Build a fresh log file so the telemetry_degraded emission path has somewhere to write
+HANG_LOG="$HANG_SESSION_DIR/activity.jsonl"
+touch "$HANG_LOG"
+
+clear_shims
+make_shim node
+make_shim python3
+export PATH="$SHIM_DIR:$OLD_PATH"
+
+(
+    export DEVFORGE_SESSION_DIR="$HANG_SESSION_DIR"
+    export DEVFORGE_LOG_FILE="$HANG_LOG"
+    export DEVFORGE_FORCE_BASH_FALLBACK=1
+    devforge_json_field "$FAKE_CLAUDE_JSON" "oauthAccount.emailAddress" >/dev/null 2>/dev/null || true
+) &
+T10_PID=$!
+sleep 5
+if kill -0 "$T10_PID" 2>/dev/null; then
+    kill -9 "$T10_PID" 2>/dev/null || true
+    echo "  FAIL: T10a: devforge_json_field hang detected (still running after 5s)"
+    fail=$((fail + 1))
+else
+    wait "$T10_PID" 2>/dev/null || true
+    echo "  PASS: T10a: devforge_json_field returned within 5s (no hang)"
+    pass=$((pass + 1))
+fi
+
+export PATH="$OLD_PATH"
+
+# --------------------------------------------------------------
+echo "TEST 11 — anti-hang: devforge_get_user_raw no-hang when node+python3 both absent + user.json present"
+clear_shims
+make_shim node
+make_shim python3
+export PATH="$SHIM_DIR:$OLD_PATH"
+
+(
+    export DEVFORGE_SESSION_DIR="$HANG_SESSION_DIR"
+    export DEVFORGE_LOG_FILE="$HANG_LOG"
+    export DEVFORGE_FORCE_BASH_FALLBACK=1
+    devforge_get_user_raw >/dev/null 2>/dev/null || true
+) &
+T11_PID=$!
+sleep 5
+if kill -0 "$T11_PID" 2>/dev/null; then
+    kill -9 "$T11_PID" 2>/dev/null || true
+    echo "  FAIL: T11a: devforge_get_user_raw hang detected (still running after 5s)"
+    fail=$((fail + 1))
+else
+    wait "$T11_PID" 2>/dev/null || true
+    echo "  PASS: T11a: devforge_get_user_raw returned within 5s (no hang)"
+    pass=$((pass + 1))
+fi
+
+export PATH="$OLD_PATH"
+clear_shims
+
+# --------------------------------------------------------------
+echo "TEST 12 — T5b: token-stats.json with total=0 → devforge_session_token_total returns '0'"
+# Equivalence with old int(0 or 0) behavior: numeric zero must NOT be dropped.
+ZERO_SESSION_DIR="$WORK/zerosession"
+mkdir -p "$ZERO_SESSION_DIR"
+echo '{"total":0,"by_tool":{}}' > "$ZERO_SESSION_DIR/token-stats.json"
+old_session_dir="${DEVFORGE_SESSION_DIR:-}"
+export DEVFORGE_SESSION_DIR="$ZERO_SESSION_DIR"
+zero_total=$(devforge_session_token_total 2>/dev/null)
+assert "T12 (T5b): token total=0 returns '0' not empty" "$zero_total" "0"
+# Restore
+export DEVFORGE_SESSION_DIR="$old_session_dir"
+
+# --------------------------------------------------------------
 echo ""
 echo "SUMMARY: $pass passed, $fail failed"
 exit $fail

@@ -385,37 +385,44 @@ devforge_identity_bundle() {
 # Reads ~/.claude.json -> oauthAccount.{emailAddress,accountUuid,organizationUuid,organizationName}.
 # This is the only point in the flow that knows the AUTHENTICATED dev identity (SSO login)
 # at action time — stamping it turns attribution from inference into a join.
-# Best-effort: file missing / no oauthAccount (Bedrock/API-key) / no python3 -> all empty.
+# Best-effort: file missing / no oauthAccount (Bedrock/API-key) / no node+python3 -> all empty.
 # Output: single line "email|account_uuid|org_uuid|org_name" (pipes/newlines in values
 # replaced with spaces to protect the delimiter contract). Override path via
 # DEVFORGE_CLAUDE_JSON for testing.
+# Cross-platform: usa devforge_json_field (node→python3→degraded) per ogni campo.
 devforge_resolve_auth_identity() {
     local claude_json="${DEVFORGE_CLAUDE_JSON:-${HOME}/.claude.json}"
-    if [ ! -f "$claude_json" ] || ! command -v python3 >/dev/null 2>&1; then
-        printf '|||'
-        return 0
-    fi
-    python3 - "$claude_json" <<'PY' 2>/dev/null || printf '|||'
-import json, sys
-try:
-    d = json.load(open(sys.argv[1]))
-    o = d.get('oauthAccount') or {}
-    vals = [str(o.get('emailAddress', '') or ''), str(o.get('accountUuid', '') or ''),
-            str(o.get('organizationUuid', '') or ''), str(o.get('organizationName', '') or '')]
-    vals = [v.replace('|', ' ').replace('\n', ' ').replace('\r', ' ').replace('"', ' ') for v in vals]
-    sys.stdout.write('|'.join(vals))
-except Exception:
-    sys.stdout.write('|||')
-PY
+    [ -f "$claude_json" ] || { printf '|||'; return 0; }
+    local ae au ou onm
+    ae=$(devforge_json_field "$claude_json" "oauthAccount.emailAddress" 2>/dev/null)
+    au=$(devforge_json_field "$claude_json" "oauthAccount.accountUuid" 2>/dev/null)
+    ou=$(devforge_json_field "$claude_json" "oauthAccount.organizationUuid" 2>/dev/null)
+    onm=$(devforge_json_field "$claude_json" "oauthAccount.organizationName" 2>/dev/null)
+    # Replace pipe/newline/CR/quote chars to protect the delimiter contract
+    ae="${ae//|/ }"; ae="${ae//$'\n'/ }"; ae="${ae//$'\r'/ }"; ae="${ae//\"/ }"
+    au="${au//|/ }"; au="${au//$'\n'/ }"; au="${au//$'\r'/ }"; au="${au//\"/ }"
+    ou="${ou//|/ }"; ou="${ou//$'\n'/ }"; ou="${ou//$'\r'/ }"; ou="${ou//\"/ }"
+    onm="${onm//|/ }"; onm="${onm//$'\n'/ }"; onm="${onm//$'\r'/ }"; onm="${onm//\"/ }"
+    printf '%s|%s|%s|%s' "$ae" "$au" "$ou" "$onm"
 }
 
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
-# file/session dir is absent or python3 is unavailable. Used to anchor token spend
+# file/session dir is absent or no interpreter is available. Used to anchor token spend
 # to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
+# Cross-platform: usa devforge_json_field (node→python3→degraded); degrado a 0 già atteso.
 devforge_session_token_total() {
     local f="${DEVFORGE_SESSION_DIR:-}/token-stats.json"
-    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ] && command -v python3 >/dev/null 2>&1; then
-        python3 -c "import json,sys; print(int(json.load(open(sys.argv[1])).get('total',0) or 0))" "$f" 2>/dev/null || echo 0
+    if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "$f" ]; then
+        local v
+        v=$(devforge_json_field "$f" "total" 2>/dev/null)
+        # devforge_json_field è solo per campi stringa; total è numerico ma
+        # entrambi i rami (node+python3) lo convertono a stringa via String(v||"").
+        # Se il valore è vuoto o non-numerico ricadiamo a 0.
+        if [[ "$v" =~ ^[0-9]+$ ]]; then
+            echo "$v"
+        else
+            echo 0
+        fi
     else
         echo 0
     fi
@@ -474,10 +481,10 @@ devforge_get_user() {
 }
 
 devforge_get_user_raw() {
-    # Prefer pinned session user.json
-    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+    # Prefer pinned session user.json — cross-platform via devforge_json_field (node→python3→degraded)
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
         local raw
-        raw=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        raw=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "raw" 2>/dev/null)
         if [ -n "$raw" ]; then
             printf '%s' "$raw"
             return
@@ -489,10 +496,10 @@ devforge_get_user_raw() {
 }
 
 devforge_get_user_source() {
-    # Prefer pinned session user.json
-    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
+    # Prefer pinned session user.json — cross-platform via devforge_json_field (node→python3→degraded)
+    if [ -n "$DEVFORGE_SESSION_DIR" ] && [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
         local src
-        src=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('source',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        src=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "source" 2>/dev/null)
         if [ -n "$src" ]; then
             printf '%s' "$src"
             return
@@ -526,17 +533,19 @@ devforge_new_sid() {
     echo "$sid"
 }
 
-# Initialize per-session state directory and pin identity for the session lifetime
+# Initialize per-session state directory and pin identity for the session lifetime.
+# Cross-platform: usa devforge_json_field (node→python3→degraded) per leggere user.json.
 devforge_init_session() {
-    local sid=$(devforge_get_sid)
+    local sid
+    sid=$(devforge_get_sid)
     DEVFORGE_SESSION_DIR="${HOME}/.claude/devforge-state/${sid}"
     DEVFORGE_PINNED_SID="$sid"
-    if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ] && command -v python3 >/dev/null 2>&1; then
-        DEVFORGE_PINNED_USER=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('raw',''))" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+    if [ -f "${DEVFORGE_SESSION_DIR}/user.json" ]; then
+        DEVFORGE_PINNED_USER=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "raw" 2>/dev/null)
         [ -n "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_canonicalize_user "$DEVFORGE_PINNED_USER")
         # Pin authenticated SSO identity from user.json.identity (additive; empty if absent)
-        DEVFORGE_AUTH_EMAIL=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_email','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
-        DEVFORGE_AUTH_ACCOUNT_UUID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('identity',{}).get('auth_account_uuid','') or '')" "${DEVFORGE_SESSION_DIR}/user.json" 2>/dev/null || echo "")
+        DEVFORGE_AUTH_EMAIL=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "identity.auth_email" 2>/dev/null)
+        DEVFORGE_AUTH_ACCOUNT_UUID=$(devforge_json_field "${DEVFORGE_SESSION_DIR}/user.json" "identity.auth_account_uuid" 2>/dev/null)
     fi
     [ -z "$DEVFORGE_PINNED_USER" ] && DEVFORGE_PINNED_USER=$(devforge_get_user)
     export DEVFORGE_SESSION_DIR DEVFORGE_PINNED_USER DEVFORGE_PINNED_SID DEVFORGE_AUTH_EMAIL DEVFORGE_AUTH_ACCOUNT_UUID
@@ -798,8 +807,14 @@ devforge_tdd_reset() {
 #   in entrambi i rami (node: `v||""` → ""; python3: `str(v or "")` → "").
 #   Non usare questa funzione per campi booleani o numerici: il risultato sarà sempre "".
 #
-# Anti-ricorsione: devforge_log legge l'identità da env var pinnate (DEVFORGE_AUTH_EMAIL),
-# NON da devforge_json_field → l'emissione di telemetry_degraded non rientra nella funzione.
+# Anti-ricorsione: nel percorso DEGRADED (node e python3 entrambi assenti), la chiamata
+# a devforge_log("telemetry_degraded") raggiunge devforge_get_user_raw e
+# devforge_get_user_source, che a loro volta chiamano devforge_json_field di nuovo se
+# DEVFORGE_SESSION_DIR è impostato e user.json esiste — producendo un loop infinito.
+# Scenario reale: Windows senza node E senza python3 con user.json presente.
+# La guardia _DEVFORGE_JF_DEGRADING=1 (inline env-var scoping) interrompe il ciclo:
+# qualsiasi chiamata rientrante vede la variabile impostata e salta l'emissione,
+# restituendo stringa vuota immediatamente senza ulteriori ricorsioni.
 devforge_json_field() {
     local file="$1" path="$2" out=""
     [ -f "$file" ] || { printf ''; return 0; }
@@ -812,6 +827,14 @@ d=json.load(open(sys.argv[1], encoding="utf-8"))
 v=functools.reduce(lambda o,k:(o.get(k,"") if isinstance(o,dict) else ""),sys.argv[2].split("."),d)
 sys.stdout.write(str(v or ""))' "$file" "$path" 2>/dev/null) && { printf '%s' "$out"; return 0; }
     fi
-    devforge_log "telemetry_degraded" "warning" '{"reason":"no_json_interpreter"}' 2>/dev/null || true
+    # DEGRADED: neither node nor python3 available.
+    # Re-entry guard: if we are already inside the degraded-log emission path
+    # (devforge_log → get_user_raw/get_user_source → devforge_json_field),
+    # skip the log call to break the infinite recursion cycle.
+    # The guard uses inline env-var scoping so every child call in this subshell
+    # chain sees _DEVFORGE_JF_DEGRADING=1 and returns immediately.
+    if [ -z "${_DEVFORGE_JF_DEGRADING:-}" ]; then
+        _DEVFORGE_JF_DEGRADING=1 devforge_log "telemetry_degraded" "warning" '{"reason":"no_json_interpreter"}' 2>/dev/null || true
+    fi
     printf ''
 }
