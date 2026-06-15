@@ -395,6 +395,14 @@ Eventi skill scritti in `~/.claude/devforge-activity.jsonl` → flush periodico 
 Athena queries. Principio **zero-loss safe-drop**: cap/quota drop solo su dati già persistiti (cursor
 == size), mai blind oldest (feedback `feedback_zero_loss_safe_drop`).
 
+### Documentazione API (Telemetry Insights)
+
+Il contratto OpenAPI degli eventi raw + read API insight è renderizzato (Redoc) e navigabile su
+**GitHub Pages privato** — accessibile **solo ai membri dell'org `itsiae`**, nessuna esposizione pubblica:
+
+- 🔒 Sito: https://redesigned-bassoon-7pmn8pw.pages.github.io/ (members-only)
+- 📄 Spec sorgente: `docs/plans/2026-06-14-devforge-telemetry-insights-api.openapi.yaml`
+
 ---
 
 ## Integrazione MCP
