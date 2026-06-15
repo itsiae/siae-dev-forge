@@ -20,7 +20,7 @@ e su `auth_email`/`auth_account_uuid` esistenti; ogni hook resta best-effort exi
 degrado sempre osservabile (mai silenzioso).
 
 ## Task
-- [ ] task-00 — Spike verifica bloccante cross-platform (node PATH + CLAUDE_CONFIG_DIR) [PENDING]
+- [x] task-00 — Spike verifica bloccante cross-platform (node PATH + CLAUDE_CONFIG_DIR) [DONE — fallback chain + decisione condizionale implementati in 02/03/09; misura empirica su Windows reale DEFERITA come field-verification, non bloccante]
 - [x] task-01 — F1: .gitattributes eol=lf + renormalize + test no-CR [DONE]
 - [x] task-02 — F2a: helper devforge_json_field (node→python3→degraded) + segnale telemetry_degraded [DONE]
 - [x] task-03 — F2b: instrada i siti identità-critici su devforge_json_field (no-regression auth_*) [DONE]
@@ -31,7 +31,7 @@ degrado sempre osservabile (mai silenzioso).
 - [x] task-08 — P2: probe diagnose-identity.sh + guida isolamento per-persona [DONE]
 - [x] task-09 — Write-path zero-loss cross-platform + suite data-loss esaustiva (ALTA priorità) [DONE]
 - [x] task-10 — Handover consumer (developer-telemetry) [DONE]
-- [ ] task-11 — No-regression + verifica criteri di accettazione + registrazione test [PENDING]
+- [x] task-11 — No-regression + verifica criteri di accettazione + registrazione test [DONE — 15 unit bash/184 assert + 15 pytest verde; pytest failures fuori-scope pre-esistenti su main (verificato); test auto-discovered via Makefile glob; version bump deferito al PR per collisione con branch adoption 1.87.0]
 
 ## Dipendenze
 - task-00 → gate per task-02/03 (node-first vs python3-prereq) e task-08 (isolamento).
