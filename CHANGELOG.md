@@ -4,7 +4,7 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.88.0] - 2026-06-15
 
 ### Added — Attribuzione identità dev root-cause, cross-platform (Windows + macOS/Linux)
 
