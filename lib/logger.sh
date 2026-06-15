@@ -600,6 +600,32 @@ devforge_sanitize_json_str() {
     printf '%s' "$s"
 }
 
+# Derive org/repo slug from a git remote URL (SSH scp-form or HTTPS).
+# Returns empty string if the slug cannot be derived (no URL, single-segment, etc.).
+# Usage: devforge_repo_slug "<remote_url>"
+# Examples:
+#   git@gitlab.itsiae.it:itsiae/diritti-api.git  → itsiae/diritti-api
+#   https://github.com/itsiae/diritti-api.git    → itsiae/diritti-api
+#   https://github.com/itsiae/diritti-api        → itsiae/diritti-api
+#   ""                                           → ""
+devforge_repo_slug() {
+    local url="$1"
+    [ -n "$url" ] || { printf ''; return 0; }
+    url="${url%.git}"             # strip trailing .git
+    url="${url#*://}"             # strip scheme (https://, ssh://)
+    url="${url#*@}"               # strip user@ (SSH)
+    url="${url/://}"              # first ':' → '/' (SSH scp-form host:org/repo)
+    local repo rest org
+    repo="${url##*/}"
+    rest="${url%/*}"
+    org="${rest##*/}"
+    if [ -n "$org" ] && [ -n "$repo" ] && [ "$org" != "$repo" ]; then
+        printf '%s/%s' "$org" "$repo"
+    else
+        printf ''
+    fi
+}
+
 # Log an event to the JSONL file
 # Usage: devforge_log <event_type> <status> [meta_json]
 # Example: devforge_log "session_start" "success" '{"project_dir":"/path","plugin_version":"1.0.1"}'
@@ -649,20 +675,22 @@ devforge_log() {
     # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
     # repo_remote survives the GitLab->GitHub mirror; auth_* come from session pinning
     # (DEVFORGE_AUTH_*), no per-event re-read of ~/.claude.json. All best-effort (empty if absent).
-    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    # repo_slug (org/repo) derived from repo_remote for join-key use at the consumer.
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
     safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
     safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+    safe_repo_slug=$(devforge_sanitize_json_str "$(devforge_repo_slug "$repo_remote")")
 
     # Zero-loss PR-A: build the JSON line once, then atomic append via Python
     # (lock + fsync, cross-OS). Replaces raw `>> file` to eliminate race.
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","repo_slug":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
+        "$safe_repo_remote" "$safe_repo_slug" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
@@ -731,19 +759,22 @@ devforge_log_timed() {
 
     # Attribution determinism: repo_remote (git origin URL, RAW) + pinned auth identity.
     # See devforge_log for rationale. duration_ms stays between status and meta (unchanged).
-    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid
+    # repo_slug (org/repo) derived from repo_remote; duration_source="wallclock" is a
+    # static marker that tells the consumer this duration was measured via epoch_ns wallclock.
+    local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
     safe_auth_email=$(devforge_sanitize_json_str "$auth_email_v")
     safe_auth_uuid=$(devforge_sanitize_json_str "$auth_uuid_v")
+    safe_repo_slug=$(devforge_sanitize_json_str "$(devforge_repo_slug "$repo_remote")")
 
     # Zero-loss PR-A: atomic append via Python (lock + fsync)
     local json_line
-    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"meta":%s}' \
+    json_line=$(printf '{"event_id":"%s","schema_version":2,"session_seq":%s,"hook_name":"%s","actor_canonical":"%s","repo_root":"%s","project_canonical":"%s","repo_remote":"%s","repo_slug":"%s","auth_email":"%s","auth_account_uuid":"%s","ts":"%s","user":"%s","user_raw":"%s","user_source":"%s","sid":"%s","branch":"%s","jira_id":%s,"project":"%s","event":"%s","status":"%s","duration_ms":%d,"duration_source":"wallclock","meta":%s}' \
         "$event_id" "$seq" "$hook_name" "$safe_user" "$safe_repo_root" "$safe_project_canonical" \
-        "$safe_repo_remote" "$safe_auth_email" "$safe_auth_uuid" \
+        "$safe_repo_remote" "$safe_repo_slug" "$safe_auth_email" "$safe_auth_uuid" \
         "$ts" "$safe_user" "$safe_user_raw" "$safe_user_source" "$safe_sid" "$safe_branch" "$jira_json" "$safe_project" "$safe_event" "$safe_status" "$duration_ms" "$meta")
 
     _devforge_atomic_append "$DEVFORGE_LOG_FILE" "$json_line"
