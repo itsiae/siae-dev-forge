@@ -24,7 +24,7 @@ degrado sempre osservabile (mai silenzioso).
 - [x] task-01 — F1: .gitattributes eol=lf + renormalize + test no-CR [DONE]
 - [x] task-02 — F2a: helper devforge_json_field (node→python3→degraded) + segnale telemetry_degraded [DONE]
 - [x] task-03 — F2b: instrada i siti identità-critici su devforge_json_field (no-regression auth_*) [DONE]
-- [ ] task-04 — F2c: hardening trailer hook (marker v2 + node→python3 + guard git≥2.15 + emissione install-time) [PENDING]
+- [x] task-04 — F2c: hardening trailer hook (marker v2 + node→python3 + guard git≥2.15 + emissione install-time) [DONE]
 - [ ] task-05 — F3: normalizzazione host short-name nel bundle identità [PENDING]
 - [ ] task-06 — 6b+6d: campo repo_slug (org/repo) da SSH+HTTPS + marker duration_source [PENDING]
 - [ ] task-07 — P5: pr_author_emails[] in post-commit-review [PENDING]
