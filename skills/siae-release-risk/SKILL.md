@@ -147,6 +147,32 @@ invoca questa skill con `--trigger pr-open`. Scorecard postata come PR comment a
 
 ---
 
+## Pubblicazione su Confluence (opt-in, account tecnico)
+
+Oltre al file md e al commento PR, la scorecard può essere pubblicata su Confluence
+(space **TechOps**, cartella **Rilasci**) come **una pagina per rilascio**, idempotente
+(un re-run sullo stesso rilascio aggiorna la stessa pagina, niente duplicati).
+
+**Disattivata di default.** Si abilita configurando le env var di un **account tecnico**
+Atlassian: l'OAuth per-utente del client MCP non è accessibile al processo Python, quindi
+per l'automazione (hook/headless/CI) serve un API token dedicato.
+
+| Variabile | Obbligatoria | Default | Note |
+|---|---|---|---|
+| `DEVFORGE_CONFLUENCE_BASE_URL` | sì | — | es. `https://siae-portfolio.atlassian.net/wiki` |
+| `DEVFORGE_CONFLUENCE_EMAIL` | sì | — | email account tecnico |
+| `DEVFORGE_CONFLUENCE_API_TOKEN` | sì | — | API token Atlassian dell'account tecnico |
+| `DEVFORGE_CONFLUENCE_SPACE_ID` | no | `222527493` | space TechOps |
+| `DEVFORGE_CONFLUENCE_PARENT_ID` | no | `670793729` | cartella Rilasci |
+| `DEVFORGE_CONFLUENCE_SPACE_KEY` | no | `TechOps` | |
+| `DEVFORGE_CONFLUENCE_TIMEOUT_SEC` | no | `8` | timeout per request HTTP |
+
+- **Titolo pagina:** `gg-mm-aaaa — <servizio> v<versione>` (storage XHTML generato dal report, non da markdown).
+- **Fail-open:** env assenti, rete giù o HTTP non-2xx → publish saltato senza errori; il file md locale e il commento PR restano sempre.
+- **Disattivazione esplicita:** flag CLI `--no-publish-confluence`.
+
+---
+
 ## Sub-skill richieste
 
 | Trigger | Sub-skill |

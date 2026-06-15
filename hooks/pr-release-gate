@@ -102,8 +102,18 @@ if [ -n "$PR_NUMBER" ] && [ -n "$DIFF_HASH" ]; then
     fi
 fi
 
+# Confluence publish status (CLI auto-pubblica se env DEVFORGE_CONFLUENCE_* presenti)
+CONFLUENCE_URL=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.confluence.url // empty' 2>/dev/null)
+CONFLUENCE_ACTION=$(echo "$ASSESS_OUTPUT" | tail -1 | jq -r '.confluence.action // empty' 2>/dev/null)
+CONFLUENCE_NOTE=""
+if [ -n "$CONFLUENCE_URL" ]; then
+    CONFLUENCE_NOTE=" Confluence: $CONFLUENCE_ACTION → $CONFLUENCE_URL"
+elif [ -n "$CONFLUENCE_ACTION" ]; then
+    CONFLUENCE_NOTE=" Confluence: $CONFLUENCE_ACTION (fail-open)."
+fi
+
 # Emit additional_context summary
 cat <<EOF
-{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"🔨 [siae-release-risk] Scorecard posted to PR #$PR_NUMBER. Level: $LEVEL. Output: $OUTPUT_PATH. Cached: $CACHED."}}
+{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"🔨 [siae-release-risk] Scorecard posted to PR #$PR_NUMBER. Level: $LEVEL. Output: $OUTPUT_PATH. Cached: $CACHED.$CONFLUENCE_NOTE"}}
 EOF
 exit 0

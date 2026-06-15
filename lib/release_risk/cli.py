@@ -28,7 +28,10 @@ from lib.release_risk.scoring import compute_score
 from lib.release_risk.cache import (
     compute_diff_hash, get as cache_get, put as cache_put, idempotency_marker,
 )
-from lib.release_risk.renderer import write_scorecard
+from lib.release_risk.renderer import write_scorecard, render_scorecard_storage
+from lib.release_risk.confluence_publish import (
+    config_from_env, build_page_title, publish_scorecard,
+)
 
 
 RELEASE_TAG_GLOBS_DEFAULT = ("release*", "v*", "*RELEASE*", "*-RELEASE", "RELEASE-*")
@@ -126,16 +129,21 @@ def assess(args) -> int:
         output_path=str(output_path), trigger=trigger,
     )
 
-    # Write output + cache + emit event
+    # Write output + cache
     marker = idempotency_marker(diff_hash)
     write_scorecard(report, output_path, idempotency_marker=marker)
     cache_put(branch, diff_hash, baseline_main_sha, report)
-    _emit_activity_event(report)
+
+    # Confluence publish (opt-in via env DEVFORGE_CONFLUENCE_*; fail-open, mai blocca)
+    confluence = _maybe_publish_confluence(report, args)
+
+    _emit_activity_event(report, confluence=confluence)
 
     print(json.dumps({
         "cached": False, "output_path": str(output_path),
         "level": scorecard.level, "decision": scorecard.decision,
         "score": scorecard.total_score, "diff_hash": diff_hash,
+        "confluence": confluence,
     }))
     return 0
 
@@ -221,7 +229,27 @@ def _baseline_fetcher_factory(service: str):
     return fetcher
 
 
-def _emit_activity_event(report: ReleaseRiskReport):
+def _maybe_publish_confluence(report: ReleaseRiskReport, args) -> Optional[dict]:
+    """Pubblica la scorecard su Confluence se le env DEVFORGE_CONFLUENCE_* sono presenti.
+
+    Fail-open: ritorna None se publish disattivato/non configurato; mai solleva.
+    Non blocca il flusso assess (file md locale + commento PR restano comunque).
+    """
+    if getattr(args, "no_publish_confluence", False):
+        return None
+    cfg = config_from_env()
+    if cfg is None:
+        return None
+    try:
+        title = build_page_title(report)
+        storage = render_scorecard_storage(report)
+        return publish_scorecard(report, storage, title, cfg)
+    except Exception as e:
+        return {"published": False, "action": "error", "url": None,
+                "reason": f"{type(e).__name__}: {e}"}
+
+
+def _emit_activity_event(report: ReleaseRiskReport, confluence: Optional[dict] = None):
     """Emit via bash devforge_log subprocess (signature `<event> <status> <meta_json>`)."""
     meta = {
         "skill": "siae-release-risk",
@@ -236,6 +264,8 @@ def _emit_activity_event(report: ReleaseRiskReport):
         "baseline_main_sha": report.baseline_main_sha,
         "cached": report.cached,
         "trigger": report.trigger,
+        "confluence_published": bool(confluence and confluence.get("published")),
+        "confluence_action": (confluence or {}).get("action"),
     }
     plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
     if not plugin_root:
@@ -270,6 +300,9 @@ def main():
     a.add_argument("--genesis-declined", action="store_true")
     a.add_argument("--trigger", choices=["pr-open", "manual", "cli"], default="cli")
     a.add_argument("--no-cache", action="store_true")
+    a.add_argument("--no-publish-confluence", action="store_true",
+                   help="Disabilita la pubblicazione su Confluence anche se le env "
+                        "DEVFORGE_CONFLUENCE_* sono configurate.")
     a.add_argument("--kg-data-file",
                    help="Path to JSON pre-fetched MCP sport-kg output (SKILL.md Step 4c prefetch). "
                         "Senza questo, Criterion 5 ritorna REQUIRES_INPUT su repo KG-mappati.")
