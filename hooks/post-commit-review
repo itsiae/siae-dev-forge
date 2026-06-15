@@ -99,6 +99,60 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     devforge_upload_logs &
 fi
 
+# ── Helper: compute pr_author_emails JSON array ──────────────────────────────
+# Returns a JSON array of unique, sorted DevForge-Author trailer values found
+# in commits between the default-branch base and HEAD.
+#
+# Git version requirements:
+#   git≥2.32 — %(trailers:key=DevForge-Author,valueonly) (primary path)
+#   git≥2.14 — %(trailers) raw (fallback via sed)
+#   git<2.14  — both formats unsupported → returns []
+#
+# Guard: --max-count=500 limits log traversal to avoid hook timeout (10s) on
+# extremely long-lived branches.
+#
+# Must NOT contain a trap EXIT (runs inside command-substitution subshells).
+_devforge_pr_author_emails_json() {
+    local default_branch="${DEVFORGE_DEFAULT_BRANCH:-main}"
+    local base=""
+    base=$(git merge-base HEAD "origin/${default_branch}" 2>/dev/null \
+        || git merge-base HEAD "${default_branch}" 2>/dev/null \
+        || echo "")
+    if [ -z "$base" ]; then
+        printf '[]'
+        return 0
+    fi
+    local authors=""
+    # git≥2.32: %(trailers:key=DevForge-Author,valueonly)
+    authors=$(git log --max-count=500 "${base}..HEAD" --format='%(trailers:key=DevForge-Author,valueonly)' 2>/dev/null \
+        | grep -v '^$' | sort -u)
+    # fallback git≥2.14: parse raw trailer lines (git<2.14 → both paths empty → [])
+    if [ -z "$authors" ]; then
+        authors=$(git log --max-count=500 "${base}..HEAD" --format='%(trailers)' 2>/dev/null \
+            | sed -n 's/^DevForge-Author: \(.\{1,\}\)/\1/p' | grep -v '^$' | sort -u)
+    fi
+    if [ -z "$authors" ]; then
+        printf '[]'
+        return 0
+    fi
+    # Serialize as JSON array with sanitized entries
+    local json="["
+    local first=1
+    while IFS= read -r email; do
+        [ -z "$email" ] && continue
+        local safe_email
+        safe_email=$(devforge_sanitize_json_str "$email")
+        if [ "$first" -eq 1 ]; then
+            json="${json}\"${safe_email}\""
+            first=0
+        else
+            json="${json},\"${safe_email}\""
+        fi
+    done <<< "$authors"
+    json="${json}]"
+    printf '%s' "$json"
+}
+
 # Emit PR lifecycle events on git push (idempotente via snapshot file)
 if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
     source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
@@ -117,8 +171,9 @@ if [[ "$TOOL_COMMAND" =~ git[[:space:]]+push ]]; then
 
                 if [ ! -f "$SNAPSHOT_FILE" ]; then
                     # Primo push con PR → emit pr_opened + crea snapshot
+                    PR_AUTHOR_EMAILS_JSON=$(_devforge_pr_author_emails_json 2>/dev/null || echo "[]")
                     devforge_log "pr_opened" "success" \
-                        "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT}}"
+                        "{\"pr_number\":${PR_NUMBER},\"base_branch\":\"${SAFE_BASE_BRANCH}\",\"files_changed\":${FILES_CHANGED},\"commits_count\":${COMMITS_COUNT},\"pr_author_emails\":${PR_AUTHOR_EMAILS_JSON}}"
 
                     OPENED_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                     cat > "${SNAPSHOT_FILE}.tmp" << EOF_SNAP
@@ -180,8 +235,12 @@ EOF_SNAP
                 MERGE_METHOD="web"
                 [ "$ORPHAN_STATE" = "CLOSED" ] && MERGE_METHOD="closed"
 
+                # Catch-up/orphan path: HEAD belongs to a DIFFERENT branch (the current one),
+                # not to the orphan PR's branch. Calling _devforge_pr_author_emails_json here
+                # would compute merge-base against wrong HEAD and return incorrect or empty
+                # authors. Emit [] best-effort; the consumer should mark this as non_observable.
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
+                    "{\"pr_number\":${ORPHAN_PR},\"merge_method\":\"${MERGE_METHOD}\",\"total_commits\":${ORPHAN_TOTAL},\"delta_from_open\":${ORPHAN_DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total),\"pr_author_emails\":[]}"
 
                 ORPHAN_REWORK=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${ORPHAN_PR}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
                 ORPHAN_REWORK=${ORPHAN_REWORK:-0}
@@ -227,8 +286,9 @@ if [[ "$TOOL_COMMAND" =~ gh[[:space:]]+pr[[:space:]]+merge ]]; then
                 DELTA=$(( TOTAL_COMMITS - COMMITS_AT_OPEN ))
                 [ "$DELTA" -lt 0 ] && DELTA=0
 
+                CLI_AUTHOR_EMAILS_JSON=$(_devforge_pr_author_emails_json 2>/dev/null || echo "[]")
                 devforge_log "pr_merged" "success" \
-                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total)}"
+                    "{\"pr_number\":${PR_NUMBER},\"merge_method\":\"cli\",\"total_commits\":${TOTAL_COMMITS},\"delta_from_open\":${DELTA},\"session_tokens_cumulative\":$(devforge_session_token_total),\"pr_author_emails\":${CLI_AUTHOR_EMAILS_JSON}}"
 
                 # pr_metrics aggregato (legge snapshot PRIMA del cleanup)
                 REWORK_COUNT=$(grep -c "\"event\":\"pr_commit_after_open\".*\"pr_number\":${PR_NUMBER}" "$DEVFORGE_LOG_FILE" 2>/dev/null || true)
