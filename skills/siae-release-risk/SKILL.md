@@ -147,6 +147,18 @@ invoca questa skill con `--trigger pr-open`. Scorecard postata come PR comment a
 
 ---
 
+## Razionale del rilascio (contesto funzionale per TechOps)
+
+In cima alla scorecard è incluso un breve paragrafo **"📝 Razionale del rilascio"** (il *perché* + le principali change funzionali), per dare contesto a chi legge — TechOps perde spesso il filo funzionale del perché si fanno le cose. Fonte ibrida, in ordine di priorità:
+
+1. **manual** — `--rationale "..."` (nel flusso interattivo `/forge-release-risk` lo compone il modello da diff/Jira/genesis e l'utente conferma/edita);
+2. **pr-body** — l'hook PR-open passa la descrizione della PR via `--pr-body-file` (ripulita dai marker + troncata);
+3. **derived** — fallback deterministico da ticket Jira + feature branch (genesis) + n. file.
+
+Se non c'è nulla di sensato da dire, la sezione viene omessa.
+
+---
+
 ## Pubblicazione su Confluence (opt-in, account tecnico)
 
 Oltre al file md e al commento PR, la scorecard può essere pubblicata su Confluence

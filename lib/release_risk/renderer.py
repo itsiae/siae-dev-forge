@@ -44,6 +44,13 @@ def render_scorecard(report: ReleaseRiskReport, idempotency_marker: str = "") ->
         lines.append("> Esegui le skill suggerite per deep analysis prima di chiudere la release.")
         lines.append("")
 
+    # Razionale del rilascio (contesto funzionale per TechOps)
+    if report.narrative:
+        lines.append("## 📝 Razionale del rilascio")
+        lines.append("")
+        lines.append(report.narrative)
+        lines.append("")
+
     # Identification
     lines.append("## 📋 Identificazione")
     lines.append("")
@@ -157,6 +164,11 @@ def render_scorecard_storage(report: ReleaseRiskReport) -> str:
     if sc.suggested_followups:
         fu = ", ".join(_esc(f) for f in sc.suggested_followups)
         p.append(f"<p><strong>📌 SUGGESTED FOLLOW-UP:</strong> {fu}</p>")
+
+    # Razionale del rilascio (contesto funzionale per TechOps)
+    if report.narrative:
+        p.append("<h2>📝 Razionale del rilascio</h2>")
+        p.append(f"<p>{_esc(report.narrative)}</p>")
 
     # Identificazione
     p.append("<h2>📋 Identificazione</h2>")

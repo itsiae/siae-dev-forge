@@ -58,6 +58,14 @@ git diff "origin/main...origin/$CURRENT_BRANCH" > "$TMPDIR/diff-content.txt" 2>/
 # Find PR number (just created by gh pr create)
 PR_NUMBER=$(net_run 5 gh pr list --head "$CURRENT_BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
 
+# Fetch PR body (razionale funzionale per la scorecard) — best-effort, fail-open
+PR_BODY_ARG=""
+if [ -n "$PR_NUMBER" ]; then
+    if net_run 5 gh pr view "$PR_NUMBER" --json body --jq '.body // ""' > "$TMPDIR/pr-body.txt" 2>/dev/null && [ -s "$TMPDIR/pr-body.txt" ]; then
+        PR_BODY_ARG="--pr-body-file $TMPDIR/pr-body.txt"
+    fi
+fi
+
 # Detect timeout cmd portatile (macOS BSD non ha `timeout` di default)
 # Vedi memory feedback_macos_timeout_portability.md
 TIMEOUT_CMD=""
@@ -76,6 +84,7 @@ ASSESS_OUTPUT=$($TIMEOUT_CMD python3 -m lib.release_risk assess \
     --service "$SERVICE" \
     --diff-files "$TMPDIR/diff-files.txt" \
     --diff-content "$TMPDIR/diff-content.txt" \
+    $PR_BODY_ARG \
     --trigger pr-open 2>/dev/null) || {
     # Fail-open: emit additional_context warning, no block
     cat <<EOF
