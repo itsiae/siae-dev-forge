@@ -16,6 +16,24 @@ info()    { echo -e "${GREEN}✓${NC} $1"; }
 warning() { echo -e "${YELLOW}!${NC} $1"; }
 error()   { echo -e "${RED}✗${NC} $1"; exit 1; }
 
+# github DIRECT su rete SIAE: la CLI risolve lo shorthand github in SSH (bloccato)
+# e gh/clone HTTPS instradano sul proxy corporate (irraggiungibile off-VPN).
+# Idempotente. NO_PROXY append-safe (stessa forma di lib/net-timeout.sh; duplicato
+# perché l'installer è self-contained, gira prima che il repo sia sul disco).
+setup_github_network() {
+  local gh_domains="github.com,api.github.com,.github.com,codeload.github.com,objects.githubusercontent.com,uploads.github.com"
+  case ",${NO_PROXY:-}," in *,github.com,*) : ;; *) export NO_PROXY="${NO_PROXY:+${NO_PROXY},}${gh_domains}" ;; esac
+  case ",${no_proxy:-}," in *,github.com,*) : ;; *) export no_proxy="${no_proxy:+${no_proxy},}${gh_domains}" ;; esac
+  # Degradazione graceful: con set -euo pipefail un git config non scrivibile
+  # (es. HOME read-only in CI) abortirebbe l'installer con errore criptico.
+  if git config --global url."https://github.com/".insteadOf "git@github.com:" \
+     && git config --global http."https://github.com/".proxy ""; then
+    info "Rete github configurata (HTTPS direct) — git config globale aggiornata"
+  else
+    warning "git config globale non modificabile — github potrebbe usare SSH/proxy (vedi README: Rete SIAE)"
+  fi
+}
+
 echo ""
 echo -e "${GREEN}🔨 DevForge · Installazione plugin${NC}"
 echo "  ──────────────────────────────────"
@@ -24,6 +42,9 @@ echo ""
 # Verifica prerequisiti
 command -v claude &>/dev/null || error "Claude Code non trovato. Installalo prima: https://docs.anthropic.com/en/docs/build-with-claude/claude-code"
 command -v gh &>/dev/null    || error "GitHub CLI (gh) non trovato. Installalo: https://cli.github.com"
+
+# github DIRECT prima di ogni chiamata gh/git su rete SIAE
+setup_github_network
 
 # Verifica autenticazione GitHub
 if ! gh auth status &>/dev/null; then
