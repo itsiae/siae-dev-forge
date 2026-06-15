@@ -20,9 +20,9 @@ assert_true() { # name cond(0=true)
 echo "TEST 1 — index.html: Redoc + spec-url same-origin"
 [ -f "$HTML" ]; assert_true "T1a: index.html exists" $?
 grep -q '<redoc' "$HTML"; assert_true "T1b: contains <redoc>" $?
-grep -q 'cdn.redocly.com/redoc' "$HTML"; assert_true "T1c: Redoc bundle from CDN" $?
+grep -q 'src="\./redoc.standalone.js"' "$HTML"; assert_true "T1c: Redoc bundle same-origin (./redoc.standalone.js)" $?
 grep -q 'spec-url="\./telemetry-insights-api.openapi.yaml"' "$HTML"; assert_true "T1d: spec-url relative same-origin" $?
-grep -q 'spec-url="http' "$HTML"; rc=$?; assert_true "T1e: spec-url NOT an external http URL" $([ "$rc" -ne 0 ] && echo 0 || echo 1)
+grep -Eq '(src|spec-url)="https?://' "$HTML"; rc=$?; assert_true "T1e: NO external URL in index.html (SIAE blocks CDNs at view-time)" $([ "$rc" -ne 0 ] && echo 0 || echo 1)
 
 echo "TEST 2 — no-drift: spec copy == source"
 if [ -f "$SPEC_COPY" ] && [ -f "$SPEC_SRC" ]; then
@@ -39,7 +39,9 @@ grep -qE 'id-token:[[:space:]]*write' "$WORKFLOW"; assert_true "T3d: permissions
 grep -qE 'group:[[:space:]]*pages' "$WORKFLOW"; assert_true "T3e: concurrency group pages" $?
 grep -q 'actions/upload-pages-artifact' "$WORKFLOW"; assert_true "T3f: uses upload-pages-artifact" $?
 grep -q 'actions/deploy-pages' "$WORKFLOW"; assert_true "T3g: uses deploy-pages" $?
-grep -qE "path:[[:space:]]*docs/api" "$WORKFLOW"; assert_true "T3h: artifact path docs/api" $?
+grep -qE "path:[[:space:]]*_site" "$WORKFLOW"; assert_true "T3h: artifact path _site (built)" $?
+grep -q 'redoc.standalone.js' "$WORKFLOW"; assert_true "T3i: workflow vendors Redoc bundle at build time" $?
+grep -q 'would be blank on SIAE' "$WORKFLOW"; assert_true "T3j: workflow has fail-closed external-URL guard" $?
 
 echo ""
 if [ "$fail" -eq 0 ]; then echo "SUMMARY: all passed, 0 failed"; else echo "SUMMARY: $fail failed"; fi
