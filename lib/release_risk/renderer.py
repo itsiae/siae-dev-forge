@@ -107,3 +107,94 @@ def write_scorecard(report: ReleaseRiskReport, output_path: Path,
         return True
     except Exception:
         return False
+
+
+def _esc(value) -> str:
+    """HTML-escape per il contenuto dinamico inserito nello storage XHTML."""
+    return (str(value).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+_NEXT_ACTIONS_STORAGE = {
+    "LOW": "GO deploy standard. Monitoring standard.",
+    "MEDIUM": "Notifica team + monitoring 2h post-deploy. Rollback plan verificato.",
+    "HIGH": "POSTPONE senza approval. War room 4h + TL+Ops approval prima di deploy.",
+    "CRITICAL": "STOP. CAB approval obbligatoria. Deploy solo fuori orario (weekend/notte).",
+}
+
+
+def render_scorecard_storage(report: ReleaseRiskReport) -> str:
+    """Render ReleaseRiskReport → Confluence storage XHTML.
+
+    Genera lo storage DIRETTAMENTE dal report (no markdown→storage), così si
+    evita il bug del blockquote-con-heading (`> ## ...`) che viene droppato in
+    conversione. Il contenuto dinamico è sempre HTML-escaped; l'output è XML
+    ben formato (tabelle/heading/paragrafi standard accettati dallo storage).
+    """
+    sc = report.scorecard
+    level_emoji = LEVEL_EMOJI[sc.level]
+    p = []
+
+    p.append(f"<h1>{level_emoji} Release Risk Scorecard — {_esc(report.service)}</h1>")
+
+    # Metadati
+    p.append("<table><tbody>")
+    p.append(f"<tr><th>Release branch</th><td><code>{_esc(report.release_branch)}</code> "
+             f"→ <code>{_esc(report.target_branch)}</code></td></tr>")
+    p.append(f"<tr><th>Generated</th><td>{_esc(report.generated_at)}</td></tr>")
+    p.append(f"<tr><th>Diff hash</th><td><code>{_esc(report.diff_hash)}</code></td></tr>")
+    p.append(f"<tr><th>Baseline main SHA</th><td><code>"
+             f"{_esc(report.baseline_main_sha or 'N/A (first release)')}</code></td></tr>")
+    p.append("</tbody></table>")
+
+    # Verdetto (heading + paragrafo: NON blockquote-con-heading)
+    p.append(f"<h2>{level_emoji} Level: {_esc(sc.level)} | Score: {sc.total_score}/36 "
+             f"| Decision: {_esc(sc.decision)}</h2>")
+    p.append(f"<p><em>{_esc(sc.decision_rationale)}</em></p>")
+    if sc.partial:
+        p.append("<p><strong>⚠️ PARTIAL SCORECARD</strong> — alcuni criteri = "
+                 "REQUIRES_INPUT. Verifica manuale richiesta pre-deploy.</p>")
+    if sc.suggested_followups:
+        fu = ", ".join(_esc(f) for f in sc.suggested_followups)
+        p.append(f"<p><strong>📌 SUGGESTED FOLLOW-UP:</strong> {fu}</p>")
+
+    # Identificazione
+    p.append("<h2>📋 Identificazione</h2>")
+    p.append("<table><tbody><tr><th>Campo</th><th>Valore</th></tr>")
+    for k, v in report.identification.items():
+        p.append(f"<tr><td><strong>{_esc(k)}</strong></td><td>{_esc(v)}</td></tr>")
+    p.append("</tbody></table>")
+
+    # Genesis
+    p.append("<h2>🌱 Release Genesis</h2>")
+    g = report.genesis
+    if g.no_merges_found:
+        p.append("<p><em>Release branch built linearly (no feature-branch merges).</em></p>")
+    elif g.declined:
+        p.append("<p>⚠️ Genesis NON confermato dall'utente. Verifica manuale pre-deploy.</p>")
+    else:
+        p.append(f"<p><strong>Feature confermate:</strong> {_esc(g.user_confirmed or 'N/A')}</p>")
+        if g.unexpected:
+            p.append(f"<p><strong>Feature non attese (anomaly):</strong> {_esc(g.unexpected)}</p>")
+
+    # Fattori di rischio
+    p.append("<h2>🔴 Fattori di Rischio (18 criteri)</h2>")
+    p.append("<table><tbody><tr><th>#</th><th>Criterio</th><th>Status</th>"
+             "<th>Peso</th><th>Evidence</th></tr>")
+    for c in sorted(report.criteria, key=lambda c: c.id):
+        emoji = _criterion_emoji(c)
+        ev = "; ".join(c.evidence[:3]) if c.evidence else "—"
+        if len(ev) > 80:
+            ev = ev[:77] + "..."
+        p.append(f"<tr><td>{c.id}</td><td><strong>{_esc(c.name)}</strong></td>"
+                 f"<td>{emoji} {_esc(c.status)}</td><td>{c.weight:+d}</td>"
+                 f"<td>{_esc(ev)}</td></tr>")
+    p.append("</tbody></table>")
+
+    # Next actions
+    p.append("<h2>➡️ Next Actions</h2>")
+    p.append(f"<p>{_esc(_NEXT_ACTIONS_STORAGE[sc.level])}</p>")
+    p.append(f"<p><em>Generato da DevForge · siae-release-risk · diff "
+             f"<code>{_esc(report.diff_hash)}</code></em></p>")
+
+    return "".join(p)
