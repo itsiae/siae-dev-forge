@@ -30,7 +30,7 @@ degrado sempre osservabile (mai silenzioso).
 - [x] task-07 — P5: pr_author_emails[] in post-commit-review [DONE]
 - [x] task-08 — P2: probe diagnose-identity.sh + guida isolamento per-persona [DONE]
 - [x] task-09 — Write-path zero-loss cross-platform + suite data-loss esaustiva (ALTA priorità) [DONE]
-- [ ] task-10 — Handover consumer (developer-telemetry) [PENDING]
+- [x] task-10 — Handover consumer (developer-telemetry) [DONE]
 - [ ] task-11 — No-regression + verifica criteri di accettazione + registrazione test [PENDING]
 
 ## Dipendenze
