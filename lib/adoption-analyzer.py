@@ -99,6 +99,48 @@ def _ledger_task_skills() -> dict[str, set[str]]:
     return out
 
 
+def _read_skill_lines(path: Path) -> list[str]:
+    """Legge un file ledger (una skill per riga), normalizza il prefisso plugin."""
+    try:
+        raw = [ln.strip() for ln in path.read_text().splitlines() if ln.strip()]
+    except OSError:
+        return []
+    return [s.split(":")[-1] for s in raw]
+
+
+def _read_task_metadata(path: Path) -> tuple[str, str]:
+    """Estrae (branch_name, design_doc) dal file metadata key=value. ('','') se assente."""
+    branch = design = ""
+    try:
+        for ln in path.read_text().splitlines():
+            if ln.startswith("branch_name="):
+                branch = ln.split("=", 1)[1].strip()
+            elif ln.startswith("design_doc="):
+                design = ln.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return branch, design
+
+
+def _task_adoption_meta(task_id: str) -> dict | None:
+    """Meta JSON dell'evento task_adoption per TASK_ID. None se ledger assente/vuoto."""
+    d = _task_skills_dir() / task_id
+    invoked = _read_skill_lines(d / "skills_invoked")
+    validated = _read_skill_lines(d / "skills_validated")
+    if not invoked and not validated:
+        return None
+    branch, design = _read_task_metadata(d / "metadata")
+    validated_set = set(validated)
+    return {
+        "task_id": task_id,
+        "task_branch": branch,
+        "design_doc": design,
+        "skills_invoked": sorted(set(invoked)),
+        "skills_validated": sorted(validated_set),
+        "core_skills_validated": {s: (s in validated_set) for s in CORE_SKILLS},
+    }
+
+
 def _user_adoption(events: list[dict], ledger: dict[str, set[str]]) -> dict[str, float]:
     """Per-skill adoption for the current user.
 
@@ -252,7 +294,15 @@ def main(argv: list[str]) -> int:
                    help="Days of activity history to scan (team baseline).")
     p.add_argument("--skill", default=None,
                    help="Required for --format block. One of the 5 core skills.")
+    p.add_argument("--task-adoption-meta", metavar="TASK_ID", default=None,
+                   help="Print task_adoption meta JSON for TASK_ID (empty if no ledger).")
     args = p.parse_args(argv)
+
+    if args.task_adoption_meta is not None:
+        meta = _task_adoption_meta(args.task_adoption_meta)
+        if meta is not None:
+            print(json.dumps(meta, sort_keys=True))
+        return 0
 
     events = _load_activity(args.window)
     ledger = _ledger_task_skills()

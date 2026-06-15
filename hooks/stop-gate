@@ -98,6 +98,13 @@ _devforge_emit_session_end() {
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
         "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR},\"model_prevalent\":\"${TOKEN_MODEL}\",\"input_tokens\":${TOKEN_INPUT},\"cache_read_tokens\":${TOKEN_CACHE_READ},\"cache_write_5m_tokens\":${TOKEN_CW5M},\"cache_write_1h_tokens\":${TOKEN_CW1H},\"by_model\":${TOKEN_BY_MODEL},\"by_tool\":${TOKEN_BY_TOOL},\"by_skill\":${TOKEN_BY_SKILL},\"by_model_tokens\":${TOKEN_BY_MODEL_TOKENS},\"pricing\":${TOKEN_PRICING}}"
 
+    # task_adoption (Layer 1, design 2026-06-14) — best-effort, non blocca lo Stop.
+    if [ -f "${PLUGIN_ROOT}/lib/adoption-emit.sh" ]; then
+        # shellcheck disable=SC1091
+        . "${PLUGIN_ROOT}/lib/adoption-emit.sh" 2>/dev/null || true
+        devforge_emit_task_adoption 2>/dev/null || true
+    fi
+
     # PR #3 ADR-009: 3-line recap to stderr so the operator sees adoption
     # numbers at session close (non-blocking, does NOT affect decision).
     # Opt-out via DEVFORGE_DISABLE_RECAP=1.

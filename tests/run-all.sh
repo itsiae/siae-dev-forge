@@ -1174,6 +1174,54 @@ else
   telfunc_fail=$((telfunc_fail + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/hooks/test_adoption_emit.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_adoption_emit.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_adoption_emit.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_stop_gate_task_adoption_wiring.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_stop_gate_task_adoption_wiring.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_stop_gate_task_adoption_wiring.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_session_start_enforcement_off.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_session_start_enforcement_off.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_session_start_enforcement_off.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_post_commit_no_verify.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_post_commit_no_verify.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_post_commit_no_verify.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_post_commit_task_id.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_post_commit_task_id.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_post_commit_task_id.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if python3 -m pytest "${PLUGIN_ROOT}/tests/test_task_adoption_meta.py" -q >/dev/null 2>&1; then
+  echo "  PASS  tests/test_task_adoption_meta.py"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/test_task_adoption_meta.py"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
 # Test F3: user cache fallback in devforge_get_user
 F3_CACHE="${HOME}/.claude/.devforge-user"
 F3_BACKUP=""
