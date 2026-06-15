@@ -169,6 +169,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/branch-tracker.ps1\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/post-commit-review.ps1\"",
             "timeout": 10
           },

@@ -33,10 +33,21 @@ try { $userRaw = (git config user.email 2>$null); if ($userRaw) { $userSource = 
 if (-not $userRaw) {
     try { $userRaw = (git config --global user.email 2>$null); if ($userRaw) { $userSource = "git-config-global" } } catch {}
 }
+if (-not $userRaw) {
+    # Legacy cache (mirrors ~/.claude/.devforge-user bash fallback)
+    $legacyCache = Join-Path $HOME ".claude\.devforge-user"
+    if (Test-Path $legacyCache) {
+        $userRaw = (Get-Content $legacyCache -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($userRaw) { $userSource = "legacy_cache" }
+    }
+}
 if (-not $userRaw) { $userRaw = $env:USERNAME; $userSource = "os-user" }
 $userRaw = $userRaw.Trim()
 $userCanonical = Invoke-DevForgeCanonicalizeUser $userRaw
 $env:DEVFORGE_PINNED_USER = $userCanonical
+
+# Cache user identity (mirrors devforge_cache_user in bash)
+Set-DevForgeUserCache -RawUser $userRaw -Source $userSource
 
 # Resolve authenticated SSO identity (best-effort, empty on API-key/Bedrock auth)
 $authResolved = Invoke-DevForgeResolveAuthIdentity 2>$null
@@ -238,7 +249,11 @@ $skillsCoreJs = Join-Path $PLUGIN_ROOT "lib\skills-core.js"
 if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path $skillsCoreJs)) {
     $skillCatalog = (node $skillsCoreJs $PLUGIN_ROOT 2>$null)
 }
-if (-not $skillCatalog) { $skillCatalog = "| (catalogo non disponibile  -  skills-core.js ha fallito) | | |" }
+if (-not $skillCatalog) {
+    $skillCatalog = "| (catalogo non disponibile — skills-core.js ha fallito) | | |"
+    Write-DevForgeLog -Event "skill_catalog" -Status "warning" `
+        -Meta "{`"reason`":`"skills-core.js returned empty or failed`"}" 2>$null
+}
 
 # -- (6) Global DevForge memory - skip symlinks --------------------------------
 # Mirrors bash: [ -L "$mf" ] && continue
@@ -297,11 +312,17 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 }
 
 # -- Build session context -----------------------------------------------------
-$udfEscaped      = Convert-ToDevForgeJson $usingDevforgeContent
-$catalogEscaped  = Convert-ToDevForgeJson $skillCatalog
-$versionEscaped  = Convert-ToDevForgeJson $versionStatus
+$udfEscaped     = Convert-ToDevForgeJson $usingDevforgeContent
+$versionEscaped = Convert-ToDevForgeJson $versionStatus
 
-$sessionContext = "<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n$versionEscaped$branchingSection\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n$udfEscaped\n\n**Dynamic Skill Catalog (auto-generated):**\n\n$catalogEscaped$globalMemorySection\n</EXTREMELY_IMPORTANT>"
+# Catalog section is conditional — mirrors bash: catalog_section="" when skill_catalog is empty
+$catalogSection = ""
+if ($skillCatalog) {
+    $catalogEscaped = Convert-ToDevForgeJson $skillCatalog
+    $catalogSection = "\n\n**Dynamic Skill Catalog (auto-generated):**\n\n$catalogEscaped"
+}
+
+$sessionContext = "<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n$versionEscaped$branchingSection\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n$udfEscaped$catalogSection$globalMemorySection\n</EXTREMELY_IMPORTANT>"
 
 # -- Emit JSON output (standard DevForge additional_context) ------------------
 @"
@@ -515,6 +536,25 @@ $durationMs  = [long]([DateTimeOffset]::UtcNow - $startTime).TotalMilliseconds
 Write-DevForgeLog -Event "session_start" -Status "success" -DurationMs $durationMs `
     -Meta "{`"project_dir`":`"$safePwd`",`"plugin_version`":`"$safeVer`"}" 2>$null
 
+# gate_bypassed (Layer 1) — il kill-switch globale altrimenti non lascia traccia.
+# DOPO l'emissione dello stdout additional_context: nessun rischio di abortire il JSON.
+# Best-effort, nessun output su stdout.
+if ($env:DEVFORGE_ENFORCEMENT_OFF -eq "1") {
+    Write-DevForgeLog -Event "gate_bypassed" -Status "warning" `
+        -Meta "{`"mechanism`":`"enforcement_off`",`"scope`":`"session`"}" 2>$null
+}
+
 # Save session start timestamp for duration calculation in stop-gate
 $startNs = $startTime.ToUnixTimeMilliseconds() * 1000000
 Set-Content (Join-Path $HOME ".claude\.devforge-session-start-ns") $startNs.ToString() -NoNewline
+
+# Telemetry upload (mirrors bash: devforge_upload_logs 2>/dev/null || true at end of session-start)
+try {
+    $uploaderPs1 = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.ps1"
+    $uploaderPy  = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
+    if (Test-Path $uploaderPs1) {
+        Start-Job -ScriptBlock { param($p) & $p 2>$null } -ArgumentList $uploaderPs1 | Out-Null
+    } elseif ((Test-Path $uploaderPy) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+        Start-Process -FilePath "python3" -ArgumentList "`"$uploaderPy`"" -WindowStyle Hidden -ErrorAction SilentlyContinue | Out-Null
+    }
+} catch {}

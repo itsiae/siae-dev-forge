@@ -62,6 +62,8 @@ Write-DevForgeLog -Event "sport_domain_detected" -Status "info" -Meta "{`"target
 # Aggiorna cooldown SOLO se Write-Output ha successo
 try {
     Write-Output $output
-    "$targetService|$now" | Set-Content $cooldownFile -NoNewline
+    $tmpCooldown = $cooldownFile + ".$PID"
+    "$targetService|$now" | Set-Content $tmpCooldown -NoNewline
+    Move-Item $tmpCooldown $cooldownFile -Force
 } catch {}
 exit 0

@@ -20,36 +20,55 @@ $counter | Set-Content $toolCounterFile -NoNewline
 
 $sessionSkills = Get-DevForgeSessionSkills
 
-# Detect git commit / checkout
-$isGitCommit   = $toolCommand -match '(?:^|&&|\|{2}|\;)\s*git\s+commit'
-$isGitCheckout = $toolCommand -match '(?:^|&&|\|{2}|\;)\s*git\s+(?:checkout|switch)'
+# Detect git commit / checkout — mirrors bash 3-tier compound-command parser (cmd-parser.sh)
+# Tier 1: standard compound operators (&&, ||, ;) and start of string
+# Tier 2: env-var prefix pattern (VAR=val git commit)
+# Tier 3: cd-then-commit pattern (cd X && git commit)
+$isGitCommit = (
+    $toolCommand -match '(?:^|&&|\|{2}|;)\s*(?:[A-Z_][A-Z0-9_]*=\S*\s+)*git\s+commit' -or
+    $toolCommand -match '\benv\s+[^;|&]*git\s+commit' -or
+    $toolCommand -match '\bcd\s+\S+\s*&&\s*git\s+commit'
+)
+$isGitCheckout = $toolCommand -match '(?:^|&&|\|{2}|;)\s*git\s+(?:checkout|switch)'
 
 if ($isGitCommit) {
-    # Emergency bypass
-    if ($env:DEVFORGE_SKIP_GIT_GATE -eq "1") {
-        Initialize-DevForgeSession 2>$null
-        $bypassFile = Join-Path $HOME ".claude\.devforge-git-gate-bypass-count"
-        $today = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
-        $bdata = if (Test-Path $bypassFile) { (Get-Content $bypassFile -Raw).Trim() } else { "" }
-        $bDate = if ($bdata -and $bdata.Contains('|')) { $bdata.Split('|')[0] } else { "" }
-        $bCount = if ($bdata -and $bdata.Contains('|')) { [int]$bdata.Split('|')[1] } else { 0 }
-        if ($bDate -ne $today) { $bCount = 0 }
-        $bCount++
-        "$today|$bCount" | Set-Content $bypassFile -NoNewline
-        Write-DevForgeLog -Event "pre_commit_git_gate_bypassed" -Status "warning" `
-            -Meta "{`"bypass_count_today`":$bCount}" 2>$null
-        # fall through to quality gate
-    } elseif ($sessionSkills -notlike "*siae-git-workflow*") {
+    if ($sessionSkills -notlike "*siae-git-workflow*") {
         Initialize-DevForgeSession 2>$null
         $safeCmd = Convert-ToDevForgeJson $toolCommand
         Write-DevForgeLog -Event "pre_commit" -Status "blocked" `
             -Meta "{`"command`":`"$safeCmd`",`"skill_missing`":`"siae-git-workflow`"}" 2>$null
-        @'
+        # Dynamic block-explainer (mirrors devforge_block_explainer siae-git-workflow in bash)
+        $pcExpl = ""
+        if ($env:DEVFORGE_DISABLE_EXPLAINER -ne "1") {
+            $explainerCache = Join-Path $HOME ".claude\.devforge-explainer-cache\siae-git-workflow"
+            if (Test-Path $explainerCache) {
+                $cacheMtime = (Get-Item $explainerCache).LastWriteTime
+                if (([DateTime]::UtcNow - $cacheMtime).TotalSeconds -lt 86400) {
+                    $cached = (Get-Content $explainerCache -Raw -ErrorAction SilentlyContinue).Trim()
+                    if ($cached) { $pcExpl = " $cached" }
+                }
+            }
+            if (-not $pcExpl) {
+                try {
+                    $adoptionAnalyzer = Join-Path $PLUGIN_ROOT "lib\adoption-analyzer.py"
+                    if ((Test-Path $adoptionAnalyzer) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+                        $explText = python3 $adoptionAnalyzer --format block --skill siae-git-workflow 2>$null
+                        if ($explText) {
+                            $cacheDir = Join-Path $HOME ".claude\.devforge-explainer-cache"
+                            if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null }
+                            Set-Content $explainerCache $explText.Trim() -NoNewline
+                            $pcExpl = " $($explText.Trim())"
+                        }
+                    }
+                } catch {}
+            }
+        }
+        @"
 {
   "decision": "block",
-  "reason": "DevForge Git Gate  -  BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Emergency bypass (tracked): DEVFORGE_SKIP_GIT_GATE=1 git commit ..."
+  "reason": "DevForge Git Gate — BLOCCATO. NON hai invocato siae-git-workflow in questa sessione. La skill stabilisce naming convention, conventional commits, e pre-flight checks. Invoca siae-git-workflow PRIMA di procedere con il commit: Skill tool -> siae-devforge:siae-git-workflow. Dopo aver invocato la skill, potrai procedere.$pcExpl"
 }
-'@
+"@
         exit 0
     }
 

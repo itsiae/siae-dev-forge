@@ -62,7 +62,7 @@ Write-DevForgeLog -Event "sub_skill_gate" -Status "blocked" -Meta "{`"skill`":`"
 @"
 {
   "decision": "block",
-  "reason": "DevForge Sub-Skill Gate  -  BLOCCATO. La skill $skillName richiede come prerequisito: $missing. Invoca prima le skill mancanti, poi riprova $skillName."
+  "reason": "DevForge Sub-Skill Gate — BLOCCATO. La skill $skillName richiede come prerequisito: $missing. Invoca prima le skill mancanti, poi riprova $skillName."
 }
 "@
 exit 0

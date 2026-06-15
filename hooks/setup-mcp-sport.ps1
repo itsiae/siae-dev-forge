@@ -21,15 +21,14 @@ if ((Test-Path $binary) -and (Test-Path $claudeJson)) {
 
 Write-Host "DevForge: installazione siae-sport-mcp..." -ForegroundColor Cyan
 
-$parentDir = Split-Path $installDir
-New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
-
 if (Test-Path (Join-Path $installDir ".git")) {
     git -C $installDir pull --quiet 2>$null | Out-Null
 } else {
+    $parentDir = Split-Path $installDir
+    New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
     git clone --quiet $repoUrl $installDir 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "DevForge: git clone siae-sport-mcp fallito" -ForegroundColor Red
+        Write-Host "❌ DevForge: git clone siae-sport-mcp fallito (rete o repo non raggiungibile)" -ForegroundColor Red
         exit 1
     }
 }

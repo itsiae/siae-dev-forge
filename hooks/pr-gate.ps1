@@ -61,7 +61,8 @@ if ($diffContent -match '(mysql|postgres|mongodb|redis|amqp)://[^:]+:[^@]+@') {
 if ($diffContent -match 'gh[pousr]_[A-Za-z0-9_]{36,}') {
     $criticalFindings += "GitHub Personal Access Token trovato nel diff"
 }
-if ($diffContent -match '(sk|rk)_(live|test)_[A-Za-z0-9]{20,}') {
+$stripeLines = $diffContent -split "`n" | Where-Object { $_ -notmatch '^\s*#|^\s*//|\$\{|process\.env|os\.environ|System\.getenv' }
+if (($stripeLines -join "`n") -match '(sk|rk)_(live|test)_[A-Za-z0-9]{20,}') {
     $criticalFindings += "Stripe secret key trovata nel diff"
 }
 if ($diffContent -match '(client_secret|secret_key|auth_token|access_token)\s*[:=]\s*"[^"]{8,}"') {
@@ -86,41 +87,19 @@ if (($awsSecretLines -join "`n") -match '[''"][A-Za-z0-9/+=]{40}[''"]') {
     $criticalFindings += "AWS Secret Access Key trovata nel diff"
 }
 
+# ── BLOCK if critical findings (mirrors bash: block BEFORE suppressions/Drools) ──
+if ($criticalFindings) {
+    $findings = $criticalFindings -join "`n"
+    $safeFindings = Convert-ToDevForgeJson ("DevForge PR Security Gate  -  BLOCCATO`n`nIssue CRITICI trovati nel diff:`n$findings`n`n--- Remediation ---`n1. Rimuovi i secret dal codice sorgente`n2. Usa AWS Secrets Manager, SSM Parameter Store, o variabili d'ambiente`n3. Se il secret e' gia' stato committato in history: usa BFG Repo-Cleaner per riscrivere la storia`n4. Ruota IMMEDIATAMENTE le credenziali esposte`n5. Dopo la remediation, ri-esegui gh pr create`n`nNON procedere finche' tutti i secret non sono stati rimossi.")
+    Write-DevForgeLog -Event "pr_gate" -Status "blocked" -Meta "{`"reason`":`"critical_secrets_found`"}" 2>$null
+    @"
+{"decision": "block", "reason": "$safeFindings"}
+"@
+    exit 0
+}
+
 # Changed file list (needed for Drools + suppressions checks)
 $changedFileList = try { (git diff --name-only "${mergeBase}...HEAD" 2>$null) } catch { "" }
-
-# ── Drools DRL review check (ADR-007 + EC-29 — WARNING, NON BLOCK) ────────
-# bash uses lib/review_evidence/drools_check.py (verified on disk)
-$drlFiles = ($changedFileList -split "`n") | Where-Object { $_ -match '\.drl$' }
-if ($drlFiles) {
-    # Primary name (confirmed on disk): drools_check.py; fallback: drools_checker.py
-    $droolsChecker = Join-Path $PLUGIN_ROOT "lib\review_evidence\drools_check.py"
-    if (-not (Test-Path $droolsChecker)) {
-        $droolsChecker = Join-Path $PLUGIN_ROOT "lib\review_evidence\drools_checker.py"
-    }
-    if ((Test-Path $droolsChecker) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
-        try {
-            $repoTarget = try { (git rev-parse --show-toplevel 2>$null).Trim() } catch { (Get-Location).Path }
-            $prLabels   = if ($env:GITHUB_PR_LABELS) { $env:GITHUB_PR_LABELS } else { "" }
-            $drlList    = ($drlFiles | Where-Object { $_ }) -join "`n"
-            $droolsOut  = (python3 -c @"
-import sys
-from pathlib import Path
-sys.path.insert(0, r'$PLUGIN_ROOT')
-try:
-    from lib.review_evidence.drools_check import check_drools_review
-    modified = [Path(f.strip()) for f in '''$drlList'''.split('\n') if f.strip()]
-    labels = [l.strip() for l in '''$prLabels'''.split(',') if l.strip()]
-    result = check_drools_review(modified, labels)
-    print(result.message if not result.ok else f'OK via {result.method}')
-except ImportError:
-    print('SKIP: drools_check not importable')
-"@ 2>$null)
-            Write-DevForgeLog -Event "pr_gate" -Status "success" `
-                -Meta "{`"check`":`"drools_review`",`"output`":`"$($droolsOut.Substring(0, [Math]::Min(200, $droolsOut.Length)))`"}" 2>$null
-        } catch {}
-    }
-}
 
 # ── SIAE Semgrep suppressions.yaml schema validation (ADR-009) ──────────────
 # bash validates only the fixed path rules/semgrep/siae/suppressions.yaml
@@ -163,14 +142,37 @@ except ImportError:
     }
 }
 
-if ($criticalFindings) {
-    $findings = $criticalFindings -join "`n"
-    $safeFindings = Convert-ToDevForgeJson ("DevForge PR Security Gate  -  BLOCCATO`n`nIssue CRITICI trovati nel diff:`n$findings`n`n--- Remediation ---`n1. Rimuovi i secret dal codice sorgente`n2. Usa AWS Secrets Manager, SSM Parameter Store, o variabili d'ambiente`n3. Se il secret e' gia' stato committato in history: usa BFG Repo-Cleaner per riscrivere la storia`n4. Ruota IMMEDIATAMENTE le credenziali esposte`n5. Dopo la remediation, ri-esegui gh pr create`n`nNON procedere finche' tutti i secret non sono stati rimossi.")
-    Write-DevForgeLog -Event "pr_gate" -Status "blocked" -Meta "{`"reason`":`"critical_secrets_found`"}" 2>$null
-    @"
-{"decision": "block", "reason": "$safeFindings"}
-"@
-    exit 0
+# ── Drools DRL review check (ADR-007 + EC-29 — WARNING, NON BLOCK) ────────
+# bash uses lib/review_evidence/drools_check.py (verified on disk)
+$drlFiles = ($changedFileList -split "`n") | Where-Object { $_ -match '\.drl$' }
+if ($drlFiles) {
+    # Primary name (confirmed on disk): drools_check.py; fallback: drools_checker.py
+    $droolsChecker = Join-Path $PLUGIN_ROOT "lib\review_evidence\drools_check.py"
+    if (-not (Test-Path $droolsChecker)) {
+        $droolsChecker = Join-Path $PLUGIN_ROOT "lib\review_evidence\drools_checker.py"
+    }
+    if ((Test-Path $droolsChecker) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+        try {
+            $repoTarget = try { (git rev-parse --show-toplevel 2>$null).Trim() } catch { (Get-Location).Path }
+            $prLabels   = if ($env:GITHUB_PR_LABELS) { $env:GITHUB_PR_LABELS } else { "" }
+            $drlList    = ($drlFiles | Where-Object { $_ }) -join "`n"
+            $droolsOut  = (python3 -c @"
+import sys
+from pathlib import Path
+sys.path.insert(0, r'$PLUGIN_ROOT')
+try:
+    from lib.review_evidence.drools_check import check_drools_review
+    modified = [Path(f.strip()) for f in '''$drlList'''.split('\n') if f.strip()]
+    labels = [l.strip() for l in '''$prLabels'''.split(',') if l.strip()]
+    result = check_drools_review(modified, labels)
+    print(result.message if not result.ok else f'OK via {result.method}')
+except ImportError:
+    print('SKIP: drools_check not importable')
+"@ 2>$null)
+            Write-DevForgeLog -Event "pr_gate" -Status "success" `
+                -Meta "{`"check`":`"drools_review`",`"output`":`"$($droolsOut.Substring(0, [Math]::Min(200, $droolsOut.Length)))`"}" 2>$null
+        } catch {}
+    }
 }
 
 Write-DevForgeLog -Event "pr_gate" -Status "success" -Meta "{`"check`":`"security_scan_clean`"}" 2>$null

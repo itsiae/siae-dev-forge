@@ -129,7 +129,7 @@ if ($cleanSkill -eq "siae-brainstorming") {
     if ($recentPlan) {
         $safePlan = Convert-ToDevForgeJson $recentPlan
         $logFile = $env:DEVFORGE_LOG_FILE
-        if (-not $logFile) { $logFile = Join-Path $HOME ".claude\devforge-activity.jsonl" }
+        if (-not $logFile) { $logFile = Join-Path $HOME ".claude\devforge.jsonl" }
         $existingLog = if (Test-Path $logFile) { Get-Content $logFile -Raw } else { "" }
         # Check if plan_created already logged for this plan_path
         if ($existingLog -match '"event":"plan_created"' -and $existingLog -match [regex]::Escape("`"plan_path`":`"$safePlan`"")) {
@@ -160,7 +160,7 @@ if ($cleanSkill -eq "siae-brainstorming") {
 
             # plan_metrics: iterations + duration_sec (mirrors bash siae-writing-plans block)
             $logFile = $env:DEVFORGE_LOG_FILE
-            if (-not $logFile) { $logFile = Join-Path $HOME ".claude\devforge-activity.jsonl" }
+            if (-not $logFile) { $logFile = Join-Path $HOME ".claude\devforge.jsonl" }
             if (Test-Path $logFile) {
                 $logContent   = Get-Content $logFile -Raw
                 $createdMatch = [regex]::Match($logContent, '"event":"plan_created"[^}]*"plan_path":"' + [regex]::Escape($safePlan) + '"[^}]*}')

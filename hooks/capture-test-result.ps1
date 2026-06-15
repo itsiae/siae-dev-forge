@@ -76,7 +76,7 @@ if ($sessionSkills -like "*siae-tdd*") {
                 $curState2 = (Get-Content $tddStateFile -Raw).Trim().Split('|')
                 $f2 = if ($curState2.Count -gt 1) { $curState2[1] } else { "unknown" }
                 $f3 = if ($curState2.Count -gt 2) { $curState2[2] } else { "impl-passed" }
-                "GREEN|$f2|$f3|$nowSec" | Set-Content $tddStateFile -NoNewline
+                [System.IO.File]::WriteAllText($tddStateFile, "GREEN|$f2|$f3|$nowSec", [System.Text.Encoding]::UTF8)
             }
             "GREEN" {
                 # GREEN + PASS = stay GREEN (refactor safe, tests still passing)
@@ -90,9 +90,19 @@ if ($sessionSkills -like "*siae-tdd*") {
     } else {
         # Test FAIL
         switch -Regex ($curPhase) {
-            '^$|^NONE$|^INIT$' { "RED|unknown|test-confirmed|$nowSec" | Set-Content $tddStateFile -NoNewline }
-            '^GREEN$'           { "RED|unknown|regression|$nowSec"     | Set-Content $tddStateFile -NoNewline }
-            '^REFACTOR$'        { "RED|unknown|refactor-regression|$nowSec" | Set-Content $tddStateFile -NoNewline }
+            '^$|^NONE$|^INIT$' {
+                [System.IO.File]::WriteAllText($tddStateFile, "RED|unknown|test-confirmed|$nowSec", [System.Text.Encoding]::UTF8)
+            }
+            '^GREEN$' {
+                # Preserve field 2 (mirrors bash: cut -d'|' -f2)
+                $f2green = if ($curStateRaw.Count -gt 1) { $curStateRaw[1] } else { "unknown" }
+                [System.IO.File]::WriteAllText($tddStateFile, "RED|$f2green|regression|$nowSec", [System.Text.Encoding]::UTF8)
+            }
+            '^REFACTOR$' {
+                # Preserve field 2 (mirrors bash: cut -d'|' -f2)
+                $f2refactor = if ($curStateRaw.Count -gt 1) { $curStateRaw[1] } else { "unknown" }
+                [System.IO.File]::WriteAllText($tddStateFile, "RED|$f2refactor|refactor-regression|$nowSec", [System.Text.Encoding]::UTF8)
+            }
             '^RED$'             { } # RED + FAIL = expected, stay RED
         }
     }
@@ -111,14 +121,14 @@ if ($sessionSkills -like "*siae-tdd*") {
 }
 
 # Build summary
-$nowTime = [DateTime]::UtcNow.ToString("HH:mm")
+$nowTime = [DateTime]::Now.ToString("HH:mm")
 $status  = if ($exitCode -eq "0") { "PASS" } else { "FAIL (exit $exitCode)" }
 
 $summaryLines = ""
 if ($stdout) {
     $summaryLines = ($stdout -split "`n" | Where-Object { $_ -match '(passed|failed|error|Tests run|test suites|FAIL|OK|SUCCESS|assertions)' } | Select-Object -Last 5) -join "`n"
 }
-"$status at $nowTime  -  cmd: $command`n$summaryLines".Trim() | Set-Content $resultFile -Encoding UTF8
+[System.IO.File]::WriteAllText($resultFile, "$status at $nowTime  -  cmd: $command`n$summaryLines".Trim(), [System.Text.Encoding]::UTF8)
 
 # Coverage extraction
 $coverageFile = Join-Path $stateDir ".devforge-last-coverage"
@@ -153,7 +163,7 @@ if ($stdout) {
 
 if ($coveragePct) {
     $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    "$coveragePct|$ts|$command" | Set-Content $coverageFile -Encoding UTF8
+    [System.IO.File]::WriteAllText($coverageFile, "$coveragePct|$ts|$command", [System.Text.Encoding]::UTF8)
 }
 
 # Telemetry

@@ -31,28 +31,70 @@ try {
     }
 } catch {}
 
-# ── Bypass HARDENED ────────────────────────────────────────────────────────
-$skipFile = Join-Path $HOME ".claude\.devforge-skip-evidence"
-if (Test-Path $skipFile) {
-    Remove-Item $skipFile -Force -ErrorAction SilentlyContinue
-    Write-DevForgeLog -Event "evidence_bypass_legacy_removed" -Status "warn" `
-        -Meta "{`"path`":`"$skipFile`",`"reason`":`"state_file_bypass_removed`"}" 2>$null
-}
-$sid = Get-DevForgeSid
-if ($sid) {
-    $bypassMarker = Join-Path $HOME ".claude\devforge-state\$sid\.bypass-evidence"
-    if (Test-Path $bypassMarker) {
-        Write-DevForgeLog -Event "evidence_bypass_used" -Status "info" `
-            -Meta "{`"source`":`"session_marker`",`"sid`":`"$sid`"}" 2>$null
-        Write-Output '{}'; exit 0
+# ── Tool-fail breakglass (ADR-1 Opzione C) ─────────────────────────────────
+# Rilascia il block SOLO sui fallimenti di tooling ambientali (lock contention,
+# collector crash, evidence assente/illeggibile), MAI sui verdetti di qualità
+# (BLOCK_REGRESSION / hard-floor: helper NON chiamato lì).
+# Sorgenti: env var DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 OPPURE state-file
+# ~/.claude/.devforge-evidence-toolfail con auto-decremento N=count.
+function Invoke-DevForgeEvidenceToolfailBreakglass {
+    if ($env:DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS -eq "1") {
+        return $true
     }
-}
-if ($env:DEVFORGE_SKIP_EVIDENCE -eq "1") {
-    Write-DevForgeLog -Event "evidence_bypass_used" -Status "info" -Meta "{`"source`":`"env_var`"}" 2>$null
-    Write-Output '{}'; exit 0
+    $bgFile = Join-Path $HOME ".claude\.devforge-evidence-toolfail"
+    if (-not (Test-Path $bgFile)) { return $false }
+    $bgData = (Get-Content $bgFile -Raw -ErrorAction SilentlyContinue) -replace '\r?\n',''
+    $bgN = 0
+    if ($bgData -match '^N=(\d+)$') {
+        $bgN = [int]$Matches[1]
+    } elseif ($bgData -match '^\d+$') {
+        $bgN = [int]$bgData
+    } else {
+        $bgN = 1
+    }
+    if ($bgN -lt 1) {
+        Remove-Item $bgFile -Force -ErrorAction SilentlyContinue
+        return $false
+    }
+    $bgN = $bgN - 1
+    if ($bgN -le 0) {
+        Remove-Item $bgFile -Force -ErrorAction SilentlyContinue
+    } else {
+        $tmpFile = "$bgFile.tmp"
+        Set-Content $tmpFile "N=${bgN}" -NoNewline -Encoding UTF8
+        Move-Item $tmpFile $bgFile -Force -ErrorAction SilentlyContinue
+    }
+    return $true
 }
 
 $hookInput      = Read-StdinAll
+
+# E05: fail-CLOSED se stdin è vuoto o non parsabile come JSON su PreToolUse gh pr create
+# (mirrors bash: explicit jq-missing / empty-stdin block in review-evidence)
+if (-not $hookInput.Trim()) {
+    # Try to detect trigger from empty input — assume PreToolUse is most conservative
+    @'
+{"decision":"block","reason":"review-evidence: input vuoto o non leggibile (E05). Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
+'@
+    exit 0
+}
+$hookInputParsed = $null
+try { $hookInputParsed = $hookInput | ConvertFrom-Json -ErrorAction Stop } catch {}
+if (-not $hookInputParsed) {
+    # E05: stdin non è JSON valido — fail-CLOSED su PreToolUse, advisory su altri trigger
+    $rawEvent = if ($hookInput -match '"hook_event_name"\s*:\s*"([^"]+)"') { $Matches[1] } else { "" }
+    if ($rawEvent -eq "PreToolUse") {
+        @'
+{"decision":"block","reason":"review-evidence: impossibile analizzare l'input (E05). Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
+'@
+    } else {
+        @'
+{"additional_context":"review-evidence: input non parsabile (E05, non bloccante su questo trigger)"}
+'@
+    }
+    exit 0
+}
+
 $toolCommand    = Get-JsonField $hookInput "command"
 if (-not $toolCommand) { $toolCommand = Get-JsonField $hookInput "tool_input.command" }
 $hookEventName  = Get-JsonField $hookInput "hook_event_name"
@@ -179,7 +221,7 @@ if (-not $dirty -and (Test-Path $evidenceFile)) {
 $lockDir      = Join-Path $evidenceDir "$sha.lock"
 $lockAcquired = $false
 
-if ($needsCompute -and $trigger -ne "post_commit") {
+if ($needsCompute) {
     for ($i = 0; $i -lt 30; $i++) {
         try {
             New-Item -ItemType Directory -Path $lockDir -ErrorAction Stop | Out-Null
@@ -197,8 +239,13 @@ if ($needsCompute -and $trigger -ne "post_commit") {
         Write-DevForgeLog -Event "evidence_lock_contention" -Status "warn" `
             -Meta "{`"sha`":`"$sha`",`"attempts`":30}" 2>$null
         if ($isBlocking) {
+            if (Invoke-DevForgeEvidenceToolfailBreakglass) {
+                Write-DevForgeLog -Event "evidence_toolfail_breakglass_used" -Status "warn" `
+                    -Meta "{`"path`":`"lock_contention`"}" 2>$null
+                Write-Output '{}'; exit 0
+            }
             @"
-{"decision":"block","reason":"review-evidence: lock contention on $($sha.Substring(0,8)), cannot verify quality. Retry, or override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: lock contention on $($sha.Substring(0,8)), cannot verify quality. Retry, or breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 "@
         } else {
             @'
@@ -226,6 +273,7 @@ if ($needsCompute) {
         if ($collectorAvailable) {
             Start-Process python3 -ArgumentList "`"$collectorPath`" --sha $sha --base $baseBranch --dirty $([int]$dirty) --out `"$evidenceFile`"" -WindowStyle Hidden -ErrorAction SilentlyContinue
         }
+        if ($lockAcquired) { Remove-Item $lockDir -Recurse -Force -ErrorAction SilentlyContinue }
         @"
 {"additional_context":"review-evidence: async compute scheduled for $($sha.Substring(0,8))"}
 "@
@@ -252,8 +300,13 @@ if ($needsCompute) {
                     }
                     Write-DevForgeLog -Event "evidence_block_compute_failed" -Status "error" `
                         -Meta "{`"sha`":`"$sha`",`"rc`":$rc}" 2>$null
+                    if (Invoke-DevForgeEvidenceToolfailBreakglass) {
+                        Write-DevForgeLog -Event "evidence_toolfail_breakglass_used" -Status "warn" `
+                            -Meta "{`"path`":`"collector_crash`"}" 2>$null
+                        Write-Output '{}'; exit 0
+                    }
                     @"
-{"decision":"block","reason":"review-evidence: $blockReason. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: $blockReason. Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 "@
                     exit 0
                 }
@@ -292,8 +345,13 @@ except Exception:
             if ($isBlocking) {
                 Write-DevForgeLog -Event "evidence_block_compute_failed" -Status "error" `
                     -Meta "{`"sha`":`"$sha`",`"rc`":0}" 2>$null
+                if (Invoke-DevForgeEvidenceToolfailBreakglass) {
+                    Write-DevForgeLog -Event "evidence_toolfail_breakglass_used" -Status "warn" `
+                        -Meta "{`"path`":`"collector_unavailable`"}" 2>$null
+                    Write-Output '{}'; exit 0
+                }
                 @'
-{"decision":"block","reason":"review-evidence: Python collector non disponibile — cannot verify quality. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: Python collector non disponibile — cannot verify quality. Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 '@
                 exit 0
             } else {
@@ -309,8 +367,13 @@ except Exception:
 # ── Read verdict ────────────────────────────────────────────────────────────
 if (-not (Test-Path $evidenceFile)) {
     if ($isBlocking) {
+        if (Invoke-DevForgeEvidenceToolfailBreakglass) {
+            Write-DevForgeLog -Event "evidence_toolfail_breakglass_used" -Status "warn" `
+                -Meta "{`"path`":`"no_evidence`"}" 2>$null
+            Write-Output '{}'; exit 0
+        }
         @"
-{"decision":"block","reason":"review-evidence: no evidence file for $($sha.Substring(0,8)) after compute. Cannot verify quality. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: no evidence file for $($sha.Substring(0,8)) after compute. Cannot verify quality. Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 "@
     } else { Write-Output '{}' }
     exit 0
@@ -321,8 +384,13 @@ try {
     $evidence = Get-Content $evidenceFile -Raw | ConvertFrom-Json -ErrorAction Stop
 } catch {
     if ($isBlocking) {
+        if (Invoke-DevForgeEvidenceToolfailBreakglass) {
+            Write-DevForgeLog -Event "evidence_toolfail_breakglass_used" -Status "warn" `
+                -Meta "{`"path`":`"invalid_json`"}" 2>$null
+            Write-Output '{}'; exit 0
+        }
         @"
-{"decision":"block","reason":"review-evidence: evidence file $evidenceFile is not valid JSON (likely iCloud placeholder). Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: evidence file $evidenceFile is not valid JSON (likely iCloud placeholder). Breakglass tool-fail: DEVFORGE_EVIDENCE_TOOLFAIL_BREAKGLASS=1 o file ~/.claude/.devforge-evidence-toolfail (solo fallimenti di tooling)"}
 "@
     } else {
         @'
@@ -341,7 +409,7 @@ switch ($decision) {
         $safeReason = Convert-ToDevForgeJson $regressionReason
         Write-DevForgeLog -Event "evidence_v2_block_hard_floor" -Status "warn" -Meta "{`"sha`":`"$sha`"}" 2>$null
         @"
-{"decision":"block","reason":"review-evidence v2: hard floor breach  -  $safeReason. NOT overridable by reviewer. Admin BREAK-GLASS: commit msg 'BREAK-GLASS: <jira>' + 2 reviewer + post-mortem 48h."}
+{"decision":"block","reason":"review-evidence v2: hard floor breach — $safeReason. NOT overridable by reviewer. Admin BREAK-GLASS: commit msg 'BREAK-GLASS: <jira>' + 2 reviewer + post-mortem 48h."}
 "@
         exit 0
     }
@@ -368,20 +436,20 @@ switch ($decision) {
         }
         Write-DevForgeLog -Event "evidence_v2_block_regression" -Status "warn" -Meta "{`"sha`":`"$sha`"}" 2>$null
         @"
-{"decision":"block","reason":"review-evidence v2: regression block  -  $safeReason. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass) (tracked, abuse 5/day).","additional_context":"review-evidence v2: BLOCK_REGRESSION $($sha.Substring(0,8))  -  $safeReason.$autoSignal"}
+{"decision":"block","reason":"review-evidence v2: regression block — $safeReason. Risolvi con un fix reale o /forge-fix-evidence (nessun override discrezionale).","additional_context":"review-evidence v2: BLOCK_REGRESSION $($sha.Substring(0,8)) — $safeReason.$autoSignal"}
 "@
         exit 0
     }
     "REVIEWER_HANDOFF" {
         @"
-{"additional_context":"review-evidence v2: regression in warn zone  -  code-reviewer agent will gatekeep. $regressionReason"}
+{"additional_context":"review-evidence v2: regression in warn zone — code-reviewer agent will gatekeep. $regressionReason"}
 "@
         exit 0
     }
     "SEVERELY_DEGRADED" {
         $missing = if ($evidence.current_scores.missing_components) { $evidence.current_scores.missing_components -join "," } else { "unknown" }
         @"
-{"additional_context":"review-evidence v2: SEVERELY_DEGRADED  -  DevForge runners parzialmente non disponibili: $missing. Hard floor SKIP."}
+{"additional_context":"review-evidence v2: SEVERELY_DEGRADED — DevForge runners parzialmente non disponibili: $missing. Hard floor SKIP."}
 "@
         exit 0
     }
@@ -403,7 +471,7 @@ if ($isBlocking -and $block) {
     Write-DevForgeLog -Event "evidence_block" -Status "warn" `
         -Meta "{`"sha`":`"$sha`",`"reasons`":`"$safeReasons`"}" 2>$null
     @"
-{"decision":"block","reason":"review-evidence: hard-block triggered. Reasons: $safeReasons. Evidence: $evidenceFile. Override: DEVFORGE_SKIP_EVIDENCE=1 (env var, session-scoped breakglass)"}
+{"decision":"block","reason":"review-evidence: hard-block triggered. Reasons: $safeReasons. Evidence: $evidenceFile. Hard-floor non-overridable (solo fix reale o admin BREAK-GLASS via commit message)."}
 "@
     exit 0
 }

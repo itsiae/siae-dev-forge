@@ -92,13 +92,17 @@ function Test-DevForgeFileExcluded {
     if ($p -match '\.md$') { return $true }
 
     # Test directories anywhere in the path
-    if ($p -match '(^|/)test/|(^|/)tests/|(^|/)__tests__/|(^|/)spec/|(^|/)docs/') { return $true }
+    if ($p -match '(^|/)test/|(^|/)tests/|(^|/)__tests__/|(^|/)spec/|(^|/)docs/|(^|/)plans/|(^|/)evals/') { return $true }
 
     # Test file naming conventions
     if ($p -match '\.spec\.|\.test\.') { return $true }
     if ($p -match '(Test|IT)\.(java|kt)$') { return $true }
     if ($p -match '(^|/)test_[^/]+\.py$') { return $true }
     if ($p -match '_test\.go$') { return $true }
+
+    # Named files excluded
+    if ($p -match 'SKILL\.md$') { return $true }
+    if ($p -match 'CLAUDE\.md$') { return $true }
 
     return $false
 }
@@ -108,7 +112,7 @@ function Test-DevForgeFileTddRequired {
     $p = $Path -replace '\\', '/'
     if (Test-DevForgeFileExcluded $p) { return $false }
 
-    if ($p -match '\.(java|ts|tsx|js|jsx|py|vue|go|kt|rb|rs|swift|scala|sql)$') { return $true }
+    if ($p -match '\.(java|ts|tsx|js|jsx|py|vue|go|kt)$') { return $true }
     if ($p -match '\.(sh|bash)$') {
         return ($env:DEVFORGE_BASH_TDD -eq "1")
     }
@@ -137,36 +141,6 @@ if ($sessionSkills -like "*siae-brainstorming*") {
     if ($taskIdForDualWrite) {
         Register-DevForgeTaskSkillInvoked -taskId $taskIdForDualWrite -skillName "siae-brainstorming" 2>$null
     }
-    Write-Output '{}'
-    exit 0
-}
-
-# ─── Explicit bypass with daily abuse tracking ────────────────────────────────
-if ($env:DEVFORGE_SKIP_BRAINSTORMING -eq "1") {
-    $safeFile    = Convert-ToDevForgeJson $filePath
-    $bypassFile  = Join-Path $HOME ".claude\.devforge-bypass-count"
-    $today       = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
-    $data        = if (Test-Path $bypassFile) { (Get-Content $bypassFile -Raw).Trim() } else { "" }
-    $bypassDate  = if ($data -and $data.Contains('|')) { $data.Split('|')[0] } else { "" }
-    $bypassCount = if ($data -and $data.Contains('|')) { [int]$data.Split('|')[1] } else { 0 }
-    if ($bypassDate -ne $today) { $bypassCount = 0 }
-    $bypassCount++
-
-    # Atomic write via temp-then-move pattern
-    $bypassTmp = "$bypassFile.tmp"
-    "$today|$bypassCount" | Set-Content $bypassTmp -NoNewline
-    Move-Item $bypassTmp $bypassFile -Force
-
-    Write-DevForgeLog -Event "brainstorming_gate_bypassed" -Status "success" `
-        -Meta "{`"file_path`":`"$safeFile`",`"reason`":`"env_var`",`"bypass_count_today`":$bypassCount}" 2>$null
-
-    # Bypass abuse tracking — mirrors bash: >5 → abuse_suspected, >=10 → always_on
-    if ($bypassCount -gt 5) {
-        $pattern = if ($bypassCount -ge 10) { "always_on" } else { "frequent_bypass" }
-        Write-DevForgeLog -Event "brainstorming_bypass_abuse_suspected" -Status "warning" `
-            -Meta "{`"count_today`":$bypassCount,`"estimated_pattern`":`"$pattern`"}" 2>$null
-    }
-
     Write-Output '{}'
     exit 0
 }
@@ -221,7 +195,7 @@ if ($newN -eq 1) {
     @"
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Nudge — ${newN}° edit senza design. Hai modificato $basename senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°, (3) Fix triviale? Usa: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>.$explainer"
+  "reason": "DevForge Brainstorming Nudge — ${newN}° edit senza design. Hai modificato $basename senza invocare siae-brainstorming. Skippare il design costa 3-5x rework. Opzioni: (1) Invoca Skill siae-devforge:siae-brainstorming ora, (2) Continua senza — hard block al 4°.$explainer"
 }
 "@
     exit 0
@@ -231,7 +205,7 @@ if ($newN -eq 1) {
     @"
 {
   "decision": "block",
-  "reason": "DevForge Brainstorming Gate — BLOCCATO. $newN edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Bypass emergenza tracciato: DEVFORGE_SKIP_BRAINSTORMING=1 <comando>. Se inappropriato, segnala a #devforge-support.$explainer"
+  "reason": "DevForge Brainstorming Gate — BLOCCATO. $newN edit senza siae-brainstorming. Legge di Ferro SIAE: nessuna implementazione senza design. Sblocca: Skill tool -> siae-devforge:siae-brainstorming. Se ritieni il gate inappropriato per questo caso, segnala a #devforge-support.$explainer"
 }
 "@
     exit 0

@@ -14,6 +14,13 @@ $hookInput   = Read-StdinAll
 $toolCommand = Get-JsonField $hookInput "command"
 if (-not $toolCommand) { $toolCommand = Get-JsonField $hookInput "tool_input.command" }
 
+# task_id join-key (Layer 1): correlazione adesione<-->outcome a valle. Vuoto fuori itsiae/*.
+$TASK_ID = ""
+if (Get-Command Get-DevForgeTaskId -ErrorAction SilentlyContinue) {
+    try { $TASK_ID = (Get-DevForgeTaskId 2>$null) } catch {}
+    if (-not $TASK_ID) { $TASK_ID = "" }
+}
+
 # --- Detect new commit: per-repo hash file ---
 $gitRoot = try { (git rev-parse --show-toplevel 2>$null).Trim() } catch { "" }
 $repoKey = if ($gitRoot) {
@@ -36,6 +43,10 @@ if ($currentHead -and $currentHead -ne $savedHash) {
 
     $changedFiles = try { (git diff --name-only HEAD~1 HEAD 2>$null) } catch { "" }
     $hasTests     = if ($changedFiles -match '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/)') { "true" } else { "false" }
+    $testFilesCount = 0
+    if ($changedFiles) {
+        $testFilesCount = ($changedFiles -split "`n" | Where-Object { $_ -match '(Test\.|_test\.|\.test\.|\.spec\.|/test/|/tests/|/__tests__/|conftest\.py)' }).Count
+    }
 
     # Token update and delta for commit (mirrors bash token-collector.py block)
     $tokenCollectorPy = Join-Path $PLUGIN_ROOT "lib\token-collector.py"
@@ -62,7 +73,16 @@ print(f',\"output_tokens_delta\":{do},\"total_tokens_delta\":{dt},\"cost_delta_e
     }
 
     Write-DevForgeLog -Event "commit_created" -Status "success" `
-        -Meta "{`"commit_sha`":`"$currentHead`",`"files_changed`":$filesChanged,`"insertions`":$insertions,`"deletions`":$deletions,`"has_tests`":$hasTests$tokenMeta}" 2>$null
+        -Meta "{`"commit_sha`":`"$currentHead`",`"files_changed`":$filesChanged,`"insertions`":$insertions,`"deletions`":$deletions,`"has_tests`":$hasTests,`"tests_files_changed`":$testFilesCount$tokenMeta,`"task_id`":`"$TASK_ID`"}" 2>$null
+
+    # gate_bypassed (Layer 1): git commit con --no-verify / -n salta i git hook.
+    # Strip dei segmenti quotati per non matchare "-n" dentro il messaggio del commit.
+    $cmdNoQuotes = $toolCommand -replace "'[^']*'","" -replace '"[^"]*"',""
+    if ($cmdNoQuotes -match 'git\s+commit' -and
+        ($cmdNoQuotes -match '--no-verify' -or $cmdNoQuotes -match '(^|\s)-[A-Za-z]*n[A-Za-z]*(\s|$)')) {
+        Write-DevForgeLog -Event "gate_bypassed" -Status "warning" `
+            -Meta "{`"mechanism`":`"git_no_verify`",`"commit_sha`":`"$currentHead`"}" 2>$null
+    }
 
     # Increment session commit counter
     $commitsFile  = Join-Path $HOME ".claude\.devforge-session-commits"
@@ -110,6 +130,44 @@ print(max(0, int((now - t).total_seconds())))
     return 0
 }
 
+# Helper: compute pr_author_emails JSON array from DevForge-Author git trailers
+# Returns a JSON array of unique, sorted DevForge-Author trailer values found
+# in commits between the default-branch base and HEAD.
+# Guard: --max-count=500 limits log traversal to avoid hook timeout.
+function Get-PrAuthorEmailsJson {
+    $defaultBranch = if ($env:DEVFORGE_DEFAULT_BRANCH) { $env:DEVFORGE_DEFAULT_BRANCH } else { "main" }
+    $base = ""
+    try { $base = (git merge-base HEAD "origin/$defaultBranch" 2>$null).Trim() } catch {}
+    if (-not $base) { try { $base = (git merge-base HEAD $defaultBranch 2>$null).Trim() } catch {} }
+    if (-not $base) { return "[]" }
+
+    # git >= 2.32: %(trailers:key=DevForge-Author,valueonly)
+    $authors = @()
+    try {
+        $raw = git log --max-count=500 "${base}..HEAD" --format='%(trailers:key=DevForge-Author,valueonly)' 2>$null
+        if ($raw) {
+            $authors = ($raw -split "`n" | Where-Object { $_.Trim() -ne "" } | Sort-Object -Unique)
+        }
+    } catch {}
+
+    # Fallback: parse raw trailer lines (git >= 2.14)
+    if (-not $authors) {
+        try {
+            $raw = git log --max-count=500 "${base}..HEAD" --format='%(trailers)' 2>$null
+            if ($raw) {
+                $authors = ($raw -split "`n" | Where-Object { $_ -match '^DevForge-Author:\s+(.+)' } |
+                    ForEach-Object { ($_ -replace '^DevForge-Author:\s+','').Trim() } |
+                    Where-Object { $_ -ne "" } | Sort-Object -Unique)
+            }
+        } catch {}
+    }
+
+    if (-not $authors) { return "[]" }
+
+    $entries = $authors | ForEach-Object { "`"$(Convert-ToDevForgeJson $_)`"" }
+    return "[" + ($entries -join ",") + "]"
+}
+
 # PR lifecycle on git push
 if ($toolCommand -match 'git\s+push') {
     if ((Get-Command gh -ErrorAction SilentlyContinue)) {
@@ -125,8 +183,9 @@ if ($toolCommand -match 'git\s+push') {
                 $snapshotFile = Join-Path $HOME ".claude\.devforge-pr-state-$prNumber.json"
                 if (-not (Test-Path $snapshotFile)) {
                     $openedTs = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    $prAuthorEmailsJson = Get-PrAuthorEmailsJson
                     Write-DevForgeLog -Event "pr_opened" -Status "success" `
-                        -Meta "{`"pr_number`":$prNumber,`"base_branch`":`"$safeBase`",`"files_changed`":$filesChanged,`"commits_count`":$commitsCount}" 2>$null
+                        -Meta "{`"pr_number`":$prNumber,`"base_branch`":`"$safeBase`",`"files_changed`":$filesChanged,`"commits_count`":$commitsCount,`"pr_author_emails`":$prAuthorEmailsJson}" 2>$null
                     @{pr_number=$prNumber;base_branch=$baseBranch;opened_ts=$openedTs;commits_at_open=$commitsCount;last_review_decision="REVIEW_REQUIRED"} `
                         | ConvertTo-Json | Set-Content $snapshotFile -Encoding UTF8
                 } else {
@@ -179,7 +238,7 @@ if ($toolCommand -match 'git\s+push') {
                     $mergeMethod      = if ($orphanState -eq "CLOSED") { "closed" } else { "web" }
                     $sessionTokensCum = Get-SessionTokenCumulative
                     Write-DevForgeLog -Event "pr_merged" -Status "success" `
-                        -Meta "{`"pr_number`":$orphanPr,`"merge_method`":`"$mergeMethod`",`"total_commits`":$orphanTotal,`"delta_from_open`":$orphanDelta,`"session_tokens_cumulative`":$sessionTokensCum}" 2>$null
+                        -Meta "{`"pr_number`":$orphanPr,`"merge_method`":`"$mergeMethod`",`"total_commits`":$orphanTotal,`"delta_from_open`":$orphanDelta,`"session_tokens_cumulative`":$sessionTokensCum,`"pr_author_emails`":[]}" 2>$null
 
                     $orphanLog     = if ($env:DEVFORGE_LOG_FILE) { $env:DEVFORGE_LOG_FILE } else { Join-Path $HOME ".claude\devforge.jsonl" }
                     $orphanContent = if (Test-Path $orphanLog) { Get-Content $orphanLog -Raw } else { "" }
@@ -187,7 +246,7 @@ if ($toolCommand -match 'git\s+push') {
                     $orphanCycles  = ([regex]::Matches($orphanContent, '"event":"pr_review_cycle"[^}]*"pr_number":' + $orphanPr)).Count
                     $orphanTtm     = Get-TimeToMergeSec -openedTs $orphanSnap.opened_ts
                     Write-DevForgeLog -Event "pr_metrics" -Status "success" `
-                        -Meta "{`"pr_number`":$orphanPr,`"rework_commits`":$orphanRework,`"review_cycles`":$orphanCycles,`"time_to_merge_sec`":$orphanTtm,`"first_push_to_merge_sec`":$orphanTtm}" 2>$null
+                        -Meta "{`"pr_number`":$orphanPr,`"rework_commits`":$orphanRework,`"review_cycles`":$orphanCycles,`"time_to_merge_sec`":$orphanTtm,`"first_push_to_merge_sec`":$orphanTtm,`"task_id`":`"$TASK_ID`"}" 2>$null
 
                     Remove-Item $orphanFile -Force -ErrorAction SilentlyContinue
                     $catchUpCount++
@@ -216,8 +275,9 @@ if ($toolCommand -match 'gh\s+pr\s+merge') {
                 $delta = [math]::Max(0, $totalCommits - $commitsAtOpen)
                 $sessionTokensCum = Get-SessionTokenCumulative
 
+                $cliAuthorEmailsJson = Get-PrAuthorEmailsJson
                 Write-DevForgeLog -Event "pr_merged" -Status "success" `
-                    -Meta "{`"pr_number`":$prNumber,`"merge_method`":`"cli`",`"total_commits`":$totalCommits,`"delta_from_open`":$delta,`"session_tokens_cumulative`":$sessionTokensCum}" 2>$null
+                    -Meta "{`"pr_number`":$prNumber,`"merge_method`":`"cli`",`"total_commits`":$totalCommits,`"delta_from_open`":$delta,`"session_tokens_cumulative`":$sessionTokensCum,`"pr_author_emails`":$cliAuthorEmailsJson}" 2>$null
 
                 # pr_metrics aggregato (legge snapshot PRIMA del cleanup)
                 $devforgeLog  = if ($env:DEVFORGE_LOG_FILE) { $env:DEVFORGE_LOG_FILE } else { Join-Path $HOME ".claude\devforge.jsonl" }
@@ -226,7 +286,7 @@ if ($toolCommand -match 'gh\s+pr\s+merge') {
                 $cyclesCount  = ([regex]::Matches($logContent, '"event":"pr_review_cycle"[^}]*"pr_number":' + $prNumber)).Count
                 $ttmSec       = Get-TimeToMergeSec -openedTs ($snap.opened_ts)
                 Write-DevForgeLog -Event "pr_metrics" -Status "success" `
-                    -Meta "{`"pr_number`":$prNumber,`"rework_commits`":$reworkCount,`"review_cycles`":$cyclesCount,`"time_to_merge_sec`":$ttmSec,`"first_push_to_merge_sec`":$ttmSec}" 2>$null
+                    -Meta "{`"pr_number`":$prNumber,`"rework_commits`":$reworkCount,`"review_cycles`":$cyclesCount,`"time_to_merge_sec`":$ttmSec,`"first_push_to_merge_sec`":$ttmSec,`"task_id`":`"$TASK_ID`"}" 2>$null
 
                 Remove-Item $snapshotFile -Force -ErrorAction SilentlyContinue
                 $shouldUpload = $true
@@ -237,6 +297,18 @@ if ($toolCommand -match 'gh\s+pr\s+merge') {
 
 # Only inject review instructions on PR create or git push
 if ($toolCommand -notmatch 'gh\s+pr\s+create' -and $toolCommand -notmatch 'git\s+push') {
+    # Commit-only path: upload telemetria se ci sono eventi pendenti (mirrors bash devforge_upload_logs &)
+    if ($shouldUpload) {
+        try {
+            $uploaderPs1 = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.ps1"
+            $uploaderPy  = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
+            if (Test-Path $uploaderPs1) {
+                Start-Job -ScriptBlock { param($p) & $p 2>$null } -ArgumentList $uploaderPs1 | Out-Null
+            } elseif ((Test-Path $uploaderPy) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+                Start-Process -FilePath "python3" -ArgumentList "`"$uploaderPy`"" -WindowStyle Hidden -ErrorAction SilentlyContinue | Out-Null
+            }
+        } catch {}
+    }
     Write-Output '{}'; exit 0
 }
 

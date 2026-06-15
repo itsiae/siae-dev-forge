@@ -16,6 +16,67 @@ function Convert-ToDevForgeJson {
     return $s
 }
 
+# --- Disk gate (mirrors _devforge_disk_gate) --------------------------------
+function Get-DevForgeFreeKb {
+    $dir = if ($env:DEVFORGE_SESSION_DIR) { $env:DEVFORGE_SESSION_DIR } else { Join-Path $HOME ".claude" }
+    try {
+        $qualifier = Split-Path $dir -Qualifier
+        $driveName = $qualifier.TrimEnd(':')
+        $drive = Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue
+        if ($drive -and $drive.Free -ne $null) { return [long]($drive.Free / 1024) }
+    } catch {}
+    return 999999999
+}
+
+function Test-DevForgeDiskGate {
+    $freeKb = Get-DevForgeFreeKb
+    $minKb = 102400  # 100MB
+    if ($freeKb -lt $minKb) {
+        $recoveryFile = Join-Path $HOME ".claude\.devforge-disk-full-events.tmp"
+        $recoveryDir = Split-Path $recoveryFile
+        if (-not (Test-Path $recoveryDir)) { New-Item -ItemType Directory -Path $recoveryDir -Force | Out-Null }
+        $ts = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        Add-Content -Path $recoveryFile -Value "${ts}|free_kb=${freeKb}" -Encoding UTF8
+        return $false
+    }
+    return $true
+}
+
+# --- Log rotation (mirrors _devforge_check_rotation) ------------------------
+# Cap totale 50MB su activity.jsonl + archived. Elimina solo archived
+# completamente consumati dal batcher (cursor >= file_size).
+function Invoke-DevForgeCheckRotation {
+    $capBytes = 52428800  # 50MB
+    if (-not $DEVFORGE_LOG_FILE) { return }
+    $dir  = Split-Path $DEVFORGE_LOG_FILE
+    $base = [System.IO.Path]::GetFileNameWithoutExtension($DEVFORGE_LOG_FILE)
+
+    $total = [long]0
+    if (Test-Path $DEVFORGE_LOG_FILE) { $total += (Get-Item $DEVFORGE_LOG_FILE).Length }
+    $archived = Get-ChildItem "$dir\${base}-*.archived.jsonl" -ErrorAction SilentlyContinue |
+                Sort-Object Name
+    foreach ($f in $archived) { $total += $f.Length }
+    if ($total -le $capBytes) { return }
+
+    $sessionDir = if ($env:DEVFORGE_SESSION_DIR) { $env:DEVFORGE_SESSION_DIR } else { $dir }
+    $outbox = Join-Path $sessionDir "outbox"
+
+    foreach ($a in $archived) {
+        if ($total -le $capBytes) { break }
+        $cursorFile = Join-Path $outbox ".cursor-$($a.Name)"
+        $cursor = [long]0
+        if (Test-Path $cursorFile) {
+            try { $cursor = [long](Get-Content $cursorFile -Raw -ErrorAction SilentlyContinue).Trim() } catch {}
+        }
+        $sz = $a.Length
+        if ($cursor -ge $sz -and $sz -gt 0) {
+            Remove-Item $a.FullName -Force -ErrorAction SilentlyContinue
+            Remove-Item $cursorFile -Force -ErrorAction SilentlyContinue
+            $total -= $sz
+        }
+    }
+}
+
 # --- Session ID -------------------------------------------------------------
 function Get-DevForgeSid {
     if ($env:DEVFORGE_PINNED_SID) { return $env:DEVFORGE_PINNED_SID }
@@ -95,9 +156,22 @@ function Invoke-DevForgeCanonicalizeUser {
 
 function Get-DevForgeUser {
     if ($env:DEVFORGE_PINNED_USER) { return $env:DEVFORGE_PINNED_USER }
+    # Session user file (mirrors DEVFORGE_SESSION_USER_FILE in bash)
+    $sessionUserFile = Join-Path $HOME ".claude\.devforge-session-user"
+    if (Test-Path $sessionUserFile) {
+        $val = (Get-Content $sessionUserFile -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($val) { return Invoke-DevForgeCanonicalizeUser $val }
+    }
     $raw = ""
     try { $raw = (git config user.email 2>$null) } catch {}
     if (-not $raw) { try { $raw = (git config --global user.email 2>$null) } catch {} }
+    # Legacy cache (mirrors ~/.claude/.devforge-user in bash)
+    if (-not $raw) {
+        $legacyCache = Join-Path $HOME ".claude\.devforge-user"
+        if (Test-Path $legacyCache) {
+            $raw = (Get-Content $legacyCache -Raw -ErrorAction SilentlyContinue).Trim()
+        }
+    }
     if (-not $raw) { $raw = $env:USERNAME }
     if (-not $raw) { $raw = "unknown" }
     return Invoke-DevForgeCanonicalizeUser $raw
@@ -114,9 +188,22 @@ function Get-DevForgeUserRaw {
             } catch {}
         }
     }
+    # Session user file (mirrors DEVFORGE_SESSION_USER_FILE in bash)
+    $sessionUserFile = Join-Path $HOME ".claude\.devforge-session-user"
+    if (Test-Path $sessionUserFile) {
+        $val = (Get-Content $sessionUserFile -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($val) { return $val }
+    }
     $raw = ""
     try { $raw = (git config user.email 2>$null) } catch {}
     if (-not $raw) { try { $raw = (git config --global user.email 2>$null) } catch {} }
+    # Legacy cache
+    if (-not $raw) {
+        $legacyCache = Join-Path $HOME ".claude\.devforge-user"
+        if (Test-Path $legacyCache) {
+            $raw = (Get-Content $legacyCache -Raw -ErrorAction SilentlyContinue).Trim()
+        }
+    }
     if (-not $raw) { $raw = $env:USERNAME }
     return $raw
 }
@@ -132,7 +219,24 @@ function Get-DevForgeUserSource {
             } catch {}
         }
     }
+    # Session user source file (mirrors DEVFORGE_SESSION_USER_SOURCE_FILE in bash)
+    $sessionUserSourceFile = Join-Path $HOME ".claude\.devforge-session-user-source"
+    if (Test-Path $sessionUserSourceFile) {
+        $val = (Get-Content $sessionUserSourceFile -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($val) { return $val }
+    }
     return "unknown"
+}
+
+# Cache user identity to session files (mirrors devforge_cache_user in bash)
+function Set-DevForgeUserCache {
+    param([string]$RawUser, [string]$Source = "unknown")
+    $sessionUserFile       = Join-Path $HOME ".claude\.devforge-session-user"
+    $sessionUserSourceFile = Join-Path $HOME ".claude\.devforge-session-user-source"
+    $legacyCache           = Join-Path $HOME ".claude\.devforge-user"
+    Set-Content -Path $sessionUserFile       -Value $RawUser -NoNewline -Encoding utf8
+    Set-Content -Path $sessionUserSourceFile -Value $Source  -NoNewline -Encoding utf8
+    Set-Content -Path $legacyCache           -Value $RawUser -NoNewline -Encoding utf8
 }
 
 # --- Per-session sequence counter (atomic) ----------------------------------
@@ -203,6 +307,10 @@ function Write-DevForgeLog {
         [string]$Meta = "{}",
         [long]$DurationMs = -1
     )
+    # Skip write if disk is critically low (mirrors _devforge_disk_gate)
+    if (-not (Test-DevForgeDiskGate)) { return }
+    Invoke-DevForgeCheckRotation
+
     $logFile = $DEVFORGE_LOG_FILE
     $logDir = Split-Path $logFile
     if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
@@ -431,6 +539,44 @@ function Get-JsonField {
         if ($current -match "`"$p`"\s*:\s*`"([^`"]*)`"") { $current = $Matches[1] } else { return "" }
     }
     return $current
+}
+
+# --- Mode sentinels (mirrors devforge_set_mode / devforge_clear_mode) -------
+function Set-DevForgeMode {
+    param([string]$Mode, [string]$Context)
+    $sentinelFile = Join-Path (Get-Location) ".devforge-active-${Mode}"
+    Set-Content -Path $sentinelFile -Value $Context -NoNewline -Encoding utf8
+}
+
+function Clear-DevForgeMode {
+    param([string]$Mode)
+    $sentinelFile = Join-Path (Get-Location) ".devforge-active-${Mode}"
+    Remove-Item -Path $sentinelFile -Force -ErrorAction SilentlyContinue
+}
+
+# --- TDD state machine (mirrors devforge_tdd_set/get/reset_phase) -----------
+function Set-DevForgeTddPhase {
+    param(
+        [string]$Phase,
+        [string]$Target   = "unknown",
+        [string]$TestName = "unknown"
+    )
+    $stateFile = Join-Path $HOME ".claude\.devforge-tdd-state"
+    $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    Set-Content -Path $stateFile -Value "${Phase}|${Target}|${TestName}|${ts}" -NoNewline -Encoding utf8
+}
+
+function Get-DevForgeTddPhase {
+    $stateFile = Join-Path $HOME ".claude\.devforge-tdd-state"
+    if (-not (Test-Path $stateFile)) { return "" }
+    $content = (Get-Content $stateFile -Raw -ErrorAction SilentlyContinue).Trim()
+    if (-not $content) { return "" }
+    return $content.Split('|')[0]
+}
+
+function Reset-DevForgeTdd {
+    $stateFile = Join-Path $HOME ".claude\.devforge-tdd-state"
+    Remove-Item -Path $stateFile -Force -ErrorAction SilentlyContinue
 }
 
 Export-ModuleMember -Function *

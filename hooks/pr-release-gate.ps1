@@ -31,10 +31,11 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
     try { $prNumber = (gh pr list --head $currentBranch --base main --json number --jq '.[0].number' 2>$null).Trim() } catch {}
 }
 
-# Generate diff files in temp dir
-$tmpDir = [System.IO.Path]::GetTempPath()
-$diffFilesPath   = Join-Path $tmpDir "devforge-diff-files.txt"
-$diffContentPath = Join-Path $tmpDir "devforge-diff-content.txt"
+# Generate diff files in temp dir (nomi univoci per evitare collisioni tra PR concorrenti)
+$tmpBase         = [System.IO.Path]::GetTempFileName()
+Remove-Item $tmpBase -Force -ErrorAction SilentlyContinue
+$diffFilesPath   = $tmpBase + "-devforge-diff-files.txt"
+$diffContentPath = $tmpBase + "-devforge-diff-content.txt"
 
 try {
     git fetch origin main --quiet 2>$null | Out-Null
@@ -45,8 +46,9 @@ try {
     $diffContent = (git diff "origin/main...origin/$currentBranch" 2>$null)
     if ($null -eq $diffFiles)   { $diffFiles   = "" }
     if ($null -eq $diffContent) { $diffContent = "" }
-    ($diffFiles   | Out-String) | Set-Content $diffFilesPath   -Encoding UTF8
-    ($diffContent | Out-String) | Set-Content $diffContentPath -Encoding UTF8
+    # Avoid Out-String trailing newline: join array with newline explicitly
+    ($diffFiles   -join "`n") | Set-Content $diffFilesPath   -Encoding UTF8
+    ($diffContent -join "`n") | Set-Content $diffContentPath -Encoding UTF8
 } catch {
     "" | Set-Content $diffFilesPath   -Encoding UTF8
     "" | Set-Content $diffContentPath -Encoding UTF8
@@ -101,7 +103,7 @@ if ($collectorAvailable) {
             Remove-Job $job -Force -ErrorAction SilentlyContinue
             Remove-Item $diffFilesPath, $diffContentPath -Force -ErrorAction SilentlyContinue
             @'
-{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[siae-release-risk] CLI timeout (25s). Run /forge-release-risk manualmente."}}
+{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"⚠️ [siae-release-risk] CLI timeout o errore. Run /forge-release-risk manualmente."}}
 '@
             exit 0
         }
@@ -111,7 +113,10 @@ if ($collectorAvailable) {
     }
 }
 
-Remove-Item $diffFilesPath, $diffContentPath -Force -ErrorAction SilentlyContinue
+# Cleanup temp files guaranteed anche su eccezione (mirrors bash: trap 'rm -rf $TMPDIR' EXIT)
+try {} finally {
+    Remove-Item $diffFilesPath, $diffContentPath -Force -ErrorAction SilentlyContinue
+}
 
 if ($assessOutput) {
     $lastLine = ($assessOutput -split "`n" | Select-Object -Last 1).Trim()
@@ -134,16 +139,9 @@ if ($assessOutput) {
             } catch {}
         }
         @"
-{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[siae-release-risk] Scorecard posted to PR #$prNumber. Level: $level. Output: $outPath. Cached: $cached."}}
+{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"🔨 [siae-release-risk] Scorecard posted to PR #$prNumber. Level: $level. Output: $outPath. Cached: $cached."}}
 "@
     } catch {
-        @'
-{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[siae-release-risk] Assessment completato."}}
-'@
     }
-} else {
-    @'
-{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[siae-release-risk] CLI non disponibile. Esegui /forge-release-risk manualmente se necessario."}}
-'@
 }
 exit 0

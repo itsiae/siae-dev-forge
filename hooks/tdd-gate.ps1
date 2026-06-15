@@ -99,11 +99,12 @@ function Test-DevForgeFileExcluded {
     param([string]$Path)
     $p = $Path -replace '\\', '/'
     if ($p -match '\.md$') { return $true }
-    if ($p -match '(^|/)test/|(^|/)tests/|(^|/)__tests__/|(^|/)spec/|(^|/)docs/') { return $true }
+    if ($p -match '(^|/)test/|(^|/)tests/|(^|/)__tests__/|(^|/)spec/|(^|/)docs/|(^|/)plans/|(^|/)evals/') { return $true }
     if ($p -match '\.spec\.|\.test\.') { return $true }
     if ($p -match '(Test|IT)\.(java|kt)$') { return $true }
     if ($p -match '(^|/)test_[^/]+\.py$') { return $true }
     if ($p -match '_test\.go$') { return $true }
+    if ($p -match '(^|/)SKILL\.md$|(^|/)CLAUDE\.md$') { return $true }
     return $false
 }
 
@@ -112,7 +113,7 @@ function Test-DevForgeFileTddRequired {
     $p = $Path -replace '\\', '/'
     if (Test-DevForgeFileExcluded $p) { return $false }
     # TDD required: tdd_required class (NOT .tf/.hcl which are brainstorming_only)
-    if ($p -match '\.(java|ts|tsx|js|jsx|py|vue|go|kt|rb|rs|swift|scala|sql)$') { return $true }
+    if ($p -match '\.(java|ts|tsx|js|jsx|py|vue|go|kt)$') { return $true }
     if ($p -match '\.(sh|bash)$') { return ($env:DEVFORGE_BASH_TDD -eq "1") }
     return $false
 }
@@ -164,7 +165,7 @@ if ($skillInvoked) {
         @"
 {
   "decision": "block",
-  "reason": "DevForge TDD Phase Gate — BLOCCATO. Hai invocato siae-tdd ma non hai ancora un test fallente. Scrivi PRIMA il test per $basename, eseguilo (deve fallire -> fase RED), poi potrai scrivere il codice di produzione."
+  "reason": "DevForge TDD Phase Gate — BLOCCATO. Hai invocato siae-tdd ma non hai ancora un test fallente. Scrivi PRIMA il test per $basename, eseguilo (deve fallire → fase RED), poi potrai scrivere il codice di produzione."
 }
 "@
         exit 0

@@ -15,9 +15,12 @@ Initialize-DevForgeSession 2>$null
 # Il secondo flush dentro Emit-SessionEnd resta come flush idempotente
 # per catturare gli eventi della session_end stessa.
 try {
-    $telemetryUploader = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
-    if (Test-Path $telemetryUploader) {
-        python3 $telemetryUploader 2>$null
+    $telemetryUploaderPs1 = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.ps1"
+    $telemetryUploaderPy  = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
+    if (Test-Path $telemetryUploaderPs1) {
+        & $telemetryUploaderPs1 2>$null
+    } elseif ((Test-Path $telemetryUploaderPy) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+        python3 $telemetryUploaderPy 2>$null
     }
 } catch {}
 
@@ -131,6 +134,19 @@ function Emit-SessionEnd {
     Write-DevForgeLog -Event "session_end" -Status "success" -DurationMs $sessionDurationMs `
         -Meta $sessionEndMeta 2>$null
 
+    # task_adoption (Layer 1, design 2026-06-14) — mirrors devforge_emit_task_adoption in bash
+    # Best-effort, non-blocking (adoption-emit.sh equivalent for PS1)
+    try {
+        $adoptionEmitAnalyzer = Join-Path $PLUGIN_ROOT "lib\adoption-analyzer.py"
+        $adoptionTaskId = Get-DevForgeTaskId
+        if ($adoptionTaskId -and (Test-Path $adoptionEmitAnalyzer) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+            $adoptionMeta = python3 $adoptionEmitAnalyzer --task-adoption-meta $adoptionTaskId 2>$null
+            if ($adoptionMeta) {
+                Write-DevForgeLog -Event "task_adoption" -Status "success" -Meta $adoptionMeta 2>$null
+            }
+        }
+    } catch {}
+
     # --- FIX 2: adoption-analyzer.py recap su stderr (ADR-009) ---
     # 3-line recap non bloccante. Opt-out via DEVFORGE_DISABLE_RECAP=1.
     try {
@@ -147,9 +163,12 @@ function Emit-SessionEnd {
 
     # Secondo flush telemetria (idempotente, cattura eventi session_end stessa)
     try {
-        $telemetryUploader = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
-        if (Test-Path $telemetryUploader) {
-            python3 $telemetryUploader 2>$null
+        $telemetryUploaderPs1 = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.ps1"
+        $telemetryUploaderPy  = Join-Path $PLUGIN_ROOT "lib\telemetry-upload.py"
+        if (Test-Path $telemetryUploaderPs1) {
+            & $telemetryUploaderPs1 2>$null
+        } elseif ((Test-Path $telemetryUploaderPy) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+            python3 $telemetryUploaderPy 2>$null
         }
     } catch {}
 
@@ -198,18 +217,12 @@ if ($lastAssistantMsg -notmatch $completionPattern) {
 # --- Retrospective gate ---
 if ($skillsUsedCount -gt 0 -or $commitsCount -gt 0) {
     if ($skillsList -notlike "*siae-retrospective*") {
-        if ($env:DEVFORGE_SKIP_RETRO_GATE -eq "1") {
-            Write-DevForgeLog -Event "stop_gate" -Status "skipped_retro" `
-                -Meta "{`"reason`":`"DEVFORGE_SKIP_RETRO_GATE=1`",`"skills`":$skillsUsedCount,`"commits`":$commitsCount}" 2>$null
-            Emit-SessionEnd
-            exit 0
-        }
         Write-DevForgeLog -Event "stop_gate" -Status "blocked_retro" `
             -Meta "{`"reason`":`"retrospective_missing`",`"skills`":$skillsUsedCount,`"commits`":$commitsCount}" 2>$null
         @"
 {
   "decision": "block",
-  "reason": "DevForge Retrospective Gate  -  Sessione produttiva ($skillsUsedCount skill invocate, $commitsCount commit) senza siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti."
+  "reason": "DevForge Retrospective Gate — Sessione produttiva ($skillsUsedCount skill invocate, $commitsCount commit) senza siae-retrospective. Le lezioni non salvate sono lezioni perse. Invoca siae-retrospective per estrarre e persistere le lezioni apprese, poi potrai fermarti."
 }
 "@
         exit 0
@@ -227,13 +240,10 @@ $verificationOk   = $false
 $taskId           = Get-DevForgeTaskId
 
 if (-not $useSessionScope -and $taskId) {
-    # Check task-scoped evidence: skills_validated file (più robusto di skills_invoked)
+    # Check task-scoped evidence: solo skills_validated (mirrors devforge_skill_validated in bash)
+    # NON accettare skills_invoked — una skill invocata ma non validata non è evidenza sufficiente
     $taskValidated = Join-Path $HOME ".claude\.devforge-task-skills\$taskId\skills_validated"
-    $taskInvoked   = Join-Path $HOME ".claude\.devforge-task-skills\$taskId\skills_invoked"
     if ((Test-Path $taskValidated) -and ((Get-Content $taskValidated) -contains "siae-verification")) {
-        $verificationOk = $true
-    } elseif ((Test-Path $taskInvoked) -and ((Get-Content $taskInvoked) -contains "siae-verification")) {
-        # Fallback su skills_invoked se skills_validated non esiste ancora
         $verificationOk = $true
     }
 }
@@ -249,42 +259,42 @@ if ($verificationOk) {
     exit 0
 }
 
-# Explicit bypass
-if ($env:DEVFORGE_FORCE_STOP -eq "1") {
-    $forceFile = Join-Path $HOME ".claude\.devforge-force-stop-count"
-    $today     = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
-    $fdata     = if (Test-Path $forceFile) { (Get-Content $forceFile -Raw).Trim() } else { "" }
-    $bDate     = if ($fdata -and $fdata.Contains('|')) { $fdata.Split('|')[0] } else { "" }
-    $bCount    = if ($fdata -and $fdata.Contains('|')) { [int]$fdata.Split('|')[1] } else { 0 }
-    if ($bDate -ne $today) { $bCount = 0 }
-    $bCount++
-    "$today|$bCount" | Set-Content $forceFile -NoNewline
-    Write-DevForgeLog -Event "stop_gate_forced" -Status "warning" -Meta "{`"count_today`":$bCount}" 2>$null
-    if ($bCount -ge 3) {
-        Write-DevForgeLog -Event "force_stop_abuse_suspected" -Status "warning" -Meta "{`"count_today`":$bCount}" 2>$null
-    }
-    Emit-SessionEnd
-    exit 0
-}
-
-# --- FIX 5: Hard block con _SG_EXPL (block-explainer) ---
+# Hard block — no auto-escape.
 Write-DevForgeLog -Event "stop_gate" -Status "blocked" `
     -Meta "{`"reason`":`"completion_claim_without_verification`",`"task_id`":`"$taskId`"}" 2>$null
 
-# Legge eventuale spiegazione aggiuntiva dal block-explainer (non bloccante)
+# Legge eventuale spiegazione aggiuntiva dal block-explainer (mirrors devforge_block_explainer in bash)
+# Usa adoption-analyzer.py --format block --skill siae-verification (come fa la bash lib/block-explainer.sh)
 $sgExpl = ""
-try {
-    $blockExplainer = Join-Path $PLUGIN_ROOT "lib\block-explainer.py"
-    if (Test-Path $blockExplainer) {
-        $explText = python3 $blockExplainer siae-verification 2>$null
-        if ($explText) { $sgExpl = " $($explText.Trim())" }
+if ($env:DEVFORGE_DISABLE_EXPLAINER -ne "1") {
+    $explainerCache = Join-Path $HOME ".claude\.devforge-explainer-cache\siae-verification"
+    if (Test-Path $explainerCache) {
+        $cacheMtime = (Get-Item $explainerCache).LastWriteTime
+        if (([DateTime]::UtcNow - $cacheMtime).TotalSeconds -lt 86400) {
+            $cached = (Get-Content $explainerCache -Raw -ErrorAction SilentlyContinue).Trim()
+            if ($cached) { $sgExpl = " $cached" }
+        }
     }
-} catch {}
+    if (-not $sgExpl) {
+        try {
+            $adoptionAnalyzer = Join-Path $PLUGIN_ROOT "lib\adoption-analyzer.py"
+            if ((Test-Path $adoptionAnalyzer) -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+                $explText = python3 $adoptionAnalyzer --format block --skill siae-verification 2>$null
+                if ($explText) {
+                    $cacheDir = Join-Path $HOME ".claude\.devforge-explainer-cache"
+                    if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null }
+                    Set-Content $explainerCache $explText.Trim() -NoNewline
+                    $sgExpl = " $($explText.Trim())"
+                }
+            }
+        } catch {}
+    }
+}
 
 @"
 {
   "decision": "block",
-  "reason": "DevForge Verification Gate  -  BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA.$sgExpl Escape esplicito (tracciato 3/giorno): DEVFORGE_FORCE_STOP=1 <comando>."
+  "reason": "DevForge Verification Gate — BLOCCATO. Il tuo ultimo output contiene un claim di completamento ma NON risulta evidenza di siae-verification per questo task. NESSUN CLAIM SENZA EVIDENZA. Invoca siae-verification e segui il protocollo IDENTIFICA -> ESEGUI -> LEGGI -> VERIFICA -> AFFERMA.$sgExpl"
 }
 "@
 exit 0

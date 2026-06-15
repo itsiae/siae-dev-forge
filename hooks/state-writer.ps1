@@ -25,9 +25,10 @@ if ($isError -ne $false) { Write-Output '{}'; exit 0 }
 
 if ($skillName -like "*:*") { $skillName = $skillName.Split(':')[-1] }
 
-# State file location — mirrors bash STATE_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/projects/$(basename pwd)"
+# State file location — mirrors bash STATE_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/projects/$(basename $(pwd))"
+# bash uses basename $(pwd) (current directory), NOT basename $CLAUDE_PROJECT_DIR.
 $projectDir = if ($env:CLAUDE_PROJECT_DIR) { $env:CLAUDE_PROJECT_DIR } else { (Get-Location).Path }
-$stateDir  = Join-Path $projectDir ".claude\projects\$(Split-Path $projectDir -Leaf)"
+$stateDir  = Join-Path $projectDir ".claude\projects\$(Split-Path (Get-Location).Path -Leaf)"
 $stateFile = Join-Path $stateDir ".skill-state"
 New-Item -ItemType Directory -Path $stateDir -Force | Out-Null 2>$null
 
