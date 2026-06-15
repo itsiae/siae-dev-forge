@@ -12,7 +12,14 @@
          times out) at view-time → a CDN <script> would leave a blank page. The Redoc
          bundle is vendored into the site at BUILD time by the Pages workflow (the
          GitHub-hosted runner has internet), so the served page has ZERO external deps. -->
-    <redoc spec-url="./telemetry-insights-api.openapi.yaml"></redoc>
+    <!-- Espansione completa di default: tutti i parametri/schemi/esempi visibili
+         senza dover cliccare (schema-expansion-level=all espande gli oggetti annidati;
+         expand-responses=all apre le risposte; json-sample-expand-level=all i sample). -->
+    <redoc spec-url="./telemetry-insights-api.openapi.yaml"
+           schema-expansion-level="all"
+           expand-responses="all"
+           json-sample-expand-level="all"
+           expand-single-schema-field="true"></redoc>
     <script src="./redoc.standalone.js"></script>
   </body>
 </html>

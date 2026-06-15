@@ -23,6 +23,8 @@ grep -q '<redoc' "$HTML"; assert_true "T1b: contains <redoc>" $?
 grep -q 'src="\./redoc.standalone.js"' "$HTML"; assert_true "T1c: Redoc bundle same-origin (./redoc.standalone.js)" $?
 grep -q 'spec-url="\./telemetry-insights-api.openapi.yaml"' "$HTML"; assert_true "T1d: spec-url relative same-origin" $?
 grep -Eq '(src|spec-url)="https?://' "$HTML"; rc=$?; assert_true "T1e: NO external URL in index.html (SIAE blocks CDNs at view-time)" $([ "$rc" -ne 0 ] && echo 0 || echo 1)
+grep -q 'schema-expansion-level="all"' "$HTML"; assert_true "T1f: all schemas/params expanded by default" $?
+grep -q 'expand-responses="all"' "$HTML"; assert_true "T1g: all responses expanded by default" $?
 
 echo "TEST 2 — no-drift: spec copy == source"
 if [ -f "$SPEC_COPY" ] && [ -f "$SPEC_SRC" ]; then
