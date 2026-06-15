@@ -32,6 +32,7 @@ from lib.release_risk.renderer import write_scorecard, render_scorecard_storage
 from lib.release_risk.confluence_publish import (
     config_from_env, build_page_title, publish_scorecard,
 )
+from lib.release_risk.narrative import build_narrative
 
 
 RELEASE_TAG_GLOBS_DEFAULT = ("release*", "v*", "*RELEASE*", "*-RELEASE", "RELEASE-*")
@@ -117,6 +118,10 @@ def assess(args) -> int:
     # Score
     scorecard = compute_score(criteria)
 
+    # Razionale funzionale (manual > pr-body > derivato) — contesto per TechOps
+    narrative_text, narrative_source = _resolve_narrative(
+        args, identification["jira_tickets"], genesis, len(diff_files))
+
     # Build report
     output_path = repo_root / "docs" / "releases" / f"{datetime.now().strftime('%Y-%m-%d')}-{service}-{branch.replace('/', '_')}.md"
     report = ReleaseRiskReport(
@@ -127,6 +132,7 @@ def assess(args) -> int:
         criteria=criteria, scorecard=scorecard,
         generated_at=datetime.now(timezone.utc).isoformat(),
         output_path=str(output_path), trigger=trigger,
+        narrative=narrative_text, narrative_source=narrative_source,
     )
 
     # Write output + cache
@@ -229,6 +235,24 @@ def _baseline_fetcher_factory(service: str):
     return fetcher
 
 
+def _resolve_narrative(args, jira_tickets, genesis, files_changed):
+    """Risolve (testo, fonte) del razionale: manual (--rationale) > pr-body (--pr-body-file) > derived."""
+    pr_body = None
+    pr_body_file = getattr(args, "pr_body_file", None)
+    if pr_body_file:
+        try:
+            pr_body = Path(pr_body_file).read_text()
+        except OSError:
+            pr_body = None
+    return build_narrative(
+        rationale=getattr(args, "rationale", None),
+        pr_body=pr_body,
+        jira_tickets=jira_tickets,
+        genesis=genesis,
+        files_changed=files_changed,
+    )
+
+
 def _maybe_publish_confluence(report: ReleaseRiskReport, args) -> Optional[dict]:
     """Pubblica la scorecard su Confluence se le env DEVFORGE_CONFLUENCE_* sono presenti.
 
@@ -303,6 +327,12 @@ def main():
     a.add_argument("--no-publish-confluence", action="store_true",
                    help="Disabilita la pubblicazione su Confluence anche se le env "
                         "DEVFORGE_CONFLUENCE_* sono configurate.")
+    a.add_argument("--rationale",
+                   help="Razionale/change funzionali (prosa) da includere nella scorecard. "
+                        "Priorità massima; nel flusso interattivo lo compone il modello.")
+    a.add_argument("--pr-body-file",
+                   help="Path a file con la descrizione della PR: usata come razionale "
+                        "se --rationale assente (flusso hook PR-open).")
     a.add_argument("--kg-data-file",
                    help="Path to JSON pre-fetched MCP sport-kg output (SKILL.md Step 4c prefetch). "
                         "Senza questo, Criterion 5 ritorna REQUIRES_INPUT su repo KG-mappati.")

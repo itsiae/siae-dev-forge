@@ -63,6 +63,8 @@ class ReleaseRiskReport:
     output_path: str
     cached: bool = False
     trigger: TriggerSource = "manual"
+    narrative: Optional[str] = None  # razionale funzionale del rilascio (contesto TechOps)
+    narrative_source: Optional[str] = None  # manual | pr-body | derived
     schema_version: str = SCHEMA_VERSION
 
     def to_json(self) -> str:

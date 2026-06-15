@@ -16,6 +16,7 @@ Output: file `docs/releases/<date>-<service>-<branch>.md` + scorecard a stdout.
 3. Generate diff `origin/main...origin/<release>` (file + content)
 4. Fill identification (version, Jira tickets, AskUserQuestion per date/owner)
 5. **Step 4b — Genesis check**: feature branch mergiate + AskUserQuestion conferma
+   - **Step 4c — Razionale funzionale**: il modello compone 2-4 frasi (perché del rilascio + change funzionali introdotte) da diff/Jira/genesis; l'utente conferma/edita → passato al CLI come `--rationale`. Finisce in cima alla scorecard come "📝 Razionale del rilascio" (contesto per TechOps).
 6. Pre-flight card 🟡 MEDIO → attesa conferma utente
 7. Invoke `python -m lib.release_risk assess` (CLI con 18 criteri)
 8. Cache check `(branch, diff-hash, baseline-main-sha)` — hit skippa re-run
