@@ -154,12 +154,9 @@ BLOCK_EOF
 
         # Validate coverage is numeric before comparing
         if [ -n "$COVERAGE_PCT" ] && echo "$COVERAGE_PCT" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
-            # Determine threshold: 80% for feature branches (case-insensitive), 70% otherwise
+            # Determine threshold: 70% for all branches (P1 modules enforced at 80% by code-coverage skill)
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
             THRESHOLD=70
-            if echo "$CURRENT_BRANCH" | grep -qiE '^feature/'; then
-                THRESHOLD=80
-            fi
 
             # Integer comparison (truncate decimals)
             COVERAGE_INT=${COVERAGE_PCT%%.*}
@@ -173,7 +170,7 @@ BLOCK_EOF
                     cat <<COV_BLOCK_EOF
 {
   "decision": "block",
-  "reason": "DevForge Coverage Gate — BLOCCATO. Coverage attuale: ${COVERAGE_PCT}% (soglia minima: ${THRESHOLD}%). Aggiungi test per raggiungere almeno ${THRESHOLD}% di copertura prima di committare. Branch: ${CURRENT_BRANCH} (feature = 80%, altro = 70%)."
+  "reason": "DevForge Coverage Gate — BLOCCATO. Coverage attuale: ${COVERAGE_PCT}% (soglia minima: ${THRESHOLD}%). Aggiungi test per raggiungere almeno ${THRESHOLD}% di copertura prima di committare. Branch: ${CURRENT_BRANCH}."
 }
 COV_BLOCK_EOF
                     exit 0
