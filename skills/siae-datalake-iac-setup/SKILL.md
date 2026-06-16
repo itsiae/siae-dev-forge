@@ -405,19 +405,22 @@ I file DDL silver sono placeholder da completare con lo schema reale delle tabel
 | ✅ Naming consistente | Prefix `${var.env}-${var.project}-${var.module}` + dominio nel nome risorse IAM/Glue (es. `${local.prefix}-{dominio}-crawler-parquet`) |
 | ✅ Partizioni bronze | Tre partition_keys: `year`, `month`, `day` (tipo string) |
 
-**🔴 Operazione ALTO rischio — pre-flight card prima di modifica IAM:**
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
-| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-datalake-iac-setup |
+| 🔴 CRITICO (modifica policy IAM) — 🔨 DevForge · siae-datalake-iac-setup |
 |:---|
-| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
-| 🔐 Risorsa IAM: `<policy/role name>` · 🌍 Ambiente: `<target>` · 📦 Servizi: `Glue Crawler / Glue Jobs` |
-| **▼ Azione** |
-| 1. 🔧 Azione: Modifica policy IAM nel modulo bronze/silver → `<file .tf>` |
-| 💡 Perché: Setup iniziale — creazione policy IAM least privilege |
-| 🚫 Se NO: Policy invariata, accessi non modificati |
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU AWS IAM** |
+| 📋 Risorsa: `<policy/role name>` · 🌍 Ambiente: `<target>` |
+| **▼ Azioni** |
+| 1. Scrittura/modifica policy IAM nel modulo bronze/silver → `<file .tf>` |
+| 2. La policy verrà applicata all'esecuzione del terraform apply successivo |
+| 💡 Perché: Le policy IAM controllano gli accessi a Glue Catalog, S3 e Crawler — una policy errata può bloccare tutti i job o aprire accessi non autorizzati |
+| 🚫 Se NO: Policy invariata, accessi non modificati, il modulo non sarà deployabile |
 
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 ---
 
@@ -447,7 +450,38 @@ presenti corrispondano al pattern del repo di riferimento:
 **Aggiornamento versione `siae-gh-actions` — OBBLIGATORIO**
 
 Dopo la verifica, indipendentemente dalla repo di riferimento, imposta **sempre** la versione
-`v3.0.0` su tutti i workflow:
+`v3.0.0` su tutti i workflow.
+
+Prima di eseguire il `sed`, rileva la situazione attuale:
+
+```bash
+# 1. Versione attuale rilevata nei workflow
+grep -roh "@v[0-9]\+\.[0-9]\+\.[0-9]\+" .github/workflows/*.yaml | sort -u
+
+# 2. Numero di file .yaml che verranno modificati
+grep -rl "siae-gh-actions" .github/workflows/*.yaml | wc -l
+
+# 3. Numero totale di occorrenze
+grep -rn "uses:.*siae-gh-actions" .github/workflows/ | wc -l
+```
+
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
+| 🔴 CRITICO (aggiornamento versione CI/CD) — 🔨 DevForge · siae-datalake-iac-setup |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — UPDATE SU TUTTI I WORKFLOW CI/CD** |
+| 📋 Risorsa: `.github/workflows/*.yaml` · 🌍 Ambiente: tutti (collaudo, certificazione, produzione) |
+| **▼ Azioni** |
+| 1. `sed -i` sostituisce `siae-gh-actions@{versione attuale rilevata}` → `siae-gh-actions@v3.0.0` |
+| 2. N file `.yaml` verranno modificati (valore rilevato dallo step precedente) |
+| 3. Tutte le pipeline CI/CD (plan, apply, scan, release) cambieranno versione d'azione simultaneamente |
+| 💡 Perché: Il bump di versione modifica il comportamento di TUTTI i pipeline CI/CD — plan, apply, scan, release — su tutti gli ambienti. Una versione errata può rompere i deploy su collaudo, certificazione e produzione |
+| 🚫 Se NO: I workflow rimangono alla versione corrente, nessuna modifica ai file `.yaml` |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 ```bash
 sed -i 's/@v[0-9]\+\.[0-9]\+\.[0-9]\+/@v3.0.0/g' .github/workflows/*.yaml
@@ -534,7 +568,8 @@ git push origin feature/{SPRINT_ID}/setup-{dominio}-domain
 | Scrittura `live/silver/terragrunt.hcl` | 🟢 Sicuro | No |
 | Scrittura moduli `_input.tf`, `_local.tf`, `_output.tf` | 🟢 Sicuro | No |
 | Scrittura `bronze.tf` / `silver.tf` con IAM | 🟡 Medio | No |
-| Modifica policy IAM esistente | 🔴 Alto | Si |
+| Modifica policy IAM esistente | 🔴 Critico | Si |
+| `sed -i` aggiornamento versione `siae-gh-actions` su workflow CI/CD | 🔴 Critico | Si |
 | `git push` branch | 🔴 Alto | Si (siae-git-workflow) |
 | `terraform apply` | 🚨 Critico | Si (siae-iac) |
 

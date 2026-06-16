@@ -83,20 +83,24 @@ Struttura `src/`: `components/`, `hooks/`, `services/`, `store/`, `types/`
 
 ## 2. Deploy (S3 + CloudFront)
 
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
 Costruisci la card come MARKDOWN TABLE direttamente nella risposta testuale.
 
-| 🚨 CRITICO (irreversibile) — 🔨 DevForge · siae-frontend |
+| 🔴 CRITICO (Deploy S3 + CloudFront) — 🔨 DevForge · siae-frontend |
 |:---|
-| **⚠️ STOP — Deploy sovrascrive assets in produzione, CloudFront invalidata** |
-| 🏗️ Ambiente: `<dev\|collaudo\|produzione>` · 🏷️ Tag rc-*: `<rc-YYYY-MM-DD-N>` |
-| ✅ Build locale: `OK / Fallita` · 🧪 Test suite: `N passed, 0 failed` |
-| **▼ Azione** |
-| 1. ⚠️ S3 sync + CloudFront invalidation → `<bucket-name>` |
-| 💡 Perche': Deploy frontend — assets sovrascritta, CloudFront invalidata |
-| 🚫 Se NO: STOP — nessun deploy eseguito |
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU S3 + CloudFront** |
+| 📋 Risorsa: `{BUCKET_NAME}` · 🌍 Ambiente: `{AMBIENTE}` |
+| **▼ Azioni** |
+| 1. `aws s3 sync dist/ s3://{BUCKET_NAME}` — sovrascrive tutti gli asset nel bucket |
+| 2. `aws cloudfront create-invalidation --distribution-id {DISTRIBUTION_ID}` — invalida la cache CloudFront |
+| 💡 Perché: Il deploy sovrascrive gli asset in produzione e invalida la cache CloudFront. L'operazione è irreversibile senza un re-deploy. |
+| 🚫 Se NO: STOP — nessun sync S3 né invalidazione CloudFront eseguiti |
 
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 `vite build` -> `dist/` -> S3 bucket (no static hosting, access via CloudFront OAI/OAC). `index.html` no-cache, assets con hash per cache busting.
 
@@ -202,6 +206,27 @@ export async function getFeatureFlag(key: string): Promise<boolean> {
 ```
 
 Firebase Analytics: `getAnalytics(app)` + `logEvent()` per tracking eventi.
+
+#### Aggiornamento parametri Remote Config (write/update/delete)
+
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
+Per qualsiasi operazione di scrittura, aggiornamento o eliminazione di parametri Firebase Remote Config (via Firebase Console, Admin SDK o REST API), mostra la card seguente prima di procedere.
+
+| 🔴 CRITICO (Firebase Remote Config Update) — 🔨 DevForge · siae-frontend |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU Firebase Remote Config** |
+| 📋 Risorsa: `{NOME_PARAMETRO}` · 🌍 Ambiente: `{AMBIENTE}` |
+| **▼ Azioni** |
+| 1. Aggiorna/crea/elimina il parametro `{NOME_PARAMETRO}` su Firebase Remote Config |
+| 2. Pubblica la nuova versione della configurazione (publish) |
+| 💡 Perché: Le modifiche alla Remote Config hanno effetto immediato su tutti i client alla prossima fetch. Valori errati possono disabilitare feature flags o alterare comportamenti in produzione. |
+| 🚫 Se NO: STOP — nessuna modifica alla Remote Config eseguita |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 ---
 

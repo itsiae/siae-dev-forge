@@ -153,19 +153,22 @@ class NomeJob(IcebergGlueJob, DatePartitionedGlueJob):
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
-**🔴 Operazione ALTO rischio — pre-flight card prima di modifica schema:**
+**🔴 CRITICO — Mostra pre-flight card prima di modifica schema Glue Catalog:**
 
-| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
+| 🔴 CRITICO (modifica schema Glue Catalog) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
-| 🗄️ Database: `<glue-database>` · 🔧 Tabella: `<table-name>` · 📦 Downstream: `<query/job dipendenti>` |
-| **▼ Azione** |
-| 1. 🔧 Azione: Modifica schema Glue Catalog (backward compatibility) → `<file schema/terraform>` |
-| 💡 Perche': Schema da aggiornare per nuovi requisiti dati |
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU GLUE CATALOG** |
+| 📋 Risorsa: `<glue-database>.<table-name>` · 🌍 Ambiente: `<ambiente>` |
+| **▼ Azioni** |
+| 1. Modifica schema Glue Catalog (backward compatibility) → `<file schema/terraform>` |
+| 2. Downstream impattati: `<query/job dipendenti>` |
+| 💡 Perché: Uno schema modificato in modo non retro-compatibile rompe tutti i job e le query dipendenti immediatamente |
 | 🚫 Se NO: Schema invariato, downstream non impattati |
 
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui la modifica schema.
 
 ---
 
@@ -201,6 +204,23 @@ La finestra temporale incrementale (`last_silver_update_time` → `next_silver_u
 
 **`force_no_window=1`**: forza full reload (finestra 0 → anno 3000). Usare con cautela in prod.
 
+**🔴 CRITICO — Mostra pre-flight card prima di impostare `force_no_window=1` in prod:**
+
+| 🔴 CRITICO (force_no_window=1 in produzione) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE MASSIVO SU S3 SILVER (FULL RELOAD)** |
+| 📋 Risorsa: `<silver-bucket>/<tabella>` · 🌍 Ambiente: `prod` |
+| **▼ Azioni** |
+| 1. Imposta `force_no_window=1` nel job Glue `<job-name>` |
+| 2. Il job riscrive **l'intero datalake silver** per la tabella `<tabella>` ignorando la finestra delta |
+| 💡 Perché: Full reload in prod può generare costi AWS imprevisti, saturare il cluster Glue e sovrascrivere dati recenti non ancora consolidati |
+| 🚫 Se NO: Job eseguito in modalità incrementale, finestra delta invariata, nessun costo extra |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, imposta il parametro e avvia il job.
+
 ---
 
 ## 4. Step Functions
@@ -234,19 +254,22 @@ RetrieveTablesToUpdate (Lambda)
 - **EventBridge dual bus**: notifiche su `datalake_events` (successo) e `dataplatform_errors` (failure)
 - State machine definition in `orchestration/silver-etl.json` (template Terraform con `templatefile`)
 
-**🔴 Operazione ALTO rischio — pre-flight card prima di esecuzione manuale:**
+**🔴 CRITICO — Mostra pre-flight card prima di esecuzione manuale Glue job:**
 
-| 🔴 ALTO (difficile da annullare) — 🔨 DevForge · siae-data-engineering |
+| 🔴 CRITICO (esecuzione manuale Glue job) — 🔨 DevForge · siae-data-engineering |
 |:---|
-| **⚠️ OPERAZIONE DIFFICILE DA ANNULLARE** |
-| 📋 Job: `<job-name>` · 🏗️ Ambiente: `<ambiente>` · 🔧 Parametri: `<parametri input>` |
-| **▼ Azione** |
-| 1. 🖥️ Azione: Esecuzione manuale Glue job (consuma risorse, scrive S3) → `aws glue start-job-run --job-name <name>` |
-| 💡 Perche': Esecuzione manuale necessaria per `<motivazione>` |
-| 🚫 Se NO: Job non eseguito, nessun dato processato |
+| **⚠️ OPERAZIONE REMOTA — WRITE SU S3 VIA GLUE** |
+| 📋 Risorsa: `<job-name>` · 🌍 Ambiente: `<ambiente>` |
+| **▼ Azioni** |
+| 1. `aws glue start-job-run --job-name <name>` con parametri: `<parametri input>` |
+| 2. Il job scrive dati su S3 silver e aggiorna il Glue Catalog |
+| 💡 Perché: L'esecuzione manuale scrive dati in produzione, consuma risorse cluster e può sovrascrivere dati esistenti; `<motivazione>` |
+| 🚫 Se NO: Job non eseguito, nessun dato processato, nessuna spesa cluster |
 
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui: `aws glue start-job-run --job-name <name>`
 
 ---
 
@@ -265,6 +288,23 @@ risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 - Naming: `{env}-{project}-schedule-orchestr`
 - Cron expression e stato (`ENABLED`/`DISABLED`) configurabili per ambiente via file env template
 - Il trigger usa un IAM role dedicato (`silver_batch_trigger_orchestration`) separato dal role della Step Function
+
+**🔴 CRITICO — Mostra pre-flight card prima di ogni modifica allo scheduler EventBridge:**
+
+| 🔴 CRITICO (modifica EventBridge schedule) — 🔨 DevForge · siae-data-engineering |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU EVENTBRIDGE** |
+| 📋 Risorsa: `{env}-{project}-schedule-orchestr` · 🌍 Ambiente: `<ambiente>` |
+| **▼ Azioni** |
+| 1. `<enable \| disable \| modifica cron>` della regola EventBridge `<nome regola>` |
+| 2. Effetto immediato: la Step Function `<nome>` verrà `<attivata \| disattivata \| rieschedulata>` |
+| 💡 Perché: Disabilitare lo scheduler blocca l'intera pipeline batch; modificare il cron cambia la finestra temporale delta di tutti i job — effetto immediato in produzione |
+| 🚫 Se NO: Scheduler invariato, pipeline batch continua senza modifiche |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui la modifica EventBridge.
 
 ---
 
@@ -432,6 +472,6 @@ Invoca `siae-verification` prima di dichiarare la pipeline completata.
 | Modifica `force_no_window` in prod | 🚨 Critico | Si |
 | Deploy Glue job (`terraform apply`) | 🚨 Critico | Si |
 | Cancellazione dati S3 | 🚨 Critico | Si |
-| Modifica schema Glue Catalog | 🔴 Alto | Si |
-| `aws glue start-job-run` manuale | 🔴 Alto | Si |
-| Modifica EventBridge schedule | 🔴 Alto | No |
+| Modifica schema Glue Catalog | 🚨 Critico | Si |
+| `aws glue start-job-run` manuale | 🚨 Critico | Si |
+| Modifica EventBridge schedule | 🚨 Critico | Si |

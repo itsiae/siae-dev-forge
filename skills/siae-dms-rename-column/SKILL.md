@@ -68,17 +68,22 @@ Se il file è vuoto o non ha transformation, parti da `237917589`.
 
 ### Step 3 — Inserimento Regole nel File
 
-🟡 MEDIO — Mostra pre-flight card prima di eseguire
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
-| 🟡 MEDIO (reversibile) — 🔨 DevForge · siae-dms-rename-column |
+| 🔴 CRITICO (Modifica regole DMS mapping) — 🔨 DevForge · siae-dms-rename-column |
 |:---|
-| 🛠️ Operazione: `Inserimento regole DMS mapping` · 📁 File: `<mapping_file>` |
-| **▼ Azione** |
-| 1. ✏️ Aggiungi regola `add-column` → rinomina `<column_name>` in `<new_column_name>` |
-| 2. ✏️ Aggiungi regola `remove-column` → rimuove colonna originale `<column_name>` |
-| 📂 `<mapping_file>` |
-| 💡 Perché: Le due regole devono essere inserite IN CIMA alla lista `rules`, prima delle trasformazioni generiche, per garantire che DMS le esegua nell'ordine corretto. |
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU AWS DMS REPLICATION TASK** |
+| 📋 Risorsa: `<mapping_file>` · 🌍 Ambiente: `<ambiente>` |
+| **▼ Azioni** |
+| 1. Aggiungi regola `add-column` → rinomina `<column_name>` in `<new_column_name>` sulla tabella `<table_name>` (schema `<schema_name>`) |
+| 2. Aggiungi regola `remove-column` → rimuove la colonna originale `<column_name>` dal mapping DMS |
+| 💡 Perché: Le regole DMS definiscono la replicazione delle colonne da DB sorgente a DB target. Una modifica errata può causare perdita di dati o interruzione della replicazione — l'operazione è di fatto applicata al sistema remoto al prossimo riavvio del task DMS. |
 | 🚫 Se NO: Il file di mapping non viene modificato e la colonna non sarà rinominata nel task DMS. |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 Le regole vanno inserite **in cima** all'array `rules`, prima di qualsiasi altra regola `transformation` generica (quelle con `table-name: "%"`).
 
@@ -137,7 +142,7 @@ Dopo l'inserimento, verifica che:
 |-----------|---------|------|
 | Raccolta parametri | 🟢 Sicuro | No |
 | Lettura file mapping per calcolo rule-id | 🟢 Sicuro | No |
-| Inserimento regole nel file JSON | 🟡 Medio | Si |
+| Inserimento regole nel file JSON | 🔴 Critico | Si |
 | Verifica struttura file risultante | 🟢 Sicuro | No |
 
 ---
@@ -148,7 +153,7 @@ Dopo l'inserimento, verifica che:
 2. **SEMPRE** usare `$<column_name>` (con prefisso `$`) nel campo `expression`
 3. **MAI** usare `rule-id` già esistenti nel file — calcola sempre il max e incrementa
 4. **SEMPRE** aggiungere prima `add-column` e poi `remove-column` — l'ordine è semanticamente rilevante per DMS
-5. **PRE-FLIGHT OBBLIGATORIA** per l'inserimento nel file (rischio >= 🟡)
+5. **PRE-FLIGHT OBBLIGATORIA** per l'inserimento nel file (rischio 🔴 CRITICO) — attendere conferma esplicita ("sì, procedi") prima di modificare il file
 
 ---
 
