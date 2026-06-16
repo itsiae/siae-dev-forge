@@ -346,7 +346,7 @@ Se presenti, mostra la card e attendi conferma:
 | 🔴 CRITICO (rm -rf scaffolding) — 🔨 DevForge · siae-datalake-ingestion-setup |
 |:---|
 | **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE SU FILE SYSTEM** |
-| 📋 Risorsa: `modules/example/`, `live/example/` · 🌍 Ambiente: locale (repo-target) |
+| 📋 Risorsa: `modules/example/`, `live/example/` · 🌍 Ambiente: `locale (repo-target)` |
 | **▼ Azioni** |
 | 1. `rm -rf modules/example/` — rimuove l'intera directory modulo scaffolding |
 | 2. `rm -rf live/example/` — rimuove l'intera directory live scaffolding |
@@ -497,7 +497,7 @@ e chiedi conferma all'utente prima di impostare queste variabili.
 3. **SEMPRE** usare `$VPC_DEFAULT_SG_ID`, `$DMS_VERSION`, `$DMS_MULTI_AZ`, `$DMS_STORAGE`
 4. **MAI** assumere il `database_name` — chiedere sempre all'utente
 5. **SEMPRE** segnalare che `mapping/{dominio}-1.json` è un placeholder da personalizzare
-6. **PRE-FLIGHT OBBLIGATORIA** per rimozione file, env sync e git push
+6. **GATE CRITICO OBBLIGATORIO** — pre-flight card con conferma esplicita per: rimozione file locali (`rm -rf`), env sync GitHub (variabili AWS CI/CD), git push; silenzio ≠ consenso
 
 ---
 

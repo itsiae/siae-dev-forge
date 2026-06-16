@@ -171,9 +171,9 @@ Deploy tag-based via Makefile + GitHub Actions reusable (trigger su push tag `rc
 | `rc-CERTIFICAZIONE`  | Certificazione  | `make deploy-certificazione` |
 | `rc-main`            | Produzione      | `make deploy-produzione`  |
 
-**🔴 CRITICO — Mostra pre-flight card prima di eseguire**
+**🚨 CRITICO — Mostra pre-flight card prima di eseguire**
 
-| 🔴 CRITICO (tag deploy) — 🔨 DevForge · siae-iac |
+| 🚨 CRITICO (tag deploy) — 🔨 DevForge · siae-iac |
 |:---|
 | **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU AWS** |
 | 📋 Risorsa: `git tag {TAG}` · 🌍 Ambiente: `{AMBIENTE}` |
