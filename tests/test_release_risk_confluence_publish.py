@@ -8,8 +8,6 @@ HTTP injettabile (http_fn) per i test, come il pattern mcp_invoker di kg_lookup.
 import base64
 import json
 
-import pytest
-
 from lib.release_risk.confluence_publish import (
     ConfluenceConfig, config_from_env, build_page_title, publish_scorecard,
 )
