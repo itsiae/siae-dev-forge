@@ -42,7 +42,12 @@ devforge_install_trailer_hook() {
     local _git_ver_raw _git_ver_ok
     _git_ver_raw=$(git --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "0.0.0")
     _git_ver_ok=0
-    if git interpret-trailers --help >/dev/null 2>&1; then
+    # Capability check FUNZIONALE: `--help` (doppio trattino) apre il viewer della
+    # documentazione git (man/pager o BROWSER se help.format=web) e resta appeso in
+    # un subprocess non-interattivo, bloccando l'init di session-start (timeout 60s).
+    # Eseguiamo invece il comando reale con stdin vuoto: ritorna 0 se esiste, senza
+    # aprire alcun viewer. NON usare mai il flag --help del sottocomando qui.
+    if printf '' | git interpret-trailers >/dev/null 2>&1; then
         # Parse major.minor and compare >= 2.15
         local _maj _min
         _maj=$(printf '%s' "$_git_ver_raw" | cut -d. -f1)
