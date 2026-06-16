@@ -171,6 +171,27 @@ Deploy tag-based via Makefile + GitHub Actions reusable (trigger su push tag `rc
 | `rc-CERTIFICAZIONE`  | Certificazione  | `make deploy-certificazione` |
 | `rc-main`            | Produzione      | `make deploy-produzione`  |
 
+**🚨 CRITICO — Mostra pre-flight card prima di eseguire**
+
+| 🚨 CRITICO (tag deploy) — 🔨 DevForge · siae-iac |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU AWS** |
+| 📋 Risorsa: `git tag {TAG}` · 🌍 Ambiente: `{AMBIENTE}` |
+| **▼ Azioni** |
+| 1. Push tag `{TAG}` sul remote → triggera pipeline GitHub Actions |
+| 2. La pipeline esegue `{COMANDO_MAKEFILE}` → terraform apply su AWS `{AMBIENTE}` |
+| 💡 Perché: Un push di tag `rc-*` è irreversibile lato CI/CD — la pipeline parte automaticamente e modifica infrastruttura AWS reale |
+| 🚫 Se NO: STOP — il tag NON viene pushato, la pipeline NON parte, l'ambiente rimane invariato |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
+
+```bash
+git tag {TAG} && git push origin {TAG}
+```
+
 ---
 
 ## 6. Vincoli Inviolabili
@@ -243,7 +264,7 @@ Invoca `siae-verification` prima di dichiarare il modulo Terraform completo.
 | terraform plan                | 🟡 Medio  | No         |
 | `terraform apply`             | 🚨 Critico| Si         |
 | Modifica IAM policy / security group | 🚨 Critico | Si |
-| Tag deploy (rc-*)             | 🚨 Critico| No         |
+| Tag deploy (rc-*)             | 🚨 Critico| Si         |
 
 ---
 

@@ -211,7 +211,7 @@ module "{code}" {
 
 ## Step 4 — Verifica e Aggiorna i Permessi IAM
 
-🟡 MEDIO — esegui sempre, anche se pensi che sia già coperto
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
 Leggi i pattern ARN presenti in `modules/edw/edw-orchestration-role.tf` nella risorsa `sfn2_edw_statemachine_permissions`.
 
@@ -225,7 +225,22 @@ Vedi [reference/iam-patterns.md](reference/iam-patterns.md) per i wildcard attiv
 | `${env}-datalake-etl-silver-{name_ext}-orchestration` | ✅ `${env}-datalake-*` |
 | `{ingestion_sfn}` (se fornita) | ⚠️ **DA VERIFICARE** — se il nome non inizia con `{env}-edw-` o `{env}-datalake-` NON è coperta |
 
-Se `ingestion_sfn` non è coperta da nessun wildcard esistente, aggiungi **entrambe** le ARN:
+Se `ingestion_sfn` non è coperta da nessun wildcard esistente, **prima di modificare `edw-orchestration-role.tf`** mostra la card CRITICO:
+
+| 🔴 CRITICO (aggiunta ARN IAM) — 🔨 DevForge · siae-dwh-etl-edw-add-submodule |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU AWS IAM** |
+| 📋 Risorsa: `edw-orchestration-role.tf` · `sfn2_edw_statemachine_permissions` · 🌍 Ambiente: tutti gli env (dev/uat/prod) |
+| **▼ Azioni** |
+| 1. Aggiunge `arn:aws:states:${var.region}:${var.account_id}:stateMachine:{ingestion_sfn}` all'array `Resource` |
+| 2. Aggiunge `arn:aws:states:${var.region}:${var.account_id}:execution:{ingestion_sfn}:*` all'array `Resource` |
+| 💡 Perché: `edw-orchestration-role.tf` è una policy IAM **condivisa** — la modifica impatta TUTTI i sottomoduli EDW attivi (mus, com, itc, …) e tutte le SFN che usano il ruolo `edw-orchestration-role`. Un ARN errato o un wildcard troppo permissivo è un rischio sicurezza su tutti gli ambienti AWS. |
+| 🚫 Se NO: Le ARN di `{ingestion_sfn}` non vengono aggiunte — la SFN leaf otterrà `States.TaskFailed` a runtime quando tenta di invocare l'ingestion esterna |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, aggiungi **entrambe** le ARN:
 
 ```hcl
 "arn:aws:states:${var.region}:${var.account_id}:stateMachine:{ingestion_sfn}",
@@ -234,7 +249,7 @@ Se `ingestion_sfn` non è coperta da nessun wildcard esistente, aggiungi **entra
 
 Inseriscile in fondo all'array `Resource` del blocco `sfn2_edw_statemachine_permissions`, dopo le ARN esistenti.
 
-Se nessuna nuova ARN è necessaria, documenta esplicitamente il motivo (quale wildcard copre).
+Se nessuna nuova ARN è necessaria (tutti i pattern sono coperti da wildcard esistenti), documenta esplicitamente il motivo (quale wildcard copre) — **nessuna modifica a `edw-orchestration-role.tf` è necessaria in questo caso**.
 
 ---
 
@@ -314,7 +329,7 @@ Vuoi sovrascrivere i file esistenti? Rispondi "sì, sovrascrivi" oppure "no, ann
 | Creazione file in `modules/edw/{parent_module}/{code}/` | 🟡 Medio | Sì |
 | Modifica `edw-{parent_module}-orchestration.tf` | 🟡 Medio | Sì |
 | Modifica `edw-{parent_module}-orchestration.json` (aggiunta branch parallel) | 🟡 Medio | Sì (inclusa nella card Step 3) |
-| Modifica `edw-orchestration-role.tf` (aggiunta ARN IAM) | 🟡 Medio | Sì |
+| Modifica `edw-orchestration-role.tf` (aggiunta ARN IAM) | 🔴 Critico | Sì — gate CRITICO con conferma esplicita |
 
 ---
 
