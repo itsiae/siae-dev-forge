@@ -275,6 +275,23 @@ fi
 rm -rf "$T4B_REPO"
 
 # ---------------------------------------------------------------
+echo "TEST 5 — capability check NON usa 'interpret-trailers --help' (regressione: apre browser e blocca init)"
+
+# Il doppio trattino apre il viewer doc git (browser se help.format=web) e appende
+# il subprocess, mandando session-start in timeout 60s. Il check deve essere funzionale.
+if grep -qE 'interpret-trailers[[:space:]]+--help' "$INSTALLER"; then
+    echo "  FAIL: T5a: installer usa 'interpret-trailers --help' (rischio blocco init / browser)"; fail=$((fail + 1))
+else
+    echo "  PASS: T5a: nessun 'interpret-trailers --help' nel sorgente"; pass=$((pass + 1))
+fi
+# Verifica positiva: presente il check funzionale con stdin vuoto.
+if grep -qF "printf '' | git interpret-trailers" "$INSTALLER"; then
+    echo "  PASS: T5b: capability check funzionale (stdin vuoto) presente"; pass=$((pass + 1))
+else
+    echo "  FAIL: T5b: capability check funzionale (stdin vuoto) NON trovato"; fail=$((fail + 1))
+fi
+
+# ---------------------------------------------------------------
 echo ""
 echo "SUMMARY: $pass passed, $fail failed"
 exit $fail
