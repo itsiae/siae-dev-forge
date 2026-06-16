@@ -4,6 +4,32 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed — Accuratezza telemetria token/costi (scoping per-sessione)
+
+Corregge 3 cause-radice dietro 5 anomalie su token/costi osservate a valle (blocco
+`by_model` congelato byte-identico ri-emesso ×36, `cost=0` su 33 dev, copertura
+`by_model` 904/96k). Design: `docs/plans/2026-06-16-telemetry-token-accuracy-fix/design.md`;
+handover consumer: `docs/handover/2026-06-16-telemetry-token-accuracy.md`.
+
+- **Scoping per-sessione fail-closed** — `lib/token-collector.py`: nuova
+  `resolve_session_dir()` che auto-deriva la dir di stato dal session id
+  (`~/.claude/.devforge-session-id` → `devforge-state/<sid>`); **rimosso il fallback
+  globale per-progetto** che faceva sopravvivere e congelare lo stato tra sessioni.
+  `update`/`init`/`write_*` sono no-op quando la sessione non è risolvibile (mai più
+  stato globale silenzioso).
+- **Reset `by_model` su cambio `.jsonl`** — niente più carry-forward del blocco
+  modello quando `update()` passa a un file di sessione diverso.
+- **Ordering export in `hooks/session-start`** — `DEVFORGE_SESSION_DIR` esportato
+  PRIMA di `token-collector.py init` (il sottoprocesso python non vedeva la dir →
+  stato fuori scope). Trigger principale della bassa copertura.
+- **`token_state_complete`** — nuovo campo booleano (f14) su `session_end`: `true`
+  solo con stato risolto e `total>0`. `hooks/stop-gate` lo emette `false` invece di
+  emettere zeri indistinguibili dai dati reali.
+- **Cleanup file di stato globali legacy** — `init()` rimuove in modo idempotente i
+  `.devforge-token-*-{project_hash}` residui.
+
 ## [1.88.0] - 2026-06-15
 
 ### Added — Attribuzione identità dev root-cause, cross-platform (Windows + macOS/Linux)
