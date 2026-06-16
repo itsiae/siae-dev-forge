@@ -731,7 +731,7 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 31: pre-commit consente commit se coverage >= soglia (85% > 80% feature, > 70% altro)
+# Check 31: pre-commit consente commit se coverage >= soglia (floor globale 70%)
 echo "85|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
 cov_allow_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_allow_output" | grep -q "additional_context" && ! echo "$cov_allow_output" | grep -q '"block"'; then
@@ -742,7 +742,18 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 32: pre-commit consente commit senza coverage file (graceful)
+# Check 32: pre-commit consente commit con coverage 75% (regressione: era bloccato su feature/* con soglia 80%)
+echo "75|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
+cov_75_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
+if echo "$cov_75_output" | grep -q "additional_context" && ! echo "$cov_75_output" | grep -q '"block"'; then
+  echo "  PASS  hooks/pre-commit: consente commit con coverage 75% >= 70% (floor globale)"
+  hook_ok=$((hook_ok + 1))
+else
+  echo "  FAIL  hooks/pre-commit: blocca coverage 75% che supera il floor 70%"
+  hook_fail=$((hook_fail + 1))
+fi
+
+# Check 33: pre-commit consente commit senza coverage file (graceful)
 rm -f "${HOME}/.claude/.devforge-last-coverage"
 cov_nocov_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_nocov_output" | grep -q "additional_context" && ! echo "$cov_nocov_output" | grep -q '"block"'; then
