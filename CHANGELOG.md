@@ -4,7 +4,7 @@ Tutte le modifiche notabili a questo progetto sono documentate in questo file.
 
 Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.90.3] - 2026-06-16
 
 ### Fixed — Accuratezza telemetria token/costi (scoping per-sessione)
 
