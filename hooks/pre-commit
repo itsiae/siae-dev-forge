@@ -154,7 +154,8 @@ BLOCK_EOF
 
         # Validate coverage is numeric before comparing
         if [ -n "$COVERAGE_PCT" ] && echo "$COVERAGE_PCT" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
-            # Determine threshold: 70% for all branches (P1 modules enforced at 80% by code-coverage skill)
+            # Determine threshold: 70% for all branches
+            # P1 modules require 80% — enforced by code-coverage skill (skills/code-coverage/assets/priority-rules.json)
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
             THRESHOLD=70
 

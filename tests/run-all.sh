@@ -742,7 +742,8 @@ else
   hook_fail=$((hook_fail + 1))
 fi
 
-# Check 32: pre-commit consente commit con coverage 75% (regressione: era bloccato su feature/* con soglia 80%)
+# Check 32: pre-commit consente commit con coverage 75% indipendentemente dal branch name
+# (regressione: era bloccato su feature/* con soglia 80% — invariante: threshold=70% per tutti i branch)
 echo "75|$(date +%s)|npx vitest" > "${HOME}/.claude/.devforge-last-coverage"
 cov_75_output=$(echo '{"command":"git commit -m test"}' | bash "${PLUGIN_ROOT}/hooks/pre-commit" 2>/dev/null)
 if echo "$cov_75_output" | grep -q "additional_context" && ! echo "$cov_75_output" | grep -q '"block"'; then
