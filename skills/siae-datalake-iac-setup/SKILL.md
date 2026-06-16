@@ -567,7 +567,7 @@ git push origin feature/{SPRINT_ID}/setup-{dominio}-domain
 | Scrittura `live/bronze/terragrunt.hcl` | 🟢 Sicuro | No |
 | Scrittura `live/silver/terragrunt.hcl` | 🟢 Sicuro | No |
 | Scrittura moduli `_input.tf`, `_local.tf`, `_output.tf` | 🟢 Sicuro | No |
-| Scrittura `bronze.tf` / `silver.tf` con IAM | 🟡 Medio | Sì |
+| Scrittura `bronze.tf` / `silver.tf` con IAM | 🟡 Medio | No |
 | Modifica policy IAM esistente | 🔴 Critico | Si |
 | `sed -i` aggiornamento versione `siae-gh-actions` su workflow CI/CD | 🔴 Critico | Si |
 | `git push` branch | 🔴 Alto | Si (siae-git-workflow) |

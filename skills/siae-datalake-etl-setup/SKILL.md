@@ -368,7 +368,7 @@ Verifica con `grep -rn "uses:" .github/workflows/` che tutte le versioni siano a
 | 🔴 CRITICO (Rimozione scaffolding) — 🔨 DevForge · siae-datalake-etl-setup |
 |:---|
 | **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE SU FILE SYSTEM** |
-| 📋 Risorsa: `modules/example/`, `live/example/`, `chart/` · 🌍 Ambiente: `locale (repo target)` |
+| 📋 Risorsa: `modules/example/`, `live/example/`, `chart/` · 🌍 Ambiente: `locale (repo-target)` |
 | **▼ Azioni** |
 | 1. `rm -rf modules/example/` — rimuove tutti i file dello scaffolding modulo example |
 | 2. `rm -rf live/example/` — rimuove tutti i file Terragrunt di esempio |

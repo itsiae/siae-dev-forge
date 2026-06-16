@@ -98,15 +98,15 @@ Una skill che introduce operazioni in scope DEVE:
 
 ## Skill Modificate (questa PR)
 
-| Skill | Gate aggiunti/aggiornati |
-|---|---|
-| `siae-datalake-deploy` | `make {ambiente}` (SICURO → CRITICO) |
-| `siae-frontend` | Deploy S3+CloudFront; Firebase Remote Config |
-| `siae-iac` | Tag deploy `rc-*` |
-| `siae-terraform-import` | `terragrunt import`; `terragrunt state rm` |
-| `siae-data-engineering` | Schema Glue Catalog; `force_no_window=1`; `aws glue start-job-run`; EventBridge |
-| `siae-datalake-iac-setup` | Modifica policy IAM; `sed -i` versione CI/CD workflow |
-| `siae-datalake-etl-setup` | `rm -rf` scaffolding; GitHub Env Sync |
-| `siae-datalake-ingestion-setup` | `rm -rf` scaffolding; GitHub Env Sync |
-| `siae-dwh-etl-edw-add-submodule` | Aggiunta ARN IAM a policy condivisa |
-| `siae-dms-rename-column` | Inserimento regole DMS mapping |
+| Skill | Path | Gate aggiunti/aggiornati |
+|---|---|---|
+| `siae-datalake-deploy` | `skills/siae-datalake-deploy/SKILL.md` | `make {ambiente}` (SICURO → CRITICO) |
+| `siae-frontend` | `skills/siae-frontend/SKILL.md` | Deploy S3+CloudFront; Firebase Remote Config |
+| `siae-iac` | `skills/siae-iac/SKILL.md` | Tag deploy `rc-*` |
+| `siae-terraform-import` | `skills/siae-terraform-import/SKILL.md` | `terragrunt import`; `terragrunt state rm` |
+| `siae-data-engineering` | `skills/siae-data-engineering/SKILL.md` | Schema Glue Catalog; `force_no_window=1`; `aws glue start-job-run`; EventBridge |
+| `siae-datalake-iac-setup` | `skills/siae-datalake-iac-setup/SKILL.md` | Modifica policy IAM; `sed -i` versione CI/CD workflow |
+| `siae-datalake-etl-setup` | `skills/siae-datalake-etl-setup/SKILL.md` | `rm -rf` scaffolding; GitHub Env Sync |
+| `siae-datalake-ingestion-setup` | `skills/siae-datalake-ingestion-setup/SKILL.md` | `rm -rf` scaffolding; GitHub Env Sync |
+| `siae-dwh-etl-edw-add-submodule` | `skills/siae-dwh-etl-edw-add-submodule/SKILL.md` | Aggiunta ARN IAM a policy condivisa |
+| `siae-dms-rename-column` | `skills/siae-dms-rename-column/SKILL.md` | Inserimento regole DMS mapping |
