@@ -282,7 +282,8 @@ def test_session_fields_line_order_and_json():
     })
     line = tc.session_fields_line(stats)
     fields = line.split("\t")
-    assert len(fields) == 13   # f1..f10 (#296) + f11 by_skill, f12 by_model_tokens, f13 pricing
+    assert len(fields) == 14   # f1..f13 + f14 token_state_complete
+    assert fields[13] == "true"           # total>0 → stato completo
     assert fields[0] == "1000"            # total
     assert fields[1] == "200"             # output
     assert fields[2] == "0.123456"        # cost_eur
@@ -301,7 +302,7 @@ def test_session_fields_line_no_tabs_in_json():
     stats["by_model"] = {"claude-sonnet-4-6": 10}
     line = tc.session_fields_line(stats)
     # JSON fields must be compact (no tab/newline) so they stay inside the line
-    assert line.count("\t") == 12   # 13 fields → 12 separators
+    assert line.count("\t") == 13   # 14 fields → 13 separators
     assert "\n" not in line
 
 
@@ -395,14 +396,15 @@ def test_pricing_snapshot_for_models():
     assert snap["by_model"]["claude-sonnet-4-6"]["output"] == 15.0
 
 
-def test_session_fields_line_has_13_fields():
+def test_session_fields_line_has_14_fields():
     import json as _json
     stats = tc.empty_stats()
     stats["by_skill"] = {"siae-tdd": {"output": 5}}
     stats["by_model_tokens"] = {"claude-opus-4-8": {"input": 1, "output": 2}}
     line = tc.session_fields_line(stats)
     f = line.split("\t")
-    assert len(f) == 13
+    assert len(f) == 14
     assert _json.loads(f[10]) == {"siae-tdd": {"output": 5}}     # f11 by_skill
     assert _json.loads(f[11]) == {"claude-opus-4-8": {"input": 1, "output": 2}}  # f12 by_model_tokens
     assert "by_model" in _json.loads(f[12])  # f13 pricing object
+    assert f[13] == "false"  # f14 token_state_complete (total 0)

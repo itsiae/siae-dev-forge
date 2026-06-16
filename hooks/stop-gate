@@ -75,6 +75,9 @@ _devforge_emit_session_end() {
     local TOKEN_INPUT=0 TOKEN_CACHE_READ=0 TOKEN_CW5M=0 TOKEN_CW1H=0
     local TOKEN_BY_MODEL="{}" TOKEN_BY_TOOL="{}"
     local TOKEN_BY_SKILL="{}" TOKEN_BY_MODEL_TOKENS="{}" TOKEN_PRICING="{}"
+    # Fail-closed: di default lo stato è "incompleto". Il consumer scarta i blocchi
+    # con token_state_complete=false invece di contare gli zeri come dati reali.
+    local TOKEN_STATE_COMPLETE="false"
     if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/token-stats.json" ]; then
         local TDATA
         TDATA=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null) || true
@@ -92,11 +95,14 @@ _devforge_emit_session_end() {
             TOKEN_BY_SKILL=$(printf '%s' "$TDATA" | cut -f11)
             TOKEN_BY_MODEL_TOKENS=$(printf '%s' "$TDATA" | cut -f12)
             TOKEN_PRICING=$(printf '%s' "$TDATA" | cut -f13)
+            TOKEN_STATE_COMPLETE=$(printf '%s' "$TDATA" | cut -f14)
+            # Guardia: se f14 manca/non-booleano (contratto vecchio), resta "false"
+            case "$TOKEN_STATE_COMPLETE" in true|false) ;; *) TOKEN_STATE_COMPLETE="false" ;; esac
         fi
     fi
 
     devforge_log_timed "session_end" "success" "$SESSION_START_NS" \
-        "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR},\"model_prevalent\":\"${TOKEN_MODEL}\",\"input_tokens\":${TOKEN_INPUT},\"cache_read_tokens\":${TOKEN_CACHE_READ},\"cache_write_5m_tokens\":${TOKEN_CW5M},\"cache_write_1h_tokens\":${TOKEN_CW1H},\"by_model\":${TOKEN_BY_MODEL},\"by_tool\":${TOKEN_BY_TOOL},\"by_skill\":${TOKEN_BY_SKILL},\"by_model_tokens\":${TOKEN_BY_MODEL_TOKENS},\"pricing\":${TOKEN_PRICING}}"
+        "{\"skills_used_count\":${SKILLS_USED_COUNT},\"commits_count\":${COMMITS_COUNT},\"total_tokens\":${TOKEN_TOTAL},\"output_tokens\":${TOKEN_OUTPUT},\"cost_estimate_eur\":${TOKEN_COST_EUR},\"model_prevalent\":\"${TOKEN_MODEL}\",\"input_tokens\":${TOKEN_INPUT},\"cache_read_tokens\":${TOKEN_CACHE_READ},\"cache_write_5m_tokens\":${TOKEN_CW5M},\"cache_write_1h_tokens\":${TOKEN_CW1H},\"by_model\":${TOKEN_BY_MODEL},\"by_tool\":${TOKEN_BY_TOOL},\"by_skill\":${TOKEN_BY_SKILL},\"by_model_tokens\":${TOKEN_BY_MODEL_TOKENS},\"pricing\":${TOKEN_PRICING},\"token_state_complete\":${TOKEN_STATE_COMPLETE}}"
 
     # task_adoption (Layer 1, design 2026-06-14) — best-effort, non blocca lo Stop.
     if [ -f "${PLUGIN_ROOT}/lib/adoption-emit.sh" ]; then

@@ -71,33 +71,52 @@ def project_hash() -> str:
     return re.sub(r"[^a-zA-Z0-9]", "-", os.getcwd())
 
 
-def session_dir() -> str | None:
-    """Return DEVFORGE_SESSION_DIR if set and exists, else None."""
+def sid_file() -> Path:
+    """Path del file che persiste il session id corrente (scritto da logger.sh)."""
+    return STATE_DIR / ".devforge-session-id"
+
+
+def resolve_session_dir() -> str | None:
+    """Risolve la dir di stato PER-SESSIONE. Mai un path globale per-progetto.
+
+    Ordine:
+      1. DEVFORGE_SESSION_DIR se settato ed esistente (path passato dagli hook bash);
+      2. auto-derivazione da DEVFORGE_SID_FILE (~/.claude/.devforge-session-id) →
+         STATE_DIR/devforge-state/<sid>, coerente con logger.sh::devforge_init_session;
+      3. None → stato non risolvibile (fail-closed: i chiamanti diventano no-op).
+    """
     sd = os.environ.get("DEVFORGE_SESSION_DIR", "")
     if sd and os.path.isdir(sd):
         return sd
+    try:
+        sid = sid_file().read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, OSError):
+        sid = ""
+    if sid:
+        candidate = STATE_DIR / "devforge-state" / sid
+        if candidate.is_dir():
+            return str(candidate)
     return None
 
 
-def cursor_file() -> Path:
-    sd = session_dir()
-    if sd:
-        return Path(os.path.join(sd, "token-cursor"))
-    return STATE_DIR / f".devforge-token-cursor-{project_hash()}"
+def session_dir() -> str | None:
+    """Compat: alias di resolve_session_dir() (nessun fallback globale)."""
+    return resolve_session_dir()
 
 
-def stats_file() -> Path:
-    sd = session_dir()
-    if sd:
-        return Path(os.path.join(sd, "token-stats.json"))
-    return STATE_DIR / f".devforge-token-stats-{project_hash()}"
+def cursor_file() -> Path | None:
+    sd = resolve_session_dir()
+    return Path(os.path.join(sd, "token-cursor")) if sd else None
 
 
-def usage_index_file() -> Path:
-    sd = session_dir()
-    if sd:
-        return Path(os.path.join(sd, "token-usage-index.json"))
-    return STATE_DIR / f".devforge-token-usage-index-{project_hash()}"
+def stats_file() -> Path | None:
+    sd = resolve_session_dir()
+    return Path(os.path.join(sd, "token-stats.json")) if sd else None
+
+
+def usage_index_file() -> Path | None:
+    sd = resolve_session_dir()
+    return Path(os.path.join(sd, "token-usage-index.json")) if sd else None
 
 
 def find_session_jsonl() -> Path | None:
@@ -171,15 +190,21 @@ def normalize_stats(raw: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def read_stats() -> dict[str, Any]:
+    path = stats_file()
+    if path is None:
+        return empty_stats()
     try:
-        return normalize_stats(json.loads(stats_file().read_text(encoding="utf-8")))
+        return normalize_stats(json.loads(path.read_text(encoding="utf-8")))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return empty_stats()
 
 
 def read_cursor() -> tuple[str, int]:
+    path = cursor_file()
+    if path is None:
+        return "", 0
     try:
-        raw = cursor_file().read_text(encoding="utf-8").strip()
+        raw = path.read_text(encoding="utf-8").strip()
     except FileNotFoundError:
         return "", 0
 
@@ -197,8 +222,11 @@ def read_cursor() -> tuple[str, int]:
 
 
 def read_usage_index() -> dict[str, dict[str, Any]]:
+    path = usage_index_file()
+    if path is None:
+        return {}
     try:
-        raw = json.loads(usage_index_file().read_text(encoding="utf-8"))
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}
 
@@ -221,15 +249,24 @@ def write_atomic(path: Path, content: str) -> None:
 
 
 def write_cursor(path: str, offset: int) -> None:
-    write_atomic(cursor_file(), f"{path}\t{offset}")
+    target = cursor_file()
+    if target is None:  # fail-closed: nessuno stato globale
+        return
+    write_atomic(target, f"{path}\t{offset}")
 
 
 def write_stats(stats: dict[str, Any]) -> None:
-    write_atomic(stats_file(), json.dumps(stats, separators=(",", ":"), sort_keys=True))
+    target = stats_file()
+    if target is None:  # fail-closed: nessuno stato globale
+        return
+    write_atomic(target, json.dumps(stats, separators=(",", ":"), sort_keys=True))
 
 
 def write_usage_index(index: dict[str, dict[str, Any]]) -> None:
-    write_atomic(usage_index_file(), json.dumps(index, separators=(",", ":"), sort_keys=True))
+    target = usage_index_file()
+    if target is None:  # fail-closed: nessuno stato globale
+        return
+    write_atomic(target, json.dumps(index, separators=(",", ":"), sort_keys=True))
 
 
 def canonical_model(model: str | None) -> str:
@@ -488,7 +525,35 @@ def finalize_model_prevalent(stats: dict[str, Any]) -> None:
     )[0]
 
 
+def _reset_breakdowns(stats: dict[str, Any]) -> None:
+    """Azzera gli accumulatori per-chiave (Task 03). Usato quando update() passa a un
+    .jsonl diverso e lo stato precedente non deve essere trasportato (anti-congelamento)."""
+    stats["by_model"] = {}
+    stats["by_model_tokens"] = {}
+    stats["by_tool"] = {}
+    stats["by_skill"] = {}
+
+
+def _cleanup_legacy_global_state() -> None:
+    """Task 09: rimuove i file di stato globali per-progetto legacy (pre-fix scoping).
+
+    Idempotente e non distruttivo: agisce solo sui 3 file globali della cwd corrente,
+    mai sullo stato per-sessione. I dati in quei file erano già inaffidabili (stato
+    congelato cross-sessione), quindi la rimozione non perde telemetria valida.
+    """
+    # Glob su TUTTI i file legacy in STATE_DIR (anche di altri cwd/progetti): erano
+    # già inaffidabili, una passata sola li rimuove indipendentemente dal cwd corrente.
+    for legacy in glob.glob(str(STATE_DIR / ".devforge-token-*")):
+        try:
+            os.unlink(legacy)
+        except (FileNotFoundError, OSError):
+            pass
+
+
 def init() -> None:
+    if resolve_session_dir() is None:  # fail-closed: nessuno stato senza sessione risolta
+        return
+    _cleanup_legacy_global_state()
     jsonl_path = find_session_jsonl()
     if not jsonl_path:
         write_stats(empty_stats())
@@ -503,6 +568,8 @@ def init() -> None:
 
 
 def update() -> None:
+    if resolve_session_dir() is None:  # fail-closed: no-op senza sessione risolta
+        return
     jsonl_path_raw, offset = read_cursor()
     jsonl_path = Path(jsonl_path_raw) if jsonl_path_raw else None
 
@@ -518,7 +585,12 @@ def update() -> None:
 
     file_size = jsonl_path.stat().st_size
     if file_size < offset:
+        # File troncato/riscritto: viene riletto integralmente da capo. Azzera stato
+        # e dedup, altrimenti gli accumulatori (by_model incluso) del contenuto
+        # precedente si sommerebbero al re-read (carry-forward). Allineato a Task 03.
         offset = 0
+        write_stats(empty_stats())
+        write_usage_index({})
     elif file_size == offset:
         stats = read_stats()
         if stats["total"] == 0:
@@ -527,6 +599,12 @@ def update() -> None:
                 jsonl_path = newer
                 offset = 0
                 write_cursor(str(jsonl_path), offset)
+                # Task 03: total==0 ma gli accumulatori per-chiave potrebbero contenere
+                # uno stato congelato di un file precedente. Azzera e ricomincia dal nuovo
+                # file, così by_model riflette SOLO il .jsonl corrente (no carry-forward).
+                _reset_breakdowns(stats)
+                write_stats(stats)
+                write_usage_index({})
             else:
                 return
         else:
@@ -590,11 +668,15 @@ def update() -> None:
 def session_fields_line(stats: dict[str, Any]) -> str:
     """Tab-separated session_end field contract consumed by hooks/stop-gate.
 
-    Order (f1..f13): total, output, cost_eur, model_prevalent, input,
+    Order (f1..f14): total, output, cost_eur, model_prevalent, input,
     cache_read, cache_write_5m, cache_write_1h, json(by_model), json(by_tool),
-    json(by_skill), json(by_model_tokens), json(pricing).
+    json(by_skill), json(by_model_tokens), json(pricing), token_state_complete.
     All JSON fields are compact (no tab/newline) so they stay on one line and can
     be embedded verbatim into the session_end meta object.
+
+    f14 token_state_complete ("true"/"false"): true SOLO se lo stato è stato letto da
+    una dir di sessione risolta E total>0. Permette al consumer di scartare i blocchi
+    inaffidabili (token a 0 / stato non risolvibile) invece di contarli come reali.
     """
     compact = lambda d: json.dumps(d or {}, separators=(",", ":"), sort_keys=True)
     by_model = compact(stats.get("by_model", {}))
@@ -603,8 +685,13 @@ def session_fields_line(stats: dict[str, Any]) -> str:
     by_model_tokens = compact(stats.get("by_model_tokens", {}))
     pricing = json.dumps(pricing_snapshot(set((stats.get("by_model") or {}).keys())),
                          separators=(",", ":"), sort_keys=True)
+    # total>0 implica che lo stato è stato letto da una sessione risolta: con dir
+    # non risolvibile read_stats() ritorna empty_stats() (total 0) → "false". Puro,
+    # nessun I/O nel formatter.
+    total = int(stats.get("total", 0) or 0)
+    token_state_complete = "true" if total > 0 else "false"
     return "\t".join((
-        str(int(stats.get("total", 0) or 0)),
+        str(total),
         str(int(stats.get("output", 0) or 0)),
         str(stats.get("cost_eur", 0) or 0),
         str(stats.get("model_prevalent", "") or ""),
@@ -617,6 +704,7 @@ def session_fields_line(stats: dict[str, Any]) -> str:
         by_skill,
         by_model_tokens,
         pricing,
+        token_state_complete,
     ))
 
 

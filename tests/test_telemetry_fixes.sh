@@ -269,9 +269,9 @@ assert_eq "partial/garbage bundle coerced to {}" '{}' "$(_guard 'garbage{partial
 assert_eq "empty bundle coerced to {}" '{}' "$(_guard '')"
 
 # ─────────────────────────────────────────────────────────────
-# Test 14 — token-collector fields: 13-field contract + by_skill/by_model_tokens/pricing JSON
+# Test 14 — token-collector fields: 14-field contract + by_skill/by_model_tokens/pricing JSON + token_state_complete
 # ─────────────────────────────────────────────────────────────
-echo "Test 14: token-collector fields emits 13 columns with valid by_skill/by_model_tokens/pricing"
+echo "Test 14: token-collector fields emits 14 columns with valid by_skill/by_model_tokens/pricing + token_state_complete"
 SID14="testsid-fields13"
 SESSION_DIR14="${TEST_TMP}/.claude/devforge-state/${SID14}"
 mkdir -p "${SESSION_DIR14}"
@@ -286,7 +286,9 @@ cat > "${SESSION_DIR14}/token-stats.json" <<'JSON'
 JSON
 FL14=$(python3 "${PLUGIN_ROOT}/lib/token-collector.py" fields 2>/dev/null)
 nf14=$(printf '%s' "$FL14" | awk -F'\t' '{print NF}')
-assert_eq "fields line has 13 columns" "13" "${nf14}"
+assert_eq "fields line has 14 columns" "14" "${nf14}"
+# f14 token_state_complete: total=1000>0 e dir risolta → "true"
+assert_eq "f14 token_state_complete true (total>0)" "true" "$(printf '%s' "$FL14" | cut -f14)"
 # f11 by_skill, f12 by_model_tokens, f13 pricing — all valid JSON, build a meta and parse
 META14="{\"by_skill\":$(printf '%s' "$FL14" | cut -f11),\"by_model_tokens\":$(printf '%s' "$FL14" | cut -f12),\"pricing\":$(printf '%s' "$FL14" | cut -f13)}"
 parsed14=$(printf '%s' "$META14" | python3 -c "

@@ -73,6 +73,13 @@ fi
 # Initialize seq counter
 echo "0" > "${DEVFORGE_SESSION_DIR}/seq"
 
+# Export DEVFORGE_SESSION_DIR PRIMA di init(): il token-collector gira in un
+# sottoprocesso python che eredita solo le variabili exportate. Senza questo,
+# init() non vedrebbe la dir di sessione e lo stato finirebbe fuori scope
+# (defense-in-depth: il collector si auto-deriva il path dal sid-file, ma
+# l'export esplicito è la cintura).
+export DEVFORGE_SESSION_DIR
+
 # Initialize token collector for this session
 python3 "${PLUGIN_ROOT}/lib/token-collector.py" init 2>/dev/null || true
 
