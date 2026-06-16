@@ -345,7 +345,7 @@ Se presenti, mostra la card e attendi conferma:
 
 | 🔴 CRITICO (rm -rf scaffolding) — 🔨 DevForge · siae-datalake-ingestion-setup |
 |:---|
-| **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE FILE SYSTEM** |
+| **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE SU FILE SYSTEM** |
 | 📋 Risorsa: `modules/example/`, `live/example/` · 🌍 Ambiente: locale (repo-target) |
 | **▼ Azioni** |
 | 1. `rm -rf modules/example/` — rimuove l'intera directory modulo scaffolding |
@@ -407,6 +407,8 @@ può restituire 404 anche su piano Enterprise se il token non ha `administration
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 **Solo dopo "sì, procedi"**, esegui `siae-github-env-sync` con `repo-riferimento=datalake-accertatori-ingestion`.
+
+---
 
 **Variabili GitHub canoniche** (pattern `accertatori`):
 

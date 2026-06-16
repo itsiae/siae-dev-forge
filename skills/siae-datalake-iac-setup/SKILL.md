@@ -420,7 +420,7 @@ I file DDL silver sono placeholder da completare con lo schema reale delle tabel
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
-**Solo dopo "sì, procedi"**, esegui:
+**Solo dopo "sì, procedi"**, procedi con la scrittura/modifica della policy IAM nel file `<file>.tf`.
 
 ---
 
@@ -572,6 +572,7 @@ git push origin feature/{SPRINT_ID}/setup-{dominio}-domain
 | `sed -i` aggiornamento versione `siae-gh-actions` su workflow CI/CD | 🔴 Critico | Si |
 | `git push` branch | 🔴 Alto | Si (siae-git-workflow) |
 | `terraform apply` | 🚨 Critico | Si (siae-iac) |
+| Tag deploy `rc-*` (triggera CI/CD) | 🚨 Critico | Si (gate in siae-iac) |
 
 ---
 

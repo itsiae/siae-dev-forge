@@ -72,7 +72,7 @@ Se il file è vuoto o non ha transformation, parti da `237917589`.
 
 | 🔴 CRITICO (Modifica regole DMS mapping) — 🔨 DevForge · siae-dms-rename-column |
 |:---|
-| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU AWS DMS REPLICATION TASK** |
+| **⚠️ OPERAZIONE LOCALE CON EFFETTO REMOTO DIFFERITO — WRITE SU FILE DMS MAPPING (effetto su AWS DMS al prossimo riavvio del task)** |
 | 📋 Risorsa: `<mapping_file>` · 🌍 Ambiente: `<ambiente>` |
 | **▼ Azioni** |
 | 1. Aggiungi regola `add-column` → rinomina `<column_name>` in `<new_column_name>` sulla tabella `<table_name>` (schema `<schema_name>`) |
