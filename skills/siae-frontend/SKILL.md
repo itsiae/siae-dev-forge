@@ -226,7 +226,7 @@ Per qualsiasi operazione di scrittura, aggiornamento o eliminazione di parametri
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
-**Solo dopo "sì, procedi"**, esegui:
+**Solo dopo "sì, procedi"**, esegui: la modifica/creazione/eliminazione del parametro `{NOME_PARAMETRO}` su Firebase Remote Config e pubblica la nuova versione.
 
 ---
 
@@ -329,7 +329,7 @@ Implementa ogni componente frontend seguendo `siae-tdd` (test Vitest fallente pr
 | Creazione/modifica componenti             | 🟡 Medio   |
 | Modifica CSS variables / brand      | 🟡 Medio   |
 | Esecuzione test (`vitest`)          | 🟡 Medio   |
-| Modifica Firebase config            | 🔴 Alto    |
+| Modifica Firebase config            | 🚨 Critico |
 | Modifica analytics/error tracking   | 🔴 Alto    |
 | Deploy S3 + CloudFront invalidation | 🚨 Critico |
 | Modifica variabili environment      | 🔴 Alto    |

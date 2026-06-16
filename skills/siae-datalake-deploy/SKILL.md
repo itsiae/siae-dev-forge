@@ -279,7 +279,7 @@ Se l'errore non rientra nella tabella del Step 5, mostra i log grezzi e chiedi a
 | Monitoring run (polling) | 🟢 Sicuro | No |
 | Lettura log job fallito | 🟢 Sicuro | No |
 | Applicazione soluzione (modifica file) | 🟡 Medio | Sì |
-| Applicazione soluzione (comando AWS/gh) | 🔴 Alto | Sì |
+| Applicazione soluzione (comando AWS/gh) | 🔴 Critico | Sì |
 
 ---
 
