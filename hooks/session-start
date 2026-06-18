@@ -36,16 +36,16 @@ _devforge_detect_plugin_update() {
     local current last_seen_file last_seen
     current="$(basename "$PLUGIN_ROOT")"
     # Dev-mode (repo non versionato in cache): basename non e' semver -> fallback plugin.json
-    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+    # Pattern ancorato (^...$): scarta basename inattesi tipo "1.91.0 beta" o path con suffissi.
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         if command -v jq >/dev/null 2>&1 && [ -f "${PLUGIN_ROOT}/.claude-plugin/plugin.json" ]; then
             current="$(jq -r '.version // empty' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null)"
         fi
     fi
-    # Post-fallback: se ancora non-semver -> versione non determinabile -> skip (no scrittura)
-    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+    # Post-fallback: se ancora non-semver (o vuoto) -> versione non determinabile -> skip (no scrittura)
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         return 0
     fi
-    [ -z "$current" ] && return 0
     last_seen_file="${HOME}/.claude/.devforge-plugin-version"
     last_seen=""
     [ -f "$last_seen_file" ] && IFS= read -r last_seen < "$last_seen_file" 2>/dev/null || true

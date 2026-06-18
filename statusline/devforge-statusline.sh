@@ -152,7 +152,7 @@ if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/.plugin-u
   read -r PLUGIN_UPDATED_VER < "${DEVFORGE_SESSION_DIR}/.plugin-updated" 2>/dev/null || true
 fi
 # Sanitize per printf %b (rimuove backslash e caratteri non-versione)
-PLUGIN_UPDATED_VER="${PLUGIN_UPDATED_VER//[^0-9a-zA-Z.\-]/}"
+PLUGIN_UPDATED_VER="${PLUGIN_UPDATED_VER//[^0-9a-zA-Z.-]/}"
 
 # --- 4. Git branch with cache (TTL 5s) ---
 get_git_branch() {
