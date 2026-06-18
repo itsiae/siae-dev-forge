@@ -1,6 +1,6 @@
 # Task 01 — Feature 1: avviso python3 mancante (statusline)
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File toccati:** `tests/statusline/test_statusline_python_warning.sh` (nuovo), `statusline/devforge-statusline.sh`
 **AC coperti:** 1, 2, 3
 **Stima:** Umano ~1 · Augmented ~0.5

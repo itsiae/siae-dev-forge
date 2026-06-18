@@ -1,6 +1,6 @@
 # Task 03 — Feature 2b: display flag aggiornamento (statusline)
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File toccati:** `tests/statusline/test_statusline_plugin_update.sh` (nuovo), `statusline/devforge-statusline.sh`
 **AC coperti:** 6 (parte display)
 **Stima:** Umano ~0.5 · Augmented ~0.25

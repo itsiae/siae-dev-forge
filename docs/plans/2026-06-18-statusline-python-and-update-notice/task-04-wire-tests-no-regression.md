@@ -1,6 +1,6 @@
 # Task 04 — Wiring test in run-all.sh + no-regression full suite
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File toccati:** `tests/run-all.sh`
 **AC coperti:** garanzia che i 3 nuovi test girino in CI + no-regression globale
 **Stima:** Umano ~0.5 · Augmented ~0.25

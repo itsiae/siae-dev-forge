@@ -1,6 +1,6 @@
 # Task 02 — Feature 2a: detection cambio versione (session-start)
 
-**Stato:** [PENDING]
+**Stato:** [DONE]
 **File toccati:** `tests/hooks/test_session_start_plugin_update.sh` (nuovo), `hooks/session-start`
 **AC coperti:** 4, 5, 6 (parte detection), 7, 8
 **Stima:** Umano ~1.5 · Augmented ~0.75
