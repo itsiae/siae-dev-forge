@@ -146,6 +146,14 @@ if [ -f "${DEVFORGE_DIR}/.devforge-batch-checkpoint" ]; then
   BATCH_CHECKPOINT=1
 fi
 
+# Plugin update flag (scritto da hooks/session-start su cambio versione)
+PLUGIN_UPDATED_VER=""
+if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/.plugin-updated" ]; then
+  read -r PLUGIN_UPDATED_VER < "${DEVFORGE_SESSION_DIR}/.plugin-updated" 2>/dev/null || true
+fi
+# Sanitize per printf %b (rimuove backslash e caratteri non-versione)
+PLUGIN_UPDATED_VER="${PLUGIN_UPDATED_VER//[^0-9a-zA-Z.\-]/}"
+
 # --- 4. Git branch with cache (TTL 5s) ---
 get_git_branch() {
   local now
@@ -267,6 +275,11 @@ fi
 # Rilevazione live (non via marker): resta visibile finché Python non è installato.
 if ! command -v python3 >/dev/null 2>&1; then
   WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b🐍 python3 assente — installalo per token/telemetria%b' "$YELLOW" "$RESET")"
+fi
+
+# Notifica aggiornamento plugin (verde): persiste per tutta la sessione post-update.
+if [ -n "$PLUGIN_UPDATED_VER" ]; then
+  WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b🆙 DevForge aggiornato a v%s%b' "$GREEN" "$PLUGIN_UPDATED_VER" "$RESET")"
 fi
 
 if [ "$BATCH_CHECKPOINT" -eq 1 ]; then
