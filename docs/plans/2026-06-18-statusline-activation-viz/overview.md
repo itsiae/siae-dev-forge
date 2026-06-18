@@ -9,7 +9,7 @@
 
 | # | Task | Stato | File |
 |---|------|-------|------|
-| 01 | D2 — tier perl fsync in logger.sh (elimina degradazione) | [PENDING] | [task-01](task-01-perl-fsync-tier.md) |
+| 01 | D2 — tier perl fsync in logger.sh (elimina degradazione) | [DONE] | [task-01](task-01-perl-fsync-tier.md) |
 | 02 | A+B — label versione / dev-mode (statusline) | [PENDING] | [task-02](task-02-version-dev-label.md) |
 | 03 | #1 — cache git per-cwd (fix bug cross-repo) | [PENDING] | [task-03](task-03-git-cache-perrepo.md) |
 | 04 | C — pallino 🟡 fallback telemetria (statusline) | [PENDING] | [task-04](task-04-telemetry-health-dot.md) |

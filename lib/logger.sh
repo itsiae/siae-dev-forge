@@ -144,6 +144,7 @@ _devforge_lock_append() {
         if [ "$waited" -gt 50 ]; then
             # 5s timeout exceeded: never lose the line — best-effort append without lock.
             printf '%s' "$line" >> "$file" 2>/dev/null
+            sync 2>/dev/null || true
             return 0
         fi
         sleep 0.1
@@ -159,16 +160,26 @@ _devforge_lock_append() {
     # Signal-while-holding-lock is handled by the STALE-GUARD in the spin-loop above
     # (mtime > 30s → rmdir): that is the correct backstop for SIGKILL/SIGTERM.
 
-    local _node_ok=0
+    local _fsync_ok=0
     if command -v node >/dev/null 2>&1; then
         # node: O_APPEND + fsyncSync via atomic_append.js
         if printf '%s' "$line" | node "${DEVFORGE_LIB_DIR}/atomic_append.js" "$file" 2>/dev/null; then
-            _node_ok=1
+            _fsync_ok=1
         fi
     fi
-    if [ "$_node_ok" -eq 0 ]; then
-        # bash degraded: node absent OR node present-but-failed (no fsync, but never silent loss)
+    if [ "$_fsync_ok" -eq 0 ] && command -v perl >/dev/null 2>&1; then
+        # perl: append + IO::Handle::sync (fsync per-file reale). Elimina la degradazione
+        # no-fsync quando python3 e node sono assenti — perl è near-universale (ships macOS,
+        # quasi tutte le distro Linux). Goal: "non possiamo avere degradazione della telemetria".
+        if printf '%s' "$line" | perl -e 'use IO::Handle; open(my $fh,">>",$ARGV[0]) or exit 1; local $/; my $d=<STDIN>; print $fh $d or exit 1; $fh->flush or exit 1; $fh->sync or exit 1; close($fh) or exit 1; exit 0' "$file" 2>/dev/null; then
+            _fsync_ok=1
+        fi
+    fi
+    if [ "$_fsync_ok" -eq 0 ]; then
+        # ultima spiaggia (no python3+node+perl, patologico): bash + sync coarse (best-effort,
+        # flush OS-wide; non garantisce write-cache hardware) + telemetry_degraded. C lo segnala.
         printf '%s' "$line" >> "$file" 2>/dev/null
+        sync 2>/dev/null || true
         # Emit telemetry_degraded once per session via DIRECT printf >> (no recursion:
         # calling devforge_log here would re-enter _devforge_lock_append and loop).
         local _deg_sentinel="${HOME}/.claude/.devforge-no-fsync-warned"
