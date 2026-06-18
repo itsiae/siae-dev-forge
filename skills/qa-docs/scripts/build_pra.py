@@ -10,8 +10,8 @@ NON tocca: Matrice Rischio, Tabelle.
 
 import sys
 import json
-import re
 import shutil
+import traceback
 from pathlib import Path
 
 try:
@@ -147,5 +147,5 @@ if __name__ == "__main__":
         print(f"OK: {result}")
     except Exception as e:
         print(f"ERRORE: {e}")
-        import traceback; traceback.print_exc()
+        traceback.print_exc()
         sys.exit(1)

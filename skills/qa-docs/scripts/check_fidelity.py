@@ -15,8 +15,6 @@ Exit 0 = OK, Exit 1 = scostamenti trovati.
 import sys
 import zipfile
 import xml.etree.ElementTree as ET
-from pathlib import Path
-
 NS_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 EXPECTED_HEADINGS = [
@@ -83,7 +81,7 @@ def get_titolo2_colors(doc_xml):
 
 def run_check(output_docx, template_docx):
     print(f"\n{'='*50}")
-    print(f"VERIFICA FEDELTÀ")
+    print("VERIFICA FEDELTÀ")
     print(f"Output:   {output_docx}")
     print(f"Template: {template_docx}")
     print(f"{'='*50}")

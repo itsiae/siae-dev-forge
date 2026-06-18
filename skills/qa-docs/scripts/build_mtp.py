@@ -16,6 +16,7 @@ import sys
 import json
 import re
 import shutil
+import traceback
 import zipfile
 import tempfile
 from pathlib import Path
@@ -556,5 +557,5 @@ if __name__ == "__main__":
         print(f"OK: {result}")
     except Exception as e:
         print(f"ERRORE: {e}")
-        import traceback; traceback.print_exc()
+        traceback.print_exc()
         sys.exit(1)
