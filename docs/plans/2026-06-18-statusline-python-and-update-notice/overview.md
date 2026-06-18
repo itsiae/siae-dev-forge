@@ -21,7 +21,7 @@ Rendere visibili nella status line DevForge due condizioni oggi silenziose:
 
 | # | Task | Stato | File |
 |---|------|-------|------|
-| 01 | Feature 1 — avviso python3 mancante (statusline) | [PENDING] | [task-01](task-01-python-warning-statusline.md) |
+| 01 | Feature 1 — avviso python3 mancante (statusline) | [DONE] | [task-01](task-01-python-warning-statusline.md) |
 | 02 | Feature 2a — detection cambio versione (session-start) | [PENDING] | [task-02](task-02-version-detection-session-start.md) |
 | 03 | Feature 2b — display flag aggiornamento (statusline) | [PENDING] | [task-03](task-03-update-notice-statusline.md) |
 | 04 | Wiring test in run-all.sh + no-regression full suite | [PENDING] | [task-04](task-04-wire-tests-no-regression.md) |

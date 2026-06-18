@@ -263,6 +263,12 @@ if [ "$CTX_INT" -ge 80 ]; then
   WARN_STR="$(printf '%b⚠️ Context alto — nuova sessione%b' "$YELLOW" "$RESET")"
 fi
 
+# python3 assente: token-stats e telemetria zero-loss degradano silenziosamente.
+# Rilevazione live (non via marker): resta visibile finché Python non è installato.
+if ! command -v python3 >/dev/null 2>&1; then
+  WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b🐍 python3 assente — installalo per token/telemetria%b' "$YELLOW" "$RESET")"
+fi
+
 if [ "$BATCH_CHECKPOINT" -eq 1 ]; then
   WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b⏸️ Batch completo — serve report%b' "$YELLOW" "$RESET")"
 fi
