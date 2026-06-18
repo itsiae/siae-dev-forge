@@ -1226,6 +1226,30 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_python_warning.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_session_start_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
 if python3 -m pytest "${PLUGIN_ROOT}/tests/test_task_adoption_meta.py" -q >/dev/null 2>&1; then
   echo "  PASS  tests/test_task_adoption_meta.py"
   TOTAL_PASS=$((TOTAL_PASS + 1))

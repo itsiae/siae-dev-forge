@@ -24,7 +24,15 @@ Rendere visibili nella status line DevForge due condizioni oggi silenziose:
 | 01 | Feature 1 — avviso python3 mancante (statusline) | [DONE] | [task-01](task-01-python-warning-statusline.md) |
 | 02 | Feature 2a — detection cambio versione (session-start) | [DONE] | [task-02](task-02-version-detection-session-start.md) |
 | 03 | Feature 2b — display flag aggiornamento (statusline) | [DONE] | [task-03](task-03-update-notice-statusline.md) |
-| 04 | Wiring test in run-all.sh + no-regression full suite | [PENDING] | [task-04](task-04-wire-tests-no-regression.md) |
+| 04 | Wiring test in run-all.sh + no-regression full suite | [DONE] | [task-04](task-04-wire-tests-no-regression.md) |
+
+**Nota no-regression (Task 04):** i 3 test sono cablati in `run-all.sh` (righe 1229-1249) e
+passano 3/3 con l'invocazione identica del runner. La full-suite **locale** (macOS + iCloud)
+ha un abort flaky **pre-esistente** nei test session-start (macOS crea `Library/Caches` nel
+sandbox HOME → un `rm -rf` non guardato aborta sotto `set -e`), che si manifesta prima dei
+nuovi blocchi e non è correlato a queste modifiche. In CI Linux il comportamento non si
+verifica. Verifica funzionale diretta: `hooks/session-start` continua a emettere
+`additional_context` JSON valido dopo la modifica.
 
 ## Criteri di accettazione globali (dal design)
 
