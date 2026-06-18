@@ -28,6 +28,38 @@ DEVFORGE_SID=$(devforge_new_sid)
 DEVFORGE_SESSION_DIR="${HOME}/.claude/devforge-state/${DEVFORGE_SID}"
 mkdir -p "${DEVFORGE_SESSION_DIR}/outbox/acked"
 
+# --- Plugin update notice (Feature 2a) — pure-local, no network ---
+# Rileva il cambio di versione del plugin rispetto all'ultima sessione e scrive un flag
+# session-scoped che la status line mostra per tutta la sessione post-update. Nessuna
+# call di rete, nessun output su stdout (non deve corrompere additional_context).
+_devforge_detect_plugin_update() {
+    local current last_seen_file last_seen
+    current="$(basename "$PLUGIN_ROOT")"
+    # Dev-mode (repo non versionato in cache): basename non e' semver -> fallback plugin.json
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+        if command -v jq >/dev/null 2>&1 && [ -f "${PLUGIN_ROOT}/.claude-plugin/plugin.json" ]; then
+            current="$(jq -r '.version // empty' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null)"
+        fi
+    fi
+    # Post-fallback: se ancora non-semver -> versione non determinabile -> skip (no scrittura)
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+        return 0
+    fi
+    [ -z "$current" ] && return 0
+    last_seen_file="${HOME}/.claude/.devforge-plugin-version"
+    last_seen=""
+    [ -f "$last_seen_file" ] && IFS= read -r last_seen < "$last_seen_file" 2>/dev/null || true
+    if [ -z "$last_seen" ]; then
+        printf '%s' "$current" > "$last_seen_file" 2>/dev/null || true   # prima installazione: nessun avviso
+        return 0
+    fi
+    if [ "$last_seen" != "$current" ]; then
+        printf '%s' "$current" > "${DEVFORGE_SESSION_DIR}/.plugin-updated" 2>/dev/null || true
+        printf '%s' "$current" > "$last_seen_file" 2>/dev/null || true
+    fi
+}
+_devforge_detect_plugin_update >/dev/null 2>&1 || true
+
 # Resolve raw identity (before canonicalization)
 USER_RAW_EMAIL=""
 USER_SOURCE="unknown"
