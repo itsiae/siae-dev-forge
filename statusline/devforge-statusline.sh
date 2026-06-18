@@ -26,6 +26,9 @@ if [ -f "${PLUGIN_ROOT_INIT}/lib/logger.sh" ]; then
 fi
 
 # Cache git keyed per-cwd: evita contaminazione cross-repo/sessione (#1)
+# cksum (POSIX) → CRC+byte-count; tr+cut danno una key numerica (≤12 cifre, lunghezza
+# variabile ma deterministica per cwd). Cache best-effort: una collisione (prob. trascurabile)
+# si auto-sana al refresh TTL 5s. Fallback "default" se cksum manca.
 _cwd_key="$(printf '%s' "$PWD" | cksum 2>/dev/null | tr -dc '0-9' | cut -c1-12)"
 _cwd_key="${_cwd_key:-default}"
 CACHE_FILE="${DEVFORGE_DIR}/.devforge-git-cache-${_cwd_key}"

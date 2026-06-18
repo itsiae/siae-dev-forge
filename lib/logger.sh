@@ -144,6 +144,8 @@ _devforge_lock_append() {
         if [ "$waited" -gt 50 ]; then
             # 5s timeout exceeded: never lose the line — best-effort append without lock.
             printf '%s' "$line" >> "$file" 2>/dev/null
+            # sync coarse: riduce la window di perdita anche su questo path emergenziale
+            # (lock non acquisito). Costo accettabile: si arriva qui solo dopo 5s di contesa.
             sync 2>/dev/null || true
             return 0
         fi

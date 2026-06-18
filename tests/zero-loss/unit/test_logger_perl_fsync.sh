@@ -49,13 +49,15 @@ cat > "$T2/bin/sync" <<EOF
 touch "$T2/.sync-called"
 EOF
 chmod +x "$T2/bin/sync"
+rm -f "$T2/.claude/.devforge-no-fsync-warned"   # difensivo: sentinel fresco così l'evento si emette
 run_append "$T2" "$T2/bin"
 line_ok=$([ -s "$T2/.claude/target.jsonl" ] && echo 1 || echo 0)
 deg=$(grep -c 'telemetry_degraded' "$T2/.claude/devforge-activity.jsonl" 2>/dev/null || true); deg="${deg//[!0-9]/}"; deg="${deg:-0}"
-if [ "$line_ok" = "1" ] && [ -f "$T2/.sync-called" ] && [ "$deg" -ge 1 ]; then
-  PASS=$((PASS+1)); echo "  PASS  ultima spiaggia: bash+sync invocato + telemetry_degraded emesso"
+sentinel_ok=$([ -f "$T2/.claude/.devforge-no-fsync-warned" ] && echo 1 || echo 0)   # il path patologico DEVE scrivere il sentinel
+if [ "$line_ok" = "1" ] && [ -f "$T2/.sync-called" ] && [ "$deg" -ge 1 ] && [ "$sentinel_ok" = "1" ]; then
+  PASS=$((PASS+1)); echo "  PASS  ultima spiaggia: bash+sync invocato + telemetry_degraded emesso + sentinel scritto"
 else
-  FAIL=$((FAIL+1)); echo "  FAIL  ultima spiaggia (line_ok=$line_ok sync=$([ -f "$T2/.sync-called" ] && echo Y || echo N) deg=$deg)"
+  FAIL=$((FAIL+1)); echo "  FAIL  ultima spiaggia (line_ok=$line_ok sync=$([ -f "$T2/.sync-called" ] && echo Y || echo N) deg=$deg sentinel=$sentinel_ok)"
 fi
 rm -rf "$T2"
 
