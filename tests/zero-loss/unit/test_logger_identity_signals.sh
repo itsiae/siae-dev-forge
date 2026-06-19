@@ -31,8 +31,11 @@ rm -rf "$T1"
 
 # ---- Parte tools (task-03) ----
 # npm che ritorna 'undefined' → normalizzato a vuoto
+# IMPORTANTE: rm -f PRIMA di cat sui binari da shim — il loop ln -sf crea symlink ai binari reali;
+# senza rm, `cat > shim` scriverebbe ATTRAVERSO il symlink sovrascrivendo il binario REALE (incidente gh).
 T2="$(mktemp -d)"; mkdir -p "$T2/bin"
 for d in $(echo "$PATH" | tr ':' ' '); do [ -d "$d" ] && ln -sf "$d"/* "$T2/bin/" 2>/dev/null || true; done
+rm -f "$T2/bin/npm" "$T2/bin/gh"
 cat > "$T2/bin/npm" <<'EOF'
 #!/usr/bin/env bash
 [ "$1" = "config" ] && { echo "undefined"; exit 0; }
@@ -92,6 +95,7 @@ rm -rf "$T5"
 # Unicode/quote nel nome OS → bundle resta JSON valido
 T6="$(mktemp -d)"; mkdir -p "$T6/bin"
 for d in $(echo "$PATH" | tr ':' ' '); do [ -d "$d" ] && ln -sf "$d"/* "$T6/bin/" 2>/dev/null || true; done
+rm -f "$T6/bin/id"   # evita scrittura attraverso symlink sul binario reale
 # shim id che ritorna nome con apostrofo+quote+unicode (simula id -F)
 cat > "$T6/bin/id" <<'EOF'
 #!/usr/bin/env bash

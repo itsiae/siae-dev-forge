@@ -102,7 +102,58 @@ _devforge_atomic_append() {
     fi
     # --- DEGRADED PATH: python3 unavailable OR python3 present-but-failed ---
     # Route through _devforge_lock_append for mkdir-lock + node/bash durability.
-    _devforge_lock_append "$target_file" "${line}"$'\n'
+    # Task-06 (Capability B): deriva outbox_dir per il cursor-move della rotazione (parità python3).
+    # Globale → .global-outbox; sessione → ${SESSION_DIR}/outbox; SESSION_DIR vuoto → "" (no cursor-move,
+    # mai il path assoluto "/outbox").
+    local outbox_dir=""
+    if [ "$target_file" = "${DEVFORGE_LOG_FILE:-}" ]; then
+        outbox_dir="${HOME}/.claude/devforge-state/.global-outbox"
+    elif [ -n "${DEVFORGE_SESSION_DIR:-}" ]; then
+        outbox_dir="${DEVFORGE_SESSION_DIR}/outbox"
+    fi
+    _devforge_lock_append "$target_file" "${line}"$'\n' "$rotate_bytes" "$outbox_dir"
+}
+
+# Task-05 (Capability B): rotazione log in bash, parità a atomic_write.py._rotate_if_needed
+# + cursor-move (corregge il bug latente del cursore stale, valido per tutti i tier).
+# Ruota $file → ${base}-<ts>.archived.jsonl se size > rotate_bytes. Dentro-lock (chiamata da
+# _devforge_lock_append). $3=outbox_dir opzionale per migrare il cursore live sull'archivio.
+_devforge_rotate_inline() {
+    local file="$1" rotate_bytes="$2" outbox="${3:-}"
+    [ "${rotate_bytes:-0}" -gt 0 ] 2>/dev/null || return 0
+    local size; size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+    [ "${size:-0}" -gt "$rotate_bytes" ] 2>/dev/null || return 0
+    local dir base ts archived i
+    dir=$(dirname "$file"); base=$(basename "$file" .jsonl)
+    ts=$(date +%s 2>/dev/null || echo 0)
+    archived="${dir}/${base}-${ts}.archived.jsonl"
+    if [ -e "$archived" ]; then
+        for i in $(seq 1 999); do
+            if [ ! -e "${dir}/${base}-${ts}-${i}.archived.jsonl" ]; then
+                archived="${dir}/${base}-${ts}-${i}.archived.jsonl"; break
+            fi
+        done
+    fi
+    if ! mv "$file" "$archived" 2>/dev/null; then
+        # C-21: rename fallito (permessi/iCloud/già ruotato). NON è perdita (la riga sarà comunque
+        # scritta dall'append). Segnala telemetry_degraded UNA volta per non rumoreggiare.
+        local _rs="${HOME}/.claude/.devforge-rotate-failed-warned"
+        if [ ! -f "$_rs" ] && [ -e "$file" ]; then
+            mkdir -p "$(dirname "$_rs")" 2>/dev/null || true
+            touch "$_rs" 2>/dev/null || true
+            local _ts; _ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || echo "1970-01-01T00:00:00.000Z")
+            printf '{"event":"telemetry_degraded","status":"warning","meta":{"reason":"rotation_failed"},"ts":"%s"}\n' \
+                "$_ts" >> "${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}" 2>/dev/null || true
+        fi
+        return 0
+    fi
+    # cursor-move: l'archivio riprende dall'offset live → zero dup/perdita (supera python3, ADR-6).
+    if [ -n "$outbox" ]; then
+        local live_cur="${outbox}/.cursor-$(basename "$file")"
+        local arch_cur="${outbox}/.cursor-$(basename "$archived")"
+        if [ -f "$live_cur" ]; then mv "$live_cur" "$arch_cur" 2>/dev/null || true; fi
+    fi
+    return 0
 }
 
 # Task-09 — portable mtime age in seconds.
@@ -122,7 +173,9 @@ _devforge_dir_age_secs() {
 # and never reaches this wrapper — no double-lock.
 # Args: $1 = target file, $2 = line (must include trailing newline)
 _devforge_lock_append() {
-    local file="$1" line="$2"
+    # Task-06 (Capability B): firma estesa retro-compatibile.
+    # $1=file  $2=line(con \n)  $3=rotate_bytes(default 0 = no rotazione)  $4=outbox_dir(default "" = no cursor-move)
+    local file="$1" line="$2" rotate_bytes="${3:-0}" outbox_dir="${4:-}"
     local lockdir="${file}.lockdir"
     local waited=0 age
 
@@ -169,6 +222,10 @@ _devforge_lock_append() {
     # mid-execution (regression: tests/zero-loss/unit/test_json_field_portable.sh T5a/T5b/T6).
     # Signal-while-holding-lock is handled by the STALE-GUARD in the spin-loop above
     # (mtime > 30s → rmdir): that is the correct backstop for SIGKILL/SIGTERM.
+
+    # Task-06 (Capability B): rotazione DENTRO il lock, prima dell'append (parità python3 che ruota
+    # dentro il flock di atomic_write.py). Garantisce rotazione anche sui tier node/perl/bash (Windows).
+    _devforge_rotate_inline "$file" "$rotate_bytes" "$outbox_dir"
 
     local _fsync_ok=0
     if command -v node >/dev/null 2>&1; then
