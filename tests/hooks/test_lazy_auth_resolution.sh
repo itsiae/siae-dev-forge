@@ -40,7 +40,24 @@ export DEVFORGE_CLAUDE_JSON=$(make_claude_json "other@example.it")
 devforge_log "test_run_result" "success" "{}"
 [ "$(assert_json_field "$DEVFORGE_LOG_FILE" auth_email)" = "pinned@siae.it" ] || { echo "FAIL AC3: pin non ha precedenza"; FAIL=1; }
 
+# --- AC3b: cache flag isola la rilettura (prova della proprietà "1 lettura/processo") ---
+# Flag settato + email vuota (es. resolution già tentata, Bedrock): un secondo log NON
+# deve rileggere ~/.claude.json nonostante il file ora contenga un'email. Se il guard del
+# flag venisse rimosso, _devforge_ensure_auth rileggerebbe e auth_email diventerebbe non-vuoto
+# → il test fallisce. Questo isola il flag, non la precedenza del pin (AC3).
+unset DEVFORGE_AUTH_EMAIL DEVFORGE_AUTH_ACCOUNT_UUID || true
+export _DEVFORGE_AUTH_RESOLVED=1
+export DEVFORGE_CLAUDE_JSON=$(make_claude_json "shouldnotread@siae.it")
+export DEVFORGE_LOG_FILE=$(mktemp)
+devforge_log "test_run_result" "success" "{}"
+[ "$(assert_json_field "$DEVFORGE_LOG_FILE" auth_email)" = "" ] || { echo "FAIL AC3b: cache flag ignorato, file riletto"; FAIL=1; }
+unset _DEVFORGE_AUTH_RESOLVED
+
 # --- AC6: no-regression — JSON valido + campi identita' invariati ---
+unset _DEVFORGE_AUTH_RESOLVED || true
+export DEVFORGE_LOG_FILE=$(mktemp)
+export DEVFORGE_AUTH_EMAIL="pinned@siae.it"
+devforge_log "test_run_result" "success" "{}"
 python3 -c "import json; [json.loads(l) for l in open('$DEVFORGE_LOG_FILE') if l.strip()]" || { echo "FAIL AC6: JSONL invalido"; FAIL=1; }
 for k in user user_raw user_source actor_canonical schema_version; do
     grep -qF "\"$k\":" "$DEVFORGE_LOG_FILE" || { echo "FAIL AC6: manca $k"; FAIL=1; }

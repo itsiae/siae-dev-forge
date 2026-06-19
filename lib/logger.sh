@@ -413,6 +413,8 @@ devforge_resolve_auth_identity() {
 # Flag settato INCONDIZIONATAMENTE (trade-off documentato in design 2026-06-19):
 # i processi hook sono short-lived, un fallimento transitorio resta confinato al
 # processo corrente; il processo hook successivo ritenta.
+# NB: _DEVFORGE_AUTH_RESOLVED NON va esportato — deve restare per-process. Ogni subprocess
+# hook riparte con flag vuoto e ritenta la resolution; export romperebbe questa semantica.
 _devforge_ensure_auth() {
     [ -n "${_DEVFORGE_AUTH_RESOLVED:-}" ] && return 0
     _DEVFORGE_AUTH_RESOLVED=1
@@ -428,6 +430,8 @@ _devforge_ensure_auth() {
 # Emette 1 evento osservabilità sull'identità SSO corrente (best-effort).
 # Chiamata UNA volta dal branch startup) di session-start (1×/sessione logica).
 # DEVFORGE_AUTH_EMAIL deve essere già risolto dal chiamante.
+# NON chiamare da devforge_log/_timed: causerebbe ricorsione (questa funzione chiama
+# devforge_log). Il chiamante deve essere un entry-point di hook (es. session-start).
 devforge_emit_identity_observability() {
     local domain_expected="${DEVFORGE_AUTH_DOMAIN:-siae.it}"
     if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
