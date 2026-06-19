@@ -226,6 +226,18 @@ e `tests/test_count_consistency.py`.
 5. `hooks.json` registra `SessionEnd` ed è valido (AC-9).
 6. Suite no-regression verde; nessun test esistente rotto.
 
+## File creati e modificati (manifest)
+
+Enumerazione esplicita dei file toccati dalla PR (manifest machine-readable):
+
+- `hooks/session-end` — nuovo hook SessionEnd
+- `hooks/stop-gate` — rimozione emit + rm stato
+- `hooks/hooks.json` — registrazione evento SessionEnd
+- `tests/hooks/test_session_end_hook.sh` — nuovo test
+- `tests/hooks/test_stop_gate_no_state_wipe.sh` — nuovo test
+- `tests/hooks/hooks-json-var-expansion.test.sh` — allineamento contatori
+- `.claude-plugin/plugin.json` e `.claude-plugin/marketplace.json` — count hook 27→28
+
 ## 8. Out of scope / limitazioni note
 - **Crash/`kill -9`** → `session_end` summary mancante (ADR-4). Limite di piattaforma
   (anche `SessionEnd` nativo non fira). Gli eventi di sessione sono già drenati dal
