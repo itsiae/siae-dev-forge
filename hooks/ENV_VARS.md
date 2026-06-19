@@ -243,6 +243,7 @@ Regola enforced da `tests/hooks/hooks-json-var-expansion.test.sh`.
 | Env var | Default | Effect |
 |---|---|---|
 | `DEVFORGE_RELEASE_RISK_DISABLED` | `0` | `1` → skip hook pr-release-gate + slash skill (kill switch) |
+| `DEVFORGE_RELEASE_RISK_ANY_PR` | `0` | `1` → l'hook scatta su QUALSIASI `gh pr create` (qualunque branch/base), non solo `release/**` → main. Modalità di test/collaudo del trigger. |
 | `DEVFORGE_RELEASE_RISK_KG_TIMEOUT_SEC` | `5` | Timeout MCP sport-kg lookup (Criterion 5 critical service detection) |
 | `DEVFORGE_RELEASE_RISK_SECURITY_CRITICAL_THRESHOLD` | `0` | Soglia Criterion 17 critical CVE count per trigger YES (>) |
 | `DEVFORGE_RELEASE_RISK_SECURITY_HIGH_THRESHOLD` | `5` | Soglia Criterion 17 high CVE count per trigger YES (>) |
