@@ -3,8 +3,6 @@ name: qa-docs
 description: >
   Genera il Master Test Plan (MTP) in formato .docx e la Product Risk Analysis (PRA) in formato
   .xlsx conformi ai template SIAE, attraverso un flusso interattivo a 6 fasi.
-  Invocare SOLO tramite il comando esplicito /qa-docs — non auto-triggerare su keyword come
-  "Master Test Plan", "MTP", "piano di test", ecc.
   Orchestra: intake perimetro (3 canali: JIRA/chat/documenti), analisi funzionale,
   conferma sistemi impattati, discovery GitHub opzionale, produzione .docx e .xlsx via patch template.
   Lingua: italiano.
