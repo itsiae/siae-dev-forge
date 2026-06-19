@@ -33,6 +33,7 @@ from lib.release_risk.confluence_publish import (
     config_from_env, build_page_title, publish_scorecard,
 )
 from lib.release_risk.narrative import build_narrative
+from lib.release_risk.platform_resolver import scorecard_path
 
 
 RELEASE_TAG_GLOBS_DEFAULT = ("release*", "v*", "*RELEASE*", "*-RELEASE", "RELEASE-*")
@@ -52,10 +53,19 @@ def assess(args) -> int:
     diff_hash = compute_diff_hash(diff_files, diff_content)
     baseline_main_sha = _get_main_sha(repo_root)[:8] if _get_main_sha(repo_root) else "00000000"
 
-    # Cache check
+    # Piattaforma + path gerarchico docs/releases/<platform>/<release>/scorecard.md
+    # (REQ-13/15). Calcolato PRIMA del cache check per poter verificare che la entry
+    # cachata punti al path corrente (la cache memorizza l'output_path: su cambio di
+    # schema path una hit stale punterebbe al vecchio file flat).
+    version = args.version or "unknown"
+    output_path, platform = scorecard_path(
+        repo_root, service, version, branch, getattr(args, "platform", None))
+
+    # Cache check — hit valida solo se path coincide ed esiste (oltre allo schema,
+    # già filtrato da cache.get via SCHEMA_VERSION). Altrimenti miss + ricalcolo.
     if not args.no_cache:
         cached = cache_get(branch, diff_hash, baseline_main_sha)
-        if cached:
+        if cached and cached.output_path == str(output_path) and Path(cached.output_path).exists():
             cached.cached = True
             print(json.dumps({"cached": True, "output_path": cached.output_path}))
             return 0
@@ -63,7 +73,8 @@ def assess(args) -> int:
     # Identification
     identification = {
         "service": service,
-        "version": args.version or "unknown",
+        "platform": platform,
+        "version": version,
         "owner": args.owner or "unknown",
         "date": args.release_date or datetime.now(timezone.utc).isoformat(),
         "jira_tickets": _extract_jira_tickets(repo_root, branch),
@@ -122,8 +133,7 @@ def assess(args) -> int:
     narrative_text, narrative_source = _resolve_narrative(
         args, identification["jira_tickets"], genesis, len(diff_files))
 
-    # Build report
-    output_path = repo_root / "docs" / "releases" / f"{datetime.now().strftime('%Y-%m-%d')}-{service}-{branch.replace('/', '_')}.md"
+    # Build report (output_path/platform già calcolati pre-cache, vedi sopra)
     report = ReleaseRiskReport(
         service=service, release_branch=branch, target_branch="main",
         diff_hash=diff_hash, baseline_main_sha=baseline_main_sha,
@@ -131,7 +141,7 @@ def assess(args) -> int:
         identification=identification, genesis=genesis,
         criteria=criteria, scorecard=scorecard,
         generated_at=datetime.now(timezone.utc).isoformat(),
-        output_path=str(output_path), trigger=trigger,
+        output_path=str(output_path), platform=platform, trigger=trigger,
         narrative=narrative_text, narrative_source=narrative_source,
     )
 
@@ -278,6 +288,7 @@ def _emit_activity_event(report: ReleaseRiskReport, confluence: Optional[dict] =
     meta = {
         "skill": "siae-release-risk",
         "service": report.service,
+        "platform": report.platform,
         "release_branch": report.release_branch,
         "level": report.scorecard.level,
         "decision": report.scorecard.decision,
@@ -316,6 +327,9 @@ def main():
     a.add_argument("--diff-files", help="path to file with diff filenames (one per line)")
     a.add_argument("--diff-content", help="path to file with full diff content")
     a.add_argument("--version")
+    a.add_argument("--platform",
+                   help="Override esplicito della piattaforma applicativa (REQ-13). "
+                        "Senza, è derivata dal nome servizio (sport-*→sport, ...).")
     a.add_argument("--owner")
     a.add_argument("--release-date")
     a.add_argument("--user-impact-ge-50", type=lambda x: x.lower() in ("true", "1", "yes"),
