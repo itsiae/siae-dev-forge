@@ -47,9 +47,11 @@ il guadagno e' identificare il failure mode che ti farebbe rollback.
 
 **Sempre, prima di `gh pr create` su `itsiae/*`.** Il hook `pr-premortem-gate` blocca la creazione PR se non c'e' evidenza di invocazione.
 
-**Nessun bypass discrezionale:** il gate `pr-premortem-gate` non è più
-aggirabile. Anche per hotfix P1, bump meccanici o revert va invocata la skill
-(per questi casi il premortem è breve: poche righe sulle top cause).
+**Scaling sul rischio del diff:** il gate `pr-premortem-gate` blocca per diff
+`risk=code`. Per diff `risk=low` (doc-only / manifest plugin, classificato da
+`lib/diff-risk-classifier.sh`) il gate è advisory automatico — il premortem resta
+consigliato (breve) ma non obbligatorio. Per qualsiasi diff che tocca codice/config
+eseguibile la skill va invocata.
 
 ---
 
@@ -172,7 +174,7 @@ mitigazioni. Il reviewer le legge per fare audit prospettico ostile.
 3. **SEMPRE** scrivere mitigazione concreta, mai wishful thinking
 4. **NON** sostituire premortem con code review o spec review (sono complementari, non ridondanti)
 5. **NON** generare cause vaghe ("bug", "potrebbe rompersi") — il hook chiama l'output e l'utente lo legge
-6. **Nessun bypass discrezionale:** il gate non è aggirabile; anche hotfix/bump/revert richiedono un premortem (breve)
+6. **Scaling sul rischio:** il gate blocca per diff `risk=code`; per `risk=low` (doc/manifest, via `lib/diff-risk-classifier.sh`) è advisory. Nessun bypass discrezionale oltre questo.
 
 ---
 
