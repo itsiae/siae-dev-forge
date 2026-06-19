@@ -418,6 +418,9 @@ case "$SESSION_START_SOURCE" in
     startup)
         # Fresh session — reset skills invoked
         echo "" > "${HOME}/.claude/.devforge-session-skills"
+        # Osservabilità identità SSO: emette identity_unresolved / identity_external_domain
+        # una sola volta per sessione logica (solo su startup, non resume/clear/compact).
+        devforge_emit_identity_observability
         ;;
     resume|clear|compact)
         # Same logical session — preserve skills invoked so far
