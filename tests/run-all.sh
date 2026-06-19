@@ -1424,6 +1424,90 @@ echo "  Plugin Update Safety: ${pus_ok} OK | ${pus_fail} FAIL"
 TOTAL_PASS=$((TOTAL_PASS + pus_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + pus_fail))
 
+# ============================================================================
+# Plugin Cache Resilience (design 2026-06-19) — un test per AC
+# Sessioni attive sopravvivono all'auto-update nativo che rimuove cache versionate.
+# ============================================================================
+echo ""
+echo "=== Plugin Cache Resilience ==="
+echo ""
+pcr_ok=0; pcr_fail=0
+PCRLIB="${PLUGIN_ROOT}/lib/plugin-cache-resilience.sh"
+CACHE_REL=".claude/plugins/cache/siae-devforge/siae-devforge"
+# helper: crea un HOME isolato con una cache 'cur' reale; echo della BASE
+_pcr_setup() { local h; h="$1"; mkdir -p "$h/$CACHE_REL/$2/hooks"; : > "$h/$CACHE_REL/$2/hooks/run-hook.cmd"; printf '%s/%s' "$h" "$CACHE_REL"; }
+
+# T1 (AC1): versione vecchia rimossa nel registro → ricreata risolvibile
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.91.0/hooks/run-hook.cmd" ]; then echo "  PASS  T1(AC1): path versionato rimosso → ripristinato"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T1(AC1)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T2 (AC2): dir reale (anche incompleta) NON toccata
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0)
+mkdir -p "$B/1.94.0/hooks"; echo REAL > "$B/1.94.0/hooks/run-hook.cmd"; mkdir -p "$B/1.93.0"  # 1.93.0 reale INCOMPLETA
+printf '1.94.0\n1.93.0\n' >> "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ "$(cat "$B/1.94.0/hooks/run-hook.cmd")" = REAL ] && [ ! -L "$B/1.94.0" ] && [ ! -L "$B/1.93.0" ] && [ ! -e "$B/1.93.0/hooks/run-hook.cmd" ]; then
+  echo "  PASS  T2(AC2): dir reale completa+incompleta intatte (no data loss)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T2(AC2)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T3 (AC3): symlink rotto semver-puro → ripuntato; symlink estranei (path esterno E target
+# semver+suffisso tipo 1.2.3-beta) → NON toccati (regex GUARD-4 ancorata ^..$)
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0)
+ln -s 9.9.9 "$B/1.90.0"; ln -s /external/path "$B/1.89.0"; ln -s 1.2.3-beta "$B/1.88.0"
+printf '1.90.0\n1.89.0\n1.88.0\n' >> "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.90.0/hooks/run-hook.cmd" ] && [ "$(readlink "$B/1.89.0")" = /external/path ] && [ "$(readlink "$B/1.88.0")" = 1.2.3-beta ]; then
+  echo "  PASS  T3(AC3): symlink rotto riparato; estranei (esterno + semver-suffisso) preservati"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T3(AC3)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T4 (AC4): cross-platform — dopo il repair il path esiste comunque (symlink su macOS, copia su
+# Windows-GitBash senza symlink nativi). Verifica generica del ramo "path risolvibile".
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.87.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.87.0/hooks/run-hook.cmd" ]; then echo "  PASS  T4(AC4): path risolvibile (symlink o copia)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T4(AC4)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T5 (AC5): base inesistente → rc 0, nessun errore sotto set -euo pipefail
+H=$(mktemp -d); RC=0; ( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$H/$CACHE_REL/1.95.0" ) 2>/dev/null || RC=$?
+if [ "$RC" = 0 ]; then echo "  PASS  T5(AC5): base assente → rc 0 (best-effort)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T5(AC5): rc=$RC"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T6 (AC6): dedup + cap 10
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); reg="$H/.claude/.devforge-known-plugin-versions"
+for i in $(seq 1 12); do echo "1.$i.0" >> "$reg"; done
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+LINES=$(grep -c . "$reg"); DUP=$(sort "$reg" | uniq -d | grep -c . || true)
+if [ "$LINES" -le 10 ] && [ "$DUP" = 0 ]; then echo "  PASS  T6(AC6): registro cap=$LINES, no duplicati"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T6(AC6): lines=$LINES dup=$DUP"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T7 (AC7): plugin_root FUORI dalla cache → nessuna operazione
+H=$(mktemp -d); mkdir -p "$H/fake/siae-dev-forge"; echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions" 2>/dev/null || mkdir -p "$H/.claude" && echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$H/fake/siae-dev-forge" ) 2>/dev/null || true
+if ! ls "$H/fake" 2>/dev/null | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then echo "  PASS  T7(AC7): guard path, nessun file in path arbitrario"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T7(AC7)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T8 (AC8): base con solo symlink, plugin_root non-semver → no autoreferenza
+H=$(mktemp -d); B="$H/$CACHE_REL"; mkdir -p "$B"; ln -s 9.9.9 "$B/1.91.0"; echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/notsemver" ) 2>/dev/null || true
+if [ "$(readlink "$B/1.91.0" 2>/dev/null)" != 1.91.0 ]; then echo "  PASS  T8(AC8): nessun symlink autoreferenziale"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T8(AC8): autoreferenza"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T9 (AC9): due invocazioni concorrenti → path valido, nessun residuo .compat.*, registro senza duplicati
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.80.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null &
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null &
+wait
+T9DUP=$(sort "$H/.claude/.devforge-known-plugin-versions" 2>/dev/null | uniq -d | grep -c . || true)
+if [ -e "$B/1.80.0/hooks/run-hook.cmd" ] && ! ls "$B"/.compat.* >/dev/null 2>&1 && [ "$T9DUP" = 0 ]; then echo "  PASS  T9(AC9): concorrenza → path valido, nessun residuo tmp, registro dedup"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T9(AC9): dup=$T9DUP"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+echo ""
+echo "  Plugin Cache Resilience: ${pcr_ok} OK | ${pcr_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + pcr_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + pcr_fail))
+
 # --- Telemetry Event Validation ---
 echo ""
 echo "=== Telemetry Event Validation ==="

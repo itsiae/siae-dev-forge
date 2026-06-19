@@ -24,6 +24,12 @@ source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
 # Plugin version observability helpers (_ver_lt, devforge_installed_version, devforge_latest_release)
 source "${PLUGIN_ROOT}/lib/plugin-version.sh" \
     || { echo "[devforge] plugin-version.sh non sourcabile" >&2; }
+# Plugin cache resilience: ripara i path versionati rimossi dall'auto-update nativo, così le
+# sessioni già attive (ancorate a cache/.../<vecchia> via ${CLAUDE_PLUGIN_ROOT}) non si rompono.
+# Chiamata EARLY (dopo logger.sh, prima delle attività pesanti) per riparare al più presto.
+source "${PLUGIN_ROOT}/lib/plugin-cache-resilience.sh" \
+    || { echo "[devforge] plugin-cache-resilience.sh non sourcabile" >&2; }
+devforge_ensure_version_compat "$PLUGIN_ROOT" 2>/dev/null || true
 START_NS=$(_devforge_epoch_ns)
 DEVFORGE_SID=$(devforge_new_sid)
 
