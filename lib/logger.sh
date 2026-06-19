@@ -56,6 +56,14 @@ if [ -z "${DEVFORGE_LIB_DIR:-}" ]; then
     DEVFORGE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
+# net_run per timeout portabili nei segnali identità (task-03): npm/gh non devono mai bloccare
+# session-start. Best-effort: assenza del file → nessun timeout, nessun abort. La lib definisce
+# solo funzioni (nessun side-effect all'import).
+if ! command -v net_run >/dev/null 2>&1 && [ -f "${DEVFORGE_LIB_DIR}/net-timeout.sh" ]; then
+    # shellcheck disable=SC1091
+    . "${DEVFORGE_LIB_DIR}/net-timeout.sh" 2>/dev/null || true
+fi
+
 # Zero-loss PR-A: atomic append via Python (lock + fsync cross-OS).
 # Replaces raw `printf >> file` to eliminate race conditions on concurrent hook writes
 # (root cause of the 6612 parse errors observed in S3 pre-PR187).
@@ -368,6 +376,65 @@ devforge_canonicalize_user() {
 # consumer (developer-telemetry) resolves with the full signal set, which makes
 # shared-machine / wrong-git-config cases disambiguable. repo_root is NOT
 # included: it is already a top-level event field (see devforge_log_timed).
+# Task-02 (Capability A): segnali identità OS cross-platform (parità mac/Linux/Win).
+# Output TSV: full_name \t login \t domain. Best-effort, mai abort sotto set -euo pipefail.
+_devforge_local_identity_signals_os() {
+    local os_full_name="" os_login="" os_domain="" uname_s
+    uname_s=$(uname -s 2>/dev/null || echo "")
+    case "$uname_s" in
+        Darwin)
+            os_full_name=$(id -F 2>/dev/null | head -1 | tr -d '\r' || true) ;;
+        Linux)
+            if command -v getent >/dev/null 2>&1; then
+                os_full_name=$(getent passwd "${USER:-}" 2>/dev/null | cut -d: -f5 | cut -d, -f1 | head -1 | tr -d '\r' || true)
+            fi ;;
+        MINGW*|MSYS*|CYGWIN*)
+            if command -v powershell.exe >/dev/null 2>&1; then
+                os_full_name=$(powershell.exe -NoProfile -Command \
+                  "(Get-CimInstance Win32_UserAccount -Filter \"Name='\$env:USERNAME'\").FullName" \
+                  2>/dev/null | head -1 | tr -d '\r' || true)
+            fi ;;
+    esac
+    os_login="${USERNAME:-${USER:-$(whoami 2>/dev/null || echo "")}}"
+    os_domain="${USERDOMAIN:-}"
+    os_full_name=$(printf '%s' "$os_full_name" | cut -c1-128)
+    printf '%s\t%s\t%s' "$os_full_name" "$os_login" "$os_domain"
+}
+
+# Task-03 (Capability A): segnali identità da tool dev (ssh/npm/gh). Best-effort, mai abort.
+# Output TSV: ssh_fingerprint \t npm_email \t gh_email. gh è OPT-IN (rete) via DEVFORGE_IDENTITY_GH=1.
+_devforge_local_identity_signals_tools() {
+    local ssh_fp="" npm_email="" gh_email="" key
+    # SSH: prima chiave pubblica in ordine deterministico, hash via ssh-keygen. Mai chiavi private.
+    if [ -d "${HOME}/.ssh" ]; then
+        key=$(ls -1 "${HOME}/.ssh/"*.pub 2>/dev/null | sort | head -1)
+        if [ -n "$key" ] && [ -r "$key" ]; then
+            ssh_fp=$(ssh-keygen -lf "$key" 2>/dev/null | awk '{print $2}' | head -1 | tr -d '\r' || true)
+        fi
+    fi
+    # npm: locale, guard + timeout (net_run) + normalizza undefined/null/""
+    if command -v npm >/dev/null 2>&1; then
+        local _v
+        if command -v net_run >/dev/null 2>&1; then
+            _v=$(net_run 2 npm config get email 2>/dev/null | head -1 | tr -d '\r' || true)
+        else
+            _v=$(npm config get email 2>/dev/null | head -1 | tr -d '\r' || true)
+        fi
+        case "$_v" in undefined|null|"") _v="" ;; esac
+        npm_email="$_v"
+    fi
+    # gh: OPT-IN (rete) — default off per non bloccare session-start su proxy SIAE
+    if [ "${DEVFORGE_IDENTITY_GH:-}" = "1" ] && command -v gh >/dev/null 2>&1; then
+        if command -v net_run >/dev/null 2>&1; then
+            gh_email=$(net_run 3 gh api user --jq '.email' 2>/dev/null | head -1 | tr -d '\r' || true)
+        else
+            gh_email=$(gh api user --jq '.email' 2>/dev/null | head -1 | tr -d '\r' || true)
+        fi
+        case "$gh_email" in null) gh_email="" ;; esac
+    fi
+    printf '%s\t%s\t%s' "$ssh_fp" "$npm_email" "$gh_email"
+}
+
 devforge_identity_bundle() {
     local gle gln gge ggn osu host
     gle=$(git config user.email 2>/dev/null || true)
@@ -387,12 +454,22 @@ devforge_identity_bundle() {
     au="${rest%%|*}"; rest="${rest#*|}"
     ou="${rest%%|*}"; onm="${rest#*|}"
 
-    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s","auth_email":"%s","auth_account_uuid":"%s","auth_org_uuid":"%s","auth_org_name":"%s"}' \
+    # Task-04 (Capability A): 6 segnali identità locali additivi (parità mac/Linux/Win).
+    local _os _tools osfn oslg osdm sshfp npme ghe
+    _os=$(_devforge_local_identity_signals_os)
+    osfn="${_os%%$'\t'*}"; _os="${_os#*$'\t'}"; oslg="${_os%%$'\t'*}"; osdm="${_os#*$'\t'}"
+    _tools=$(_devforge_local_identity_signals_tools)
+    sshfp="${_tools%%$'\t'*}"; _tools="${_tools#*$'\t'}"; npme="${_tools%%$'\t'*}"; ghe="${_tools#*$'\t'}"
+
+    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s","auth_email":"%s","auth_account_uuid":"%s","auth_org_uuid":"%s","auth_org_name":"%s","os_full_name":"%s","os_login":"%s","os_domain":"%s","ssh_fingerprint":"%s","npm_email":"%s","gh_email":"%s"}' \
         "$(devforge_sanitize_json_str "$gle")" "$(devforge_sanitize_json_str "$gln")" \
         "$(devforge_sanitize_json_str "$gge")" "$(devforge_sanitize_json_str "$ggn")" \
         "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")" \
         "$(devforge_sanitize_json_str "$ae")" "$(devforge_sanitize_json_str "$au")" \
-        "$(devforge_sanitize_json_str "$ou")" "$(devforge_sanitize_json_str "$onm")"
+        "$(devforge_sanitize_json_str "$ou")" "$(devforge_sanitize_json_str "$onm")" \
+        "$(devforge_sanitize_json_str "$osfn")" "$(devforge_sanitize_json_str "$oslg")" \
+        "$(devforge_sanitize_json_str "$osdm")" "$(devforge_sanitize_json_str "$sshfp")" \
+        "$(devforge_sanitize_json_str "$npme")" "$(devforge_sanitize_json_str "$ghe")"
 }
 
 # Resolve authenticated SSO identity from Claude Code's local oauth account file.
