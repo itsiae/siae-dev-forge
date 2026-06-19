@@ -425,6 +425,22 @@ _devforge_ensure_auth() {
     fi
 }
 
+# Emette 1 evento osservabilità sull'identità SSO corrente (best-effort).
+# Chiamata UNA volta dal branch startup) di session-start (1×/sessione logica).
+# DEVFORGE_AUTH_EMAIL deve essere già risolto dal chiamante.
+devforge_emit_identity_observability() {
+    local domain_expected="${DEVFORGE_AUTH_DOMAIN:-siae.it}"
+    if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
+        devforge_log "identity_unresolved" "warning" '{"reason":"oauthAccount_absent"}' 2>/dev/null || true
+    else
+        local _dom="${DEVFORGE_AUTH_EMAIL##*@}"
+        if [ "$_dom" != "$domain_expected" ]; then
+            devforge_log "identity_external_domain" "warning" \
+                "{\"domain\":\"$(devforge_sanitize_json_str "$_dom")\"}" 2>/dev/null || true
+        fi
+    fi
+}
+
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
 # file/session dir is absent or no interpreter is available. Used to anchor token spend
 # to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
