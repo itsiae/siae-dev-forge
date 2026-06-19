@@ -19,11 +19,11 @@ Portare `auth_email` a ~100% alla fonte lato produttore DevForge tramite:
 
 | # | Task | Tipo | AC | Stato |
 |---|------|------|----|-------|
-| 01 | [Test lazy auth resolution (RED)](task-01-test-lazy-auth.md) | test | AC1,AC2,AC3,AC6,AC7 | [PENDING] |
-| 02 | [Implementa _devforge_ensure_auth + wiring (GREEN)](task-02-impl-lazy-auth.md) | impl | AC1,AC2,AC3,AC6,AC7 | [PENDING] |
-| 03 | [Test osservabilità identità (RED)](task-03-test-observability.md) | test | AC4,AC5,AC8 | [PENDING] |
-| 04 | [Implementa emit in session-start startup (GREEN)](task-04-impl-observability.md) | impl | AC4,AC5,AC8 | [PENDING] |
-| 05 | [Doc ENV_VARS + no-regression suite](task-05-doc-and-regression.md) | doc/verify | AC6 | [PENDING] |
+| 01 | [Test lazy auth resolution (RED)](task-01-test-lazy-auth.md) | test | AC1,AC2,AC3,AC6,AC7 | [DONE] |
+| 02 | [Implementa _devforge_ensure_auth + wiring (GREEN)](task-02-impl-lazy-auth.md) | impl | AC1,AC2,AC3,AC6,AC7 | [DONE] |
+| 03 | [Test osservabilità identità (RED)](task-03-test-observability.md) | test | AC4,AC5,AC8 | [DONE] |
+| 04 | [Implementa emit in session-start startup (GREEN)](task-04-impl-observability.md) | impl | AC4,AC5,AC8 | [DONE] |
+| 05 | [Doc ENV_VARS + no-regression suite](task-05-doc-and-regression.md) | doc/verify | AC6 | [DONE] |
 
 ## Ordine
 
