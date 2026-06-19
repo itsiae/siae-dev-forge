@@ -350,7 +350,7 @@ _devforge_check_rotation() {
             [ -f "$archived" ] || continue
             archived_basename=$(basename "$archived")
             cursor_file="${outbox}/.cursor-${archived_basename}"
-            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            cursor=$(cat "$cursor_file" 2>/dev/null | tr -d '\r'); cursor="${cursor:-0}"; case "$cursor" in ''|*[!0-9]*) cursor=0;; esac
             sz=$(stat -f%z "$archived" 2>/dev/null || stat -c%s "$archived" 2>/dev/null || echo 0)
             # Only drop if fully consumed: cursor >= file_size
             if [ "$cursor" -ge "$sz" ] 2>/dev/null && [ "$sz" -gt 0 ] 2>/dev/null; then

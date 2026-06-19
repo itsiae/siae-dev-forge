@@ -30,8 +30,8 @@ Windows ≡ macOS ≡ Linux**, zero-loss, additivo, no-regression.
 | [task-04](task-04-identity-bundle-wire.md) | A | Wire dei 6 campi in `devforge_identity_bundle` | [DONE] |
 | [task-05](task-05-rotate-inline-helper.md) | B | `_devforge_rotate_inline` (rename + collisione + stat) | [PENDING] |
 | [task-06](task-06-lock-append-rotation-routing.md) | B | Firma 4-arg `_devforge_lock_append` + cursor-move + routing | [PENDING] |
-| [task-07](task-07-batch-global-archives.md) | B | Drain archivi globali in `devforge_batch_global` | [PENDING] |
-| [task-08](task-08-crlf-guard.md) | C | CRLF guard su tutte le letture cursore | [PENDING] |
+| [task-07](task-07-batch-global-archives.md) | B | Drain archivi globali in `devforge_batch_global` | [DONE] |
+| [task-08](task-08-crlf-guard.md) | C | CRLF guard su tutte le letture cursore | [DONE] |
 | [task-09](task-09-no-regression-crossplatform-verify.md) | tutte | Harness verifica cross-platform committato + no-regression | [PENDING] |
 
 ## Ordine e dipendenze
