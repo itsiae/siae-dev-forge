@@ -26,12 +26,12 @@ if [ "$single_count" -ne 0 ]; then
   exit 1
 fi
 
-# Assert 2: 26 occorrenze del byte-pattern escaped-dquote \"${CLAUDE_PLUGIN_ROOT}
-# (22 pre-existing + 2 review-evidence: PreToolUse + PostToolUse, Task 03 + 1 pr-release-gate PR #252
-# + 1 session-start-tiered-advisor PR tiered-claude-md)
+# Assert 2: 29 occorrenze del byte-pattern escaped-dquote \"${CLAUDE_PLUGIN_ROOT}
+# (26 storici + 2 aggiunti senza allineare il contatore — drift sanato qui
+# + 1 SessionEnd: fix lifecycle stop-gate/session_end 2026-06-19)
 escaped_count=$(grep -cF '\"${CLAUDE_PLUGIN_ROOT}' "$HOOKS_JSON" || true)
-if [ "$escaped_count" -ne 26 ]; then
-  echo "FAIL[2]: attese 26 occorrenze escaped-dquote \\\"\${CLAUDE_PLUGIN_ROOT}, trovate $escaped_count"
+if [ "$escaped_count" -ne 29 ]; then
+  echo "FAIL[2]: attese 29 occorrenze escaped-dquote \\\"\${CLAUDE_PLUGIN_ROOT}, trovate $escaped_count"
   exit 1
 fi
 
@@ -63,9 +63,9 @@ if [ "$failed" -ne 0 ]; then
   echo "FAIL[4]: $failed/$total hooks non si espandono correttamente"
   exit 1
 fi
-if [ "$total" -ne 26 ]; then
-  echo "FAIL[4]: attesi 26 commands totali, trovati $total"
+if [ "$total" -ne 29 ]; then
+  echo "FAIL[4]: attesi 29 commands totali, trovati $total"
   exit 1
 fi
 
-echo "PASS: hooks.json var expansion conforme (26 hooks, JSON valid, runtime expansion OK)"
+echo "PASS: hooks.json var expansion conforme (29 hooks, JSON valid, runtime expansion OK)"
