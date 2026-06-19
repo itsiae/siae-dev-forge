@@ -107,6 +107,23 @@ if [ "$VALIDATED" = "1" ]; then
     exit 0
 fi
 
+# Proportional scaling: su diff risk=low (doc/manifest) il gate è advisory, non block.
+# Floor security/secret invariato (pre-commit non toccato). Design ADR-3.
+RISK=code
+if source "${PLUGIN_ROOT}/lib/diff-risk-classifier.sh" 2>/dev/null \
+   && command -v devforge_classify_diff_risk >/dev/null 2>&1; then
+    RISK=$(devforge_classify_diff_risk "origin/main" 2>/dev/null || echo code)
+fi
+if [ "$RISK" = "low" ]; then
+    devforge_log "pr_gate_scaled" "info" "{\"gate\":\"pr-blind-review-gate\",\"risk\":\"low\"}" 2>/dev/null || true
+    cat <<EOF
+{
+  "additional_context": "<IMPORTANT>\\nDevForge Blind Review Gate scalato ad ADVISORY: diff a basso rischio (doc-only/manifest plugin). siae-blind-review consigliato ma NON obbligatorio per questo diff. Floor security invariato.\\n</IMPORTANT>"
+}
+EOF
+    exit 0
+fi
+
 # Block
 devforge_log "pr_blind_review_gate" "blocked" "{\"task_id\":\"${TASK_ID:-}\"}"
 _BR_EXPL=""
