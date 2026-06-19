@@ -310,3 +310,20 @@ override.
   resta invariato nel codice ma beneficia indirettamente quando il cursore viene spostato dal
   prossimo evento bash/node/perl. Residuo race writer-vs-batcher = ri-upload idempotente, mai
   perdita (BLOCK-2).
+
+## File modificati (manifest implementazione)
+
+File di produzione toccati da questa PR (per drift detection — base = branch parent statusline):
+
+- `lib/logger.sh` — Cap. A (identità), B (rotazione), D (event_id mkdir-lock)
+- `lib/telemetry-upload.sh` — Cap. B (drain archivi globali), C (CRLF guard)
+- `tests/run-all.sh` — wiring delle nuove suite
+
+Test (Cap. A/B/C/D):
+- `tests/zero-loss/unit/test_logger_event_id_concurrency.sh`
+- `tests/zero-loss/unit/test_logger_identity_signals.sh`
+- `tests/zero-loss/unit/test_logger_rotation_crosstier.sh`
+- `tests/zero-loss/unit/test_batch_global_archives.sh`
+- `tests/zero-loss/unit/test_logger_crlf_cursor.sh`
+- `tests/zero-loss/integration/test_crossplatform_no_degradation.sh`
+- `tests/test_telemetry_fixes.sh`
