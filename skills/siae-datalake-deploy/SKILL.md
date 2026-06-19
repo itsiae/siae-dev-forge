@@ -94,7 +94,23 @@ Se `gh` non è disponibile o non autenticato → segnala e fermati (serve per il
 
 ## Step 2 — Lancio pipeline
 
-🟢 SICURO — esegui direttamente senza chiedere conferma
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
+| 🔴 CRITICO (Deploy pipeline CI/CD) — 🔨 DevForge · siae-datalake-deploy |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU AWS (infrastruttura Terraform)** |
+| 📋 Risorsa: `{repo}` · 🌍 Ambiente: `{ambiente}` |
+| **▼ Azioni** |
+| 1. Push tag `{tag}` sul repo `itsiae/{repo}` |
+| 2. Avvio pipeline CI/CD GitHub Actions |
+| 3. Terraform apply su AWS ({ambiente} → collaudo/certificazione) |
+| 💡 Perché: il push del tag triggera immediatamente la pipeline — Terraform applicherà modifiche sull'infrastruttura AWS. L'operazione è difficilmente reversibile una volta partita. |
+| 🚫 Se NO: nessun tag pushato, nessuna pipeline avviata, infrastruttura AWS invariata. |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 ```bash
 make {ambiente}
@@ -259,11 +275,11 @@ Se l'errore non rientra nella tabella del Step 5, mostra i log grezzi e chiedi a
 | Operazione | Livello | Card |
 |---|---|---|
 | Verifica Makefile e gh CLI | 🟢 Sicuro | No |
-| `make {ambiente}` — push tag | 🟢 Sicuro | No |
+| `make {ambiente}` — push tag + deploy AWS | 🔴 Critico | Sì |
 | Monitoring run (polling) | 🟢 Sicuro | No |
 | Lettura log job fallito | 🟢 Sicuro | No |
 | Applicazione soluzione (modifica file) | 🟡 Medio | Sì |
-| Applicazione soluzione (comando AWS/gh) | 🔴 Alto | Sì |
+| Applicazione soluzione (comando AWS/gh) | 🔴 Critico | Sì |
 
 ---
 
@@ -271,7 +287,7 @@ Se l'errore non rientra nella tabella del Step 5, mostra i log grezzi e chiedi a
 
 1. **SOLO** `dev`, `qa`, `plan_dev`, `plan_qa` come valori per `ambiente` — rifiuta tutto il resto
 2. **MAI** eseguire `make prod` o `make plan_prod` — bloccato dal Makefile stesso
-3. **PRE-FLIGHT OBBLIGATORIA** solo per le soluzioni applicate in caso di errore — NON per `make {ambiente}`
+3. **PRE-FLIGHT OBBLIGATORIA** per `make {ambiente}` (deploy AWS) E per le soluzioni applicate in caso di errore
 4. **SEMPRE** attendere conferma esplicita prima di applicare soluzioni
 5. **SEMPRE** mostrare il Run ID e il link GitHub Actions dopo il lancio
 6. **NON** proporre soluzioni senza aver letto i log — analisi prima, proposta dopo

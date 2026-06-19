@@ -209,28 +209,29 @@ Se NON sei dietro Zscaler (CI runner, VM cloud), salta questo step.
 
 ## Step 4 — Pre-flight Card
 
-🔴 ALTO — Mostra pre-flight card prima di eseguire
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
-| 🔴 ALTO (modifica state remoto) — 🔨 DevForge · siae-terraform-import |
+| 🔴 CRITICO (import state remoto) — 🔨 DevForge · siae-terraform-import |
 |:---|
-| **⚠️ MODIFICA DELLO STATE TERRAFORM REMOTO** |
-| 📋 Repo: `<repo>` · 🌍 Env: `<env>` · 📦 Risorsa: `<resource-address>` |
-| 🆔 AWS ID: `<aws-resource-id>` |
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE/DELETE SU TERRAFORM STATE** |
+| 📋 Risorsa: `<resource-address>` · 🌍 Ambiente: `<env>` |
+| 🆔 Repo: `<repo>` · AWS ID: `<aws-resource-id>` |
 | **▼ Azioni** |
-| 1. 🔧 `terragrunt import <resource-address> <aws-resource-id>` |
-| 2. 🔍 `terragrunt plan` per verificare 0 destroy |
-| 💡 Perche': la risorsa esiste in AWS ma non e' nello state — import evita ResourceExistsException al prossimo apply |
-| 🚫 Se NO: la risorsa resta orfana, il prossimo apply fallira' |
-| ⚠️ Rischio: se l'ID e' sbagliato, lo state punta a risorsa errata → drift permanente |
+| 1. `terragrunt import <resource-address> <aws-resource-id>` — scrive la risorsa nello state remoto S3 |
+| 2. `terragrunt plan` — verifica che il plan mostri 0 destroy (lettura, non scrive) |
+| 💡 Perche': la risorsa esiste in AWS ma non e' nello state — import evita ResourceExistsException al prossimo apply; se l'ID e' sbagliato, lo state punta a risorsa errata → drift permanente irreversibile senza rollback manuale |
+| 🚫 Se NO: la risorsa resta orfana, il prossimo apply fallira' con ResourceExistsException |
 
 ⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finche' l'utente
 risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 
 ---
 
 ## Step 5 — Esegui l'Import
 
-🔴 ALTO
+🔴 CRITICO — esegui solo dopo conferma esplicita dello Step 4
 
 **Solo dopo "sì, procedi"**, esegui dal cwd `live/<module-path>`:
 
@@ -366,7 +367,41 @@ NON applicare. Mostra il diff completo all'utente con la sezione `# forces
 replacement` e chiedi come procedere:
 1. Aggiusta codice Terraform per evitare il replace
 2. Aggiungi `lifecycle { prevent_destroy = true }` se applicabile
-3. Annulla l'import (`terragrunt state rm <address>`) e investigate
+3. Annulla l'import con `terragrunt state rm` — vedi gate CRITICO obbligatorio qui sotto
+
+### Rollback import errato — `terragrunt state rm`
+
+Se l'import ha associato l'address sbagliato o l'ID AWS e' errato, il rollback richiede
+la rimozione dallo state remoto. Questa operazione e' **irreversibile** (lo state viene
+modificato immediatamente sul backend S3 remoto) — richiede gate esplicito.
+
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
+| 🔴 CRITICO (state rm — rollback import) — 🔨 DevForge · siae-terraform-import |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — DELETE SU TERRAFORM STATE** |
+| 📋 Risorsa: `<resource-address>` · 🌍 Ambiente: `<env>` |
+| 🆔 Repo: `<repo>` |
+| **▼ Azioni** |
+| 1. `terragrunt state rm <resource-address>` — rimuove la risorsa dallo state remoto S3 |
+| 💡 Perche': l'import precedente ha associato address o ID errato; `state rm` ripristina lo state prima dell'import permettendo di ritentare con i dati corretti |
+| 🚫 Se NO: lo state rimane con la associazione errata, i prossimi plan/apply useranno l'ID sbagliato generando drift permanente |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finche' l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
+
+```bash
+cd <repo>/<live-path>
+SSL_CERT_FILE=/tmp/combined_ca.pem \
+AWS_CA_BUNDLE=/tmp/combined_ca.pem \
+ENV=<env> terragrunt state rm \
+  --terragrunt-non-interactive \
+  '<resource-address>'
+```
+
+Dopo il `state rm`, torna allo Step 4 per ritentare l'import con i dati corretti.
 
 ### Backend S3 inaccessibile
 
@@ -406,9 +441,9 @@ GitHub Actions runner (no Zscaler) con un workflow ad-hoc `workflow_dispatch`.
 | Generazione CA bundle Zscaler | 🟢 Sicuro | No |
 | Lettura state remoto (`state list`) | 🟢 Sicuro | No |
 | `terragrunt plan` (read-only) | 🟢 Sicuro | No |
-| **`terragrunt import` (modifica state)** | 🔴 Alto | Sì |
-| `terragrunt state rm` (rollback import) | 🔴 Alto | Sì |
-| `terragrunt apply` post-import | 🔴 Alto | Sì (skill separata, non in scope qui) |
+| **`terragrunt import` (modifica state)** | 🔴 CRITICO | Sì |
+| **`terragrunt state rm` (rollback import)** | 🔴 CRITICO | Sì |
+| `terragrunt apply` post-import | 🔴 CRITICO | Sì (skill separata, non in scope qui) |
 
 ---
 

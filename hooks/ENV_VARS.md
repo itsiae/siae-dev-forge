@@ -32,6 +32,7 @@ Bedrock/API-key (no `oauthAccount`) o `~/.claude.json`/python3 assenti. Vedi
 | `DEVFORGE_AUTH_EMAIL` | (da oauthAccount) | Email SSO autenticata pinnata della sessione (`oauthAccount.emailAddress`). Timbrata top-level in ogni evento per attribuzione deterministica. |
 | `DEVFORGE_AUTH_ACCOUNT_UUID` | (da oauthAccount) | UUID account autenticato pinnato (`oauthAccount.accountUuid`). Chiave di join più stabile dell'email. |
 | `DEVFORGE_CLAUDE_JSON` | `~/.claude.json` | Override del path del file oauth letto da `devforge_resolve_auth_identity` e dal trailer hook. Usato principalmente nei test. |
+| `DEVFORGE_AUTH_DOMAIN` | `siae.it` | Dominio email aziendale atteso. Se `auth_email` ha dominio diverso, `session-start` (branch `startup`) emette `identity_external_domain`. Usato da `devforge_emit_identity_observability` (v1.92+). Override per altri org. |
 
 > Il trailer `prepare-commit-msg` (`DevForge-Author`, Comp.4) è installato sempre
 > da session-start (installer zero-harm: salta repo con un `prepare-commit-msg`
