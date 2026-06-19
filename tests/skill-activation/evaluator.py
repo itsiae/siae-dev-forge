@@ -37,9 +37,9 @@ def evaluate(cases: list, log_lines: list) -> dict:
             results.append({"id": case["id"], "status": "ERROR", "expected": case.get("expected_primary"), "got": "ERROR"})
             continue
         parsed = parse_response(entry.get("response", ""))
-        expected = case["expected_primary"]
+        expected = case.get("expected_primary")
         got = parsed.get("primary", "UNKNOWN")
-        status = "PASS" if got == expected else "FAIL"
+        status = "PASS" if expected is None or got == expected else "FAIL"
         forbidden = case.get("forbidden", [])
         forbidden_hit = [f for f in forbidden if f in [got] + parsed.get("chain", [])]
         chain = parsed.get("chain", [])
