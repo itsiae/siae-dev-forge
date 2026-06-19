@@ -584,12 +584,33 @@ devforge_next_seq() {
             echo "$locked_result"
             return
         fi
-        # flock contention or flock unavailable — fallback to unlocked increment
-        # (no atomicity guarantee; duplicate seq numbers possible under concurrency)
+        # flock contention or flock unavailable — fall through to mkdir-lock below.
     fi
-    local current=$(cat "$seq_file" 2>/dev/null || echo "0")
+    # Task-01 (Capability D): atomic seq SENZA il binario flock (assente su macOS e Windows
+    # Git Bash → senza questo il path era una race read-modify-write, con event_id duplicati
+    # sotto concorrenza). mkdir è atomico cross-OS (stesso pattern di _devforge_lock_append).
+    # NOTA: niente stale-guard basato su mtime qui. Il seq-lock è tenuto per microsecondi
+    # (read+write+rmdir): un SIGKILL durante questa finestra è trascurabile. Lo stale-guard
+    # via _devforge_dir_age_secs misfira sotto contesa (TOCTOU: stat su lockdir appena rimosso
+    # → mtime fallback 0 → age "enorme" → rimuove lock VALIDI → seq duplicati). Il backstop per
+    # eventuali orfani è il timeout `waited` sotto: dopo ~1s si procede senza lock (zero-loss).
+    local lockdir="${seq_file}.lockdir"
+    local waited=0
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        waited=$((waited + 1))
+        if [ "$waited" -gt 100 ]; then
+            # ~2s di contesa (irrealistico per hook DevForge) o lock orfano: last-resort senza lock.
+            # Preferisce un possibile tie di seq alla perdita dell'evento (zero-loss prevale).
+            local cur; cur=$(cat "$seq_file" 2>/dev/null | tr -d '\r' || echo "0")
+            echo "$((cur + 1))"
+            return
+        fi
+        sleep 0.02
+    done
+    local current; current=$(cat "$seq_file" 2>/dev/null | tr -d '\r' || echo "0")
     local next=$((current + 1))
     echo "$next" > "$seq_file"
+    rmdir "$lockdir" 2>/dev/null || true
     echo "$next"
 }
 

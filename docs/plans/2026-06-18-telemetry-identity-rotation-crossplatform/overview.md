@@ -24,7 +24,7 @@ Windows ≡ macOS ≡ Linux**, zero-loss, additivo, no-regression.
 
 | Task | Capability | Descrizione | Stato |
 |------|-----------|-------------|-------|
-| [task-01](task-01-event-id-collision-resistant.md) | D | `event_id` collision-resistant via mkdir-lock in `devforge_next_seq` | [PENDING] |
+| [task-01](task-01-event-id-collision-resistant.md) | D | `event_id` collision-resistant via mkdir-lock in `devforge_next_seq` | [DONE] |
 | [task-02](task-02-identity-os-signals.md) | A | `os_full_name`/`os_login`/`os_domain` cross-platform | [PENDING] |
 | [task-03](task-03-identity-ssh-npm-gh.md) | A | `ssh_fingerprint`/`npm_email`/`gh_email` (opt-in) | [PENDING] |
 | [task-04](task-04-identity-bundle-wire.md) | A | Wire dei 6 campi in `devforge_identity_bundle` | [PENDING] |
