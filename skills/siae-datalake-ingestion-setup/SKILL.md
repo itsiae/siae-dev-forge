@@ -335,13 +335,28 @@ sed -i "s/@v[0-9]\+\.[0-9]\+\.[0-9]\+/${LATEST_VERSION}/g" .github/workflows/*.y
 
 ## Step 10 — Rimozione Scaffolding Example
 
-🟡 MEDIO — Verifica prima di rimuovere
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
 ```bash
 ls modules/example/ live/example/ 2>/dev/null
 ```
 
-Se presenti, rimuovi:
+Se presenti, mostra la card e attendi conferma:
+
+| 🔴 CRITICO (rm -rf scaffolding) — 🔨 DevForge · siae-datalake-ingestion-setup |
+|:---|
+| **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE SU FILE SYSTEM** |
+| 📋 Risorsa: `modules/example/`, `live/example/` · 🌍 Ambiente: `locale (repo-target)` |
+| **▼ Azioni** |
+| 1. `rm -rf modules/example/` — rimuove l'intera directory modulo scaffolding |
+| 2. `rm -rf live/example/` — rimuove l'intera directory live scaffolding |
+| 💡 Perché: le directory `example/` sono scaffolding del template e non devono essere presenti nel repo finale; la rimozione è irreversibile senza git history |
+| 🚫 Se NO: le directory example rimangono nel repo e verranno committate — il repo IaC conterrà codice placeholder non funzionale |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
 ```bash
 rm -rf modules/example/ live/example/
 ```
@@ -361,7 +376,7 @@ sed -i 's/# 🚀 \[INSERIRE NOME PROGETTO QUI\]/# 🚀 datalake-{dominio}-ingest
 
 ## Step 12 — GitHub Env Sync
 
-🔴 ALTO — Pre-flight obbligatoria
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
 ```
 REQUIRED SUB-SKILL: siae-github-env-sync
@@ -375,7 +390,25 @@ può restituire 404 anche su piano Enterprise se il token non ha `administration
 1. Crea gli ambienti manualmente su GitHub:
    `https://github.com/itsiae/{repo-target}/settings/environments`
 2. Crea: `collaudo`, `certificazione`, `produzione`
-3. Poi esegui `siae-github-env-sync` con `repo-riferimento=datalake-accertatori-ingestion`
+3. Poi mostra la card e attendi conferma prima di eseguire `siae-github-env-sync`
+
+| 🔴 CRITICO (GitHub Env Sync) — 🔨 DevForge · siae-datalake-ingestion-setup |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU GITHUB ENVIRONMENT VARIABLES** |
+| 📋 Risorsa: `itsiae/{repo-target}` · 🌍 Ambiente: `collaudo`, `certificazione`, `produzione` |
+| **▼ Azioni** |
+| 1. Scrittura/sovrascrittura variabili AWS (`AWS_ENV`, `AWS_ORG_ACCOUNT`, `AWS_REGION`, `AWS_ROLE`, `AWS_TARGET_ACCOUNT_ID`) su tutti e 3 gli ambienti |
+| 2. Scrittura/sovrascrittura variabili DMS (`DMS_INSTANCE_TYPE`, `DMS_MULTI_AZ`, `DMS_STORAGE`, `DMS_VERSION`) su tutti e 3 gli ambienti |
+| 3. Scrittura/sovrascrittura variabili infrastruttura (`LOG_LEVEL`, `LOG_RETENTION_DAYS`, `TRANSIENT_BUCKET_NAME`, `VPC_DEFAULT_SG_ID`, `VPC_STAGE`) su tutti e 3 gli ambienti |
+| 💡 Perché: le variabili GitHub CI/CD controllano l'accesso AWS e i parametri DMS in produzione — una sovrascrittura errata può rendere le pipeline non funzionali o puntare ad account AWS sbagliati |
+| 🚫 Se NO: le variabili GitHub rimangono quelle esistenti (o assenti) — la pipeline CI/CD non potrà deployare correttamente il dominio |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui `siae-github-env-sync` con `repo-riferimento=datalake-accertatori-ingestion`.
+
+---
 
 **Variabili GitHub canoniche** (pattern `accertatori`):
 
@@ -451,8 +484,8 @@ e chiedi conferma all'utente prima di impostare queste variabili.
 | Lettura repo di riferimento via gh api | 🟢 Sicuro | No |
 | Scrittura file Terraform/Terragrunt | 🟢 Sicuro | No |
 | Aggiornamento workflow versioni | 🟢 Sicuro | No |
-| Rimozione scaffolding example | 🟡 Medio | Sì |
-| GitHub Env Sync | 🔴 Alto | Sì (siae-github-env-sync) |
+| Rimozione scaffolding example | 🔴 Critico | Sì (gate esplicito inline) |
+| GitHub Env Sync | 🔴 Critico | Sì (gate esplicito inline + siae-github-env-sync) |
 | git commit + push | 🔴 Alto | Sì (siae-git-workflow) |
 
 ---
@@ -464,7 +497,7 @@ e chiedi conferma all'utente prima di impostare queste variabili.
 3. **SEMPRE** usare `$VPC_DEFAULT_SG_ID`, `$DMS_VERSION`, `$DMS_MULTI_AZ`, `$DMS_STORAGE`
 4. **MAI** assumere il `database_name` — chiedere sempre all'utente
 5. **SEMPRE** segnalare che `mapping/{dominio}-1.json` è un placeholder da personalizzare
-6. **PRE-FLIGHT OBBLIGATORIA** per rimozione file, env sync e git push
+6. **GATE CRITICO OBBLIGATORIO** — pre-flight card con conferma esplicita per: rimozione file locali (`rm -rf`), env sync GitHub (variabili AWS CI/CD), git push; silenzio ≠ consenso
 
 ---
 

@@ -1344,6 +1344,86 @@ echo "  Telemetry functional: ${telfunc_ok} OK | ${telfunc_fail} FAIL"
 TOTAL_PASS=$((TOTAL_PASS + telfunc_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + telfunc_fail))
 
+# ============================================================================
+# Plugin Update Safety (design 2026-06-19) — un test per criterio di accettazione
+# ============================================================================
+echo ""
+echo "=== Plugin Update Safety ==="
+echo ""
+pus_ok=0; pus_fail=0
+SS="${PLUGIN_ROOT}/hooks/session-start"
+PVLIB="${PLUGIN_ROOT}/lib/plugin-version.sh"
+
+# T-AC1: nessun claude plugin update / rm -rf cache ATTIVO (non commentato)
+if ! grep -nE '^[[:space:]]*[^#].*claude[[:space:]]+plugin[[:space:]]+update' "$SS" >/dev/null 2>&1 \
+   && ! grep -nE '^[[:space:]]*[^#].*rm[[:space:]]+-rf[^#]*plugins/cache' "$SS" >/dev/null 2>&1; then
+  echo "  PASS  T-AC1: session-start non esegue claude plugin update / rm -rf cache"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC1: trovato claude plugin update o rm -rf cache attivo"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC2: nessun falso successo / call-to-action manuale
+if ! grep -nE '^[[:space:]]*[^#].*(Esegui:|aggiornato a v|Aggiornamento fallito)' "$SS" >/dev/null 2>&1; then
+  echo "  PASS  T-AC2: nessun messaggio di falso successo / call-to-action"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC2: trovato messaggio falso successo/call-to-action"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC3: confronto numerico robusto + suffisso prerelease scartato
+if ( source "$PVLIB" 2>/dev/null
+     _ver_lt 1.9.0 1.10.0 && ! _ver_lt 1.10.0 1.9.0 && ! _ver_lt 1.93.0 1.93.0 && ! _ver_lt 1.93.0-rc1 1.93.0 ); then
+  echo "  PASS  T-AC3: _ver_lt numerico (1.9<1.10, =, no prerelease bump)"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC3: _ver_lt errato"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC4: evento plugin_version_observed con status valido (anche in fallback)
+PUS_LOG=$(mktemp 2>/dev/null || echo "/tmp/pus_log.$$")
+DEVFORGE_LOG_FILE="$PUS_LOG" bash "$SS" >/dev/null 2>&1 || true
+if grep -q '"event":"plugin_version_observed"' "$PUS_LOG" 2>/dev/null \
+   && grep -oE '"status":"(up_to_date|behind|unavailable)"' "$PUS_LOG" >/dev/null 2>&1; then
+  echo "  PASS  T-AC4: plugin_version_observed emesso con status valido"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC4: evento plugin_version_observed mancante o status non valido"; pus_fail=$((pus_fail+1))
+fi
+rm -f "$PUS_LOG"
+
+# T-AC5: install.sh scrive path STABILE non-versionato + idempotenza
+if command -v jq >/dev/null 2>&1; then
+  PUS_HOME=$(mktemp -d 2>/dev/null || echo "/tmp/pus_home.$$"); mkdir -p "$PUS_HOME"
+  mkdir -p "$PUS_HOME/.claude/plugins/marketplaces/siae-devforge/statusline"
+  : > "$PUS_HOME/.claude/plugins/marketplaces/siae-devforge/statusline/devforge-statusline.sh"
+  HOME="$PUS_HOME" bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
+  CMD1=$(jq -r '.statusLine.command // empty' "$PUS_HOME/.claude/settings.json" 2>/dev/null)
+  HOME="$PUS_HOME" bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
+  CMD2=$(jq -r '.statusLine.command // empty' "$PUS_HOME/.claude/settings.json" 2>/dev/null)
+  if ! printf '%s' "$CMD1" | grep -qE 'plugins/cache/siae-devforge/siae-devforge/[0-9]+\.[0-9]+\.[0-9]+' \
+     && printf '%s' "$CMD1" | grep -q 'marketplaces/siae-devforge' && [ -n "$CMD1" ] && [ "$CMD1" = "$CMD2" ]; then
+    echo "  PASS  T-AC5: install.sh path stabile non-versionato + idempotente"; pus_ok=$((pus_ok+1))
+  else
+    echo "  FAIL  T-AC5: path versionato o non idempotente (CMD1='$CMD1' CMD2='$CMD2')"; pus_fail=$((pus_fail+1))
+  fi
+  rm -rf "$PUS_HOME"
+else
+  echo "  SKIP  T-AC5: jq non disponibile"
+fi
+
+# T-AC6: VERSION_STATUS ancora presente → coperto dal test esistente "session-start injects
+# VERSION_STATUS into additional_context JSON" (cerca "DevForge v"). Non duplicato qui per non
+# eseguire session-start due volte (lento per la call gh).
+
+# T-AC7: la lib versione non dipende da pgrep/kill su processi nativi (cross-platform safe)
+if ! grep -nE 'pgrep|kill[[:space:]]+-|_net_kill_tree' "$PVLIB" >/dev/null 2>&1; then
+  echo "  PASS  T-AC7: plugin-version.sh privo di pgrep/kill (Windows-safe)"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC7: trovato pgrep/kill in plugin-version.sh"; pus_fail=$((pus_fail+1))
+fi
+
+echo ""
+echo "  Plugin Update Safety: ${pus_ok} OK | ${pus_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + pus_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + pus_fail))
+
 # --- Telemetry Event Validation ---
 echo ""
 echo "=== Telemetry Event Validation ==="

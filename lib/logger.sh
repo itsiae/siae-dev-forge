@@ -560,6 +560,40 @@ devforge_resolve_auth_identity() {
     printf '%s|%s|%s|%s' "$ae" "$au" "$ou" "$onm"
 }
 
+# Lazy auth resolution: se DEVFORGE_AUTH_EMAIL non è pinnato (hook senza
+# devforge_init_session, o sessione partita con plugin vecchio), risolvi inline
+# da ~/.claude.json. Cache flag per-process: 1 lettura max/processo hook.
+# Flag settato INCONDIZIONATAMENTE (trade-off documentato in design 2026-06-19):
+# i processi hook sono short-lived, un fallimento transitorio resta confinato al
+# processo corrente; il processo hook successivo ritenta.
+_devforge_ensure_auth() {
+    [ -n "${_DEVFORGE_AUTH_RESOLVED:-}" ] && return 0
+    _DEVFORGE_AUTH_RESOLVED=1
+    if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
+        local _auth _rest
+        _auth=$(devforge_resolve_auth_identity 2>/dev/null || printf '|||')
+        DEVFORGE_AUTH_EMAIL="${_auth%%|*}"
+        _rest="${_auth#*|}"
+        DEVFORGE_AUTH_ACCOUNT_UUID="${_rest%%|*}"
+    fi
+}
+
+# Emette 1 evento osservabilità sull'identità SSO corrente (best-effort).
+# Chiamata UNA volta dal branch startup) di session-start (1×/sessione logica).
+# DEVFORGE_AUTH_EMAIL deve essere già risolto dal chiamante.
+devforge_emit_identity_observability() {
+    local domain_expected="${DEVFORGE_AUTH_DOMAIN:-siae.it}"
+    if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
+        devforge_log "identity_unresolved" "warning" '{"reason":"oauthAccount_absent"}' 2>/dev/null || true
+    else
+        local _dom="${DEVFORGE_AUTH_EMAIL##*@}"
+        if [ "$_dom" != "$domain_expected" ]; then
+            devforge_log "identity_external_domain" "warning" \
+                "{\"domain\":\"$(devforge_sanitize_json_str "$_dom")\"}" 2>/dev/null || true
+        fi
+    fi
+}
+
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
 # file/session dir is absent or no interpreter is available. Used to anchor token spend
 # to outcomes/blocks (e.g. pr_merged) without computing anything in the producer.
@@ -855,6 +889,7 @@ devforge_log() {
     # repo_slug (org/repo) derived from repo_remote for join-key use at the consumer.
     local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    _devforge_ensure_auth
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
@@ -940,6 +975,7 @@ devforge_log_timed() {
     # static marker that tells the consumer this duration was measured via epoch_ns wallclock.
     local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    _devforge_ensure_auth
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")

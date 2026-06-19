@@ -148,3 +148,21 @@
 - id: data-glue-job
   prompt: "scrivo un Glue job PySpark per la trasformazione bronze-to-silver"
   expected_primary: siae-data-engineering
+
+# === qa-docs: attivazione solo via /qa-docs esplicito (4) ===
+# fix/qa-docs-restrict-trigger: la skill NON deve auto-triggerare su keyword MTP/piano di test.
+- id: qa-docs-explicit-command
+  prompt: "/qa-docs"
+  expected_primary: qa-docs
+
+- id: qa-docs-no-trigger-mtp-keyword
+  prompt: "genera un Master Test Plan per il progetto DMND0006339"
+  forbidden: [qa-docs]
+
+- id: qa-docs-no-trigger-piano-test
+  prompt: "ho bisogno di un piano di test per la nuova feature"
+  forbidden: [qa-docs]
+
+- id: qa-docs-no-trigger-mtp-acronym
+  prompt: "MTP per il rilascio di sport-gestione-licenze-service"
+  forbidden: [qa-docs]
