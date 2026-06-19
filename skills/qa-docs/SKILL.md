@@ -13,6 +13,8 @@ description: >
 > **Orchestratore**: questo file governa le 6 fasi. Dettagli strutturali → `reference/template-structure.md`.
 > Regole operative → `reference/phase-playbook.md`. Canali intake → `reference/intake-channels.md`.
 
+> ⚠️ **Attivazione**: invocare SOLO tramite il comando esplicito `/qa-docs` — non auto-triggerare su keyword come "Master Test Plan", "MTP", "piano di test", ecc.
+
 **Lingua**: tutta l'interazione con l'utente e il contenuto del documento sono in italiano.
 
 ---
