@@ -363,14 +363,33 @@ Verifica con `grep -rn "uses:" .github/workflows/` che tutte le versioni siano a
 
 ## Step 14 — Rimozione Scaffolding Example
 
-🟡 MEDIO — verifica prima di rimuovere
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
 
-Rimuovi i file di scaffolding se presenti:
+| 🔴 CRITICO (Rimozione scaffolding) — 🔨 DevForge · siae-datalake-etl-setup |
+|:---|
+| **⚠️ OPERAZIONE LOCALE IRREVERSIBILE — DELETE SU FILE SYSTEM** |
+| 📋 Risorsa: `modules/example/`, `live/example/`, `chart/` · 🌍 Ambiente: `locale (repo-target)` |
+| **▼ Azioni** |
+| 1. `rm -rf modules/example/` — rimuove tutti i file dello scaffolding modulo example |
+| 2. `rm -rf live/example/` — rimuove tutti i file Terragrunt di esempio |
+| 3. `rm -rf chart/` — rimuove la directory chart se non presente nel repo di riferimento sport-etl |
+| 💡 Perché: la rimozione è irreversibile senza git; se eseguita su branch sbagliato o prima di un commit, i file sono persi senza possibilità di rollback semplice |
+| 🚫 Se NO: lo scaffolding rimane nel repo e potrebbe confondere i deploy Terraform futuri |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui:
+
+Prima di rimuovere, verifica che non ci siano riferimenti a `example` nel codice:
+```bash
+grep -rn "example" live/ modules/ --include="*.tf" --include="*.hcl" | grep -v "example/"
+```
+
+Se il grep non restituisce risultati, rimuovi:
 - `modules/example/` (tutti i file)
 - `live/example/` (tutti i file)
 - `chart/` — **da rimuovere** se non presente nel repo di riferimento sport-etl
-
-Verifica che non ci siano riferimenti a `example` nel codice prima di rimuovere.
 
 ---
 
@@ -385,7 +404,22 @@ Vedi [reference/readme-template.md](reference/readme-template.md) per il templat
 
 ## Step 16 — GitHub Env Sync
 
-🔴 ALTO — pre-flight card obbligatoria
+🔴 CRITICO — Mostra pre-flight card prima di eseguire
+
+| 🔴 CRITICO (GitHub Env Sync) — 🔨 DevForge · siae-datalake-etl-setup |
+|:---|
+| **⚠️ OPERAZIONE REMOTA — WRITE/UPDATE SU GITHUB ENVIRONMENTS (VARIABILI AWS CI/CD)** |
+| 📋 Risorsa: `itsiae/datalake-{dominio}-etl` · 🌍 Ambiente: `collaudo`, `certificazione`, `produzione` |
+| **▼ Azioni** |
+| 1. Copia/aggiorna le variabili GitHub Actions da `datalake-sport-etl` verso il repo target |
+| 2. Variabili interessate: `AWS_ENV`, `AWS_ORG_ACCOUNT`, `AWS_REGION`, `AWS_ROLE`, `AWS_TARGET_ACCOUNT_ID`, `BRONZE_DATALAKE_BUCKET_ID`, `SILVER_DATALAKE_BUCKET_ID`, `DYNAMO_BRONZE_TABLE_UPDATE_ID`, `EVENTBRIDGE_DATALAKE_BUS_ID`, `EVENTBRIDGE_DATAPLATFORM_ERRORS_ID`, `GLUE_PACKAGES_BUCKET_ID`, `GLUE_SPARKUI_BUCKET_ID`, `LOGS_RETENTION_DAYS`, `OPEN_LINEAGE_DOMAIN_ID`, `SILVER_UPDATES_MANAGER_LAMBDA_ARN`, `STEPFUN_CRON_SCHEDULE`, `STEPFUN_CRON_STATUS`, `VPC_STAGE` |
+| 💡 Perché: le variabili GitHub environments controllano i parametri AWS (account, region, ruoli IAM, bucket) usati dalle pipeline CI/CD; una modifica errata può rompere i deploy su tutti gli ambienti |
+| 🚫 Se NO: le variabili CI/CD rimangono quelle di default del repo template e i deploy falliranno |
+
+⏸️ **ATTENDI CONFERMA ESPLICITA** — mostra la card e NON eseguire finché l'utente
+risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
+
+**Solo dopo "sì, procedi"**, esegui tramite sub-skill:
 
 ```
 REQUIRED SUB-SKILL: siae-github-env-sync
@@ -453,9 +487,9 @@ Se l'utente chiede di creare anche il file `.py`:
 | Scrittura file Terraform/Terragrunt | 🟢 Sicuro | No |
 | Scrittura _envs/*.tmpl | 🟢 Sicuro | No |
 | Aggiornamento workflow versioni | 🟢 Sicuro | No |
-| Rimozione scaffolding example | 🟡 Medio | Sì |
+| Rimozione scaffolding example | 🔴 Critico | Sì (gate inline Step 14) |
 | Scrittura README.md | 🟢 Sicuro | No |
-| GitHub Env Sync | 🔴 Alto | Sì (siae-github-env-sync) |
+| GitHub Env Sync | 🔴 Critico | Sì (gate inline Step 16 + siae-github-env-sync) |
 | git commit + push | 🔴 Alto | Sì (siae-git-workflow) |
 
 ---
@@ -469,7 +503,7 @@ Se l'utente chiede di creare anche il file `.py`:
 5. **`new_db_silver_mapping.json`** è il nome corretto del file mapping nel pattern sport (non `silver-mapping.json`)
 6. **`STEPFUN_CRON_SCHEDULE`/`STEPFUN_CRON_STATUS`** sono le variabili corrette nel pattern sport
 7. **SEMPRE** verificare che `force_no_window: 0` in prod e `1` in dev/qa
-8. **PRE-FLIGHT OBBLIGATORIA** per rimozione file, env sync e git push
+8. **GATE CRITICO OBBLIGATORIO** — pre-flight card con conferma esplicita per: rimozione file locali (`rm -rf`), env sync GitHub (variabili AWS CI/CD), git push; silenzio ≠ consenso
 9. **`--force_no_window: "0"` nell'ASL JSON sempre hardcoded** — non iniettare il valore da templatefile variable; il campo `.tmpl` è usato esclusivamente dai `default_arguments` Glue al deploy, non dalla Step Function a runtime
 
 ---
