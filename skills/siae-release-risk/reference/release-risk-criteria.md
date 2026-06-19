@@ -161,6 +161,7 @@
 | Env var | Default | Effect |
 |---|---|---|
 | `DEVFORGE_RELEASE_RISK_DISABLED` | `0` | `1` → skip hook + skill |
+| `DEVFORGE_RELEASE_RISK_ANY_PR` | `0` | `1` → hook scatta su qualsiasi `gh pr create` (qualunque branch/base); default scope `release/**`→main |
 | `DEVFORGE_RELEASE_RISK_KG_TIMEOUT_SEC` | `5` | Timeout MCP sport-kg lookup (Criterion 5) |
 | `DEVFORGE_RELEASE_RISK_SECURITY_CRITICAL_THRESHOLD` | `0` | Soglia Criterion 17 critical |
 | `DEVFORGE_RELEASE_RISK_SECURITY_HIGH_THRESHOLD` | `5` | Soglia Criterion 17 high |
