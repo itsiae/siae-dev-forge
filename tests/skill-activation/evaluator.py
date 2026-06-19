@@ -42,6 +42,8 @@ def evaluate(cases: list, log_lines: list) -> dict:
         status = "PASS" if expected is None or got == expected else "FAIL"
         forbidden = case.get("forbidden", [])
         forbidden_hit = [f for f in forbidden if f in [got] + parsed.get("chain", [])]
+        if forbidden_hit:
+            status = "FAIL"
         chain = parsed.get("chain", [])
         chain_expected = case.get("expected_chain", [])
         chain_complete = all(s in chain or s == got for s in chain_expected) if chain_expected else None
