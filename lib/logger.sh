@@ -128,10 +128,13 @@ _devforge_rotate_inline() {
     ts=$(date +%s 2>/dev/null || echo 0)
     archived="${dir}/${base}-${ts}.archived.jsonl"
     if [ -e "$archived" ]; then
-        for i in $(seq 1 999); do
+        # MAJOR-3: loop aritmetico bash puro (no `seq`, assente in Busybox/Alpine CI).
+        i=1
+        while [ "$i" -le 999 ]; do
             if [ ! -e "${dir}/${base}-${ts}-${i}.archived.jsonl" ]; then
                 archived="${dir}/${base}-${ts}-${i}.archived.jsonl"; break
             fi
+            i=$((i + 1))
         done
     fi
     if ! mv "$file" "$archived" 2>/dev/null; then
@@ -462,7 +465,10 @@ _devforge_local_identity_signals_os() {
 # Output TSV: ssh_fingerprint \t npm_email \t gh_email. gh è OPT-IN (rete) via DEVFORGE_IDENTITY_GH=1.
 _devforge_local_identity_signals_tools() {
     local ssh_fp="" npm_email="" gh_email="" key
-    # SSH: prima chiave pubblica in ordine deterministico, hash via ssh-keygen. Mai chiavi private.
+    # SSH: prima chiave pubblica in ordine deterministico. Mai chiavi private.
+    # MAJOR-1: usa `ssh-keygen -lf` (fingerprint canonico OpenSSH, es. SHA256:...) invece di
+    # _devforge_shasum del design: è lo standard riconoscibile/verificabile, disponibile su Git for
+    # Windows. Il campo ssh_fingerprint è una stringa opaca per il consumer (no SHA-1 raw).
     if [ -d "${HOME}/.ssh" ]; then
         key=$(ls -1 "${HOME}/.ssh/"*.pub 2>/dev/null | sort | head -1)
         if [ -n "$key" ] && [ -r "$key" ]; then
@@ -733,8 +739,12 @@ devforge_next_seq() {
     while ! mkdir "$lockdir" 2>/dev/null; do
         waited=$((waited + 1))
         if [ "$waited" -gt 100 ]; then
-            # ~2s di contesa (irrealistico per hook DevForge) o lock orfano: last-resort senza lock.
-            # Preferisce un possibile tie di seq alla perdita dell'evento (zero-loss prevale).
+            # ~2s di contesa o lock orfano (SIGKILL nella finestra critica). MAJOR-2: rimuovi il
+            # lockdir orfano qui, altrimenti ogni evento successivo della sessione spinde 2s. Sicuro:
+            # se fossimo arrivati a 2s, il detentore è verosimilmente morto (altrimenti avrebbe
+            # rilasciato). rmdir incondizionato qui non ha il TOCTOU dello stale-guard basato su mtime.
+            rmdir "$lockdir" 2>/dev/null || true
+            # last-resort senza lock: preferisce un possibile tie di seq alla perdita (zero-loss prevale).
             local cur; cur=$(cat "$seq_file" 2>/dev/null | tr -d '\r' || echo "0")
             echo "$((cur + 1))"
             return
