@@ -1226,6 +1226,89 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_python_warning.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_session_start_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_version_label.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_version_label.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_version_label.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_git_cache_perrepo.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_git_cache_perrepo.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_git_cache_perrepo.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_telemetry_health.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_telemetry_health.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_telemetry_health.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/zero-loss/unit/test_logger_perl_fsync.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/zero-loss/unit/test_logger_perl_fsync.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/zero-loss/unit/test_logger_perl_fsync.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+# Telemetria/identità cross-platform (parità Windows≡macOS≡Linux) — design 2026-06-18
+for _t in \
+  "tests/zero-loss/unit/test_logger_event_id_concurrency.sh" \
+  "tests/zero-loss/unit/test_logger_identity_signals.sh" \
+  "tests/zero-loss/unit/test_logger_rotation_crosstier.sh" \
+  "tests/zero-loss/unit/test_batch_global_archives.sh" \
+  "tests/zero-loss/unit/test_logger_crlf_cursor.sh" \
+  "tests/zero-loss/integration/test_crossplatform_no_degradation.sh" \
+  "tests/test_telemetry_fixes.sh" \
+  "tests/test_telemetry_flush_storm.sh"; do
+  if bash "${PLUGIN_ROOT}/${_t}" >/dev/null 2>&1; then
+    echo "  PASS  ${_t}"
+    TOTAL_PASS=$((TOTAL_PASS + 1))
+  else
+    echo "  FAIL  ${_t}"
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
+  fi
+done
+
 if python3 -m pytest "${PLUGIN_ROOT}/tests/test_task_adoption_meta.py" -q >/dev/null 2>&1; then
   echo "  PASS  tests/test_task_adoption_meta.py"
   TOTAL_PASS=$((TOTAL_PASS + 1))

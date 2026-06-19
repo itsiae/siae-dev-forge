@@ -25,7 +25,14 @@ if [ -f "${PLUGIN_ROOT_INIT}/lib/logger.sh" ]; then
     devforge_init_session 2>/dev/null || true
 fi
 
-CACHE_FILE="${DEVFORGE_DIR}/.devforge-git-cache"
+# Cache git keyed per-cwd: evita contaminazione cross-repo/sessione (#1)
+# cksum (POSIX) → CRC+byte-count; tr+cut danno una key numerica (≤12 cifre, lunghezza
+# variabile ma deterministica per cwd). Cache best-effort: una collisione (prob. trascurabile)
+# si auto-sana al refresh TTL 5s. Fallback "default" se cksum manca.
+_cwd_key="$(printf '%s' "$PWD" | cksum 2>/dev/null | tr -dc '0-9' | cut -c1-12)"
+_cwd_key="${_cwd_key:-default}"
+CACHE_FILE="${DEVFORGE_DIR}/.devforge-git-cache-${_cwd_key}"
+unset _cwd_key
 
 CTX_USED="0"
 QUOTA_5H=""
@@ -146,6 +153,31 @@ if [ -f "${DEVFORGE_DIR}/.devforge-batch-checkpoint" ]; then
   BATCH_CHECKPOINT=1
 fi
 
+# Plugin update flag (scritto da hooks/session-start su cambio versione)
+PLUGIN_UPDATED_VER=""
+if [ -n "${DEVFORGE_SESSION_DIR:-}" ] && [ -f "${DEVFORGE_SESSION_DIR}/.plugin-updated" ]; then
+  read -r PLUGIN_UPDATED_VER < "${DEVFORGE_SESSION_DIR}/.plugin-updated" 2>/dev/null || true
+fi
+# Sanitize per printf %b (rimuove backslash e caratteri non-versione)
+PLUGIN_UPDATED_VER="${PLUGIN_UPDATED_VER//[^0-9a-zA-Z.-]/}"
+
+# Versione plugin per il label (A/B): semver da basename PLUGIN_ROOT_SL, altrimenti dev-mode
+PLUGIN_LABEL_VER=""
+PLUGIN_IS_DEV=0
+_pv="$(basename "$PLUGIN_ROOT_SL" 2>/dev/null)"
+if printf '%s' "$_pv" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  PLUGIN_LABEL_VER="$_pv"
+else
+  PLUGIN_IS_DEV=1
+fi
+unset _pv
+
+# Salute telemetria (C): sentinel scritto da logger.sh quando il path fsync degrada a bash
+TELEMETRY_DOT=""
+if [ -f "${DEVFORGE_DIR}/.devforge-no-fsync-warned" ]; then
+  TELEMETRY_DOT="🟡"
+fi
+
 # --- 4. Git branch with cache (TTL 5s) ---
 get_git_branch() {
   local now
@@ -226,6 +258,14 @@ has_skill() {
 
 # --- 6. Compose line 1 — Operational status ---
 LINE1="🔨 DevForge"
+if [ -n "$PLUGIN_LABEL_VER" ]; then
+  LINE1="${LINE1} v${PLUGIN_LABEL_VER}"
+elif [ "$PLUGIN_IS_DEV" -eq 1 ]; then
+  LINE1="${LINE1} (dev)"
+fi
+if [ -n "$TELEMETRY_DOT" ]; then
+  LINE1="${LINE1} ${TELEMETRY_DOT}"
+fi
 
 if [ -n "$SDLC_PHASE" ] && [ "$SDLC_PHASE" != "idle" ] && [ "$SDLC_PHASE" != "unknown" ]; then
   LINE1="${LINE1} [${SDLC_PHASE}]"
@@ -261,6 +301,17 @@ CTX_INT="${CTX_INT:-0}"
 
 if [ "$CTX_INT" -ge 80 ]; then
   WARN_STR="$(printf '%b⚠️ Context alto — nuova sessione%b' "$YELLOW" "$RESET")"
+fi
+
+# python3 assente: token-stats e telemetria zero-loss degradano silenziosamente.
+# Rilevazione live (non via marker): resta visibile finché Python non è installato.
+if ! command -v python3 >/dev/null 2>&1; then
+  WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b🐍 python3 assente — installalo per token/telemetria%b' "$YELLOW" "$RESET")"
+fi
+
+# Notifica aggiornamento plugin (verde): persiste per tutta la sessione post-update.
+if [ -n "$PLUGIN_UPDATED_VER" ]; then
+  WARN_STR="${WARN_STR:+$WARN_STR }$(printf '%b🆙 DevForge aggiornato a v%s%b' "$GREEN" "$PLUGIN_UPDATED_VER" "$RESET")"
 fi
 
 if [ "$BATCH_CHECKPOINT" -eq 1 ]; then

@@ -168,18 +168,18 @@ batch_count=$(find "${SESSION_DIR4}/outbox" -maxdepth 1 -name 'batch-*.jsonl' -n
 assert_eq "non-empty batch file created" "1" "${batch_count}"
 
 # ─────────────────────────────────────────────────────────────
-# Test 7 — devforge_identity_bundle: 10 campi (6 git/os + 4 auth), JSON valido, no repo_root
+# Test 7 — devforge_identity_bundle: 16 campi (10 base + 6 segnali locali Cap.A), JSON valido, no repo_root
 # ─────────────────────────────────────────────────────────────
-echo "Test 7: devforge_identity_bundle emits 10-field valid JSON (in a repo)"
+echo "Test 7: devforge_identity_bundle emits 16-field valid JSON (in a repo)"
 
 IBREPO="${TEST_TMP}/ibrepo"
 mkdir -p "$IBREPO"
 ( cd "$IBREPO" && git init -q && git config user.email "Mario.Rossi@siae.it" && git config user.name "Mario Rossi" )
 # Isola dall'~/.claude.json reale: auth_* presenti ma vuoti, chiavi deterministiche ovunque.
 BUNDLE7=$( cd "$IBREPO" && DEVFORGE_CLAUDE_JSON="/nonexistent/claude.json" devforge_identity_bundle )
-# parsable JSON with exactly the 10 expected keys (6 git/os + 4 auth_*), no repo_root
+# parsable JSON con le 16 chiavi attese (10 base git/os/auth + 6 segnali locali Cap.A), no repo_root
 keys7=$(printf '%s' "$BUNDLE7" | python3 -c "import json,sys; d=json.load(sys.stdin); print(','.join(sorted(d.keys())))" 2>/dev/null || echo "PARSE_FAIL")
-assert_eq "bundle has 10 keys (6 git/os + 4 auth), no repo_root" "auth_account_uuid,auth_email,auth_org_name,auth_org_uuid,git_global_email,git_global_name,git_local_email,git_local_name,host,os_user" "$keys7"
+assert_eq "bundle has 16 keys (10 base + 6 segnali locali), no repo_root" "auth_account_uuid,auth_email,auth_org_name,auth_org_uuid,gh_email,git_global_email,git_global_name,git_local_email,git_local_name,host,npm_email,os_domain,os_full_name,os_login,os_user,ssh_fingerprint" "$keys7"
 local_email7=$(printf '%s' "$BUNDLE7" | python3 -c "import json,sys; print(json.load(sys.stdin)['git_local_email'])" 2>/dev/null || echo "ERR")
 assert_eq "git_local_email captured" "Mario.Rossi@siae.it" "$local_email7"
 

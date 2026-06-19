@@ -165,6 +165,7 @@ assert "T1b: nessuna riga corrotta (node path)" "$bad_1b" "0"
 clear_shims
 make_shim python3
 make_shim node
+make_shim perl
 OUTFILE_1C="$WORK/concurrent_bash.jsonl"
 touch "$OUTFILE_1C"
 for i in $(seq 1 50); do
@@ -225,6 +226,7 @@ echo "TEST 3 — No-interprete: node+python3 mascherati → bash + telemetry_deg
 clear_shims
 make_shim python3
 make_shim node
+make_shim perl
 # Reset the degraded sentinel so T3 can emit a fresh event
 rm -f "$HOME/.claude/.devforge-no-fsync-warned"
 
@@ -410,6 +412,7 @@ assert "T9a: python3-rotto → fall-through su node, riga scritta" "$lines_9a" "
 clear_shims
 make_shim python3
 make_shim node
+make_shim perl
 # Reset sentinel so degraded event can be emitted fresh
 rm -f "$HOME/.claude/.devforge-no-fsync-warned"
 
