@@ -23,9 +23,9 @@ unico owner del reset/preserve. Nessuna dipendenza dall'ordine di esecuzione hoo
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Nuovo hook `hooks/session-end` (emit senza rm) | `task-01-session-end-hook.md` | [PENDING] |
-| 2 | Registra `SessionEnd` in hooks.json + fix contatori test | `task-02-register-hook-counters.md` | [PENDING] |
-| 3 | Strip `hooks/stop-gate` (rimuovi rm + emit, solo gate) | `task-03-stop-gate-strip.md` | [PENDING] |
+| 1 | Nuovo hook `hooks/session-end` (emit senza rm) | `task-01-session-end-hook.md` | [DONE] |
+| 2 | Registra `SessionEnd` in hooks.json + fix contatori test | `task-02-register-hook-counters.md` | [DONE] |
+| 3 | Strip `hooks/stop-gate` (rimuovi rm + emit, solo gate) | `task-03-stop-gate-strip.md` | [DONE] |
 
 ## Dipendenze
 
