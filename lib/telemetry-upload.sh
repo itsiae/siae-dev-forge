@@ -50,7 +50,7 @@ ${session_dir}/activity.jsonl"
             [ -f "$f" ] && [ -s "$f" ] || { _devforge_maybe_remove_archived "$f" "${session_dir}/outbox"; continue; }
             basename=$(basename "$f")
             cursor_file="${session_dir}/outbox/.cursor-${basename}"
-            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            cursor=$(cat "$cursor_file" 2>/dev/null | tr -d '\r'); cursor="${cursor:-0}"; case "$cursor" in ''|*[!0-9]*) cursor=0;; esac
             file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
 
             if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
@@ -83,7 +83,7 @@ _devforge_maybe_remove_archived() {
     esac
     local cursor_file="${outbox}/.cursor-${basename}"
     local cursor file_size
-    cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+    cursor=$(cat "$cursor_file" 2>/dev/null | tr -d '\r'); cursor="${cursor:-0}"; case "$cursor" in ''|*[!0-9]*) cursor=0;; esac
     file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
     if [ "$cursor" -ge "$file_size" ] 2>/dev/null && [ "$file_size" -gt 0 ] 2>/dev/null; then
         rm -f "$f" "$cursor_file"
@@ -97,28 +97,50 @@ _devforge_maybe_remove_archived() {
 # before creating the session dir, events land ONLY in the global file and
 # are permanently stranded. This function provides a fallback drain with a
 # dedicated cursor so events are batched exactly once.
+# Task-07 (Capability B / BLOCK-1): drena live + ARCHIVI del file globale (creati dalla
+# rotazione cross-tier). Per-basename cursor in .global-outbox, simmetrico a devforge_create_batch.
+# Migrazione one-shot dal vecchio cursore fisso .cursor-global. Cleanup archivi consumati.
 devforge_batch_global() {
     local global_file="${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}"
-    [ -f "$global_file" ] && [ -s "$global_file" ] || return 0
+    local dir base state_root outbox
+    dir=$(dirname "$global_file"); base=$(basename "$global_file" .jsonl)
+    state_root="${HOME}/.claude/devforge-state"; outbox="${state_root}/.global-outbox"
+    mkdir -p "${outbox}/acked" 2>/dev/null || return 0
 
-    local state_root="${HOME}/.claude/devforge-state"
-    mkdir -p "${state_root}/.global-outbox/acked" 2>/dev/null || return 0
-
-    local cursor_file="${state_root}/.global-outbox/.cursor-global"
-    local cursor file_size batch_file epoch_ns
-    cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
-    file_size=$(stat -f%z "$global_file" 2>/dev/null || stat -c%s "$global_file" 2>/dev/null || echo "0")
-
-    if [ "$file_size" -gt "$cursor" ] 2>/dev/null; then
-        epoch_ns=$(command -v _devforge_epoch_ns >/dev/null 2>&1 && _devforge_epoch_ns || date +%s)
-        batch_file="${state_root}/.global-outbox/batch-${epoch_ns}-$$.jsonl"
-        tail -c +"$((cursor + 1))" "$global_file" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; return 0; }
-        if [ -s "$batch_file" ]; then
-            echo "$file_size" > "$cursor_file"
-        else
-            rm -f "$batch_file"
-        fi
+    # Migrazione one-shot: vecchio cursore fisso → cursore per-basename del file live.
+    if [ -f "${outbox}/.cursor-global" ] && [ ! -f "${outbox}/.cursor-${base}.jsonl" ]; then
+        mv "${outbox}/.cursor-global" "${outbox}/.cursor-${base}.jsonl" 2>/dev/null || true
     fi
+
+    # Archivi (vecchio→nuovo per ts nel nome) poi file live.
+    local files f bn cur_f cur file_size batch_file epoch_ns
+    files=$(ls -1 "${dir}/${base}"-*.archived.jsonl 2>/dev/null | sort) || files=""
+    [ -f "$global_file" ] && [ -s "$global_file" ] && files="${files}
+${global_file}"
+
+    for f in $files; do
+        [ -f "$f" ] && [ -s "$f" ] || { _devforge_maybe_remove_archived_global "$f" "$outbox" "$base"; continue; }
+        bn=$(basename "$f"); cur_f="${outbox}/.cursor-${bn}"
+        cur=$(cat "$cur_f" 2>/dev/null | tr -d '\r'); cur="${cur:-0}"; case "$cur" in ''|*[!0-9]*) cur=0;; esac
+        file_size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
+        if [ "$file_size" -gt "$cur" ] 2>/dev/null; then
+            epoch_ns=$(command -v _devforge_epoch_ns >/dev/null 2>&1 && _devforge_epoch_ns || date +%s)
+            batch_file="${outbox}/batch-${epoch_ns}-$$-${bn%.jsonl}.jsonl"
+            tail -c +"$((cur + 1))" "$f" > "$batch_file" 2>/dev/null || { rm -f "$batch_file"; continue; }
+            if [ -s "$batch_file" ]; then echo "$file_size" > "$cur_f"; else rm -f "$batch_file"; fi
+        fi
+        _devforge_maybe_remove_archived_global "$f" "$outbox" "$base"
+    done
+}
+
+# Cleanup archivio globale consumato (cursor>=size). Mai tocca il file live (solo *-*.archived.jsonl).
+_devforge_maybe_remove_archived_global() {
+    local f="$1" outbox="$2" base="$3" bn cur sz
+    bn=$(basename "$f")
+    case "$bn" in "${base}"-*.archived.jsonl) ;; *) return 0 ;; esac
+    cur=$(cat "${outbox}/.cursor-${bn}" 2>/dev/null | tr -d '\r'); cur="${cur:-0}"; case "$cur" in ''|*[!0-9]*) cur=0;; esac
+    sz=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo "0")
+    if [ "$cur" -ge "$sz" ] 2>/dev/null && [ "$sz" -gt 0 ] 2>/dev/null; then rm -f "$f" "${outbox}/.cursor-${bn}"; fi
 }
 
 # _devforge_post_batch <batch_file> — POST one batch, echo HTTP code.
