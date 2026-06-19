@@ -23,9 +23,9 @@ rename-aware, fail-safe `code`); i 2 gate lo invocano e downgrade ad advisory su
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | `lib/diff-risk-classifier.sh` + test | `task-01-diff-classifier.md` | [PENDING] |
-| 2 | Downgrade advisory nei 2 gate PR + test | `task-02-gate-advisory.md` | [PENDING] |
-| 3 | Allineamento SKILL.md (premortem + blind-review) | `task-03-skill-coherence.md` | [PENDING] |
+| 1 | `lib/diff-risk-classifier.sh` + test | `task-01-diff-classifier.md` | [DONE] |
+| 2 | Downgrade advisory nei 2 gate PR + test | `task-02-gate-advisory.md` | [DONE] |
+| 3 | Allineamento SKILL.md (premortem + blind-review) | `task-03-skill-coherence.md` | [DONE] |
 
 ## Dipendenze
 - Task 2 dipende da Task 1 (i gate chiamano il classifier).
