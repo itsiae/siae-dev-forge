@@ -45,7 +45,21 @@ else
 fi
 rm -rf "$TH"
 
-echo "=== AC-3: completion + no verification → block (no-regression) ==="
+echo "=== AC-2b: Stop con INPUT non-JSON → no block, stato preservato (FINDING 4.1) ==="
+TH=$(_seed)
+OUT=$(printf 'questo non e json valido {{{' | HOME="$TH" bash "$HOOK" 2>/dev/null || true)
+if [ -f "$TH/.claude/.devforge-session-skills" ] \
+   && grep -qF 'siae-git-workflow' "$TH/.claude/.devforge-session-skills" \
+   && ! echo "$OUT" | grep -q '"decision": "block"'; then
+    echo "  PASS  INPUT malformato: stato intatto, no block"; PASS=$((PASS+1))
+else
+    echo "  FAIL  INPUT malformato gestito male: $(echo "$OUT" | head -1)"; FAIL=$((FAIL+1))
+fi
+rm -rf "$TH"
+
+# AC-3: seed con siae-retrospective (retro gate PASSA) ma SENZA siae-verification →
+# scatta il VERIFICATION gate (BLOCCO 5), che è quello che asseriamo (block + msg).
+echo "=== AC-3: completion + no verification → block verification gate (no-regression) ==="
 TH=$(_seed); printf 'siae-retrospective\n' > "$TH/.claude/.devforge-session-skills"
 OUT=$(printf '{"messages":[{"role":"assistant","content":"fatto, completato"}]}' \
     | HOME="$TH" env DEVFORGE_USE_SESSION_SCOPE=1 bash "$HOOK" 2>/dev/null || true)

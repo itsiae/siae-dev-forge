@@ -6,7 +6,7 @@
 # Matcher:  "" (tutti i reason: clear/resume/logout/prompt_input_exit/other)
 # Timeout:  async:false — only cleanup/logging, non puo' bloccare
 # Formato:  echo '{}' (SessionEnd non puo' emettere decision:block)
-# History:  v1.93.0 — estratto da stop-gate::_devforge_emit_session_end SENZA il
+# History:  2026-06-19 — estratto da stop-gate::_devforge_emit_session_end SENZA il
 #           blocco rm dello stato di sessione. Lo Stop fira per-turno e cancellava
 #           lo stato a meta'-sessione (bloccava il git gate); session_end migra qui
 #           dove i conteggi sono accumulati fino alla fine reale. Il reset dello
