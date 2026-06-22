@@ -21,12 +21,53 @@ source "${PLUGIN_ROOT}/lib/logger.sh"
 # Il source applica già il fix NO_PROXY; net_run avvolge le call gh/git sotto.
 source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
     || { echo "[devforge] net-timeout.sh non sourcabile" >&2; }
+# Plugin version observability helpers (_ver_lt, devforge_installed_version, devforge_latest_release)
+source "${PLUGIN_ROOT}/lib/plugin-version.sh" \
+    || { echo "[devforge] plugin-version.sh non sourcabile" >&2; }
+# Plugin cache resilience: ripara i path versionati rimossi dall'auto-update nativo, così le
+# sessioni già attive (ancorate a cache/.../<vecchia> via ${CLAUDE_PLUGIN_ROOT}) non si rompono.
+# Chiamata EARLY (dopo logger.sh, prima delle attività pesanti) per riparare al più presto.
+source "${PLUGIN_ROOT}/lib/plugin-cache-resilience.sh" \
+    || { echo "[devforge] plugin-cache-resilience.sh non sourcabile" >&2; }
+devforge_ensure_version_compat "$PLUGIN_ROOT" 2>/dev/null || true
 START_NS=$(_devforge_epoch_ns)
 DEVFORGE_SID=$(devforge_new_sid)
 
 # Create session state directory
 DEVFORGE_SESSION_DIR="${HOME}/.claude/devforge-state/${DEVFORGE_SID}"
 mkdir -p "${DEVFORGE_SESSION_DIR}/outbox/acked"
+
+# --- Plugin update notice (Feature 2a) — pure-local, no network ---
+# Rileva il cambio di versione del plugin rispetto all'ultima sessione e scrive un flag
+# session-scoped che la status line mostra per tutta la sessione post-update. Nessuna
+# call di rete, nessun output su stdout (non deve corrompere additional_context).
+_devforge_detect_plugin_update() {
+    local current last_seen_file last_seen
+    current="$(basename "$PLUGIN_ROOT")"
+    # Dev-mode (repo non versionato in cache): basename non e' semver -> fallback plugin.json
+    # Pattern ancorato (^...$): scarta basename inattesi tipo "1.91.0 beta" o path con suffissi.
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        if command -v jq >/dev/null 2>&1 && [ -f "${PLUGIN_ROOT}/.claude-plugin/plugin.json" ]; then
+            current="$(jq -r '.version // empty' "${PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null)"
+        fi
+    fi
+    # Post-fallback: se ancora non-semver (o vuoto) -> versione non determinabile -> skip (no scrittura)
+    if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        return 0
+    fi
+    last_seen_file="${HOME}/.claude/.devforge-plugin-version"
+    last_seen=""
+    [ -f "$last_seen_file" ] && IFS= read -r last_seen < "$last_seen_file" 2>/dev/null || true
+    if [ -z "$last_seen" ]; then
+        printf '%s' "$current" > "$last_seen_file" 2>/dev/null || true   # prima installazione: nessun avviso
+        return 0
+    fi
+    if [ "$last_seen" != "$current" ]; then
+        printf '%s' "$current" > "${DEVFORGE_SESSION_DIR}/.plugin-updated" 2>/dev/null || true
+        printf '%s' "$current" > "$last_seen_file" 2>/dev/null || true
+    fi
+}
+_devforge_detect_plugin_update >/dev/null 2>&1 || true
 
 # Resolve raw identity (before canonicalization)
 USER_RAW_EMAIL=""
@@ -151,46 +192,39 @@ cat >&2 <<'BANNER'
 
 BANNER
 
-# Auto-update check: compare installed version with latest GitHub release
-# VERSION_STATUS is injected into additional_context so Claude can display it
+# Plugin version OBSERVABILITY (design 2026-06-19 plugin-update-safety).
+# L'aggiornamento è gestito dal meccanismo NATIVO di Claude Code (autoUpdate
+# org-wide via remote-settings.json): a ogni startup Claude refresha il marketplace
+# e aggiorna i plugin installati, dietro le quinte, senza azione utente.
+# Qui NON si aggiorna nulla — si OSSERVA soltanto. Il vecchio blocco custom
+# (claude plugin update + rm -rf cache + git pull in background) è stato rimosso:
+# era inerte su scope managed (rc=0 falso successo), corrompeva cache/registry,
+# e non portabile su Windows (pgrep/kill MSYS). Vedi design per gli 11+2 difetti.
+INSTALLED_VERSION=$(devforge_installed_version "$PLUGIN_ROOT")
+LATEST_VERSION=$(devforge_latest_release)   # release stabile (prerelease escluse); "" se non risolvibile
 VERSION_STATUS=""
-if command -v gh >/dev/null 2>&1 && [ "$PLUGIN_VERSION" != "unknown" ]; then
-    # Timeout hard portabile (net_run): cappa SEMPRE al budget su macOS/Linux/Git-Bash,
-    # senza dipendere da `timeout`/`gtimeout` (assenti su BSD) o perl (deprecato).
-    # NO_PROXY-github (applicato dal source di net-timeout.sh) rende la call DIRECT.
-    _REL_ARGS=(gh release list --repo itsiae/siae-dev-forge --limit 1 --json tagName --jq '.[0].tagName')
-    LATEST_TAG=$(net_run 5 "${_REL_ARGS[@]}" 2>/dev/null || echo "")
-    LATEST_VERSION="${LATEST_TAG#v}"
-
-    # Validate tag format (semver with optional -suffix)
-    if [ -n "$LATEST_VERSION" ] && echo "$LATEST_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
-        # Compare versions using sort -V (version sort) with portability guard
-        if printf '1.0\n2.0' | sort -V >/dev/null 2>&1; then
-            if [ "$PLUGIN_VERSION" != "$LATEST_VERSION" ] && \
-               [ "$(printf '%s\n%s' "$PLUGIN_VERSION" "$LATEST_VERSION" | sort -V | tail -1)" = "$LATEST_VERSION" ]; then
-                VERSION_STATUS="🔄 Aggiornamento disponibile: v${PLUGIN_VERSION} → v${LATEST_VERSION}. Esegui: claude plugin update siae-devforge@siae-devforge"
-                echo "🔄 DevForge: aggiornamento disponibile v${PLUGIN_VERSION} → v${LATEST_VERSION}" >&2
-                echo "   Aggiornamento in corso..." >&2
-                # Only the update itself runs in background to not block session start
-                # 1. Pull marketplace clone: claude plugin update does NOT git pull automatically
-                # 2. Invalidate cache: claude plugin update skips re-copy if version string matches
-                (MARKETPLACE_DIR="${HOME}/.claude/plugins/marketplaces/siae-devforge"; \
-                [ -d "$MARKETPLACE_DIR/.git" ] && git -C "$MARKETPLACE_DIR" pull origin main --ff-only >/dev/null 2>&1; \
-                rm -rf "${HOME}/.claude/plugins/cache/siae-devforge" 2>/dev/null; \
-                claude plugin update "siae-devforge@siae-devforge" >/dev/null 2>&1 && \
-                    echo "✅ DevForge aggiornato a v${LATEST_VERSION}. Riavvia Claude Code per attivare." >&2 || \
-                    echo "⚠️  Aggiornamento fallito. Esegui manualmente: claude plugin update \"siae-devforge@siae-devforge\"" >&2
-                ) &
-            else
-                VERSION_STATUS="✅ DevForge v${PLUGIN_VERSION} — aggiornato"
-            fi
+PV_STATE="unavailable"
+PV_LATEST_JSON="null"
+if [ "$INSTALLED_VERSION" != "unknown" ]; then
+    if [ -n "$LATEST_VERSION" ] && _ver_is_semver "$LATEST_VERSION"; then
+        PV_LATEST_JSON="\"${LATEST_VERSION}\""
+        if _ver_lt "$INSTALLED_VERSION" "$LATEST_VERSION"; then
+            PV_STATE="behind"
+            # Informativo, NON un call-to-action: l'update arriva da solo al prossimo avvio.
+            VERSION_STATUS="DevForge v${INSTALLED_VERSION} (v${LATEST_VERSION} in arrivo — aggiornamento automatico in background)"
+        else
+            PV_STATE="up_to_date"
+            VERSION_STATUS="DevForge v${INSTALLED_VERSION} — aggiornato"
         fi
+    else
+        VERSION_STATUS="DevForge v${INSTALLED_VERSION}"
     fi
 fi
-# Fallback if gh is not available or version check failed
-if [ -z "$VERSION_STATUS" ] && [ "$PLUGIN_VERSION" != "unknown" ]; then
-    VERSION_STATUS="DevForge v${PLUGIN_VERSION}"
-fi
+# Telemetria convergenza: emessa SEMPRE (anche in fallback con status=unavailable),
+# così a valle (S3) si verifica che TUTTI i seat convergano all'ultima versione.
+devforge_log "plugin_version_observed" "success" \
+    "{\"installed\":\"$(devforge_sanitize_json_str "$INSTALLED_VERSION")\",\"latest\":${PV_LATEST_JSON},\"status\":\"${PV_STATE}\"}" \
+    2>/dev/null || true
 
 # Read using-devforge content
 using_devforge_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/SKILL.md" 2>&1 || echo "Error reading using-devforge skill")
@@ -288,7 +322,15 @@ if [ -d "$GLOBAL_MEMORY_DIR" ]; then
 fi
 # --- End global memory ---
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${version_status_escaped}${branching_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
+# P-banner: se python3 manca, banner ESPLICITO e prominente in additional_context
+# (in cima, prima dello stato versione). Solo avviso visibile, nessun blocco operazioni.
+python3_banner_section=""
+_py3_raw="$(devforge_python3_banner 2>/dev/null || true)"
+if [ -n "$_py3_raw" ]; then
+    python3_banner_section="$(escape_for_json "$_py3_raw")\\n\\n"
+fi
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${python3_banner_section}${version_status_escaped}${branching_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # additional_context is the canonical field for Claude Code hooks.
@@ -418,6 +460,9 @@ case "$SESSION_START_SOURCE" in
     startup)
         # Fresh session — reset skills invoked
         echo "" > "${HOME}/.claude/.devforge-session-skills"
+        # Osservabilità identità SSO: emette identity_unresolved / identity_external_domain
+        # una sola volta per sessione logica (solo su startup, non resume/clear/compact).
+        devforge_emit_identity_observability
         ;;
     resume|clear|compact)
         # Same logical session — preserve skills invoked so far

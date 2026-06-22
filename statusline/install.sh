@@ -9,7 +9,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-STATUSLINE_SCRIPT="${PLUGIN_ROOT}/statusline/devforge-statusline.sh"
+# Path STABILE invariante agli auto-update (root-cause fix, design 2026-06-19).
+# Il clone marketplace è git-pullato IN-PLACE → path NON versionato, sopravvive a ogni
+# update. PLUGIN_ROOT invece può essere la cache versionata (cache/.../X.Y.Z) che
+# l'auto-update cancella → settings.json punterebbe a uno script inesistente → statusline
+# vuota in silenzio. Preferiamo il clone se il file esiste; fallback a PLUGIN_ROOT solo su
+# fresh-install (clone non ancora presente) — si auto-corregge al primo session-start utile.
+STABLE_STATUSLINE="${HOME}/.claude/plugins/marketplaces/siae-devforge/statusline/devforge-statusline.sh"
+if [ -f "$STABLE_STATUSLINE" ]; then
+  STATUSLINE_SCRIPT="$STABLE_STATUSLINE"
+else
+  STATUSLINE_SCRIPT="${PLUGIN_ROOT}/statusline/devforge-statusline.sh"
+fi
 SETTINGS_FILE="${HOME}/.claude/settings.json"
 
 # 1. Verify devforge-statusline.sh exists

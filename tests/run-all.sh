@@ -1226,6 +1226,89 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_python_warning.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_python_warning.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_session_start_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_session_start_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_plugin_update.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_plugin_update.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_version_label.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_version_label.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_version_label.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_git_cache_perrepo.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_git_cache_perrepo.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_git_cache_perrepo.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/statusline/test_statusline_telemetry_health.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/statusline/test_statusline_telemetry_health.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/statusline/test_statusline_telemetry_health.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/zero-loss/unit/test_logger_perl_fsync.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/zero-loss/unit/test_logger_perl_fsync.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/zero-loss/unit/test_logger_perl_fsync.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/zero-loss/unit/test_writepath_zeroloss_crossplatform.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+# Telemetria/identità cross-platform (parità Windows≡macOS≡Linux) — design 2026-06-18
+for _t in \
+  "tests/zero-loss/unit/test_logger_event_id_concurrency.sh" \
+  "tests/zero-loss/unit/test_logger_identity_signals.sh" \
+  "tests/zero-loss/unit/test_logger_rotation_crosstier.sh" \
+  "tests/zero-loss/unit/test_batch_global_archives.sh" \
+  "tests/zero-loss/unit/test_logger_crlf_cursor.sh" \
+  "tests/zero-loss/integration/test_crossplatform_no_degradation.sh" \
+  "tests/test_telemetry_fixes.sh" \
+  "tests/test_telemetry_flush_storm.sh"; do
+  if bash "${PLUGIN_ROOT}/${_t}" >/dev/null 2>&1; then
+    echo "  PASS  ${_t}"
+    TOTAL_PASS=$((TOTAL_PASS + 1))
+  else
+    echo "  FAIL  ${_t}"
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
+  fi
+done
+
 if python3 -m pytest "${PLUGIN_ROOT}/tests/test_task_adoption_meta.py" -q >/dev/null 2>&1; then
   echo "  PASS  tests/test_task_adoption_meta.py"
   TOTAL_PASS=$((TOTAL_PASS + 1))
@@ -1260,6 +1343,170 @@ echo ""
 echo "  Telemetry functional: ${telfunc_ok} OK | ${telfunc_fail} FAIL"
 TOTAL_PASS=$((TOTAL_PASS + telfunc_ok))
 TOTAL_FAIL=$((TOTAL_FAIL + telfunc_fail))
+
+# ============================================================================
+# Plugin Update Safety (design 2026-06-19) — un test per criterio di accettazione
+# ============================================================================
+echo ""
+echo "=== Plugin Update Safety ==="
+echo ""
+pus_ok=0; pus_fail=0
+SS="${PLUGIN_ROOT}/hooks/session-start"
+PVLIB="${PLUGIN_ROOT}/lib/plugin-version.sh"
+
+# T-AC1: nessun claude plugin update / rm -rf cache ATTIVO (non commentato)
+if ! grep -nE '^[[:space:]]*[^#].*claude[[:space:]]+plugin[[:space:]]+update' "$SS" >/dev/null 2>&1 \
+   && ! grep -nE '^[[:space:]]*[^#].*rm[[:space:]]+-rf[^#]*plugins/cache' "$SS" >/dev/null 2>&1; then
+  echo "  PASS  T-AC1: session-start non esegue claude plugin update / rm -rf cache"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC1: trovato claude plugin update o rm -rf cache attivo"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC2: nessun falso successo / call-to-action manuale
+if ! grep -nE '^[[:space:]]*[^#].*(Esegui:|aggiornato a v|Aggiornamento fallito)' "$SS" >/dev/null 2>&1; then
+  echo "  PASS  T-AC2: nessun messaggio di falso successo / call-to-action"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC2: trovato messaggio falso successo/call-to-action"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC3: confronto numerico robusto + suffisso prerelease scartato
+if ( source "$PVLIB" 2>/dev/null
+     _ver_lt 1.9.0 1.10.0 && ! _ver_lt 1.10.0 1.9.0 && ! _ver_lt 1.93.0 1.93.0 && ! _ver_lt 1.93.0-rc1 1.93.0 ); then
+  echo "  PASS  T-AC3: _ver_lt numerico (1.9<1.10, =, no prerelease bump)"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC3: _ver_lt errato"; pus_fail=$((pus_fail+1))
+fi
+
+# T-AC4: evento plugin_version_observed con status valido (anche in fallback)
+PUS_LOG=$(mktemp 2>/dev/null || echo "/tmp/pus_log.$$")
+DEVFORGE_LOG_FILE="$PUS_LOG" bash "$SS" >/dev/null 2>&1 || true
+if grep -q '"event":"plugin_version_observed"' "$PUS_LOG" 2>/dev/null \
+   && grep -oE '"status":"(up_to_date|behind|unavailable)"' "$PUS_LOG" >/dev/null 2>&1; then
+  echo "  PASS  T-AC4: plugin_version_observed emesso con status valido"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC4: evento plugin_version_observed mancante o status non valido"; pus_fail=$((pus_fail+1))
+fi
+rm -f "$PUS_LOG"
+
+# T-AC5: install.sh scrive path STABILE non-versionato + idempotenza
+if command -v jq >/dev/null 2>&1; then
+  PUS_HOME=$(mktemp -d 2>/dev/null || echo "/tmp/pus_home.$$"); mkdir -p "$PUS_HOME"
+  mkdir -p "$PUS_HOME/.claude/plugins/marketplaces/siae-devforge/statusline"
+  : > "$PUS_HOME/.claude/plugins/marketplaces/siae-devforge/statusline/devforge-statusline.sh"
+  HOME="$PUS_HOME" bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
+  CMD1=$(jq -r '.statusLine.command // empty' "$PUS_HOME/.claude/settings.json" 2>/dev/null)
+  HOME="$PUS_HOME" bash "${PLUGIN_ROOT}/statusline/install.sh" >/dev/null 2>&1 || true
+  CMD2=$(jq -r '.statusLine.command // empty' "$PUS_HOME/.claude/settings.json" 2>/dev/null)
+  if ! printf '%s' "$CMD1" | grep -qE 'plugins/cache/siae-devforge/siae-devforge/[0-9]+\.[0-9]+\.[0-9]+' \
+     && printf '%s' "$CMD1" | grep -q 'marketplaces/siae-devforge' && [ -n "$CMD1" ] && [ "$CMD1" = "$CMD2" ]; then
+    echo "  PASS  T-AC5: install.sh path stabile non-versionato + idempotente"; pus_ok=$((pus_ok+1))
+  else
+    echo "  FAIL  T-AC5: path versionato o non idempotente (CMD1='$CMD1' CMD2='$CMD2')"; pus_fail=$((pus_fail+1))
+  fi
+  rm -rf "$PUS_HOME"
+else
+  echo "  SKIP  T-AC5: jq non disponibile"
+fi
+
+# T-AC6: VERSION_STATUS ancora presente → coperto dal test esistente "session-start injects
+# VERSION_STATUS into additional_context JSON" (cerca "DevForge v"). Non duplicato qui per non
+# eseguire session-start due volte (lento per la call gh).
+
+# T-AC7: la lib versione non dipende da pgrep/kill su processi nativi (cross-platform safe)
+if ! grep -nE 'pgrep|kill[[:space:]]+-|_net_kill_tree' "$PVLIB" >/dev/null 2>&1; then
+  echo "  PASS  T-AC7: plugin-version.sh privo di pgrep/kill (Windows-safe)"; pus_ok=$((pus_ok+1))
+else
+  echo "  FAIL  T-AC7: trovato pgrep/kill in plugin-version.sh"; pus_fail=$((pus_fail+1))
+fi
+
+echo ""
+echo "  Plugin Update Safety: ${pus_ok} OK | ${pus_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + pus_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + pus_fail))
+
+# ============================================================================
+# Plugin Cache Resilience (design 2026-06-19) — un test per AC
+# Sessioni attive sopravvivono all'auto-update nativo che rimuove cache versionate.
+# ============================================================================
+echo ""
+echo "=== Plugin Cache Resilience ==="
+echo ""
+pcr_ok=0; pcr_fail=0
+PCRLIB="${PLUGIN_ROOT}/lib/plugin-cache-resilience.sh"
+CACHE_REL=".claude/plugins/cache/siae-devforge/siae-devforge"
+# helper: crea un HOME isolato con una cache 'cur' reale; echo della BASE
+_pcr_setup() { local h; h="$1"; mkdir -p "$h/$CACHE_REL/$2/hooks"; : > "$h/$CACHE_REL/$2/hooks/run-hook.cmd"; printf '%s/%s' "$h" "$CACHE_REL"; }
+
+# T1 (AC1): versione vecchia rimossa nel registro → ricreata risolvibile
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.91.0/hooks/run-hook.cmd" ]; then echo "  PASS  T1(AC1): path versionato rimosso → ripristinato"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T1(AC1)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T2 (AC2): dir reale (anche incompleta) NON toccata
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0)
+mkdir -p "$B/1.94.0/hooks"; echo REAL > "$B/1.94.0/hooks/run-hook.cmd"; mkdir -p "$B/1.93.0"  # 1.93.0 reale INCOMPLETA
+printf '1.94.0\n1.93.0\n' >> "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ "$(cat "$B/1.94.0/hooks/run-hook.cmd")" = REAL ] && [ ! -L "$B/1.94.0" ] && [ ! -L "$B/1.93.0" ] && [ ! -e "$B/1.93.0/hooks/run-hook.cmd" ]; then
+  echo "  PASS  T2(AC2): dir reale completa+incompleta intatte (no data loss)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T2(AC2)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T3 (AC3): symlink rotto semver-puro → ripuntato; symlink estranei (path esterno E target
+# semver+suffisso tipo 1.2.3-beta) → NON toccati (regex GUARD-4 ancorata ^..$)
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0)
+ln -s 9.9.9 "$B/1.90.0"; ln -s /external/path "$B/1.89.0"; ln -s 1.2.3-beta "$B/1.88.0"
+printf '1.90.0\n1.89.0\n1.88.0\n' >> "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.90.0/hooks/run-hook.cmd" ] && [ "$(readlink "$B/1.89.0")" = /external/path ] && [ "$(readlink "$B/1.88.0")" = 1.2.3-beta ]; then
+  echo "  PASS  T3(AC3): symlink rotto riparato; estranei (esterno + semver-suffisso) preservati"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T3(AC3)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T4 (AC4): cross-platform — dopo il repair il path esiste comunque (symlink su macOS, copia su
+# Windows-GitBash senza symlink nativi). Verifica generica del ramo "path risolvibile".
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.87.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+if [ -e "$B/1.87.0/hooks/run-hook.cmd" ]; then echo "  PASS  T4(AC4): path risolvibile (symlink o copia)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T4(AC4)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T5 (AC5): base inesistente → rc 0, nessun errore sotto set -euo pipefail
+H=$(mktemp -d); RC=0; ( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$H/$CACHE_REL/1.95.0" ) 2>/dev/null || RC=$?
+if [ "$RC" = 0 ]; then echo "  PASS  T5(AC5): base assente → rc 0 (best-effort)"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T5(AC5): rc=$RC"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T6 (AC6): dedup + cap 10
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); reg="$H/.claude/.devforge-known-plugin-versions"
+for i in $(seq 1 12); do echo "1.$i.0" >> "$reg"; done
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null || true
+LINES=$(grep -c . "$reg"); DUP=$(sort "$reg" | uniq -d | grep -c . || true)
+if [ "$LINES" -le 10 ] && [ "$DUP" = 0 ]; then echo "  PASS  T6(AC6): registro cap=$LINES, no duplicati"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T6(AC6): lines=$LINES dup=$DUP"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T7 (AC7): plugin_root FUORI dalla cache → nessuna operazione
+H=$(mktemp -d); mkdir -p "$H/fake/siae-dev-forge"; echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions" 2>/dev/null || mkdir -p "$H/.claude" && echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$H/fake/siae-dev-forge" ) 2>/dev/null || true
+if ! ls "$H/fake" 2>/dev/null | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then echo "  PASS  T7(AC7): guard path, nessun file in path arbitrario"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T7(AC7)"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T8 (AC8): base con solo symlink, plugin_root non-semver → no autoreferenza
+H=$(mktemp -d); B="$H/$CACHE_REL"; mkdir -p "$B"; ln -s 9.9.9 "$B/1.91.0"; echo "1.91.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/notsemver" ) 2>/dev/null || true
+if [ "$(readlink "$B/1.91.0" 2>/dev/null)" != 1.91.0 ]; then echo "  PASS  T8(AC8): nessun symlink autoreferenziale"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T8(AC8): autoreferenza"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+# T9 (AC9): due invocazioni concorrenti → path valido, nessun residuo .compat.*, registro senza duplicati
+H=$(mktemp -d); B=$(_pcr_setup "$H" 1.95.0); echo "1.80.0" > "$H/.claude/.devforge-known-plugin-versions"
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null &
+( set -euo pipefail; HOME="$H"; source "$PCRLIB"; devforge_ensure_version_compat "$B/1.95.0" ) 2>/dev/null &
+wait
+T9DUP=$(sort "$H/.claude/.devforge-known-plugin-versions" 2>/dev/null | uniq -d | grep -c . || true)
+if [ -e "$B/1.80.0/hooks/run-hook.cmd" ] && ! ls "$B"/.compat.* >/dev/null 2>&1 && [ "$T9DUP" = 0 ]; then echo "  PASS  T9(AC9): concorrenza → path valido, nessun residuo tmp, registro dedup"; pcr_ok=$((pcr_ok+1)); else echo "  FAIL  T9(AC9): dup=$T9DUP"; pcr_fail=$((pcr_fail+1)); fi
+rm -rf "$H"
+
+echo ""
+echo "  Plugin Cache Resilience: ${pcr_ok} OK | ${pcr_fail} FAIL"
+TOTAL_PASS=$((TOTAL_PASS + pcr_ok))
+TOTAL_FAIL=$((TOTAL_FAIL + pcr_fail))
 
 # --- Telemetry Event Validation ---
 echo ""

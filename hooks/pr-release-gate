@@ -28,21 +28,28 @@ else
     TOOL_COMMAND=$(echo "$HOOK_INPUT" | grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 fi
 
-# Match only `gh pr create --base main` or similar
-if ! echo "$TOOL_COMMAND" | grep -qE 'gh pr create.+--base[= ]main' 2>/dev/null; then
+# Modalità test: se =1 l'hook scatta su QUALSIASI PR (qualunque branch/base),
+# per poterlo collaudare dal vivo. Default 0 = scope release/** → main.
+ANY_PR="${DEVFORGE_RELEASE_RISK_ANY_PR:-0}"
+
+# Match QUALSIASI `gh pr create` (copre --base main, -B main, --fill e base di
+# default). Il base reale NON si deduce dal testo del comando — è fragile su
+# short-flag e default branch — ma si verifica via GitHub dopo che il PR esiste.
+if ! echo "$TOOL_COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create' 2>/dev/null; then
     exit 0
 fi
 
-# Verify current branch is release/**
+# Verify current branch is release/** (gate saltato in modalità ANY_PR)
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
-if ! echo "$CURRENT_BRANCH" | grep -qE '^release/' 2>/dev/null; then
-    exit 0
+if [ "$ANY_PR" != "1" ]; then
+    if ! echo "$CURRENT_BRANCH" | grep -qE '^release/' 2>/dev/null; then
+        exit 0
+    fi
 fi
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 SERVICE=$(basename "$REPO_ROOT")
 
-# Generate diff
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -51,12 +58,19 @@ trap 'rm -rf "$TMPDIR"' EXIT
 source "${PLUGIN_ROOT}/lib/net-timeout.sh" \
     || { echo "[devforge] net-timeout.sh non sourcabile" >&2; }
 
+# Risolvi il PR appena creato e il suo base REALE via GitHub (non dal comando).
+# Skip se il base != main, salvo modalità ANY_PR. Cattura -B main / --fill /
+# default-branch ed evita falsi trigger su PR verso altri base.
+PR_JSON=$(net_run 5 gh pr list --head "$CURRENT_BRANCH" --json number,baseRefName 2>/dev/null || echo "")
+PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.[0].number // empty' 2>/dev/null || echo "")
+PR_BASE=$(printf '%s' "$PR_JSON" | jq -r '.[0].baseRefName // empty' 2>/dev/null || echo "")
+if [ "$ANY_PR" != "1" ] && [ "$PR_BASE" != "main" ]; then
+    exit 0
+fi
+
 net_run 8 git fetch origin main --quiet 2>/dev/null || true
 git diff "origin/main...origin/$CURRENT_BRANCH" --name-only > "$TMPDIR/diff-files.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-files.txt"
 git diff "origin/main...origin/$CURRENT_BRANCH" > "$TMPDIR/diff-content.txt" 2>/dev/null || echo "" > "$TMPDIR/diff-content.txt"
-
-# Find PR number (just created by gh pr create)
-PR_NUMBER=$(net_run 5 gh pr list --head "$CURRENT_BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
 
 # Fetch PR body (razionale funzionale per la scorecard) — best-effort, fail-open
 PR_BODY_ARG=""

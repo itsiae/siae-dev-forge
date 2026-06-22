@@ -62,4 +62,4 @@ def test_report_roundtrip_json():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == "1.0"
+    assert SCHEMA_VERSION == "2.0"  # 2.0: aggiunto platform + storage gerarchico (REQ-13/14/15)

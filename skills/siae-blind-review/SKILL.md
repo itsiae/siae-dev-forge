@@ -42,7 +42,11 @@ invece di cercare problemi. L'auditor ostile non sa. Trova.
 
 **Eccezioni (chiedi esplicitamente al partner umano):**
 - Hotfix P1 dove il tempo e' critico (l'utente deve autorizzare esplicitamente lo skip)
-- Modifiche esclusivamente documentali (nessun codice di produzione)
+
+**Scaling automatico (no conferma umana richiesta):**
+- Modifiche con `risk=low` (doc-only / manifest plugin, classificato da
+  `lib/diff-risk-classifier.sh`): il gate `pr-blind-review-gate` è advisory automatico.
+  Per qualsiasi diff `risk=code` la blind review resta obbligatoria.
 
 ---
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional, Literal
 import json
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "2.0"  # 2.0: aggiunto `platform` + storage gerarchico (REQ-13/14/15)
 
 CriterionStatus = Literal["YES", "NO", "REQUIRES_INPUT", "TOOL_UNAVAILABLE"]
 Level = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
@@ -61,6 +61,7 @@ class ReleaseRiskReport:
     scorecard: ScoreCard
     generated_at: str  # ISO8601
     output_path: str
+    platform: Optional[str] = None  # piattaforma applicativa (REQ-13), es. "sport", "pop"
     cached: bool = False
     trigger: TriggerSource = "manual"
     narrative: Optional[str] = None  # razionale funzionale del rilascio (contesto TechOps)

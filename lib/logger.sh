@@ -56,6 +56,14 @@ if [ -z "${DEVFORGE_LIB_DIR:-}" ]; then
     DEVFORGE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
+# net_run per timeout portabili nei segnali identità (task-03): npm/gh non devono mai bloccare
+# session-start. Best-effort: assenza del file → nessun timeout, nessun abort. La lib definisce
+# solo funzioni (nessun side-effect all'import).
+if ! command -v net_run >/dev/null 2>&1 && [ -f "${DEVFORGE_LIB_DIR}/net-timeout.sh" ]; then
+    # shellcheck disable=SC1091
+    . "${DEVFORGE_LIB_DIR}/net-timeout.sh" 2>/dev/null || true
+fi
+
 # Zero-loss PR-A: atomic append via Python (lock + fsync cross-OS).
 # Replaces raw `printf >> file` to eliminate race conditions on concurrent hook writes
 # (root cause of the 6612 parse errors observed in S3 pre-PR187).
@@ -94,7 +102,61 @@ _devforge_atomic_append() {
     fi
     # --- DEGRADED PATH: python3 unavailable OR python3 present-but-failed ---
     # Route through _devforge_lock_append for mkdir-lock + node/bash durability.
-    _devforge_lock_append "$target_file" "${line}"$'\n'
+    # Task-06 (Capability B): deriva outbox_dir per il cursor-move della rotazione (parità python3).
+    # Globale → .global-outbox; sessione → ${SESSION_DIR}/outbox; SESSION_DIR vuoto → "" (no cursor-move,
+    # mai il path assoluto "/outbox").
+    local outbox_dir=""
+    if [ "$target_file" = "${DEVFORGE_LOG_FILE:-}" ]; then
+        outbox_dir="${HOME}/.claude/devforge-state/.global-outbox"
+    elif [ -n "${DEVFORGE_SESSION_DIR:-}" ]; then
+        outbox_dir="${DEVFORGE_SESSION_DIR}/outbox"
+    fi
+    _devforge_lock_append "$target_file" "${line}"$'\n' "$rotate_bytes" "$outbox_dir"
+}
+
+# Task-05 (Capability B): rotazione log in bash, parità a atomic_write.py._rotate_if_needed
+# + cursor-move (corregge il bug latente del cursore stale, valido per tutti i tier).
+# Ruota $file → ${base}-<ts>.archived.jsonl se size > rotate_bytes. Dentro-lock (chiamata da
+# _devforge_lock_append). $3=outbox_dir opzionale per migrare il cursore live sull'archivio.
+_devforge_rotate_inline() {
+    local file="$1" rotate_bytes="$2" outbox="${3:-}"
+    [ "${rotate_bytes:-0}" -gt 0 ] 2>/dev/null || return 0
+    local size; size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+    [ "${size:-0}" -gt "$rotate_bytes" ] 2>/dev/null || return 0
+    local dir base ts archived i
+    dir=$(dirname "$file"); base=$(basename "$file" .jsonl)
+    ts=$(date +%s 2>/dev/null || echo 0)
+    archived="${dir}/${base}-${ts}.archived.jsonl"
+    if [ -e "$archived" ]; then
+        # MAJOR-3: loop aritmetico bash puro (no `seq`, assente in Busybox/Alpine CI).
+        i=1
+        while [ "$i" -le 999 ]; do
+            if [ ! -e "${dir}/${base}-${ts}-${i}.archived.jsonl" ]; then
+                archived="${dir}/${base}-${ts}-${i}.archived.jsonl"; break
+            fi
+            i=$((i + 1))
+        done
+    fi
+    if ! mv "$file" "$archived" 2>/dev/null; then
+        # C-21: rename fallito (permessi/iCloud/già ruotato). NON è perdita (la riga sarà comunque
+        # scritta dall'append). Segnala telemetry_degraded UNA volta per non rumoreggiare.
+        local _rs="${HOME}/.claude/.devforge-rotate-failed-warned"
+        if [ ! -f "$_rs" ] && [ -e "$file" ]; then
+            mkdir -p "$(dirname "$_rs")" 2>/dev/null || true
+            touch "$_rs" 2>/dev/null || true
+            local _ts; _ts=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || echo "1970-01-01T00:00:00.000Z")
+            printf '{"event":"telemetry_degraded","status":"warning","meta":{"reason":"rotation_failed"},"ts":"%s"}\n' \
+                "$_ts" >> "${DEVFORGE_LOG_FILE:-${HOME}/.claude/devforge-activity.jsonl}" 2>/dev/null || true
+        fi
+        return 0
+    fi
+    # cursor-move: l'archivio riprende dall'offset live → zero dup/perdita (supera python3, ADR-6).
+    if [ -n "$outbox" ]; then
+        local live_cur="${outbox}/.cursor-$(basename "$file")"
+        local arch_cur="${outbox}/.cursor-$(basename "$archived")"
+        if [ -f "$live_cur" ]; then mv "$live_cur" "$arch_cur" 2>/dev/null || true; fi
+    fi
+    return 0
 }
 
 # Task-09 — portable mtime age in seconds.
@@ -114,7 +176,9 @@ _devforge_dir_age_secs() {
 # and never reaches this wrapper — no double-lock.
 # Args: $1 = target file, $2 = line (must include trailing newline)
 _devforge_lock_append() {
-    local file="$1" line="$2"
+    # Task-06 (Capability B): firma estesa retro-compatibile.
+    # $1=file  $2=line(con \n)  $3=rotate_bytes(default 0 = no rotazione)  $4=outbox_dir(default "" = no cursor-move)
+    local file="$1" line="$2" rotate_bytes="${3:-0}" outbox_dir="${4:-}"
     local lockdir="${file}.lockdir"
     local waited=0 age
 
@@ -144,6 +208,9 @@ _devforge_lock_append() {
         if [ "$waited" -gt 50 ]; then
             # 5s timeout exceeded: never lose the line — best-effort append without lock.
             printf '%s' "$line" >> "$file" 2>/dev/null
+            # sync coarse: riduce la window di perdita anche su questo path emergenziale
+            # (lock non acquisito). Costo accettabile: si arriva qui solo dopo 5s di contesa.
+            sync 2>/dev/null || true
             return 0
         fi
         sleep 0.1
@@ -159,16 +226,30 @@ _devforge_lock_append() {
     # Signal-while-holding-lock is handled by the STALE-GUARD in the spin-loop above
     # (mtime > 30s → rmdir): that is the correct backstop for SIGKILL/SIGTERM.
 
-    local _node_ok=0
+    # Task-06 (Capability B): rotazione DENTRO il lock, prima dell'append (parità python3 che ruota
+    # dentro il flock di atomic_write.py). Garantisce rotazione anche sui tier node/perl/bash (Windows).
+    _devforge_rotate_inline "$file" "$rotate_bytes" "$outbox_dir"
+
+    local _fsync_ok=0
     if command -v node >/dev/null 2>&1; then
         # node: O_APPEND + fsyncSync via atomic_append.js
         if printf '%s' "$line" | node "${DEVFORGE_LIB_DIR}/atomic_append.js" "$file" 2>/dev/null; then
-            _node_ok=1
+            _fsync_ok=1
         fi
     fi
-    if [ "$_node_ok" -eq 0 ]; then
-        # bash degraded: node absent OR node present-but-failed (no fsync, but never silent loss)
+    if [ "$_fsync_ok" -eq 0 ] && command -v perl >/dev/null 2>&1; then
+        # perl: append + IO::Handle::sync (fsync per-file reale). Elimina la degradazione
+        # no-fsync quando python3 e node sono assenti — perl è near-universale (ships macOS,
+        # quasi tutte le distro Linux). Goal: "non possiamo avere degradazione della telemetria".
+        if printf '%s' "$line" | perl -e 'use IO::Handle; open(my $fh,">>",$ARGV[0]) or exit 1; local $/; my $d=<STDIN>; print $fh $d or exit 1; $fh->flush or exit 1; $fh->sync or exit 1; close($fh) or exit 1; exit 0' "$file" 2>/dev/null; then
+            _fsync_ok=1
+        fi
+    fi
+    if [ "$_fsync_ok" -eq 0 ]; then
+        # ultima spiaggia (no python3+node+perl, patologico): bash + sync coarse (best-effort,
+        # flush OS-wide; non garantisce write-cache hardware) + telemetry_degraded. C lo segnala.
         printf '%s' "$line" >> "$file" 2>/dev/null
+        sync 2>/dev/null || true
         # Emit telemetry_degraded once per session via DIRECT printf >> (no recursion:
         # calling devforge_log here would re-enter _devforge_lock_append and loop).
         local _deg_sentinel="${HOME}/.claude/.devforge-no-fsync-warned"
@@ -272,7 +353,7 @@ _devforge_check_rotation() {
             [ -f "$archived" ] || continue
             archived_basename=$(basename "$archived")
             cursor_file="${outbox}/.cursor-${archived_basename}"
-            cursor=$(cat "$cursor_file" 2>/dev/null || echo "0")
+            cursor=$(cat "$cursor_file" 2>/dev/null | tr -d '\r'); cursor="${cursor:-0}"; case "$cursor" in ''|*[!0-9]*) cursor=0;; esac
             sz=$(stat -f%z "$archived" 2>/dev/null || stat -c%s "$archived" 2>/dev/null || echo 0)
             # Only drop if fully consumed: cursor >= file_size
             if [ "$cursor" -ge "$sz" ] 2>/dev/null && [ "$sz" -gt 0 ] 2>/dev/null; then
@@ -355,6 +436,68 @@ devforge_canonicalize_user() {
 # consumer (developer-telemetry) resolves with the full signal set, which makes
 # shared-machine / wrong-git-config cases disambiguable. repo_root is NOT
 # included: it is already a top-level event field (see devforge_log_timed).
+# Task-02 (Capability A): segnali identità OS cross-platform (parità mac/Linux/Win).
+# Output TSV: full_name \t login \t domain. Best-effort, mai abort sotto set -euo pipefail.
+_devforge_local_identity_signals_os() {
+    local os_full_name="" os_login="" os_domain="" uname_s
+    uname_s=$(uname -s 2>/dev/null || echo "")
+    case "$uname_s" in
+        Darwin)
+            os_full_name=$(id -F 2>/dev/null | head -1 | tr -d '\r' || true) ;;
+        Linux)
+            if command -v getent >/dev/null 2>&1; then
+                os_full_name=$(getent passwd "${USER:-}" 2>/dev/null | cut -d: -f5 | cut -d, -f1 | head -1 | tr -d '\r' || true)
+            fi ;;
+        MINGW*|MSYS*|CYGWIN*)
+            if command -v powershell.exe >/dev/null 2>&1; then
+                os_full_name=$(powershell.exe -NoProfile -Command \
+                  "(Get-CimInstance Win32_UserAccount -Filter \"Name='\$env:USERNAME'\").FullName" \
+                  2>/dev/null | head -1 | tr -d '\r' || true)
+            fi ;;
+    esac
+    os_login="${USERNAME:-${USER:-$(whoami 2>/dev/null || echo "")}}"
+    os_domain="${USERDOMAIN:-}"
+    os_full_name=$(printf '%s' "$os_full_name" | cut -c1-128)
+    printf '%s\t%s\t%s' "$os_full_name" "$os_login" "$os_domain"
+}
+
+# Task-03 (Capability A): segnali identità da tool dev (ssh/npm/gh). Best-effort, mai abort.
+# Output TSV: ssh_fingerprint \t npm_email \t gh_email. gh è OPT-IN (rete) via DEVFORGE_IDENTITY_GH=1.
+_devforge_local_identity_signals_tools() {
+    local ssh_fp="" npm_email="" gh_email="" key
+    # SSH: prima chiave pubblica in ordine deterministico. Mai chiavi private.
+    # MAJOR-1: usa `ssh-keygen -lf` (fingerprint canonico OpenSSH, es. SHA256:...) invece di
+    # _devforge_shasum del design: è lo standard riconoscibile/verificabile, disponibile su Git for
+    # Windows. Il campo ssh_fingerprint è una stringa opaca per il consumer (no SHA-1 raw).
+    if [ -d "${HOME}/.ssh" ]; then
+        key=$(ls -1 "${HOME}/.ssh/"*.pub 2>/dev/null | sort | head -1)
+        if [ -n "$key" ] && [ -r "$key" ]; then
+            ssh_fp=$(ssh-keygen -lf "$key" 2>/dev/null | awk '{print $2}' | head -1 | tr -d '\r' || true)
+        fi
+    fi
+    # npm: locale, guard + timeout (net_run) + normalizza undefined/null/""
+    if command -v npm >/dev/null 2>&1; then
+        local _v
+        if command -v net_run >/dev/null 2>&1; then
+            _v=$(net_run 2 npm config get email 2>/dev/null | head -1 | tr -d '\r' || true)
+        else
+            _v=$(npm config get email 2>/dev/null | head -1 | tr -d '\r' || true)
+        fi
+        case "$_v" in undefined|null|"") _v="" ;; esac
+        npm_email="$_v"
+    fi
+    # gh: OPT-IN (rete) — default off per non bloccare session-start su proxy SIAE
+    if [ "${DEVFORGE_IDENTITY_GH:-}" = "1" ] && command -v gh >/dev/null 2>&1; then
+        if command -v net_run >/dev/null 2>&1; then
+            gh_email=$(net_run 3 gh api user --jq '.email' 2>/dev/null | head -1 | tr -d '\r' || true)
+        else
+            gh_email=$(gh api user --jq '.email' 2>/dev/null | head -1 | tr -d '\r' || true)
+        fi
+        case "$gh_email" in null) gh_email="" ;; esac
+    fi
+    printf '%s\t%s\t%s' "$ssh_fp" "$npm_email" "$gh_email"
+}
+
 devforge_identity_bundle() {
     local gle gln gge ggn osu host
     gle=$(git config user.email 2>/dev/null || true)
@@ -374,12 +517,22 @@ devforge_identity_bundle() {
     au="${rest%%|*}"; rest="${rest#*|}"
     ou="${rest%%|*}"; onm="${rest#*|}"
 
-    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s","auth_email":"%s","auth_account_uuid":"%s","auth_org_uuid":"%s","auth_org_name":"%s"}' \
+    # Task-04 (Capability A): 6 segnali identità locali additivi (parità mac/Linux/Win).
+    local _os _tools osfn oslg osdm sshfp npme ghe
+    _os=$(_devforge_local_identity_signals_os)
+    osfn="${_os%%$'\t'*}"; _os="${_os#*$'\t'}"; oslg="${_os%%$'\t'*}"; osdm="${_os#*$'\t'}"
+    _tools=$(_devforge_local_identity_signals_tools)
+    sshfp="${_tools%%$'\t'*}"; _tools="${_tools#*$'\t'}"; npme="${_tools%%$'\t'*}"; ghe="${_tools#*$'\t'}"
+
+    printf '{"git_local_email":"%s","git_local_name":"%s","git_global_email":"%s","git_global_name":"%s","os_user":"%s","host":"%s","auth_email":"%s","auth_account_uuid":"%s","auth_org_uuid":"%s","auth_org_name":"%s","os_full_name":"%s","os_login":"%s","os_domain":"%s","ssh_fingerprint":"%s","npm_email":"%s","gh_email":"%s"}' \
         "$(devforge_sanitize_json_str "$gle")" "$(devforge_sanitize_json_str "$gln")" \
         "$(devforge_sanitize_json_str "$gge")" "$(devforge_sanitize_json_str "$ggn")" \
         "$(devforge_sanitize_json_str "$osu")" "$(devforge_sanitize_json_str "$host")" \
         "$(devforge_sanitize_json_str "$ae")" "$(devforge_sanitize_json_str "$au")" \
-        "$(devforge_sanitize_json_str "$ou")" "$(devforge_sanitize_json_str "$onm")"
+        "$(devforge_sanitize_json_str "$ou")" "$(devforge_sanitize_json_str "$onm")" \
+        "$(devforge_sanitize_json_str "$osfn")" "$(devforge_sanitize_json_str "$oslg")" \
+        "$(devforge_sanitize_json_str "$osdm")" "$(devforge_sanitize_json_str "$sshfp")" \
+        "$(devforge_sanitize_json_str "$npme")" "$(devforge_sanitize_json_str "$ghe")"
 }
 
 # Resolve authenticated SSO identity from Claude Code's local oauth account file.
@@ -405,6 +558,40 @@ devforge_resolve_auth_identity() {
     ou="${ou//|/ }"; ou="${ou//$'\n'/ }"; ou="${ou//$'\r'/ }"; ou="${ou//\"/ }"
     onm="${onm//|/ }"; onm="${onm//$'\n'/ }"; onm="${onm//$'\r'/ }"; onm="${onm//\"/ }"
     printf '%s|%s|%s|%s' "$ae" "$au" "$ou" "$onm"
+}
+
+# Lazy auth resolution: se DEVFORGE_AUTH_EMAIL non è pinnato (hook senza
+# devforge_init_session, o sessione partita con plugin vecchio), risolvi inline
+# da ~/.claude.json. Cache flag per-process: 1 lettura max/processo hook.
+# Flag settato INCONDIZIONATAMENTE (trade-off documentato in design 2026-06-19):
+# i processi hook sono short-lived, un fallimento transitorio resta confinato al
+# processo corrente; il processo hook successivo ritenta.
+_devforge_ensure_auth() {
+    [ -n "${_DEVFORGE_AUTH_RESOLVED:-}" ] && return 0
+    _DEVFORGE_AUTH_RESOLVED=1
+    if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
+        local _auth _rest
+        _auth=$(devforge_resolve_auth_identity 2>/dev/null || printf '|||')
+        DEVFORGE_AUTH_EMAIL="${_auth%%|*}"
+        _rest="${_auth#*|}"
+        DEVFORGE_AUTH_ACCOUNT_UUID="${_rest%%|*}"
+    fi
+}
+
+# Emette 1 evento osservabilità sull'identità SSO corrente (best-effort).
+# Chiamata UNA volta dal branch startup) di session-start (1×/sessione logica).
+# DEVFORGE_AUTH_EMAIL deve essere già risolto dal chiamante.
+devforge_emit_identity_observability() {
+    local domain_expected="${DEVFORGE_AUTH_DOMAIN:-siae.it}"
+    if [ -z "${DEVFORGE_AUTH_EMAIL:-}" ]; then
+        devforge_log "identity_unresolved" "warning" '{"reason":"oauthAccount_absent"}' 2>/dev/null || true
+    else
+        local _dom="${DEVFORGE_AUTH_EMAIL##*@}"
+        if [ "$_dom" != "$domain_expected" ]; then
+            devforge_log "identity_external_domain" "warning" \
+                "{\"domain\":\"$(devforge_sanitize_json_str "$_dom")\"}" 2>/dev/null || true
+        fi
+    fi
 }
 
 # Raw cumulative session token total (from token-stats.json). Fallback 0 if the
@@ -571,12 +758,37 @@ devforge_next_seq() {
             echo "$locked_result"
             return
         fi
-        # flock contention or flock unavailable — fallback to unlocked increment
-        # (no atomicity guarantee; duplicate seq numbers possible under concurrency)
+        # flock contention or flock unavailable — fall through to mkdir-lock below.
     fi
-    local current=$(cat "$seq_file" 2>/dev/null || echo "0")
+    # Task-01 (Capability D): atomic seq SENZA il binario flock (assente su macOS e Windows
+    # Git Bash → senza questo il path era una race read-modify-write, con event_id duplicati
+    # sotto concorrenza). mkdir è atomico cross-OS (stesso pattern di _devforge_lock_append).
+    # NOTA: niente stale-guard basato su mtime qui. Il seq-lock è tenuto per microsecondi
+    # (read+write+rmdir): un SIGKILL durante questa finestra è trascurabile. Lo stale-guard
+    # via _devforge_dir_age_secs misfira sotto contesa (TOCTOU: stat su lockdir appena rimosso
+    # → mtime fallback 0 → age "enorme" → rimuove lock VALIDI → seq duplicati). Il backstop per
+    # eventuali orfani è il timeout `waited` sotto: dopo ~1s si procede senza lock (zero-loss).
+    local lockdir="${seq_file}.lockdir"
+    local waited=0
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        waited=$((waited + 1))
+        if [ "$waited" -gt 100 ]; then
+            # ~2s di contesa o lock orfano (SIGKILL nella finestra critica). MAJOR-2: rimuovi il
+            # lockdir orfano qui, altrimenti ogni evento successivo della sessione spinde 2s. Sicuro:
+            # se fossimo arrivati a 2s, il detentore è verosimilmente morto (altrimenti avrebbe
+            # rilasciato). rmdir incondizionato qui non ha il TOCTOU dello stale-guard basato su mtime.
+            rmdir "$lockdir" 2>/dev/null || true
+            # last-resort senza lock: preferisce un possibile tie di seq alla perdita (zero-loss prevale).
+            local cur; cur=$(cat "$seq_file" 2>/dev/null | tr -d '\r' || echo "0")
+            echo "$((cur + 1))"
+            return
+        fi
+        sleep 0.02
+    done
+    local current; current=$(cat "$seq_file" 2>/dev/null | tr -d '\r' || echo "0")
     local next=$((current + 1))
     echo "$next" > "$seq_file"
+    rmdir "$lockdir" 2>/dev/null || true
     echo "$next"
 }
 
@@ -677,6 +889,7 @@ devforge_log() {
     # repo_slug (org/repo) derived from repo_remote for join-key use at the consumer.
     local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    _devforge_ensure_auth
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
@@ -762,6 +975,7 @@ devforge_log_timed() {
     # static marker that tells the consumer this duration was measured via epoch_ns wallclock.
     local repo_remote auth_email_v auth_uuid_v safe_repo_remote safe_auth_email safe_auth_uuid safe_repo_slug
     repo_remote=$(git remote get-url origin 2>/dev/null || echo "")
+    _devforge_ensure_auth
     auth_email_v="${DEVFORGE_AUTH_EMAIL:-}"
     auth_uuid_v="${DEVFORGE_AUTH_ACCOUNT_UUID:-}"
     safe_repo_remote=$(devforge_sanitize_json_str "$repo_remote")
