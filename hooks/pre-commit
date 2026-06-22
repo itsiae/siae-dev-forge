@@ -145,9 +145,29 @@ BLOCK_EOF
     fi
     SKILL_REMINDER=""
 
+    # Coverage gate applicability: applies ONLY when the commit introduces or
+    # modifies production source code in a coverage-measured language. A
+    # config-only or test-only commit (e.g. editing .mcp.json plus a guardrail
+    # test) has no production Python/TS/Java/Go to cover, so the 70% gate and
+    # the force-run together create a catch-22 (force-run demands fresh
+    # coverage; any measurement is 0% because there is no source to cover; the
+    # gate then rejects 0%). Skip both when no production source is staged.
+    # --diff-filter=ACMR ignora i file solo-eliminati: un commit che rimuove
+    # esclusivamente sorgente non attiva il gate (niente codice da coprire dopo
+    # la rimozione) — comportamento voluto.
+    STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null \
+        | grep -iE '\.(py|ts|tsx|js|jsx|java|go)$' \
+        | grep -vE '(^|/)tests?/|(^|/)__tests__/|\.(spec|test)\.[tj]sx?$|(^|/)test_[^/]*\.py$|_test\.py$|_test\.go$|Test\.java$|IT\.java$|(^|/)conftest\.py$' \
+        || true)
+    COVERAGE_APPLIES=1
+    if [ -z "$STAGED_SRC" ]; then
+        COVERAGE_APPLIES=0
+        devforge_log "coverage_gate" "skipped_no_source" "{\"reason\":\"no production source in staged diff\"}" 2>/dev/null || true
+    fi
+
     # Coverage Gate — HARD BLOCK if coverage below threshold
     COVERAGE_FILE="${HOME}/.claude/.devforge-last-coverage"
-    if [ -f "$COVERAGE_FILE" ]; then
+    if [ "$COVERAGE_APPLIES" = "1" ] && [ -f "$COVERAGE_FILE" ]; then
         COVERAGE_DATA=$(cat "$COVERAGE_FILE" 2>/dev/null || echo "")
         COVERAGE_PCT=$(echo "$COVERAGE_DATA" | cut -d'|' -f1)
         COVERAGE_TS=$(echo "$COVERAGE_DATA" | cut -d'|' -f2)
@@ -187,7 +207,7 @@ COV_BLOCK_EOF
     # passing silently just because tests were not executed.
     STAGED_TEST_HITS=$(git diff --cached --name-only 2>/dev/null \
         | grep -E "\.(spec|test)\.|Test\.java$|IT\.java$|test_.*\.py$|_test\.go$" || true)
-    if [ -n "$STAGED_TEST_HITS" ]; then
+    if [ "$COVERAGE_APPLIES" = "1" ] && [ -n "$STAGED_TEST_HITS" ]; then
         COVERAGE_AGE=9999
         if [ -f "$COVERAGE_FILE" ]; then
             COVERAGE_TS=$(cut -d'|' -f2 "$COVERAGE_FILE" 2>/dev/null || echo 0)

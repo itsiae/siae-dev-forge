@@ -420,6 +420,38 @@ DevForge integra 3 server MCP per query strutturate context-isolated:
 `portal-apigateway-*`, `ttpp-*-bff-service`), il workflow brainstorming richiede `/forge-mcp-preflight`
 per ottenere rischio + 3 vincoli + volumi prima di proporre opzioni.
 
+### Configurazione credenziali MCP
+
+I server MCP `elasticsearch` e `siae-sport-oracle` richiedono **credenziali che NON sono
+versionate nel repo**. Il `.mcp.json` del plugin le legge da variabili d'ambiente — devi
+impostare due valori, forniti dal team AI Competence Center:
+
+| Variabile | Server | Note |
+|---|---|---|
+| `ES_PASSWORD` | elasticsearch | password utente ES read-only |
+| `ORACLE_PASSWORD` | siae-sport-oracle | password utente Oracle SPORT read-only |
+
+**Modo raccomandato (cross-platform)** — aggiungile al campo `env` di `~/.claude/settings.json`
+(Claude Code le inietta nell'ambiente di ogni sessione e le espande in `.mcp.json`):
+
+```json
+{
+  "env": {
+    "ES_PASSWORD": "<password-es>",
+    "ORACLE_PASSWORD": "<password-oracle>"
+  }
+}
+```
+
+In alternativa, come variabili d'ambiente del sistema operativo (macOS/Linux: `export` nel
+profilo shell; Windows: `setx` o Variabili d'ambiente utente) prima di avviare Claude Code.
+
+> **Nota — dove "vive" il `.mcp.json`**: Claude Code **non** copia `.mcp.json` in `~/.claude/`.
+> Lo legge automaticamente dalla cache del plugin
+> (`~/.claude/plugins/marketplaces/siae-devforge/.mcp.json`). Se non trovi il file in `~/.claude/`
+> è normale: verifica i server con il comando `/mcp` o `claude --debug`, non cercando una copia.
+> Senza le due variabili impostate, ES/Oracle non si connettono ma **non bloccano** gli altri MCP.
+
 ---
 
 ## Versioning & changelog

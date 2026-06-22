@@ -1,23 +1,31 @@
 #!/usr/bin/env bash
-# test_coverage_force_run.sh — PR #2 Task 8 (ADR-008).
-# Ensures the pre-commit hook refuses to proceed when staged tests exist
-# but cached coverage is stale (> 30 min) or missing.
+# test_coverage_force_run.sh — PR #2 Task 8 (ADR-008) + 2026-06-22 config-only fix.
+# The pre-commit coverage gate (Force-Run + 70% threshold) must apply ONLY when
+# the commit stages production source code in a coverage-measured language.
+#   - Common case (source + test staged): force-run / threshold still enforced.
+#   - Config-only or test-only commit (no production source staged): both skipped,
+#     because there is no production code to cover (else a catch-22 blocks the
+#     commit — force-run demands fresh coverage, any measure is 0%, gate rejects 0%).
 set -eu
 PASS=0; FAIL=0
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 HOOK="${REPO_ROOT}/hooks/pre-commit"
 
+# Scenario knobs (env):
+#   COV_AGE   — seconds-ago for the cached coverage timestamp (omit = no cache)
+#   COV_PCT   — cached coverage percentage (default 85)
+#   STAGE_SRC — 1 = stage an uncommitted production source file (src/feature.py)
+#   STAGE_TEST    — 1 = stage a test file (tests/test_feature.py)
+#   STAGE_CONFIG  — 1 = stage a non-source config file (.mcp.json)
 _run() {
     local tmp_home; tmp_home=$(mktemp -d)
     local tmp_repo; tmp_repo=$(mktemp -d)
     mkdir -p "$tmp_home/.claude"
-    # Seed session-skills so the git-workflow gate doesn't short-circuit.
     echo "siae-git-workflow" > "$tmp_home/.claude/.devforge-session-skills"
-    # Optional: seed coverage cache per scenario
     if [ -n "${COV_AGE:-}" ]; then
         local ts
         ts=$(( $(date +%s) - COV_AGE ))
-        echo "85|${ts}" > "$tmp_home/.claude/.devforge-last-coverage"
+        echo "${COV_PCT:-85}|${ts}" > "$tmp_home/.claude/.devforge-last-coverage"
     fi
 
     (
@@ -27,57 +35,67 @@ _run() {
         git config user.name t
         git remote add origin "git@github.com:itsiae/test-repo.git"
         mkdir -p src tests
-        echo "hello" > src/app.ts
-        git add src/app.ts
+        echo "x = 1" > src/base.py
+        git add src/base.py
         git commit -q -m init
-        # Stage a test file for the "staged test" signal
-        if [ "${STAGE_TEST:-0}" = "1" ]; then
-            echo "t" > tests/app.spec.ts
-            git add tests/app.spec.ts
+        if [ "${STAGE_SRC:-0}" = "1" ]; then
+            echo "def feature(): return 2" > src/feature.py
+            git add src/feature.py
         fi
-        # Invoke the hook with a fake `git commit` command
+        if [ "${STAGE_TEST:-0}" = "1" ]; then
+            echo "def test_feature(): assert True" > tests/test_feature.py
+            git add tests/test_feature.py
+        fi
+        if [ "${STAGE_CONFIG:-0}" = "1" ]; then
+            echo '{"mcpServers":{}}' > .mcp.json
+            git add .mcp.json
+        fi
         printf '%s' '{"command":"git commit -m test"}' \
             | HOME="$tmp_home" bash "$HOOK" 2>/dev/null || true
     )
     rm -rf "$tmp_home" "$tmp_repo"
 }
 
-echo "=== 1. Staged tests + stale coverage (3h old) → block ==="
-OUT=$(COV_AGE=10800 STAGE_TEST=1 _run)
-if echo "$OUT" | grep -q '"decision": "block"' && echo "$OUT" | grep -q "Coverage Force-Run"; then
-    echo "  PASS  blocks stale coverage"; PASS=$((PASS+1))
-else
-    echo "  FAIL  expected coverage-force-run block"
-    echo "  OUT: $OUT" | head -c 200
-    FAIL=$((FAIL+1))
-fi
+_check() { # $1=label $2=expected(block|allow) $3=needle $4=output
+    local got="allow"
+    echo "$4" | grep -q '"decision": "block"' && got="block"
+    local ok=0
+    if [ "$2" = "allow" ]; then
+        # allow = l'hook NON ha emesso un block (verifica esplicita, non grep "")
+        [ "$got" = "allow" ] && ok=1
+    else
+        # block = decisione block E il messaggio atteso ($3) presente
+        { [ "$got" = "block" ] && echo "$4" | grep -q "$3"; } && ok=1
+    fi
+    if [ "$ok" = "1" ]; then
+        echo "  PASS  $1"; PASS=$((PASS+1))
+    else
+        echo "  FAIL  $1 (expected $2)"; echo "  OUT: $4" | head -c 200; echo; FAIL=$((FAIL+1))
+    fi
+}
+
+echo "=== Common case: source + test staged (gate ENFORCED) ==="
+_check "1. src+test + stale coverage -> block force-run" block "Coverage Force-Run" \
+    "$(COV_AGE=10800 STAGE_SRC=1 STAGE_TEST=1 _run)"
+_check "2. src+test + fresh coverage -> allow"           allow "" \
+    "$(COV_AGE=60 STAGE_SRC=1 STAGE_TEST=1 _run)"
+_check "3. src only, no test -> allow (no force-run)"     allow "" \
+    "$(COV_AGE=99999 STAGE_SRC=1 STAGE_TEST=0 _run)"
+_check "4. src+test + no coverage cache -> block"         block "Coverage Force-Run" \
+    "$(STAGE_SRC=1 STAGE_TEST=1 _run)"
+_check "5. src + low fresh coverage -> block threshold"   block "Coverage Gate" \
+    "$(COV_AGE=60 COV_PCT=10 STAGE_SRC=1 _run)"
+_check "5b. src+test + low fresh coverage -> block thr."  block "Coverage Gate" \
+    "$(COV_AGE=60 COV_PCT=10 STAGE_SRC=1 STAGE_TEST=1 _run)"
 
 echo ""
-echo "=== 2. Staged tests + fresh coverage (<30min) → allow ==="
-OUT=$(COV_AGE=60 STAGE_TEST=1 _run)
-if ! echo "$OUT" | grep -q "Coverage Force-Run"; then
-    echo "  PASS  fresh coverage bypasses force-run"; PASS=$((PASS+1))
-else
-    echo "  FAIL  should not block with fresh coverage"; FAIL=$((FAIL+1))
-fi
-
-echo ""
-echo "=== 3. No staged tests → allow even with stale coverage ==="
-OUT=$(COV_AGE=99999 STAGE_TEST=0 _run)
-if ! echo "$OUT" | grep -q "Coverage Force-Run"; then
-    echo "  PASS  no staged tests → no force-run"; PASS=$((PASS+1))
-else
-    echo "  FAIL  force-run triggered without staged tests"; FAIL=$((FAIL+1))
-fi
-
-echo ""
-echo "=== 4. Staged tests + no coverage cache → block ==="
-OUT=$(STAGE_TEST=1 _run)
-if echo "$OUT" | grep -q "Coverage Force-Run"; then
-    echo "  PASS  missing coverage triggers force-run"; PASS=$((PASS+1))
-else
-    echo "  FAIL  expected block when coverage absent"; FAIL=$((FAIL+1))
-fi
+echo "=== Fix 2026-06-22: no production source staged (gate SKIPPED) ==="
+_check "6. test-only + stale coverage -> allow (skip)"    allow "" \
+    "$(COV_AGE=10800 STAGE_TEST=1 _run)"
+_check "7. config-only + test + 0% fresh -> allow (skip)" allow "" \
+    "$(COV_AGE=60 COV_PCT=0 STAGE_CONFIG=1 STAGE_TEST=1 _run)"
+_check "8. config-only + low fresh coverage -> allow"     allow "" \
+    "$(COV_AGE=60 COV_PCT=10 STAGE_CONFIG=1 _run)"
 
 echo ""
 echo "Total: $((PASS+FAIL)) — PASS: $PASS — FAIL: $FAIL"

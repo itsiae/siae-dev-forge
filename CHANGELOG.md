@@ -6,18 +6,32 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Added — Banner esplicito quando python3 manca
+### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 
-`python3` è prerequisito della telemetria DevForge (token, attribuzione identità, KPI,
-durabilità zero-loss). Finora la sua assenza degradava in modo **silenzioso** (solo stderr
-+ una riga statusline). Ora `session-start` mostra un **banner esplicito e prominente** in
-`additional_context`, con il comando d'installazione per-OS. È solo un avviso — **non blocca**
-le operazioni.
+Il coverage gate del `pre-commit` (Force-Run + soglia 70%) si attivava su qualsiasi
+commit con un file di test staged, senza verificare se il commit introducesse codice
+sorgente di produzione misurabile. Un commit config-only o test-only (es. modifica a
+`.mcp.json` + un guardrail test) entrava in catch-22: il Force-Run pretende coverage
+fresca, ma senza codice da coprire la misura è 0%, che il gate poi rifiuta. Ora i due
+controlli si applicano solo quando lo staged diff contiene sorgente di produzione in un
+linguaggio misurato (`.py/.ts/.tsx/.js/.jsx/.java/.go`, esclusi i file di test); il caso
+comune codice+test resta interamente enforced. Test: `tests/hooks/test_coverage_force_run.sh`
+(8 scenari, caso comune + skip). Evento `coverage_gate=skipped_no_source` per osservabilità.
 
-- `lib/python3-check.sh` — `devforge_python3_banner` (solo builtin `command`/`printf` →
-  testabile in isolamento, nessuna dipendenza esterna).
-- `hooks/session-start` — inietta il banner in cima a `additional_context` quando python3 manca.
-- Test: `tests/hooks/test_python3_banner.sh` (caso assente/presente + wiring + JSON valido).
+### Security — Rimozione credenziali in chiaro dal `.mcp.json` (1.90.3)
+
+Le password di produzione di Elasticsearch (`ES_PASSWORD`) e Oracle SPORT (`ORACLE_PASSWORD`)
+erano committate in chiaro nel `.mcp.json` versionato e distribuite nella cache di ogni
+installazione del plugin. Ora sono riferimenti a variabili d'ambiente (`${ES_PASSWORD}`,
+`${ORACLE_PASSWORD}`); i valori non segreti (host/porta/service/utente tecnico) restano nel
+file. Aggiunto guardrail `tests/test_mcp_no_secrets.py` che blocca la reintroduzione di segreti.
+README documenta come impostare le due variabili (cross-platform) e chiarisce che `.mcp.json`
+non viene copiato in `~/.claude/` (auto-detect dalla cache plugin). `install.sh` avvisa se le
+variabili non sono impostate. **Azione DevOps richiesta**: ruotare le due credenziali (già
+esposte in git history). Design: `docs/plans/2026-06-22-mcp-clean-install-fix-design.md`.
+**Nota**: il funzionamento end-to-end di `siae-sport-oracle` via `npx github:` richiede anche
+una PR separata su `itsiae/siae-sport-mcp` (aggiunta di `bin`/`main`/`prepare` + shebang;
+root cause #2 del design).
 
 ### Fixed — Accuratezza telemetria token/costi (scoping per-sessione)
 
