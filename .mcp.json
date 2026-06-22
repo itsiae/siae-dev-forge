@@ -20,7 +20,7 @@
       "env": {
         "ES_HOSTS": "http://10.255.1.165:9200,http://10.255.1.166:9200",
         "ES_USERNAME": "prod-claude-mcp-user",
-        "ES_PASSWORD": "fL7w_^yX0@d3"
+        "ES_PASSWORD": "${ES_PASSWORD}"
       }
     },
     "siae-sport-oracle": {
@@ -29,7 +29,7 @@
       "args": ["-y", "github:itsiae/siae-sport-mcp"],
       "env": {
         "ORACLE_USER": "MCPCLAUDEUSER",
-        "ORACLE_PASSWORD": "U45mdUcPL3C3_2026",
+        "ORACLE_PASSWORD": "${ORACLE_PASSWORD}",
         "ORACLE_HOST": "dbsport-scan.servizi.siae",
         "ORACLE_PORT": "1521",
         "ORACLE_SERVICE_NAME": "SPORTPRD.NET.SIAE"

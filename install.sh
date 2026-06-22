@@ -172,6 +172,13 @@ fi
 
 add_mcp_permissions
 
+# Avviso credenziali MCP (NON le scriviamo: vivono nell'ambiente del dev)
+if [ -z "${ES_PASSWORD:-}" ] || [ -z "${ORACLE_PASSWORD:-}" ]; then
+  warning "Server MCP elasticsearch/siae-sport-oracle: imposta ES_PASSWORD e ORACLE_PASSWORD"
+  warning "  → in ~/.claude/settings.json (campo \"env\") o come variabili d'ambiente OS"
+  warning "  → vedi README: 'Configurazione credenziali MCP'"
+fi
+
 echo ""
 echo -e "${GREEN}🔨 DevForge · Installazione completata${NC}"
 echo "  ──────────────────────────────────────"
