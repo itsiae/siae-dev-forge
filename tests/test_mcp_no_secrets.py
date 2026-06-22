@@ -24,6 +24,24 @@ def _load():
         return json.load(f)
 
 
+def _iter_strings(obj):
+    """Yield ricorsivamente ogni valore stringa dentro dict/list (env, args, command, url...)."""
+    if isinstance(obj, str):
+        yield obj
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            yield from _iter_strings(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _iter_strings(v)
+
+
+# Segreto inline in una stringa: "password=valore" / "--token: valore" con valore non-${VAR}.
+INLINE_SECRET_RE = re.compile(
+    r"(?i)(password|secret|token|api[-_]?key|access[-_]?key)\s*[=:]\s*(?!\$\{)(\S+)"
+)
+
+
 def test_mcp_json_is_valid_json():
     """Il .mcp.json deve restare parseable (un edit malformato romperebbe tutti gli MCP)."""
     data = _load()
@@ -43,6 +61,29 @@ def test_no_secret_literals_in_env():
     assert not offenders, (
         "Segreti in chiaro nel .mcp.json versionato (usa ${VAR}): " + "; ".join(offenders)
     )
+
+
+def test_no_secret_literals_in_args_or_command():
+    """Segreti possono nascondersi anche in args/command, non solo in env.
+    Es. args: ["--password", "s3cret"] o command "... --token=abc". Copre l'intero
+    config (ricorsivo): nessun valore deve contenere un secret inline literal, e nessun
+    flag-segreto in args deve essere seguito da un valore non-${VAR}."""
+    data = _load()
+    offenders = []
+    flag_re = re.compile(r"(?i)(password|secret|token|api[-_]?key|access[-_]?key)")
+    for server, cfg in data.get("mcpServers", {}).items():
+        # 1. secret inline in qualsiasi stringa del server (env esclusa: già coperta sopra)
+        for s in _iter_strings({k: v for k, v in cfg.items() if k != "env"}):
+            if INLINE_SECRET_RE.search(s):
+                offenders.append(f"{server}: inline secret in {s!r}")
+        # 2. coppie (flag-segreto, valore) negli args: ["--password", "literal"]
+        args = cfg.get("args") or []
+        for i in range(len(args) - 1):
+            cur, nxt = args[i], args[i + 1]
+            if isinstance(cur, str) and isinstance(nxt, str) \
+                    and flag_re.search(cur) and not ENV_REF_RE.fullmatch(nxt):
+                offenders.append(f"{server}: args flag {cur!r} -> literal {nxt!r}")
+    assert not offenders, "Possibile segreto in chiaro fuori da env: " + "; ".join(offenders)
 
 
 @pytest.mark.parametrize(

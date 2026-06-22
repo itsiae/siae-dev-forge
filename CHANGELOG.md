@@ -29,6 +29,9 @@ README documenta come impostare le due variabili (cross-platform) e chiarisce ch
 non viene copiato in `~/.claude/` (auto-detect dalla cache plugin). `install.sh` avvisa se le
 variabili non sono impostate. **Azione DevOps richiesta**: ruotare le due credenziali (già
 esposte in git history). Design: `docs/plans/2026-06-22-mcp-clean-install-fix-design.md`.
+**Nota**: il funzionamento end-to-end di `siae-sport-oracle` via `npx github:` richiede anche
+una PR separata su `itsiae/siae-sport-mcp` (aggiunta di `bin`/`main`/`prepare` + shebang;
+root cause #2 del design).
 
 ### Fixed — Accuratezza telemetria token/costi (scoping per-sessione)
 

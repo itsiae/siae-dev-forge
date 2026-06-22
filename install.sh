@@ -172,7 +172,10 @@ fi
 
 add_mcp_permissions
 
-# Avviso credenziali MCP (NON le scriviamo: vivono nell'ambiente del dev)
+# Avviso credenziali MCP (NON le scriviamo: vivono nell'ambiente del dev).
+# Non bloccante per design: l'installazione procede comunque — i soli MCP
+# elasticsearch/siae-sport-oracle non si connettono finché le var non sono
+# impostate, gli altri MCP funzionano.
 if [ -z "${ES_PASSWORD:-}" ] || [ -z "${ORACLE_PASSWORD:-}" ]; then
   warning "Server MCP elasticsearch/siae-sport-oracle: imposta ES_PASSWORD e ORACLE_PASSWORD"
   warning "  → in ~/.claude/settings.json (campo \"env\") o come variabili d'ambiente OS"

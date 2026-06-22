@@ -59,7 +59,15 @@ _run() {
 _check() { # $1=label $2=expected(block|allow) $3=needle $4=output
     local got="allow"
     echo "$4" | grep -q '"decision": "block"' && got="block"
-    if [ "$got" = "$2" ] && { [ "$2" = "allow" ] || echo "$4" | grep -q "$3"; }; then
+    local ok=0
+    if [ "$2" = "allow" ]; then
+        # allow = l'hook NON ha emesso un block (verifica esplicita, non grep "")
+        [ "$got" = "allow" ] && ok=1
+    else
+        # block = decisione block E il messaggio atteso ($3) presente
+        { [ "$got" = "block" ] && echo "$4" | grep -q "$3"; } && ok=1
+    fi
+    if [ "$ok" = "1" ]; then
         echo "  PASS  $1"; PASS=$((PASS+1))
     else
         echo "  FAIL  $1 (expected $2)"; echo "  OUT: $4" | head -c 200; echo; FAIL=$((FAIL+1))
@@ -77,6 +85,8 @@ _check "4. src+test + no coverage cache -> block"         block "Coverage Force-
     "$(STAGE_SRC=1 STAGE_TEST=1 _run)"
 _check "5. src + low fresh coverage -> block threshold"   block "Coverage Gate" \
     "$(COV_AGE=60 COV_PCT=10 STAGE_SRC=1 _run)"
+_check "5b. src+test + low fresh coverage -> block thr."  block "Coverage Gate" \
+    "$(COV_AGE=60 COV_PCT=10 STAGE_SRC=1 STAGE_TEST=1 _run)"
 
 echo ""
 echo "=== Fix 2026-06-22: no production source staged (gate SKIPPED) ==="

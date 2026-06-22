@@ -152,6 +152,9 @@ BLOCK_EOF
     # the force-run together create a catch-22 (force-run demands fresh
     # coverage; any measurement is 0% because there is no source to cover; the
     # gate then rejects 0%). Skip both when no production source is staged.
+    # --diff-filter=ACMR ignora i file solo-eliminati: un commit che rimuove
+    # esclusivamente sorgente non attiva il gate (niente codice da coprire dopo
+    # la rimozione) — comportamento voluto.
     STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null \
         | grep -iE '\.(py|ts|tsx|js|jsx|java|go)$' \
         | grep -vE '(^|/)tests?/|(^|/)__tests__/|\.(spec|test)\.[tj]sx?$|(^|/)test_[^/]*\.py$|_test\.py$|_test\.go$|Test\.java$|IT\.java$|(^|/)conftest\.py$' \
