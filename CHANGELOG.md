@@ -6,6 +6,19 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added — Banner esplicito quando python3 manca
+
+`python3` è prerequisito della telemetria DevForge (token, attribuzione identità, KPI,
+durabilità zero-loss). Finora la sua assenza degradava in modo **silenzioso** (solo stderr
++ una riga statusline). Ora `session-start` mostra un **banner esplicito e prominente** in
+`additional_context`, con il comando d'installazione per-OS. È solo un avviso — **non blocca**
+le operazioni.
+
+- `lib/python3-check.sh` — `devforge_python3_banner` (solo builtin `command`/`printf` →
+  testabile in isolamento, nessuna dipendenza esterna).
+- `hooks/session-start` — inietta il banner in cima a `additional_context` quando python3 manca.
+- Test: `tests/hooks/test_python3_banner.sh` (caso assente/presente + wiring + JSON valido).
+
 ### Fixed — Accuratezza telemetria token/costi (scoping per-sessione)
 
 Corregge 3 cause-radice dietro 5 anomalie su token/costi osservate a valle (blocco

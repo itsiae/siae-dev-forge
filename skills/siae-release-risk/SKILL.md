@@ -18,7 +18,8 @@ NESSUN DEPLOY DI RELEASE SENZA SCORECARD GENERATA
 ```
 
 Una release sconosciuta è una release pericolosa. Questa skill produce evidence-based scorecard
-con 18 criteri verificabili. Output: file md versionato in `docs/releases/` + PR comment automatico.
+con 18 criteri verificabili. Output: file md versionato in `docs/releases/<piattaforma>/<release>/scorecard.md`
++ PR comment automatico.
 
 ---
 
@@ -89,7 +90,7 @@ Parse feature branch names. AskUserQuestion multiSelect: "Quali di queste N feat
 | 📋 Service: `$SERVICE` · 🌿 Branch: `$BRANCH` |
 | **▼ Azione** |
 | 1. 📌 Run release-risk assessment (18 criteri) |
-| 2. 💾 Output: `docs/releases/<date>-<service>-<branch>.md` (versionato) |
+| 2. 💾 Output: `docs/releases/<piattaforma>/<service>-<version>/scorecard.md` (versionato, gerarchico per piattaforma) |
 | 3. 📊 Activity event emit per forge-adoption |
 | 💡 Perché: evaluate deploy risk + traceability audit |
 | 🚫 Se NO: nessun output, nessun event emesso |
@@ -107,6 +108,7 @@ python -m lib.release_risk assess \
   --diff-content /tmp/diff-content.txt \
   --version "$VERSION" \
   --owner "$OWNER" \
+  ${PLATFORM:+--platform "$PLATFORM"} \
   --release-date "$RELEASE_DATE" \
   --user-impact-ge-50 "$USER_IMPACT" \
   --genesis-confirmed "$GENESIS_CONFIRMED" \
@@ -122,7 +124,7 @@ CLI gestisce internamente. Se cache hit + `gh pr comment --list` mostra marker `
 - `--no-cache` salta solo la lettura: il run ricalcola e sovrascrive comunque la entry in cache.
 
 ### Step 8 — Display scorecard  🟢 SICURO
-Output CLI mostra scorecard markdown. Path file: `docs/releases/<date>-<service>-<branch>.md`.
+Output CLI mostra scorecard markdown. Path file: `docs/releases/<piattaforma>/<service>-<version>/scorecard.md`.
 
 ### Step 9 — Emit activity event  🟢 SICURO
 CLI già esegue `devforge_log "release-risk" "success" "$META"` internamente.
@@ -158,6 +160,30 @@ In cima alla scorecard è incluso un breve paragrafo **"📝 Razionale del rilas
 Se non c'è nulla di sensato da dire, la sezione viene omessa.
 
 ---
+
+## Piattaforma applicativa e organizzazione gerarchica (REQ-13/14/15)
+
+La piattaforma (es. `sport`, `pop`, `pae`, `ciam`, …) è **identificata automaticamente dal
+nome servizio** (che l'hook ricava da `basename($REPO_ROOT)`) — REQ-13. Regola deterministica
+(`lib/release_risk/platform_resolver.py`, mai solleva):
+
+1. override esplicito `--platform`;
+2. match del prefisso più lungo in `PLATFORM_PREFIXES` (allineato a `KG_PREFIXES`): es.
+   `sport-*`, `digital-channels-sport-*`, `esb-sport-*` → `sport`; `esb-sso-*` → `ciam`;
+3. fallback: primo token del nome servizio (es. `billing-core` → `billing`) → ogni famiglia ha
+   la sua cartella, **niente bucket condiviso** (separazione REQ-14).
+
+Estendibile senza toccare codice via env `DEVFORGE_RELEASE_RISK_PLATFORM_MAP`
+(`plat:pref1|pref2;plat2:pref3`).
+
+**Storage gerarchico (REQ-15):** `docs/releases/<piattaforma>/<service>-<version>/scorecard.md`
+(fallback `<service>-<branch>` se version unknown). Un file `scorecard.md` per release →
+**idempotente** (re-run sovrascrive, versionato via git). Piattaforme diverse vivono in
+sottoalberi distinti: nessuna aggregazione cross-sistema (REQ-14).
+
+> **Backward-compat:** i file storici flat in `docs/releases/*.md` restano dove sono; i nuovi
+> run scrivono gerarchico. La cache scarta le entry di schema vecchio (`SCHEMA_VERSION` 1.0) e
+> su hit verifica che il path coincida ed esista, così non serve mai un path stale.
 
 ## Pubblicazione su Confluence (opt-in, account tecnico)
 

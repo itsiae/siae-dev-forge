@@ -5,7 +5,7 @@ import os
 import hashlib
 from pathlib import Path
 from typing import Optional
-from lib.release_risk.schema import ReleaseRiskReport
+from lib.release_risk.schema import ReleaseRiskReport, SCHEMA_VERSION
 
 CACHE_DIR = Path.home() / ".claude" / ".cache" / "release-risk"
 
@@ -35,9 +35,13 @@ def get(branch: str, diff_hash: str, baseline_main_sha: str) -> Optional[Release
     if not p.exists():
         return None
     try:
-        return ReleaseRiskReport.from_json(p.read_text())
+        report = ReleaseRiskReport.from_json(p.read_text())
     except Exception:
         return None  # corrupted cache, treat as miss
+    # Invalida entry di schema vecchio (es. pre-platform 1.0: output_path flat stale).
+    if getattr(report, "schema_version", None) != SCHEMA_VERSION:
+        return None
+    return report
 
 
 def put(branch: str, diff_hash: str, baseline_main_sha: str, report: ReleaseRiskReport) -> bool:
