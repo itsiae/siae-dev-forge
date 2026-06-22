@@ -133,6 +133,23 @@ torna attivo appena si tocca sorgente. Cache plugin sincronizzata per applicare 
 `siae-dev-forge` e nella cache di ogni client che ha installato. Rimuoverle dal file NON le
 revoca. Vanno **ruotate** lato Elasticsearch e Oracle. (Opzionale: purge git history.)
 
+## File modificati
+
+PR-A (questo repo `siae-dev-forge`):
+- `.mcp.json` — segreti → env var `${VAR}`
+- `README.md` — sezione "Configurazione credenziali MCP" + nota modello cache
+- `install.sh` — avviso credenziali non bloccante
+- `CHANGELOG.md` — note 1.90.3
+- `.claude-plugin/plugin.json` e `.claude-plugin/marketplace.json` — bump 1.90.2 → 1.90.3
+- `hooks/pre-commit` — guardia `COVERAGE_APPLIES` (fix coverage gate config-only)
+- `tests/test_mcp_no_secrets.py` — guardrail anti-segreti
+- `tests/hooks/test_coverage_force_run.sh` — scenari gate (caso comune + skip)
+- `docs/plans/2026-06-22-mcp-clean-install-fix-design.md` — questo design
+
+PR-B (repo `siae-sport-mcp`, separata):
+- `package.json` — `bin`/`main`/`prepare`
+- `src/index.ts` — shebang `#!/usr/bin/env node`
+
 ## Criteri di accettazione
 
 - AC1: `.mcp.json` non contiene alcuna password in chiaro (grep dei valori = 0 match).
