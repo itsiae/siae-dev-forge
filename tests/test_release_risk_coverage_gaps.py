@@ -112,7 +112,8 @@ def test_assess_in_process_full_run(git_repo_with_origin, tmp_path, monkeypatch,
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert out["cached"] is False
     assert out["level"] in ("LOW", "MEDIUM", "HIGH", "CRITICAL")
-    assert list((git_repo_with_origin / "docs" / "releases").glob("*.md"))
+    # REQ-15: storage gerarchico <platform>/<release>/scorecard.md
+    assert list((git_repo_with_origin / "docs" / "releases").glob("**/scorecard.md"))
 
 
 def test_assess_cache_hit_second_run(git_repo_with_origin, tmp_path, monkeypatch, capsys):

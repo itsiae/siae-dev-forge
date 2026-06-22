@@ -74,9 +74,14 @@ def test_cli_writes_output_file(fake_git_repo, diff_fixtures):
         capture_output=True, text=True, check=True,
     )
     output_dir = fake_git_repo / "docs" / "releases"
-    files = list(output_dir.glob("*.md"))
+    # REQ-15: storage gerarchico <platform>/<release>/scorecard.md (glob ricorsivo)
+    files = list(output_dir.glob("**/scorecard.md"))
     assert len(files) == 1
-    content = files[0].read_text()
+    sc = files[0]
+    # REQ-13/14: 'test-service' → platform 'test' (primo token), separazione per cartella
+    assert sc.parent.parent.name == "test"  # docs/releases/test/<release>/scorecard.md
+    assert sc.parent.name == "test-service-release_1.0.0"
+    content = sc.read_text()
     assert "Release Risk Scorecard" in content
     assert "<!-- release-risk:" in content  # idempotency marker
 

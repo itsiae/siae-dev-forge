@@ -68,6 +68,24 @@ def test_corrupted_cache_treated_as_miss(fake_cache_dir):
     assert r is None
 
 
+def test_get_invalidates_old_schema_version(fake_cache_dir, sample_report):
+    """Entry di schema vecchio (pre-platform 1.0) scartata: output_path flat stale."""
+    import json
+    p = cache_key("release/1.0", "deadbeef0000", "1a2b3c4d")
+    d = json.loads(sample_report.to_json())
+    d["schema_version"] = "1.0"          # simula cache pre-platform
+    d.pop("platform", None)              # vecchio schema non aveva platform
+    p.write_text(json.dumps(d))
+    assert get("release/1.0", "deadbeef0000", "1a2b3c4d") is None
+
+
+def test_get_accepts_current_schema_version(fake_cache_dir, sample_report):
+    """Entry di schema corrente (2.0) servita normalmente."""
+    put("release/1.0", "deadbeef0000", "1a2b3c4d", sample_report)
+    r = get("release/1.0", "deadbeef0000", "1a2b3c4d")
+    assert r is not None and r.schema_version == "2.0"
+
+
 def test_idempotency_marker_format():
     m = idempotency_marker("abc123")
     assert m == "<!-- release-risk:abc123 -->"

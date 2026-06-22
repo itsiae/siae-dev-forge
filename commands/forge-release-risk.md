@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, AskUserQuestion, Write
 # /forge-release-risk — Release Risk Assessment on-demand
 
 Esegue scorecard 18-criteri pre-deploy per la release branch corrente (o specificata).
-Output: file `docs/releases/<date>-<service>-<branch>.md` + scorecard a stdout.
+Output: file `docs/releases/<piattaforma>/<service>-<version>/scorecard.md` (gerarchico per
+piattaforma, REQ-13/14/15) + scorecard a stdout.
 
 ## Cosa fa
 
@@ -49,8 +50,9 @@ Diff hash: abc123def456
 Baseline main SHA: 1a2b3c4d
 
 Level: MEDIUM | Score: 7/36 | Decision: GO_WITH_MONITORING
+Platform: sport
 
-Output: docs/releases/2026-05-14-sport-gestione-licenze-service-release_2.4.0.md
+Output: docs/releases/sport/sport-gestione-licenze-service-2.4.0/scorecard.md
 ```
 
 ## Bypass / override
@@ -61,6 +63,9 @@ touch ~/.claude/.devforge-skip-release-risk
 
 # Skip cache (force re-run)
 python -m lib.release_risk assess --no-cache ...
+
+# Override piattaforma (default: auto da nome servizio, es. sport-*→sport)
+python -m lib.release_risk assess --platform sport ...
 
 # Modalità test: hook scatta su QUALSIASI PR (qualunque branch/base) per collaudo
 export DEVFORGE_RELEASE_RISK_ANY_PR=1
