@@ -164,6 +164,7 @@ Pattern: `<categoria>-<id_tag>-<forma?>-<area>-<NNN>`
 | AUTORE | `A-83421-IT-001` | — | IT, UE, EXTRA-UE |
 | BUSINESS | `B-SDC-83421-IT-001` | SDC | IT, UE, EXTRA-UE |
 | EDITORE | `E-COOP-83421-IT-001` | COOP | IT |
+| COMBO | `AE-83421-IT-001` | — | IT (autore+editore stessa persona) |
 
 L'`<id_tag>` è un tag a 5 cifre auto-generato dall'epoch Unix % 100.000 ad ogni
 run (o specificato esplicitamente con `--id-tag`). Cambia il seed del PRNG →

@@ -591,7 +591,7 @@ class TestValidators:
         from validators import valida_belfiore_coerente
         cf = "RSSMRA85A01Z999Z"  # Z999 = codice inesistente
         ok, _ = valida_belfiore_coerente(cf, "Italia", "Roma")
-        # Accetta True o False — l'importante è che non sollevi eccezione
+        assert not ok  # belfiore inesistente → invalido
 
     def test_valida_profilo_ue(self):
         from generate_profiles import genera_dataset
@@ -663,7 +663,7 @@ class TestOutputFormatters:
         from generate_profiles import to_csv
         profili = self._profili(2)
         out = to_csv(profili)
-        lines = [l for l in out.strip().splitlines() if l]
+        lines = [line for line in out.strip().splitlines() if line]
         assert len(lines) >= 3  # header + 2 profili
 
     def test_to_csv_ha_header(self):
@@ -706,7 +706,6 @@ class TestProfiloUeExtraUe:
     """Profili UE e EXTRA_UE coprono i path alternativi di genera_profilo."""
 
     def test_profilo_ue_valido(self):
-        import re
         from generate_profiles import genera_dataset
         profili = genera_dataset({
             "categorie": ["PRIVATO"],

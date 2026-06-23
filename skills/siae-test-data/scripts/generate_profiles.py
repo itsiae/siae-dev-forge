@@ -209,9 +209,9 @@ def _genera_soggetto_giuridico(
     fg_info = FORME_GIURIDICHE[forma_giuridica_codice]
     nat_giur = rng.choice(fg_info["nature_giuridiche"])
     ragione = rng.choice(fg_info["esempi_ragione_sociale"])
-    # Estrai progressivo e epoch tag dal profilo_id per unicità cross-run
+    # Formato BUSINESS: B-{fg}-{id_tag}-{area}-{NNN} → id_tag è sempre a indice 2
     _parts = profilo_id.split("-")
-    _epoch_tag = _parts[2] if len(_parts) >= 4 else ""
+    _epoch_tag = _parts[2] if len(_parts) >= 5 else ""
     _progressivo = profilo_id[-3:]
     ragione = f"{ragione} {_progressivo}-{_epoch_tag}" if _epoch_tag else f"{ragione} {_progressivo}"
 
@@ -414,9 +414,10 @@ def genera_dataset(config: dict) -> list[dict]:
     edge_pattern_filter = config.get("edge_pattern_filter")
     edge_probability = float(config.get("edge_probability", 0.6))
     id_tag = config.get("id_tag", "")
+    _now = int(time.time())
     if not id_tag:
-        id_tag = str(int(time.time()) % 100_000)
-    run_epoch = int(time.time())
+        id_tag = str(_now % 100_000)
+    run_epoch = _now
     tag_suffix = f"-{id_tag}"
 
     def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None):
