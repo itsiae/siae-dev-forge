@@ -277,3 +277,103 @@ class TestGuardValidation:
             cwd=SCRIPTS_DIR, capture_output=True, text=True, timeout=5,
         )
         assert r.returncode == 1, 'calcolaCF avrebbe dovuto lanciare su data invalida'
+
+
+class TestJsEpochUniqueness:
+    """Verifica che il path Node.js produca pid con epoch tag."""
+
+    def test_js_pid_contiene_epoch_tag(self):
+        """Node.js genera profilo_id con 4 segmenti (include epoch)."""
+        from pathlib import Path
+        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
+        result = subprocess.run(
+            ["node", script,
+             "--categorie", "PRIVATO",
+             "--nazionalita", "ITA",
+             "--quantita", "1",
+             "--id-tag", "77777",
+             "--skip-validation"],
+            capture_output=True, text=True, timeout=15
+        )
+        assert result.returncode == 0, f"Script fallito: {result.stderr[:500]}"
+        profili = json.loads(result.stdout)
+        pid = profili[0]["profilo_id"]
+        parts = pid.split("-")
+        assert len(parts) == 4, f"Attesi 4 segmenti, trovato: {pid}"
+        assert "77777" in pid, f"Epoch tag '77777' assente nel pid: {pid}"
+
+    def test_js_due_run_diverse_producono_nomi_diversi(self):
+        """Due run JS con id-tag diversi producono almeno 1 nome diverso."""
+        from pathlib import Path
+        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
+
+        def _run(tag):
+            r = subprocess.run(
+                ["node", script,
+                 "--categorie", "PRIVATO",
+                 "--nazionalita", "ITA",
+                 "--quantita", "5",
+                 "--id-tag", tag,
+                 "--skip-validation"],
+                capture_output=True, text=True, timeout=15
+            )
+            assert r.returncode == 0
+            return {p["anagrafica"]["nome"] + p["anagrafica"]["cognome"]
+                    for p in json.loads(r.stdout)}
+
+        nomi1 = _run("11111")
+        nomi2 = _run("22222")
+        assert nomi1 != nomi2, f"Nomi identici tra run diverse: {nomi1}"
+
+
+class TestJsCrossRunUniqueness:
+    """Test E2E: due run Node.js successive producono nomi diversi."""
+
+    @staticmethod
+    def _run_js(id_tag: str, quantita: int = 5) -> list:
+        from pathlib import Path
+        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
+        result = subprocess.run(
+            ["node", script,
+             "--categorie", "PRIVATO",
+             "--nazionalita", "ITA",
+             "--quantita", str(quantita),
+             "--id-tag", id_tag,
+             "--skip-validation"],
+            capture_output=True, text=True, timeout=15
+        )
+        assert result.returncode == 0, f"Script fallito: {result.stderr[:500]}"
+        return json.loads(result.stdout)
+
+    def test_due_run_js_producono_nomi_diversi(self):
+        """Due run JS con id-tag diversi producono almeno 1 nome diverso su 5."""
+        profili1 = self._run_js("11111")
+        profili2 = self._run_js("22222")
+        nomi1 = [(p["anagrafica"]["nome"], p["anagrafica"]["cognome"]) for p in profili1]
+        nomi2 = [(p["anagrafica"]["nome"], p["anagrafica"]["cognome"]) for p in profili2]
+        assert nomi1 != nomi2, (
+            f"Le due run JS hanno prodotto gli stessi nomi.\n"
+            f"Run 1: {nomi1}\nRun 2: {nomi2}"
+        )
+
+    def test_js_cf_valido_con_epoch_in_pid(self):
+        """Il CF JS rimane valido (16 char) con epoch nel profilo_id."""
+        import re
+        CF_PATTERN = re.compile(r'^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$')
+        profili = self._run_js("83421", quantita=5)
+        for p in profili:
+            cf = p["anagrafica"]["codice_fiscale"]
+            assert CF_PATTERN.match(cf), (
+                f"CF JS non valido per pid {p['profilo_id']}: '{cf}'"
+            )
+
+    def test_js_stesso_id_tag_preserva_determinismo(self):
+        """Stesso --id-tag produce gli stessi profili tra due run JS."""
+        profili1 = self._run_js("REPLAY", quantita=3)
+        profili2 = self._run_js("REPLAY", quantita=3)
+        for p1, p2 in zip(profili1, profili2):
+            assert p1["anagrafica"]["nome"] == p2["anagrafica"]["nome"], (
+                f"Nomi diversi con stesso id-tag: "
+                f"'{p1['anagrafica']['nome']}' vs '{p2['anagrafica']['nome']}'"
+            )
+            assert p1["anagrafica"]["codice_fiscale"] == p2["anagrafica"]["codice_fiscale"]

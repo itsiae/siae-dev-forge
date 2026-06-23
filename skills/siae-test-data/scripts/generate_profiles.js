@@ -482,6 +482,7 @@ function main() {
   const mode      = (args.profilo || 'FULL').toUpperCase();
   const outFile   = args.output;
 
+  const idTag    = args['id-tag'] || String(Math.floor(Date.now() / 1000) % 100000).padStart(5, '0');
   const AREA_MAP = { 'ITA': 'IT', 'UE': 'UE', 'EXTRA-UE': 'EXTRA-UE', 'IT': 'IT' };
   const dist     = calcolaDistribuzione(quantita, distRaw || nazRaw.map(() => 1));
 
@@ -493,14 +494,14 @@ function main() {
       if (cat === 'BUSINESS') {
         for (const fg of fgList) {
           for (let i = 1; i <= count; i++) {
-            const pid = `B-${fg}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
+            const pid = `B-${fg}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
             profili.push(generaProfiloBusiness(pid, area, fg, mode, makePRNG(pid)));
           }
         }
       } else {
         const pre = cat === 'AUTORE' ? 'A' : cat === 'EDITORE' ? 'E' : 'P';
         for (let i = 1; i <= count; i++) {
-          const pid = `${pre}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
+          const pid = `${pre}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
           profili.push(generaProfiloPrivato(pid, area, mode, makePRNG(pid)));
         }
       }
