@@ -25,6 +25,7 @@ import io
 import json
 import random
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -208,8 +209,11 @@ def _genera_soggetto_giuridico(
     fg_info = FORME_GIURIDICHE[forma_giuridica_codice]
     nat_giur = rng.choice(fg_info["nature_giuridiche"])
     ragione = rng.choice(fg_info["esempi_ragione_sociale"])
-    # Aggiungi seed differenziale per evitare collisioni
-    ragione = f"{ragione} {profilo_id[-4:]}"
+    # Estrai progressivo e epoch tag dal profilo_id per unicità cross-run
+    _parts = profilo_id.split("-")
+    _epoch_tag = _parts[2] if len(_parts) >= 4 else ""
+    _progressivo = profilo_id[-3:]
+    ragione = f"{ragione} {_progressivo}-{_epoch_tag}" if _epoch_tag else f"{ragione} {_progressivo}"
 
     # Sede legale
     if residenza_kind == "ITA":
@@ -315,6 +319,7 @@ def genera_profilo(
     edge_case_flag: bool,
     edge_pattern_filter: list[str] | None = None,
     edge_probability: float = 0.6,
+    run_epoch: int = 0,
 ) -> dict:
     """Genera un singolo profilo deterministico identificato da profilo_id.
 
@@ -359,6 +364,7 @@ def genera_profilo(
             "edge_case": pf["indirizzo"].get("edge_case"),
             "calcolo_cf": pf["_meta_cf_status"],
             "note": "",
+            "generated_at_epoch": run_epoch,
         }
     else:
         # Giuridica
@@ -379,6 +385,7 @@ def genera_profilo(
                 "uguale_piva" if fg in ("COOP", "SDC", "SDP") else "personale_titolare"
             ),
             "note": "",
+            "generated_at_epoch": run_epoch,
         }
 
     return profilo
@@ -407,13 +414,17 @@ def genera_dataset(config: dict) -> list[dict]:
     edge_pattern_filter = config.get("edge_pattern_filter")
     edge_probability = float(config.get("edge_probability", 0.6))
     id_tag = config.get("id_tag", "")
-    tag_suffix = f"-{id_tag}" if id_tag else ""
+    if not id_tag:
+        id_tag = str(int(time.time()) % 100_000)
+    run_epoch = int(time.time())
+    tag_suffix = f"-{id_tag}"
 
     def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None):
         return genera_profilo(
             pid, cat, ruoli, area, fg, edge,
             edge_pattern_filter=edge_pattern_filter,
             edge_probability=edge_probability,
+            run_epoch=run_epoch,
         )
 
     # Categorie PRIVATO / AUTORE
@@ -680,6 +691,8 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true", help="Fallisci se validazione invalidi")
     parser.add_argument("--skip-validation", action="store_true", dest="skip_validation",
                         help="Salta validazione post-generazione (profili generati deterministicamente)")
+    parser.add_argument("--id-tag", dest="id_tag", default=None,
+                        help="Tag univoco nel profilo_id (default: auto-generato da epoch 5 cifre)")
     args = parser.parse_args()
 
     if args.config:
@@ -692,6 +705,7 @@ def main() -> int:
             "edge_case": args.edge_case,
             "quantita_per_tipo": args.quantita,
             "formato_output": {"JSON": "J", "CSV": "C", "MARKDOWN": "T", "ALL": "A"}[args.formato],
+            "id_tag": args.id_tag or "",
         }
     else:
         # Interattivo
