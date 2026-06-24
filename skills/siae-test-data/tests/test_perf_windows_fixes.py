@@ -923,3 +923,92 @@ class TestIdTagConTrattino:
             f"id_tag 'MY-TAG' dovrebbe apparire intero nella ragione sociale, "
             f"ma la ragione e': {rs!r}"
         )
+
+
+class TestCoverageGap:
+    """Test mirati per raggiungere 70% coverage su generate_profiles.py.
+
+    Coprono path di forma giuridica (ENTEP, ENTE), edge case indirizzi e
+    output markdown con soggetti giuridici — rami non esercitati dai test esistenti.
+    """
+
+    @staticmethod
+    def _sys_path():
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+
+    def test_forma_giuridica_entep(self):
+        """ENTEP genera CF ente a 11 cifre + P.IVA."""
+        self._sys_path()
+        from generate_profiles import genera_dataset
+        config = {
+            "categorie": ["BUSINESS"],
+            "area_residenza": "IT",
+            "forme_giuridiche": ["ENTEP"],
+            "quantita_per_tipo": 1,
+            "edge_case": False,
+            "id_tag": "ENTEP1",
+        }
+        profili = genera_dataset(config)
+        assert len(profili) == 1
+        sg = profili[0]["soggetto_giuridico"]
+        assert sg["codice_fiscale_ente"], "ENTEP deve avere CF ente"
+        assert len(sg["codice_fiscale_ente"]) == 11, (
+            f"CF ENTEP deve essere 11 cifre, got: {sg['codice_fiscale_ente']}"
+        )
+
+    def test_forma_giuridica_ente(self):
+        """ENTE genera CF ente a 10 cifre."""
+        self._sys_path()
+        from generate_profiles import genera_dataset
+        config = {
+            "categorie": ["BUSINESS"],
+            "area_residenza": "IT",
+            "forme_giuridiche": ["ENTE"],
+            "quantita_per_tipo": 2,
+            "edge_case": False,
+            "id_tag": "ENTE01",
+        }
+        profili = genera_dataset(config)
+        assert len(profili) == 2
+        for p in profili:
+            sg = p["soggetto_giuridico"]
+            assert sg["codice_fiscale_ente"], "ENTE deve avere CF ente"
+            assert len(sg["codice_fiscale_ente"]) == 10, (
+                f"CF ENTE deve essere 10 cifre, got: {sg['codice_fiscale_ente']}"
+            )
+
+    def test_edge_case_indirizzo_it(self):
+        """Con edge_case=True almeno 1 profilo IT ha un edge case nell'indirizzo."""
+        self._sys_path()
+        from generate_profiles import genera_dataset
+        config = {
+            "categorie": ["PRIVATO"],
+            "area_residenza": "IT",
+            "quantita_per_tipo": 10,
+            "edge_case": True,
+            "id_tag": "EDGE01",
+        }
+        profili = genera_dataset(config)
+        assert len(profili) == 10
+        indirizzi = [p["indirizzo"] for p in profili]
+        has_edge = any(ind.get("edge_case") for ind in indirizzi)
+        assert has_edge, "Con edge_case=True almeno 1 profilo su 10 deve avere edge_case nell'indirizzo"
+
+    def test_to_markdown_con_soggetto_giuridico(self):
+        """to_markdown_table copre il ramo soggetto giuridico (tipo_persona=GIURIDICA)."""
+        self._sys_path()
+        from generate_profiles import genera_dataset, to_markdown_table
+        config = {
+            "categorie": ["BUSINESS"],
+            "area_residenza": "IT",
+            "forme_giuridiche": ["SDC"],
+            "quantita_per_tipo": 1,
+            "edge_case": False,
+            "id_tag": "MKDN1",
+        }
+        profili = genera_dataset(config)
+        md = to_markdown_table(profili)
+        assert "MKDN1" in md, "Il markdown deve contenere il profilo_id"
+        assert "|" in md, "Il markdown deve contenere separatori di tabella"

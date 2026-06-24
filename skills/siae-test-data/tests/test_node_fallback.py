@@ -283,7 +283,7 @@ class TestJsEpochUniqueness:
     """Verifica che il path Node.js produca pid con epoch tag."""
 
     def test_js_pid_contiene_epoch_tag(self):
-        """Node.js genera profilo_id con 4 segmenti (include epoch)."""
+        """Node.js PRIVATO genera profilo_id con 4 segmenti P-{idTag}-{naz}-{seq} (include epoch)."""
         from pathlib import Path
         script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
         result = subprocess.run(
