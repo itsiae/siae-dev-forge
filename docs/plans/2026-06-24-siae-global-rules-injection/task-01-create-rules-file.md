@@ -1,6 +1,6 @@
 # Task 01 — Crea la fonte unica versionata delle regole
 
-**Goal:** creare `skills/using-devforge/reference/siae-global-rules.md` con le SIAE Global Rules normalizzate per distribuzione team. Stato: `[PENDING]`.
+**Goal:** creare `skills/using-devforge/reference/siae-global-rules.md` con le SIAE Global Rules normalizzate per distribuzione team. Stato: `[DONE]`.
 
 ## File coinvolti
 - CREA: `skills/using-devforge/reference/siae-global-rules.md`

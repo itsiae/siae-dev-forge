@@ -1,6 +1,6 @@
 # Task 03 — Bump versione plugin + CHANGELOG
 
-**Goal:** allineare la versione nei due manifest e registrare la modifica nel CHANGELOG. Stato: `[PENDING]`.
+**Goal:** allineare la versione nei due manifest e registrare la modifica nel CHANGELOG. Stato: `[DONE]`.
 **Dipende da:** Task 01 + 02 (bump solo a comportamento completo e testato).
 
 ## File coinvolti

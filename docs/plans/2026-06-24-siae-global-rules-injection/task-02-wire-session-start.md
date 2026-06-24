@@ -1,6 +1,6 @@
 # Task 02 — TDD: test + wiring iniezione in session-start
 
-**Goal:** session-start legge `siae-global-rules.md` e inietta la sezione nel blocco `<EXTREMELY_IMPORTANT>`, con test di guardia (A strutturale, B funzionale JSON-valid, C fail-safe, D anti-leak). Stato: `[PENDING]`.
+**Goal:** session-start legge `siae-global-rules.md` e inietta la sezione nel blocco `<EXTREMELY_IMPORTANT>`, con test di guardia (A strutturale, B funzionale JSON-valid, C fail-safe, D anti-leak). Stato: `[DONE]`.
 **Dipende da:** Task 01 (il file regole deve esistere per i test B/C).
 
 ## File coinvolti

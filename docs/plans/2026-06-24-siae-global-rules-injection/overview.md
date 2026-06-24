@@ -15,10 +15,10 @@
 
 | # | Task | File | Stato |
 |---|------|------|-------|
-| 1 | Crea la fonte unica versionata delle regole | `task-01-create-rules-file.md` | [PENDING] |
-| 2 | TDD: test + wiring iniezione in session-start | `task-02-wire-session-start.md` | [PENDING] |
-| 3 | Bump versione plugin + CHANGELOG | `task-03-version-bump.md` | [PENDING] |
-| 4 | Gate finale: verifica aderenza e allineamento | `task-04-verify-adherence-alignment.md` | [PENDING] |
+| 1 | Crea la fonte unica versionata delle regole | `task-01-create-rules-file.md` | [DONE] |
+| 2 | TDD: test + wiring iniezione in session-start | `task-02-wire-session-start.md` | [DONE] |
+| 3 | Bump versione plugin + CHANGELOG | `task-03-version-bump.md` | [DONE] |
+| 4 | Gate finale: verifica aderenza e allineamento | `task-04-verify-adherence-alignment.md` | [DONE] |
 
 ## Dipendenze
 

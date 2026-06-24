@@ -1,6 +1,6 @@
 # Task 04 — Gate finale: verifica ADERENZA e ALLINEAMENTO
 
-**Goal:** chiudere il goal utente *"verifica aderenza e allineamento"* con evidenza concreta — l'implementazione aderisce al design e alla fonte, e l'allineamento single-source regge. Stato: `[PENDING]`.
+**Goal:** chiudere il goal utente *"verifica aderenza e allineamento"* con evidenza concreta — l'implementazione aderisce al design e alla fonte, e l'allineamento single-source regge. Stato: `[DONE]`.
 **Dipende da:** Task 01 + 02 + 03 (gate finale, dopo tutto il resto).
 
 ## Cosa significano qui (no nuovo sottosistema — solo verifica)
