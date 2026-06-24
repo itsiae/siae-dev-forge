@@ -1,6 +1,4 @@
 """REQ-13/14/15 — platform_resolver: identificazione piattaforma + path gerarchico."""
-from pathlib import Path
-
 import pytest
 
 from lib.release_risk.platform_resolver import (
