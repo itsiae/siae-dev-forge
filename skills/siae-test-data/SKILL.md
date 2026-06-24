@@ -360,7 +360,7 @@ python generate_profiles.py --id-tag FIXED ...
 
 **Troubleshooting profili duplicati in CI**: se vedi profili con pid identici
 tra due run, verificare prima che `--id-tag` non sia lo stesso nei due job.
-Se `--id-tag` differisce ma i profili collbidono, aprire un issue con
+Se `--id-tag` differisce ma i profili collidono, aprire un issue con
 `meta.generated_at_epoch` di entrambe le run.
 
 ## File della skill
