@@ -176,7 +176,7 @@ separati. Su Windows ogni round-trip al modello costa 300-800ms extra.
 
 #### Loop — Per ciascun profilo (itera gruppo per gruppo: prima tutti N_ITA, poi N_UE, poi N_EXTRA-UE)
 
-1. **Costruisci il `profilo_id`** secondo la convenzione (`P-IT-001`, `B-SDC-IT-001`, ...).
+1. **Costruisci il `profilo_id`** secondo la convenzione (`P-{id_tag}-IT-001`, `B-SDC-{id_tag}-IT-001`, ...). L'`id_tag` è auto-generato da epoch % 100.000 se non fornito; per output deterministico in CI usa `--id-tag <valore-fisso>`.
 2. **Scegli i dati anagrafici** dal pool nomi della cittadinanza del gruppo corrente,
    una data di nascita tra 1950-2005, comune di nascita coerente con la cittadinanza.
 3. **Calcola il CF** seguendo `algoritmi.md` sezione 1 (passi 1-7):

@@ -10,7 +10,7 @@ opzionale.
 
 ```json
 {
-  "profilo_id": "P-IT-001",
+  "profilo_id": "P-83421-IT-001",
   "macro_categoria": "PRIVATO",
   "ruoli": ["UTILIZZATORE"],
   "tipo_persona": "FISICA",
@@ -68,7 +68,7 @@ opzionale.
 
 ```json
 {
-  "profilo_id": "B-SDC-IT-001",
+  "profilo_id": "B-SDC-83421-IT-001",
   "macro_categoria": "BUSINESS",
   "ruoli": ["UTILIZZATORE"],
   "tipo_persona": "GIURIDICA",

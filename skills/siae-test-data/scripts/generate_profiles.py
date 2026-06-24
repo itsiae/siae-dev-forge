@@ -73,15 +73,31 @@ def _seed_rng(profilo_id: str) -> random.Random:
     return random.Random(profilo_id)
 
 
-def _pick_nome_cognome(stato_cittadinanza: str, genere: str, rng: random.Random) -> tuple[str, str]:
+def _pick_nome_cognome(
+    stato_cittadinanza: str,
+    genere: str,
+    rng: random.Random,
+    run_epoch: int = 0,
+    run_counter: int = 0,
+) -> tuple[str, str]:
+    """Selezione nome+cognome epoch-driven: idx = (epoch*7919 + counter*1013) % (N*M).
+    Garantisce unicità su N*M=100.000 combinazioni con run_counter globale."""
     if stato_cittadinanza == "Italia":
         pool_n = NOMI_IT["nomi_maschili"] if genere == "M" else NOMI_IT["nomi_femminili"]
-        return rng.choice(pool_n), rng.choice(NOMI_IT["cognomi"])
-    pool = NOMI_ESTERI.get(stato_cittadinanza)
-    if not pool or isinstance(pool, str):
-        pool = NOMI_ESTERI["Germania"]
-    pool_n = pool["nomi_maschili"] if genere == "M" else pool["nomi_femminili"]
-    return rng.choice(pool_n), rng.choice(pool["cognomi"])
+        pool_c = NOMI_IT["cognomi"]
+    else:
+        pool = NOMI_ESTERI.get(stato_cittadinanza)
+        if not pool or isinstance(pool, str):
+            pool = NOMI_ESTERI["Germania"]
+        pool_n = pool["nomi_maschili"] if genere == "M" else pool["nomi_femminili"]
+        pool_c = pool["cognomi"]
+
+    N = len(pool_n)   # atteso 100
+    M = len(pool_c)   # atteso 1000
+    idx = (run_epoch * 7919 + run_counter * 1013) % (N * M)
+    nome_idx = idx % N
+    cogn_idx = idx // N
+    return pool_n[nome_idx], pool_c[cogn_idx]
 
 
 def _pick_data_nascita(rng: random.Random, anno_min: int = 1950, anno_max: int = 2005) -> date:
@@ -106,6 +122,8 @@ def _genera_anagrafica_persona_fisica(
     rng: random.Random,
     edge_pattern_filter: list[str] | None = None,
     edge_probability: float = 0.6,
+    run_epoch: int = 0,
+    run_counter: int = 0,
 ) -> dict:
     """Genera struttura anagrafica completa per persona fisica + indirizzo."""
 
@@ -122,7 +140,7 @@ def _genera_anagrafica_persona_fisica(
         stato_nascita = _stato_random("EXTRA_UE", rng)
         cittadinanza = stato_nascita
 
-    nome, cognome = _pick_nome_cognome(stato_nascita, genere, rng)
+    nome, cognome = _pick_nome_cognome(stato_nascita, genere, rng, run_epoch=run_epoch, run_counter=run_counter)
     data_nasc = _pick_data_nascita(rng)
 
     # Comune/provincia di nascita
@@ -201,6 +219,8 @@ def _genera_soggetto_giuridico(
     forma_giuridica_codice: str,
     residenza_kind: str,
     rng: random.Random,
+    run_epoch: int = 0,
+    run_counter: int = 0,
 ) -> dict:
     """Genera struttura soggetto_giuridico + rappresentante legale.
 
@@ -235,7 +255,8 @@ def _genera_soggetto_giuridico(
     if forma_giuridica_codice == "DI":
         # Rappresentante legale e' anche titolare; CF=CF personale 16 char
         rl = _genera_anagrafica_persona_fisica(
-            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng
+            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng,
+            run_epoch=run_epoch, run_counter=run_counter + 50003,
         )
         cf_ente = rl["anagrafica"]["codice_fiscale"]
         piva = (
@@ -247,7 +268,8 @@ def _genera_soggetto_giuridico(
         cf_ente = genera_cf_ente_numerico(11, seed_key=profilo_id + "-cf-ente")
         piva = genera_piva(sigla_prov, seed=profilo_id + "-piva") if residenza_kind == "ITA" else None
         rl = _genera_anagrafica_persona_fisica(
-            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng
+            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng,
+            run_epoch=run_epoch, run_counter=run_counter + 50003,
         )
     elif forma_giuridica_codice in ("ENTE", "IST", "ONP"):
         cf_ente = genera_cf_ente_numerico(10, seed_key=profilo_id + "-cf-ente")
@@ -259,7 +281,8 @@ def _genera_soggetto_giuridico(
             else None
         )
         rl = _genera_anagrafica_persona_fisica(
-            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng
+            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng,
+            run_epoch=run_epoch, run_counter=run_counter + 50003,
         )
     elif forma_giuridica_codice in ("COOP", "SDC", "SDP"):
         if residenza_kind == "ITA":
@@ -270,7 +293,8 @@ def _genera_soggetto_giuridico(
             cf_ente = "—"
             piva = None
         rl = _genera_anagrafica_persona_fisica(
-            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng
+            profilo_id + "-RL", "P-IT" if residenza_kind == "ITA" else "P-EU-RES", False, rng,
+            run_epoch=run_epoch, run_counter=run_counter + 50003,
         )
     else:
         raise ValueError(f"Forma giuridica {forma_giuridica_codice} non gestita")
@@ -320,6 +344,7 @@ def genera_profilo(
     edge_pattern_filter: list[str] | None = None,
     edge_probability: float = 0.6,
     run_epoch: int = 0,
+    run_counter: int = 0,
 ) -> dict:
     """Genera un singolo profilo deterministico identificato da profilo_id.
 
@@ -354,6 +379,8 @@ def genera_profilo(
             profilo_id, residenza_kind, edge_case_flag, rng,
             edge_pattern_filter=edge_pattern_filter,
             edge_probability=edge_probability,
+            run_epoch=run_epoch,
+            run_counter=run_counter,
         )
         profilo["tipo_profilo"] = residenza_kind
         profilo["anagrafica"] = pf["anagrafica"]
@@ -373,7 +400,7 @@ def genera_profilo(
             ("ITA" if rng.random() < 0.7 else "ESTERA")
         )
         fg = forma_giuridica or "SDC"
-        sg = _genera_soggetto_giuridico(profilo_id, fg, residenza_kind, rng)
+        sg = _genera_soggetto_giuridico(profilo_id, fg, residenza_kind, rng, run_epoch=run_epoch, run_counter=run_counter)
         profilo["tipo_profilo"] = f"G-{fg}"
         profilo["soggetto_giuridico"] = sg["soggetto_giuridico"]
         profilo["rappresentante_legale"] = sg["rappresentante_legale"]
@@ -420,12 +447,15 @@ def genera_dataset(config: dict) -> list[dict]:
     run_epoch = _now
     tag_suffix = f"-{id_tag}"
 
-    def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None):
+    _global_counter = 0
+
+    def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None, counter: int):
         return genera_profilo(
             pid, cat, ruoli, area, fg, edge,
             edge_pattern_filter=edge_pattern_filter,
             edge_probability=edge_probability,
             run_epoch=run_epoch,
+            run_counter=counter,
         )
 
     # Categorie PRIVATO / AUTORE
@@ -434,24 +464,28 @@ def genera_dataset(config: dict) -> list[dict]:
             ruoli = ["UTILIZZATORE"] if cat == "PRIVATO" else ["AUTORE"]
             for i in range(1, qta + 1):
                 pid = f"{cat[0]}{tag_suffix}-{area}-{i:03d}"
-                out.append(_mk_profilo(pid, cat, ruoli, None))
+                out.append(_mk_profilo(pid, cat, ruoli, None, _global_counter))
+                _global_counter += 1
         elif cat == "BUSINESS":
             ruoli = ["UTILIZZATORE"]
             for fg in fg_list:
                 for i in range(1, qta + 1):
                     pid = f"B-{fg}{tag_suffix}-{area}-{i:03d}"
-                    out.append(_mk_profilo(pid, "BUSINESS", ruoli, fg))
+                    out.append(_mk_profilo(pid, "BUSINESS", ruoli, fg, _global_counter))
+                    _global_counter += 1
         elif cat == "EDITORE":
             ruoli = ["EDITORE"]
             for fg in fg_list:
                 for i in range(1, qta + 1):
                     pid = f"E-{fg}{tag_suffix}-{area}-{i:03d}"
-                    out.append(_mk_profilo(pid, "EDITORE", ruoli, fg))
+                    out.append(_mk_profilo(pid, "EDITORE", ruoli, fg, _global_counter))
+                    _global_counter += 1
         elif cat == "COMBO":
             # Autore + Editore sulla stessa anagrafica
             for i in range(1, qta + 1):
                 pid = f"AE{tag_suffix}-{area}-{i:03d}"
-                out.append(_mk_profilo(pid, "AUTORE", ["AUTORE", "EDITORE"], None))
+                out.append(_mk_profilo(pid, "AUTORE", ["AUTORE", "EDITORE"], None, _global_counter))
+                _global_counter += 1
 
     return out
 
