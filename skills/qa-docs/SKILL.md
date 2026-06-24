@@ -92,9 +92,11 @@ A partire da `intake_grezzo`, produci:
 2. **Piattaforme / Piattaforme Modificate / Sistemi Impattati / touch point** — SEMPRE prodotti in questa fase dall'analisi funzionale. Dove certo → inserisci; dove dedotto o incerto → marca «DA CONFERMARE [fonte: ...]»
 3. **Perimetro di Progetto** — prosa sintetica
 4. **Perimetro di Test** — elenco numerato macro-scenari con sotto-punti puntati
+   **Granularità**: punta a **4–8 macro-scenari**. Meno di 4 è troppo generico e perde valore nella PRA; più di 8 diluisce la prioritizzazione. Raggruppa scenari strettamente correlati in uno solo; separa funzionalità con profili di rischio distinti.
 5. **Criteri di accettazione** per area
 6. **Out of Scope** — esclusioni
 7. **Obiettivi del test** — checklist stile MTP
+   **Regola di derivazione**: gli `obiettivi_test` NON sono una copia dei macro-scenari. Esprimono l'*intento di verifica* ad alto livello: cosa si garantisce (correttezza, integrità, sicurezza, performance) e per quale livello (T0/T1/T2). Esempi: "Verificare la correttezza del calcolo royalties su tutti i casi d'uso principali (T0)", "Validare l'integrazione SPORT↔ESB su flusso emissione licenze (T1)", "Confermare l'aderenza ai requisiti con la BU di riferimento (T2)". Tipicamente 1 obiettivo per macro-scenario + 1 obiettivo trasversale per livello di test.
 8. **Livelli di test** — tabella T0/T1/T2 (Livello | Descrizione | Dettaglio | Owner | Governance)
 9. **Performance test / NRT / Test Automatici** — default «Non previsti.» se non desumibili
 10. **GANTT** — struttura compilabile; popola SOLO ciò che emerge dall'intake; lascia il resto «DA CONFERMARE»
@@ -186,10 +188,17 @@ Costruisci `mtp_data.json`:
   "obiettivo_progetto": "...",
   "piattaforme": ["SPORT"],
   "piattaforme_modificate": ["Mule", "Sistema Incassi"],
-  "sistemi_impattati": ["SPORT"],
+  "sistemi_impattati": ["Sistema Pagamenti"],
   "perimetro_progetto": "...",
   "perimetro_test": [{"num": 1, "titolo": "...", "punti": ["..."]}],
-  "obiettivi_test": ["..."],
+  "criteri_accettazione": [
+    {"area": "nome macro-scenario", "criteri": ["Criterio di accettazione 1", "Criterio 2"]}
+  ],
+  "obiettivi_test": [
+    "Verificare la correttezza del flusso principale su tutti i casi d'uso previsti (T0)",
+    "Validare le integrazioni con i sistemi downstream (T1)",
+    "Confermare l'aderenza ai requisiti con la BU di riferimento (T2)"
+  ],
   "livelli": [
     {"livello": "T0", "descrizione": "Unit Test/System Test", "dettaglio": "...", "owner": "Fornitore", "governance": "QA"},
     {"livello": "T1", "descrizione": "Integration Test", "dettaglio": "...", "owner": "Fornitore", "governance": "QA"},
@@ -200,15 +209,23 @@ Costruisci `mtp_data.json`:
   "test_automatici": "Non previsti.",
   "gantt": [],
   "out_of_scope": ["..."],
-  "rischi": ["..."]
+  "rischi": [
+    {"rischio": "...", "probabilita": "Media", "impatto": "Alto", "mitigazione": "...", "owner": "QA"}
+  ]
 }
 ```
+
+> **Livelli opzionali**: ometti dalla lista un livello se non applicabile al progetto (es. nessuna riga T2 per un progetto puramente tecnico senza UAT). `build_mtp.py` genera solo le righe presenti nell'array. Non inserire righe con valori vuoti o "N/A".
+
+> **`criteri_accettazione`**: raccolti in Fase 2, restano nel JSON per riferimento. `build_mtp.py` non li scrive nel .docx (sezione non presente nel template MTP); sono disponibili per il team QA come allegato all'analisi.
 
 ### 6.2 — Esegui build_mtp.py
 
 ```bash
 python3 ~/.claude/skills/qa-docs/scripts/build_mtp.py mtp_data.json output_dir/
 ```
+
+> **Policy marker DA CONFERMARE**: i placeholder «DA CONFERMARE [...]» rimangono nel .docx come testo visibile — `build_mtp.py` non li rimuove né li evidenzia automaticamente. La lista `punti_da_confermare[]` mostrata in Fase 6.5 è l'inventario di tutto ciò che va completato prima della distribuzione ufficiale del documento.
 
 ### 6.3 — Esegui build_pra.py
 
@@ -219,30 +236,63 @@ python3 ~/.claude/skills/qa-docs/scripts/build_pra.py mtp_data.json output_dir/
 Output: `PRA_-_<CODICE>.xlsx`
 
 Verifica:
-- Foglio "Obiettivi del Test": righe dati da R5, colonna I con formula `=IF(B5=...` (non valore statico)
-- Fogli "Matrice Rischio" e "Tabelle": **invariati**
+- Foglio "Obiettivi del Test": righe dati da R5, colonna I con formula `=IF(B{R}=...` dove `{R}` è il numero di riga corretto per ogni riga (R5, R6, R7...) — non valore statico, non formula con riga fissa
+- Fogli "Matrice Rischio" e "Tabelle": **invariati** — `build_pra.py` scrive solo su Copertina R10F, Informazioni R6, Obiettivi R5+, Piano R2+
 - Copertina R10 F e Informazioni R6 compilati
 
-**Struttura `pra_obiettivi`** (aggiungi al JSON in 6.1 — un entry per ogni macro-scenario):
+**Passo 6.3b — Diff check cardinalità (obbligatorio prima di produrre il file):**
+```
+len(perimetro_test) == N scenari
+len(pra_obiettivi) == N scenari  ← deve essere uguale
+```
+Se diversi: mostra il diff in chat (quali scenari MTP mancano dalla PRA o viceversa) e chiedi conferma prima di procedere.
+
+**Struttura `pra_obiettivi`** (aggiungi al JSON in 6.1 — un entry per ogni macro-scenario, stessa cardinalità di `perimetro_test`):
 ```json
 "pra_obiettivi": [
   {
-    "obiettivo": "nome macro-scenario",
+    "obiettivo": "Flusso principale — emissione licenza",
+    "criticita": "Bloccante",
+    "fattore_rischio": "B-03 Perdita di incassi",
+    "motivazione": "Blocco dell'emissione licenze impatta direttamente gli incassi SIAE — frequenza: Molto Alta su ~N licenze/giorno",
+    "frequenza_uso": "Molto Alta",
+    "req_nrt": "No",
+    "req_performance": "No",
+    "req_e2e_uat": "Si"
+  },
+  {
+    "obiettivo": "Integrazione ESB/Mulesoft",
     "criticita": "Alta",
-    "fattore_rischio": "Q-15 Aderenza ai requisiti",
-    "motivazione": "breve motivazione",
+    "fattore_rischio": "T-01 Interfacciamento ESB/Mulesoft",
+    "motivazione": "Regressione sull'integrazione ESB blocca tutti i flussi downstream",
     "frequenza_uso": "Alta",
+    "req_nrt": "No",
+    "req_performance": "No",
+    "req_e2e_uat": "No"
+  },
+  {
+    "obiettivo": "Reportistica e rendicontazione",
+    "criticita": "Media",
+    "fattore_rischio": "Q-10 Reportistica e rendicontazione",
+    "motivazione": "Errori nei report hanno impatto differito — non bloccano gli incassi ma richiedono correzione manuale",
+    "frequenza_uso": "Media",
     "req_nrt": "No",
     "req_performance": "No",
     "req_e2e_uat": "Si"
   }
 ]
 ```
-Valori criticità: `Bassa / Media / Alta / Bloccante`
-Valori frequenza: `Bassa / Media / Alta / Molto Alta`
-Fattori di rischio: codici B-xx / T-xx / Q-xx (vedi foglio Tabelle del template → `reference/pra-structure.md`)
+Valori criticità: `Bassa / Media / Alta / Bloccante` (vedi rubrica → `reference/pra-structure.md`)
+Valori frequenza: `Bassa / Media / Alta / Molto Alta` (vedi criteri → `reference/pra-structure.md`)
+Fattori di rischio: codici B-xx / T-xx / Q-xx con nome breve (vedi tassonomia SIAE → `reference/pra-structure.md`)
 
-Coerenza con MTP: `req_nrt` ↔ sezione 1.5, `req_performance` ↔ 1.4, `req_e2e_uat` ↔ T2 in 1.3.
+**Regola cardinalità**: `len(pra_obiettivi)` deve essere uguale a `len(perimetro_test)`. Verifica prima di produrre il file.
+
+**Derivazione req_nrt / req_performance / req_e2e_uat dal JSON MTP (obbligatorio):**
+- Leggi `performance_test` dal JSON: se ≠ `"Non previsti."` → `req_performance: "Si"` sugli obiettivi con requisiti di performance
+- Leggi `nrt` dal JSON: se ≠ `"Non previsti."` → `req_nrt: "Si"` sugli obiettivi con requisiti NRT
+- Leggi `livelli`: se contiene una riga `"T2"` → `req_e2e_uat: "Si"` sugli obiettivi che richiedono UAT
+- NON re-inferire questi valori dal contesto conversazionale: leggi sempre dal JSON già costruito in 6.1.
 
 **Struttura `pra_piano`** (opzionale, da Fase 3c GANTT):
 ```json
@@ -267,7 +317,11 @@ Presenta **entrambi i file**:
 - Riepilogo macro-scenari (numero e titoli)
 - Elenco punti «DA CONFERMARE»
 - Esito verifica fedeltà MTP
-- Nota coerenza MTP ↔ PRA (stessi scenari, stessi req_nrt/perf/uat)
+- **Checklist coerenza MTP ↔ PRA** (derivata dal JSON, non dall'analisi):
+  - [ ] `len(perimetro_test)` == `len(pra_obiettivi)` — se diversi mostra il diff
+  - [ ] `nrt` nel JSON == "Non previsti." → tutti `req_nrt: "No"` (o viceversa: almeno uno "Si")
+  - [ ] `performance_test` nel JSON == "Non previsti." → tutti `req_performance: "No"` (o viceversa)
+  - [ ] presenza riga T2 in `livelli` → almeno un `req_e2e_uat: "Si"` (o viceversa: nessuna riga T2 → tutti "No")
 
 ---
 
