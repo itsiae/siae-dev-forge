@@ -6,6 +6,20 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added — SIAE Global Rules: fonte unica versionata iniettata in ogni sessione (1.97.0)
+
+Le "SIAE Global Rules" operative (scope control, interaction style, data handling CSV,
+conventions dev/qa/prod, CI/CD GitHub Environments con le 5 env var, workspace synced-paths,
+network corporate: HTTPS-not-SSH + proxy `10.255.1.241` + `set_proxy`) diventano una **fonte
+unica versionata** in `skills/using-devforge/reference/siae-global-rules.md`, letta live da
+`hooks/session-start` e iniettata nel blocco `<EXTREMELY_IMPORTANT>` di OGNI sessione → guardrail
+sempre attivi e distribuiti a tutto il team. Allineamento **per costruzione** (single source of
+truth, zero copie) + **test di guardia** del link (`tests/hooks/test_session_start_global_rules.sh`:
+strutturale + funzionale JSON-valid + fail-safe + anti-leak). Fail-safe: file mancante → sezione
+vuota → `additional_context` resta JSON valido. Nessuna duplicazione: git → `siae-git-workflow`,
+GitHub env → `siae-github-env-sync`. Design: `docs/plans/2026-06-24-siae-global-rules-injection-design.md`.
+Anche README badge versione allineato (1.88.0 → 1.97.0, gap hygiene pregresso).
+
 ### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 
 Il coverage gate del `pre-commit` (Force-Run + soglia 70%) si attivava su qualsiasi
