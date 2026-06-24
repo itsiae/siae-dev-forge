@@ -221,19 +221,19 @@ def _genera_soggetto_giuridico(
     rng: random.Random,
     run_epoch: int = 0,
     run_counter: int = 0,
+    id_tag: str = "",
 ) -> dict:
     """Genera struttura soggetto_giuridico + rappresentante legale.
 
     residenza_kind: "ITA" o "ESTERA"
+    id_tag: tag epoch passato esplicitamente — non estratto dal profilo_id per
+            evitare parsing fragile su id_tag che contengono trattini.
     """
     fg_info = FORME_GIURIDICHE[forma_giuridica_codice]
     nat_giur = rng.choice(fg_info["nature_giuridiche"])
     ragione = rng.choice(fg_info["esempi_ragione_sociale"])
-    # Formato BUSINESS: B-{fg}-{id_tag}-{area}-{NNN} → id_tag è sempre a indice 2
-    _parts = profilo_id.split("-")
-    _epoch_tag = _parts[2] if len(_parts) >= 5 else ""
     _progressivo = profilo_id[-3:]
-    ragione = f"{ragione} {_progressivo}-{_epoch_tag}" if _epoch_tag else f"{ragione} {_progressivo}"
+    ragione = f"{ragione} {_progressivo}-{id_tag}" if id_tag else f"{ragione} {_progressivo}"
 
     # Sede legale
     if residenza_kind == "ITA":
@@ -345,6 +345,7 @@ def genera_profilo(
     edge_probability: float = 0.6,
     run_epoch: int = 0,
     run_counter: int = 0,
+    id_tag: str = "",
 ) -> dict:
     """Genera un singolo profilo deterministico identificato da profilo_id.
 
@@ -400,7 +401,7 @@ def genera_profilo(
             ("ITA" if rng.random() < 0.7 else "ESTERA")
         )
         fg = forma_giuridica or "SDC"
-        sg = _genera_soggetto_giuridico(profilo_id, fg, residenza_kind, rng, run_epoch=run_epoch, run_counter=run_counter)
+        sg = _genera_soggetto_giuridico(profilo_id, fg, residenza_kind, rng, run_epoch=run_epoch, run_counter=run_counter, id_tag=id_tag)
         profilo["tipo_profilo"] = f"G-{fg}"
         profilo["soggetto_giuridico"] = sg["soggetto_giuridico"]
         profilo["rappresentante_legale"] = sg["rappresentante_legale"]
@@ -456,6 +457,7 @@ def genera_dataset(config: dict) -> list[dict]:
             edge_probability=edge_probability,
             run_epoch=run_epoch,
             run_counter=counter,
+            id_tag=id_tag,
         )
 
     # Categorie PRIVATO / AUTORE

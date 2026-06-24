@@ -851,7 +851,9 @@ class TestCliSubprocess:
     """Esercita il CLI main() di generate_profiles.py via subprocess."""
 
     def test_cli_privato_json(self):
-        import subprocess, json, sys
+        import subprocess
+        import json
+        import sys
         from pathlib import Path
         script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.py")
         r = subprocess.run(
@@ -866,7 +868,9 @@ class TestCliSubprocess:
         assert data[0]["profilo_id"] == "P-CLI1-IT-001"
 
     def test_cli_id_tag_nel_pid(self):
-        import subprocess, json, sys
+        import subprocess
+        import json
+        import sys
         from pathlib import Path
         script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.py")
         r = subprocess.run(
@@ -879,7 +883,9 @@ class TestCliSubprocess:
         assert "MYTEST" in data[0]["profilo_id"]
 
     def test_cli_senza_id_tag_epoch_auto(self):
-        import subprocess, json, sys
+        import subprocess
+        import json
+        import sys
         from pathlib import Path
         script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.py")
         r = subprocess.run(
@@ -891,3 +897,29 @@ class TestCliSubprocess:
         data = json.loads(r.stdout)
         parts = data[0]["profilo_id"].split("-")
         assert len(parts) == 4 and parts[1].isdigit()
+
+
+class TestIdTagConTrattino:
+    """Regressione: id_tag con trattino non deve troncare la ragione sociale."""
+
+    def test_id_tag_con_trattino_non_tronca_ragione_sociale(self):
+        """MAJOR fix: id_tag='MY-TAG' deve comparire intero nella ragione sociale."""
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+        from generate_profiles import genera_dataset
+
+        config = {
+            "categorie": ["BUSINESS"],
+            "area_residenza": "IT",
+            "forme_giuridiche": ["SDC"],
+            "quantita_per_tipo": 1,
+            "id_tag": "MY-TAG",
+        }
+        profili = genera_dataset(config)
+        assert len(profili) == 1
+        rs = profili[0].get("soggetto_giuridico", {}).get("ragione_sociale", "")
+        assert "MY-TAG" in rs, (
+            f"id_tag 'MY-TAG' dovrebbe apparire intero nella ragione sociale, "
+            f"ma la ragione e': {rs!r}"
+        )
