@@ -445,7 +445,9 @@ def genera_dataset(config: dict) -> list[dict]:
     _now = int(time.time())
     if not id_tag:
         id_tag = str(_now % 100_000)
-    run_epoch = _now
+        run_epoch = _now  # epoch reale: nomi variano tra run automatiche
+    else:
+        run_epoch = 0  # id_tag esplicito → deterministico: nome/CF invarianti tra run
     tag_suffix = f"-{id_tag}"
 
     _global_counter = 0

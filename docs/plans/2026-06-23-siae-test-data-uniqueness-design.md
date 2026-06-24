@@ -61,9 +61,11 @@ genera_dataset(config)
 
 | File | Tipo modifica |
 |------|--------------|
-| `skills/siae-test-data/scripts/generate_profiles.py` | Auto-generate id_tag, propagare run_epoch, aggiornare ragione sociale, aggiungere meta.generated_at_epoch, aggiungere --id-tag CLI |
+| `skills/siae-test-data/scripts/generate_profiles.py` | Auto-generate id_tag, propagare run_epoch + run_counter, aggiornare ragione sociale, aggiungere meta.generated_at_epoch, aggiungere --id-tag CLI |
 | `skills/siae-test-data/scripts/generate_profiles.js` | Aggiungere epoch tag al pid, aggiornare ragione sociale, propagare in module.exports |
 | `skills/siae-test-data/references/output_schema.md` | Documentare meta.generated_at_epoch |
+| `skills/siae-test-data/references/nomi_italiani.json` | Espansione pool: 100M + 100F + 1000 cognomi (da 31M+30F+51). Necessario perché la formula `idx % N` assume N=100 per garantire 100.000 combinazioni uniche. |
+| `skills/siae-test-data/references/nomi_esteri.json` | Espansione pool: 100M + 100F + 1000 cognomi per tutti i 44 stati (26 UE + 18 EXTRA-UE). Stessa motivazione: N=100, M=1000 richiesti dalla formula epoch. |
 | `skills/siae-test-data/tests/test_perf_windows_fixes.py` | Aggiungere test cross-run uniqueness (Python) |
 | `skills/siae-test-data/tests/test_node_fallback.py` | Aggiungere test cross-run uniqueness (Node.js) |
 
@@ -79,10 +81,13 @@ import time  # aggiungere in testa al file
 def genera_dataset(config: dict) -> list[dict]:
     # ... (invariato fino a riga 408)
     id_tag = config.get("id_tag", "")
+    _now = int(time.time())
     if not id_tag:                                              # NUOVO
-        id_tag = str(int(time.time()) % 100_000)               # NUOVO
-    run_epoch = int(time.time())                               # NUOVO
-    tag_suffix = f"-{id_tag}"                                   # era: f"-{id_tag}" if id_tag else ""
+        id_tag = str(_now % 100_000)                           # NUOVO
+        run_epoch = _now      # epoch reale: nomi variano tra run automatiche
+    else:
+        run_epoch = 0         # id_tag esplicito → deterministico (CA4)
+    tag_suffix = f"-{id_tag}"
 
     def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None):
         return genera_profilo(
@@ -126,20 +131,21 @@ profilo["meta"] = {
 
 ### `generate_profiles.py` — `_genera_soggetto_giuridico()` (riga 212)
 
-La funzione riceve già `profilo_id`. Il `profilo_id` include già il nuovo `id_tag`
-nel path `P-83421-IT-001`, quindi `profilo_id[-4:]` diventa `"001"` (invariato).
-Per la ragione sociale aggiungere un'ulteriore differenziazione visiva estraendo
-il tag dal `profilo_id`:
+La funzione riceve `profilo_id` + `id_tag` come parametro esplicito (non estratto
+dal `profilo_id` via split, per evitare parsing fragile quando `id_tag` contiene trattini,
+es. `--id-tag MY-TAG`). Progressivo estratto con `[-3:]` (3 char senza trattino):
 
 ```python
-# Riga 212 — PRIMA:
+# PRIMA:
 ragione = f"{ragione} {profilo_id[-4:]}"
 
-# DOPO: estrai id_tag dal profilo_id (es. "83421" da "B-SDC-83421-IT-001")
-_parts = profilo_id.split("-")
-_epoch_suffix = _parts[2] if len(_parts) >= 4 else profilo_id[-4:]
-ragione = f"{ragione} {profilo_id[-4:]}-{_epoch_suffix}"
+# DOPO: id_tag passato esplicitamente da genera_profilo()
+_progressivo = profilo_id[-3:]   # es. "001" da "B-SDC-83421-IT-001"
+ragione = f"{ragione} {_progressivo}-{id_tag}" if id_tag else f"{ragione} {_progressivo}"
 ```
+
+Nota: la firma della funzione riceve `run_epoch`, `run_counter` e `id_tag` come
+parametri keyword-only aggiuntivi rispetto al design originale.
 
 ### `generate_profiles.py` — CLI `main()` (riga 671)
 
@@ -189,7 +195,11 @@ const pid = `B-${fg}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
 
 ## Non in scope
 
-- Ampliamento del pool `nomi_italiani.json` (migliora la cardinalità ma non risolve
-  il determinismo — problema ortogonale).
 - Registry persistente cross-run (complessità sproporzionata, rotto dal path Claude-native).
 - Modifiche a `cf_calculator.py` o `piva_calculator.py`.
+
+> **Nota implementativa:** L'ampliamento dei pool `nomi_italiani.json` e `nomi_esteri.json`
+> era inizialmente marcato "non in scope". Durante l'implementazione è risultato necessario
+> per soddisfare il contratto della formula epoch (`idx % N` con N=100): con i pool originali
+> (31M+30F+51) le 100.000 combinazioni teoriche si riducevano a ~1.581, compromettendo
+> l'unicità garantita. L'espansione è stata inclusa come prerequisito funzionale.
