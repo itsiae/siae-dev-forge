@@ -335,6 +335,34 @@ Lo stesso `profilo_id` deve produrre lo stesso output. Quando Claude genera
 mentalmente, ancori la generazione al profilo_id (es. uso `profilo_id` come
 seed mentale per scelte di pool).
 
+## CI Usage — Unicità cross-run
+
+La skill genera un `id_tag` automatico da epoch (`int(time.time()) % 100_000`)
+quando non fornito. Questo garantisce profili distinti tra run diverse nella
+maggioranza dei casi.
+
+**Attenzione job CI paralleli**: due job lanciati nello stesso secondo producono
+lo stesso `id_tag` e quindi profili identici. Soluzione:
+
+```bash
+# Python
+python generate_profiles.py --id-tag "$CI_JOB_ID" ...
+
+# Node.js
+node generate_profiles.js --id-tag "$CI_JOB_ID" ...
+```
+
+Per output completamente deterministico (stesso profilo ad ogni run):
+
+```bash
+python generate_profiles.py --id-tag FIXED ...
+```
+
+**Troubleshooting profili duplicati in CI**: se vedi profili con pid identici
+tra due run, verificare prima che `--id-tag` non sia lo stesso nei due job.
+Se `--id-tag` differisce ma i profili collbidono, aprire un issue con
+`meta.generated_at_epoch` di entrambe le run.
+
 ## File della skill
 
 ```
