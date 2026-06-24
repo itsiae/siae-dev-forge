@@ -201,6 +201,10 @@ const _TOP_ESTERO = {
   'Austria':     ['STRASSE',  ['Mariahilfer','Kaerntner','Ringstrasse']],
 };
 
+// Uniqueness strategy (JS vs Python differ by design):
+// JS: name selected via pid-seeded PRNG (pid includes idTag → different seed per run).
+// Python: explicit formula idx=(run_epoch*7919 + run_counter*1013) % (N*M).
+// Both guarantee cross-run diversity when idTag changes. See design doc 2026-06-23.
 function _pickNomeCognome(stato, genere, rng) {
   _initRefs();
   let nomiM, nomiF, cognomi;

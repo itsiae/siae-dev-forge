@@ -62,3 +62,7 @@ tests/fixtures/perf_corpus_200k/
 .code-coverage/
 tl-review-eval-workspace/
 log/
+
+# siae-test-data output locale (artefatti di test manuale, non committare)
+profili_test*.csv
+skills/siae-test-data/output/
