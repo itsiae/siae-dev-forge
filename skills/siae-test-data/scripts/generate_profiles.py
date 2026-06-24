@@ -449,7 +449,7 @@ def genera_dataset(config: dict) -> list[dict]:
         run_epoch = 0  # id_tag esplicito → deterministico: nome/CF invarianti tra run
     tag_suffix = f"-{id_tag}"
 
-    _global_counter = 0
+    profilo_counter = 0
 
     def _mk_profilo(pid: str, cat: str, ruoli: list[str], fg: str | None, counter: int):
         return genera_profilo(
@@ -467,28 +467,28 @@ def genera_dataset(config: dict) -> list[dict]:
             ruoli = ["UTILIZZATORE"] if cat == "PRIVATO" else ["AUTORE"]
             for i in range(1, qta + 1):
                 pid = f"{cat[0]}{tag_suffix}-{area}-{i:03d}"
-                out.append(_mk_profilo(pid, cat, ruoli, None, _global_counter))
-                _global_counter += 1
+                out.append(_mk_profilo(pid, cat, ruoli, None, profilo_counter))
+                profilo_counter += 1
         elif cat == "BUSINESS":
             ruoli = ["UTILIZZATORE"]
             for fg in fg_list:
                 for i in range(1, qta + 1):
                     pid = f"B-{fg}{tag_suffix}-{area}-{i:03d}"
-                    out.append(_mk_profilo(pid, "BUSINESS", ruoli, fg, _global_counter))
-                    _global_counter += 1
+                    out.append(_mk_profilo(pid, "BUSINESS", ruoli, fg, profilo_counter))
+                    profilo_counter += 1
         elif cat == "EDITORE":
             ruoli = ["EDITORE"]
             for fg in fg_list:
                 for i in range(1, qta + 1):
                     pid = f"E-{fg}{tag_suffix}-{area}-{i:03d}"
-                    out.append(_mk_profilo(pid, "EDITORE", ruoli, fg, _global_counter))
-                    _global_counter += 1
+                    out.append(_mk_profilo(pid, "EDITORE", ruoli, fg, profilo_counter))
+                    profilo_counter += 1
         elif cat == "COMBO":
             # Autore + Editore sulla stessa anagrafica
             for i in range(1, qta + 1):
                 pid = f"AE{tag_suffix}-{area}-{i:03d}"
-                out.append(_mk_profilo(pid, "AUTORE", ["AUTORE", "EDITORE"], None, _global_counter))
-                _global_counter += 1
+                out.append(_mk_profilo(pid, "AUTORE", ["AUTORE", "EDITORE"], None, profilo_counter))
+                profilo_counter += 1
 
     return out
 

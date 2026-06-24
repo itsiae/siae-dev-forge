@@ -364,7 +364,7 @@ function generaRappLegale(pid, area) {
   return { cf, nome, cognome, data_nascita: dataNasc, genere };
 }
 
-function generaProfiloBusiness(pid, area, fg, mode, rng) {
+function generaProfiloBusiness(pid, area, fg, mode, rng, idTag) {
   _initRefs();
   if (area === 'ITA') area = 'IT';
   const fgAll  = loadRef('forme_giuridiche.json');
@@ -402,8 +402,8 @@ function generaProfiloBusiness(pid, area, fg, mode, rng) {
   }
 
   const rl      = generaRappLegale(pid, area);
-  const pidSegs = pid.split('-');
-  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + pidSegs.at(-1) + '-' + pidSegs[2];
+  const seq    = pid.split('-').at(-1);
+  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + seq + '-' + idTag;
   const natGiur = rng.choice(fgData.nature_giuridiche || ['S.R.L.']);
 
   const soggGiur = {
@@ -496,7 +496,7 @@ function main() {
         for (const fg of fgList) {
           for (let i = 1; i <= count; i++) {
             const pid = `B-${fg}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
-            profili.push(generaProfiloBusiness(pid, area, fg, mode, makePRNG(pid)));
+            profili.push(generaProfiloBusiness(pid, area, fg, mode, makePRNG(pid), idTag));
           }
         }
       } else {

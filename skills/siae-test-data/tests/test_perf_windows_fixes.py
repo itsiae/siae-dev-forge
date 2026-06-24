@@ -315,6 +315,23 @@ class TestRunEpochMeta:
         profili = genera_dataset(config)
         assert "generated_at_epoch" in profili[0]["meta"]
 
+    def test_meta_epoch_zero_con_id_tag_esplicito(self):
+        """Con id_tag esplicito run_epoch=0: determinismo garantito, no dipendenza dall'orologio."""
+        from generate_profiles import genera_dataset
+        config = {
+            "categorie": ["PRIVATO"],
+            "area_residenza": "IT",
+            "quantita_per_tipo": 2,
+            "edge_case": False,
+            "id_tag": "FIXED",
+        }
+        profili = genera_dataset(config)
+        for p in profili:
+            assert p["meta"]["generated_at_epoch"] == 0, (
+                f"Con id_tag esplicito generated_at_epoch deve essere 0, "
+                f"trovato: {p['meta']['generated_at_epoch']}"
+            )
+
 
 # ─── TASK 03 — ragione sociale epoch ────────────────────────────────────────
 
