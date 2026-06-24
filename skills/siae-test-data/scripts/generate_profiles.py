@@ -76,7 +76,6 @@ def _seed_rng(profilo_id: str) -> random.Random:
 def _pick_nome_cognome(
     stato_cittadinanza: str,
     genere: str,
-    rng: random.Random,
     run_epoch: int = 0,
     run_counter: int = 0,
 ) -> tuple[str, str]:
@@ -140,7 +139,7 @@ def _genera_anagrafica_persona_fisica(
         stato_nascita = _stato_random("EXTRA_UE", rng)
         cittadinanza = stato_nascita
 
-    nome, cognome = _pick_nome_cognome(stato_nascita, genere, rng, run_epoch=run_epoch, run_counter=run_counter)
+    nome, cognome = _pick_nome_cognome(stato_nascita, genere, run_epoch=run_epoch, run_counter=run_counter)
     data_nasc = _pick_data_nascita(rng)
 
     # Comune/provincia di nascita

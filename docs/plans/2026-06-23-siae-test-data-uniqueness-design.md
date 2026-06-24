@@ -191,6 +191,10 @@ const pid = `B-${fg}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
 - Il pool di nomi non cambia: i dati rimangono inequivocabilmente fittizi.
 - L'epoch a 5 cifre (mod 100.000) non è tracciabile a un'ora specifica della giornata.
 
+## Limitazioni note
+
+- **Same-second collision**: due run avviate nello stesso secondo Unix producono lo stesso `id_tag` e output identici. Per ambienti CI con job paralleli sullo stesso agent, usare `--id-tag` con seed derivato dal job ID (es. `--id-tag $CI_JOB_ID` o `--id-tag $(date +%s%N | tail -c5)`).
+
 ---
 
 ## Non in scope
