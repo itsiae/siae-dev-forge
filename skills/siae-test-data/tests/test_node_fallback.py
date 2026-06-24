@@ -377,3 +377,47 @@ class TestJsCrossRunUniqueness:
                 f"'{p1['anagrafica']['nome']}' vs '{p2['anagrafica']['nome']}'"
             )
             assert p1["anagrafica"]["codice_fiscale"] == p2["anagrafica"]["codice_fiscale"]
+
+    def test_js_senza_id_tag_epoch_auto(self):
+        """Senza --id-tag il JS auto-genera un tag numerico (5 cifre) nel profilo_id."""
+        from pathlib import Path
+        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
+        result = subprocess.run(
+            ["node", script,
+             "--categorie", "PRIVATO",
+             "--nazionalita", "ITA",
+             "--quantita", "1",
+             "--skip-validation"],
+            capture_output=True, text=True, timeout=15,
+        )
+        assert result.returncode == 0, f"Script fallito: {result.stderr[:500]}"
+        data = json.loads(result.stdout)
+        parts = data[0]["profilo_id"].split("-")
+        assert len(parts) == 4, f"profilo_id JS senza id-tag deve avere 4 segmenti, got: {data[0]['profilo_id']}"
+        assert parts[1].isdigit(), (
+            f"Il segmento id-tag (parts[1]) deve essere numerico con auto-epoch, got: '{parts[1]}'"
+        )
+
+    def test_js_ragione_sociale_progressivo_idtag(self):
+        """La ragione sociale BUSINESS deve contenere progressivo-idTag (no pid.slice(-4))."""
+        from pathlib import Path
+        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
+        id_tag = "55555"
+        result = subprocess.run(
+            ["node", script,
+             "--categorie", "BUSINESS",
+             "--nazionalita", "ITA",
+             "--quantita", "3",
+             "--id-tag", id_tag,
+             "--skip-validation"],
+            capture_output=True, text=True, timeout=15,
+        )
+        assert result.returncode == 0, f"Script fallito: {result.stderr[:500]}"
+        data = json.loads(result.stdout)
+        for p in data:
+            pid = p["profilo_id"]
+            rag = p["soggetto_giuridico"]["ragione_sociale"]
+            progressivo = pid.split("-")[-1]          # es. '001'
+            assert f"{progressivo}-{id_tag}" in rag, (
+                f"ragione_sociale '{rag}' non contiene '{progressivo}-{id_tag}' per pid '{pid}'"
+            )

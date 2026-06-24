@@ -402,7 +402,8 @@ function generaProfiloBusiness(pid, area, fg, mode, rng) {
   }
 
   const rl      = generaRappLegale(pid, area);
-  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + pid.slice(-4);
+  const pidSegs = pid.split('-');
+  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + pidSegs.at(-1) + '-' + pidSegs[2];
   const natGiur = rng.choice(fgData.nature_giuridiche || ['S.R.L.']);
 
   const soggGiur = {
