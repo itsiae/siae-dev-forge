@@ -176,7 +176,7 @@ separati. Su Windows ogni round-trip al modello costa 300-800ms extra.
 
 #### Loop — Per ciascun profilo (itera gruppo per gruppo: prima tutti N_ITA, poi N_UE, poi N_EXTRA-UE)
 
-1. **Costruisci il `profilo_id`** secondo la convenzione (`P-IT-001`, `B-SDC-IT-001`, ...).
+1. **Costruisci il `profilo_id`** secondo la convenzione (`P-{id_tag}-IT-001`, `B-SDC-{id_tag}-IT-001`, ...). L'`id_tag` è auto-generato da epoch % 100.000 se non fornito; per output deterministico in CI usa `--id-tag <valore-fisso>`.
 2. **Scegli i dati anagrafici** dal pool nomi della cittadinanza del gruppo corrente,
    una data di nascita tra 1950-2005, comune di nascita coerente con la cittadinanza.
 3. **Calcola il CF** seguendo `algoritmi.md` sezione 1 (passi 1-7):
@@ -334,6 +334,34 @@ Dettagli completi in `algoritmi.md` sezione 7.
 Lo stesso `profilo_id` deve produrre lo stesso output. Quando Claude genera
 mentalmente, ancori la generazione al profilo_id (es. uso `profilo_id` come
 seed mentale per scelte di pool).
+
+## CI Usage — Unicità cross-run
+
+La skill genera un `id_tag` automatico da epoch (`int(time.time()) % 100_000`)
+quando non fornito. Questo garantisce profili distinti tra run diverse nella
+maggioranza dei casi.
+
+**Attenzione job CI paralleli**: due job lanciati nello stesso secondo producono
+lo stesso `id_tag` e quindi profili identici. Soluzione:
+
+```bash
+# Python
+python generate_profiles.py --id-tag "$CI_JOB_ID" ...
+
+# Node.js
+node generate_profiles.js --id-tag "$CI_JOB_ID" ...
+```
+
+Per output completamente deterministico (stesso profilo ad ogni run):
+
+```bash
+python generate_profiles.py --id-tag FIXED ...
+```
+
+**Troubleshooting profili duplicati in CI**: se vedi profili con pid identici
+tra due run, verificare prima che `--id-tag` non sia lo stesso nei due job.
+Se `--id-tag` differisce ma i profili collidono, aprire un issue con
+`meta.generated_at_epoch` di entrambe le run.
 
 ## File della skill
 
