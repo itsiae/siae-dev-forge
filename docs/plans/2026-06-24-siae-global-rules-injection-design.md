@@ -120,3 +120,16 @@ Nuovo `tests/hooks/test_session_start_global_rules.sh` (mirror di `test_session_
 ## 9. Stima
 - SP (Umano): 3 · SP (Augmented): 1
 - File toccati: +2 nuovi (`skills/using-devforge/reference/siae-global-rules.md`, `tests/hooks/test_session_start_global_rules.sh`), ~8 righe in `hooks/session-start`, +1 riga in `tests/run-all.sh`, bump versione in `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` (allineati, vedi memoria [[project_plugin_version_dual_source]]) + CHANGELOG.
+
+## File modificati
+
+Manifest esaustivo dei file toccati (sezione strutturata per spec-drift detection):
+
+- `hooks/session-start` — wiring lettura live + iniezione `global_rules_section`
+- `skills/using-devforge/reference/siae-global-rules.md` — fonte unica versionata (nuovo)
+- `tests/hooks/test_session_start_global_rules.sh` — test di guardia, 10 assert (nuovo)
+- `tests/run-all.sh` — registrazione del nuovo test nella suite
+- `.claude-plugin/plugin.json` — bump versione 1.97.0
+- `.claude-plugin/marketplace.json` — bump versione 1.97.0
+- `CHANGELOG.md` — entry 1.97.0
+- `README.md` — allineamento badge versione
