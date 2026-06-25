@@ -6,6 +6,16 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added — Simplicity Reminder Hook: nudge periodico KISS/YAGNI (1.98.0)
+
+Nuovo hook `UserPromptSubmit` (`hooks/simplicity-reminder`) che ogni 5 prompt inietta un
+reminder dei principi ingegneristici di semplicita del codice (KISS — fai la cosa piu'
+semplice che funziona; YAGNI — solo cio' che serve ora; AHA — evita astrazioni premature).
+Contatore GLOBALE cumulativo, robusto a sessioni concorrenti (uno slot per-sessione si
+auto-annullerebbe con session_id alternati — vedi premortem nel design); fail-safe (non
+blocca mai il prompt, non legge stdin). Allinea anche `marketplace.json` (era 1.96.0,
+drift) a `plugin.json`. Test: `tests/hooks/test_simplicity_reminder.sh` (6/6 PASS).
+
 ### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 
 Il coverage gate del `pre-commit` (Force-Run + soglia 70%) si attivava su qualsiasi
