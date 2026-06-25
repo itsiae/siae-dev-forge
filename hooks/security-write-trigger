@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# security-write-trigger — PreToolUse:Edit/Write hook
+# ─────────────────────────────────────────────────────────────────
+# Sicurezza PROATTIVA: se si modifica un file security-sensibile (auth/credentials/
+# .env/token/permission) e siae-security NON e' stata invocata in sessione, emette
+# un ADVISORY (additionalContext, NON blocca) che invita a invocare siae-security.
+# Oggi siae-security e' reattiva (al PR via pr-gate). Questo anticipa il segnale.
+# Fail-safe ASSOLUTO: sempre exit 0, mai decision:block. NESSUN set -e/-u/pipefail.
+# Design: docs/plans/2026-06-25-sdlc-guardrail-hooks-design.md
+# ─────────────────────────────────────────────────────────────────
+export DEVFORGE_CURRENT_HOOK="security-write-trigger"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." 2>/dev/null && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+
+HOOK_INPUT="$(cat 2>/dev/null || true)"
+[ -z "$HOOK_INPUT" ] && { echo '{}'; exit 0; }
+
+if command -v jq >/dev/null 2>&1; then
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
+else
+    FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true)
+fi
+[ -z "$FILE_PATH" ] && { echo '{}'; exit 0; }
+
+# --- file security-sensibile? ---
+SEC_PATTERN='/auth/|/security/|/credentials/|/secrets/|\.env(\.|$)|[Ss]ecret|[Tt]oken|[Pp]ermission|[Cc]redential|/\.aws/|\.pem$|\.key$|\.p12$|\.pfx$'
+if ! printf '%s' "$FILE_PATH" | grep -qE "$SEC_PATTERN"; then
+    echo '{}'; exit 0
+fi
+
+# --- siae-security gia' invocata in sessione? -> silenzioso ---
+if grep -qF "siae-security" "${HOME}/.claude/.devforge-session-skills" 2>/dev/null; then
+    echo '{}'; exit 0
+fi
+
+devforge_log "security_write_trigger" "advisory" "{\"file\":\"$(devforge_sanitize_json_str "$FILE_PATH")\"}" 2>/dev/null || true
+CTX=$(devforge_sanitize_json_str "DevForge Security Trigger (advisory): stai modificando un file security-sensibile (${FILE_PATH}). Invoca siae-security per validare gestione credenziali / IAM least-privilege / OWASP / PII PRIMA di procedere. (Il pr-gate ricontrollera i segreti nel diff al momento della PR.)")
+cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${CTX}"
+  }
+}
+EOF
+exit 0

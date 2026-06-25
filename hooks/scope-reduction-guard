@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# scope-reduction-guard — PreToolUse:Write hook
+# ─────────────────────────────────────────────────────────────────
+# Anti-perdita-requisiti / allineamento: alla scrittura di un piano esecutivo
+# (docs/plans/<topic>/overview.md o docs/plans/*-plan*.md), confronta i requisiti
+# del design doc piu' recente con il contenuto del piano. >30% non tracciati ->
+# warn advisory (additionalContext, non blocca); >60% -> decision:block.
+# Fail-safe ASSOLUTO: design assente / 0 requisiti / parse error -> {} exit 0
+# (nessuna divisione per zero, nessun block spurio). NESSUN set -e/-u/pipefail.
+# Design: docs/plans/2026-06-25-sdlc-guardrail-hooks-design.md
+# ─────────────────────────────────────────────────────────────────
+export DEVFORGE_CURRENT_HOOK="scope-reduction-guard"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." 2>/dev/null && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+
+HOOK_INPUT="$(cat 2>/dev/null || true)"
+[ -z "$HOOK_INPUT" ] && { echo '{}'; exit 0; }
+
+# --- estrai file_path + content ---
+if command -v jq >/dev/null 2>&1; then
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // .tool_input.file_path // empty' 2>/dev/null || true)
+    CONTENT=$(echo "$HOOK_INPUT" | jq -r '.content // .tool_input.content // empty' 2>/dev/null || true)
+else
+    FILE_PATH=$(echo "$HOOK_INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true)
+    CONTENT=$(echo "$HOOK_INPUT" | grep -o '"content"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true)
+fi
+[ -z "$FILE_PATH" ] && { echo '{}'; exit 0; }
+
+# --- attiva solo su file di PIANO esecutivo ---
+if ! echo "$FILE_PATH" | grep -qE '(^|/)docs/plans/.+/overview\.md$|(^|/)docs/plans/.+-plan[^/]*\.md$'; then
+    echo '{}'; exit 0
+fi
+
+# --- trova il design doc piu' recente (flat *-design.md o subdir */design.md) ---
+# NB: ls relativo al cwd = repo root (impostato da run-hook.cmd); se il cwd non lo
+# fosse, DESIGN resta vuoto e l'hook esce fail-safe (exit 0) sotto.
+DESIGN=$(ls -t docs/plans/*-design.md docs/plans/*/design.md 2>/dev/null | head -1 || true)
+[ -z "$DESIGN" ] || [ ! -f "$DESIGN" ] && { echo '{}'; exit 0; }
+
+# --- estrai righe-requisito dal design ---
+REQ_LINES=$(grep -nE 'AC-[0-9]+|^[[:space:]]*[-*][[:space:]]*\[ \]|[Rr]equisito|^#{2,3}[[:space:]]+[0-9]+\.' "$DESIGN" 2>/dev/null || true)
+REQ_TOTAL=$(printf '%s\n' "$REQ_LINES" | grep -c . 2>/dev/null || true)
+case "$REQ_TOTAL" in ''|*[!0-9]*) REQ_TOTAL=0 ;; esac
+[ "$REQ_TOTAL" -eq 0 ] && { echo '{}'; exit 0; }   # WARN-5: niente requisiti -> no div/0
+
+# --- conta i requisiti NON tracciati nel contenuto del piano ---
+STOP='sistema|viene|della|correttamente|qualsiasi|implementare|questo|quello|essere|utente|tutti|tutte|prima|dopo|senza|stato'
+MISSING=0
+MISSING_LIST=""
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    keywords=$(printf '%s' "$line" | grep -oE '[A-Za-zàèéìòù]{5,}' 2>/dev/null | grep -ivE "^(${STOP})$" 2>/dev/null || true)
+    found=0
+    for kw in $keywords; do
+        if printf '%s' "$CONTENT" | grep -qiF "$kw" 2>/dev/null; then found=1; break; fi
+    done
+    if [ "$found" -eq 0 ]; then
+        MISSING=$((MISSING + 1))
+        label=$(printf '%s' "$line" | sed 's/^[0-9]*://' | cut -c1-60)
+        MISSING_LIST="${MISSING_LIST}\\n  - ${label}"
+    fi
+done < <(printf '%s\n' "$REQ_LINES")
+
+PCT=$(( MISSING * 100 / REQ_TOTAL ))
+
+if [ "$PCT" -gt 60 ]; then
+    devforge_log "scope_reduction_guard" "blocked" "{\"missing\":${MISSING},\"total\":${REQ_TOTAL},\"pct\":${PCT}}" 2>/dev/null || true
+    REASON=$(devforge_sanitize_json_str "DevForge Scope Reduction Guard — BLOCCATO. ${MISSING}/${REQ_TOTAL} requisiti del design (${PCT}%) NON risultano tracciati nel piano:${MISSING_LIST}. Scope-reduction silente: il piano omette requisiti approvati nel design. Aggiungi i requisiti mancanti al piano, oppure documenta esplicitamente perche sono esclusi (out of scope).")
+    cat <<EOF
+{
+  "decision": "block",
+  "reason": "${REASON}"
+}
+EOF
+    exit 0
+elif [ "$PCT" -gt 30 ]; then
+    devforge_log "scope_reduction_guard" "warn" "{\"missing\":${MISSING},\"total\":${REQ_TOTAL},\"pct\":${PCT}}" 2>/dev/null || true
+    CTX=$(devforge_sanitize_json_str "DevForge Scope Guard (advisory): ${MISSING}/${REQ_TOTAL} requisiti del design (${PCT}%) non risultano tracciati nel piano:${MISSING_LIST}. Verifica che non sia scope-reduction silente prima di procedere.")
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "${CTX}"
+  }
+}
+EOF
+    exit 0
+fi
+
+echo '{}'
+exit 0
