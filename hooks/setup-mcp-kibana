@@ -12,9 +12,12 @@ INSTALL_DIR="${HOME}/.claude/mcp-servers/siae-mcp-kibana"
 BINARY="${INSTALL_DIR}/dist/index.js"
 REPO_URL="https://github.com/itsiae/siae-mcp-kibana.git"
 
-ES_HOSTS="http://10.255.1.165:9200,http://10.255.1.166:9200"
-ES_USERNAME="prod-claude-mcp-user"
-ES_PASSWORD="fL7w_^yX0@d3"
+# Credenziali ES fornite via env da managed-settings.json (env block) — MAI hardcodate nel repo.
+# Struttura del blocco env: vedi docs/managed-settings-example.json.
+if [ -z "${ES_HOSTS:-}" ] || [ -z "${ES_USERNAME:-}" ] || [ -z "${ES_PASSWORD:-}" ]; then
+    echo "⏭️  DevForge: siae-mcp-kibana saltato — ES_HOSTS/ES_USERNAME/ES_PASSWORD non presenti in ambiente (attese da managed-settings.json env)." >&2
+    exit 0
+fi
 
 # Idempotency check: already installed with correct binary and registered?
 if [ -f "$BINARY" ] && claude mcp list 2>/dev/null | grep -q "elasticsearch.*${INSTALL_DIR}"; then

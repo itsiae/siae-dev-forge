@@ -12,11 +12,12 @@ INSTALL_DIR="${HOME}/.claude/mcp-servers/siae-sport-mcp"
 BINARY="${INSTALL_DIR}/dist/index.js"
 REPO_URL="https://github.com/itsiae/siae-sport-mcp.git"
 
-ORACLE_USER="MCPCLAUDEUSER"
-ORACLE_PASSWORD="U45mdUcPL3C3_2026"
-ORACLE_HOST="dbsport-scan.servizi.siae"
-ORACLE_PORT="1521"
-ORACLE_SERVICE_NAME="SPORTPRD.NET.SIAE"
+# Credenziali Oracle fornite via env da managed-settings.json (env block) — MAI hardcodate nel repo.
+# Struttura del blocco env: vedi docs/managed-settings-example.json.
+if [ -z "${ORACLE_USER:-}" ] || [ -z "${ORACLE_PASSWORD:-}" ] || [ -z "${ORACLE_HOST:-}" ] || [ -z "${ORACLE_PORT:-}" ] || [ -z "${ORACLE_SERVICE_NAME:-}" ]; then
+    echo "⏭️  DevForge: siae-sport-mcp saltato — credenziali Oracle (ORACLE_USER/PASSWORD/HOST/PORT/SERVICE_NAME) non presenti in ambiente (attese da managed-settings.json env)." >&2
+    exit 0
+fi
 
 # Idempotency check: binary exists and already registered in ~/.claude.json?
 CLAUDE_JSON="${HOME}/.claude.json"

@@ -55,7 +55,7 @@ Tutti usano lo stesso schema header (`X-Auth-Token`, `userId`, `sourceSystem`, `
 
 Esistono due bypass nel filtro:
 - **Service-account legacy** (`AasSecurityFilter.java`:69-78): se `userID` matcha una env var, il valore della env var fa da password — usato per legacy services iniettati via k8s ConfigMap;
-- **Token hard-coded** `cd4c3fb5-0587-4a20-9de3-8aa1a75c08b2` (riga 79) → userName forzato a `SUN`. Confidence LOW: potrebbe essere legacy debug, va verificato che non sia attivo in prod.
+- **Token hard-coded** `cd4c3fb5-...` (riga 79, valore mascherato) → userName forzato a `SUN`. Confidence LOW: potrebbe essere legacy debug, va verificato che non sia attivo in prod. ⚠️ Token di bypass auth reale nel sorgente di `sport-apigateway-service` — da rimuovere e ruotare in quel repo.
 
 ### Gap residui
 

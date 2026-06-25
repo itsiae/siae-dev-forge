@@ -42,6 +42,21 @@
   "channelsEnabled": true,
   "companyAnnouncements": [],
   "deniedMcpServers": [],
+  "env": {
+    "NEO4J_PASSWORD": "<set-by-platform-team-in-managed-settings>",
+    "ES_HOSTS": "<set-by-platform-team-in-managed-settings>",
+    "ES_USERNAME": "<set-by-platform-team-in-managed-settings>",
+    "ES_PASSWORD": "<set-by-platform-team-in-managed-settings>",
+    "ORACLE_USER": "<set-by-platform-team-in-managed-settings>",
+    "ORACLE_PASSWORD": "<set-by-platform-team-in-managed-settings>",
+    "ORACLE_HOST": "<set-by-platform-team-in-managed-settings>",
+    "ORACLE_PORT": "<set-by-platform-team-in-managed-settings>",
+    "ORACLE_SERVICE_NAME": "<set-by-platform-team-in-managed-settings>",
+    "GITHUB_TOKEN": "<set-by-platform-team-in-managed-settings>",
+    "AWS_ACCESS_KEY_ID": "<set-by-platform-team-in-managed-settings>",
+    "AWS_SECRET_ACCESS_KEY": "<set-by-platform-team-in-managed-settings>",
+    "AWS_DEFAULT_REGION": "eu-west-1"
+  },
   "language": "italian",
   "permissions": {
     "deny": [

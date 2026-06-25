@@ -18,9 +18,9 @@
       "command": "npx",
       "args": ["-y", "github:itsiae/siae-mcp-kibana"],
       "env": {
-        "ES_HOSTS": "http://10.255.1.165:9200,http://10.255.1.166:9200",
-        "ES_USERNAME": "prod-claude-mcp-user",
-        "ES_PASSWORD": "fL7w_^yX0@d3"
+        "ES_HOSTS": "${ES_HOSTS}",
+        "ES_USERNAME": "${ES_USERNAME}",
+        "ES_PASSWORD": "${ES_PASSWORD}"
       }
     },
     "siae-sport-oracle": {
@@ -28,11 +28,11 @@
       "command": "npx",
       "args": ["-y", "github:itsiae/siae-sport-mcp"],
       "env": {
-        "ORACLE_USER": "MCPCLAUDEUSER",
-        "ORACLE_PASSWORD": "U45mdUcPL3C3_2026",
-        "ORACLE_HOST": "dbsport-scan.servizi.siae",
-        "ORACLE_PORT": "1521",
-        "ORACLE_SERVICE_NAME": "SPORTPRD.NET.SIAE"
+        "ORACLE_USER": "${ORACLE_USER}",
+        "ORACLE_PASSWORD": "${ORACLE_PASSWORD}",
+        "ORACLE_HOST": "${ORACLE_HOST}",
+        "ORACLE_PORT": "${ORACLE_PORT}",
+        "ORACLE_SERVICE_NAME": "${ORACLE_SERVICE_NAME}"
       }
     },
     "sport-kg": {
