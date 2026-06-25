@@ -302,29 +302,6 @@ class TestJsEpochUniqueness:
         assert len(parts) == 4, f"Attesi 4 segmenti, trovato: {pid}"
         assert "77777" in pid, f"Epoch tag '77777' assente nel pid: {pid}"
 
-    def test_js_due_run_diverse_producono_nomi_diversi(self):
-        """Due run JS con id-tag diversi producono almeno 1 nome diverso."""
-        from pathlib import Path
-        script = str(Path(__file__).parent.parent / "scripts" / "generate_profiles.js")
-
-        def _run(tag):
-            r = subprocess.run(
-                ["node", script,
-                 "--categorie", "PRIVATO",
-                 "--nazionalita", "ITA",
-                 "--quantita", "5",
-                 "--id-tag", tag,
-                 "--skip-validation"],
-                capture_output=True, text=True, timeout=15
-            )
-            assert r.returncode == 0
-            return {p["anagrafica"]["nome"] + p["anagrafica"]["cognome"]
-                    for p in json.loads(r.stdout)}
-
-        nomi1 = _run("11111")
-        nomi2 = _run("22222")
-        assert nomi1 != nomi2, f"Nomi identici tra run diverse: {nomi1}"
-
 
 class TestJsCrossRunUniqueness:
     """Test E2E: due run Node.js successive producono nomi diversi."""
