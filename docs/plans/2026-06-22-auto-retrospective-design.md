@@ -122,3 +122,15 @@ utente --apply → writer marker-section → CLAUDE.md / memory/  (idempotente)
 6. Ambiente python-less: scan degrada pulito con warn one-shot, nessun errore all'utente.
 7. `NOTICE` contiene l'attribuzione Apache-2.0 headroom per i file portati.
 8. `siae-retrospective` manuale invariata (no-regression).
+
+## File
+Manifest esaustivo (sezione strutturata, header non numerato, per spec-drift detection):
+- `lib/retro/scan.py` · `lib/retro/classifier.py` · `lib/retro/digest.py` · `lib/retro/writer.py` · `lib/retro/nudge.py` · `lib/retro/__init__.py` — package retrospettiva (port headroom)
+- `hooks/session-end` — DETECT scan (additivo)
+- `hooks/session-start` — NUDGE (additivo, riconciliato sopra python3_banner)
+- `skills/forge-retrospect/SKILL.md` — skill MINE/APPLY/DISMISS
+- `commands/forge-retrospect.md` — comando
+- `tests/test_retro_classifier.py` · `tests/test_retro_digest.py` · `tests/test_retro_writer.py` · `tests/test_retro_scan.py` · `tests/test_retro_nudge.py` · `tests/test_retro_notice.py` · `tests/test_retro_session_end_hook.py` · `tests/test_retro_session_start_nudge.py` · `tests/test_retro_skill_structure.py` · `tests/integration/test_retro_e2e.py` — 36 test
+- `CHANGELOG.md` — entry 1.100.0
+- `.claude-plugin/plugin.json` · `.claude-plugin/marketplace.json` — bump versione + count
+- `NOTICE` — attribuzione Apache-2.0 headroom
