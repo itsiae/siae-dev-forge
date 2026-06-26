@@ -1226,11 +1226,27 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
-if bash "${PLUGIN_ROOT}/tests/hooks/test_simplicity_reminder.sh" >/dev/null 2>&1; then
-  echo "  PASS  tests/hooks/test_simplicity_reminder.sh"
+if bash "${PLUGIN_ROOT}/tests/hooks/test_uncertainty_escalation.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_uncertainty_escalation.sh"
   TOTAL_PASS=$((TOTAL_PASS + 1))
 else
-  echo "  FAIL  tests/hooks/test_simplicity_reminder.sh"
+  echo "  FAIL  tests/hooks/test_uncertainty_escalation.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_scope_reduction_guard.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_scope_reduction_guard.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_scope_reduction_guard.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/test_security_write_trigger.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/test_security_write_trigger.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/test_security_write_trigger.sh"
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 

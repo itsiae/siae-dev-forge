@@ -6,15 +6,24 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Added — Simplicity Reminder Hook: nudge periodico KISS/YAGNI (1.98.0)
+### Added — SDLC Guardrail Hooks: famiglia di 3 hook (escalation / requisiti / sicurezza) (1.99.0)
 
-Nuovo hook `UserPromptSubmit` (`hooks/simplicity-reminder`) che ogni 5 prompt inietta un
-reminder dei principi ingegneristici di semplicita del codice (KISS — fai la cosa piu'
-semplice che funziona; YAGNI — solo cio' che serve ora; AHA — evita astrazioni premature).
-Contatore GLOBALE cumulativo, robusto a sessioni concorrenti (uno slot per-sessione si
-auto-annullerebbe con session_id alternati — vedi premortem nel design); fail-safe (non
-blocca mai il prompt, non legge stdin). Allinea anche `marketplace.json` (era 1.96.0,
-drift) a `plugin.json`. Test: `tests/hooks/test_simplicity_reminder.sh` (6/6 PASS).
+Tre hook "che girano sotto", fondati su gap analysis (ricerca obra/superpowers/AI-SDLC + inventario
+interno per evitare duplicazioni):
+- `uncertainty-escalation` (Stop, prima di stop-gate): se l'ultimo messaggio assistant contiene >=2
+  segnali FORTI di incertezza (non so / TBD / non ho abbastanza informazioni / unclear...) e NON
+  contiene una domanda (`?`), blocca e forza una domanda diretta all'utente. Escalation PROATTIVA
+  su umano quando incerti / mancano dati (gap prima senza copertura). Riusa l'estrazione
+  LAST_ASSISTANT_MSG di stop-gate.
+- `scope-reduction-guard` (PreToolUse:Write su docs/plans piani): confronta i requisiti del design
+  doc col piano esecutivo; warn >30% / block >60% requisiti non tracciati (anti scope-reduction
+  silente). No div/0 su 0 requisiti.
+- `security-write-trigger` (PreToolUse:Edit+Write su file auth/credential/.env/token): advisory
+  non-bloccante che invita a invocare siae-security prima della modifica (sicurezza proattiva).
+
+Tutti bash deterministici e fail-safe (mai bloccano per errore tecnico, exit 0). La categoria
+"test" NON ha hook nuovi: gia coperta da `tdd-gate` (YAGNI, confermato in spec-review). Allinea
+`marketplace.json` (1.96.0->1.99.0) e il count `hooks-json-var-expansion` (29->33). Test: 21/21 PASS.
 
 ### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 

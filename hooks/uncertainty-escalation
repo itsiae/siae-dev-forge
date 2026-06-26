@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# uncertainty-escalation — Stop hook (PRIMO nell'array Stop, prima di stop-gate)
+# ─────────────────────────────────────────────────────────────────
+# Escalation PROATTIVA su umano: se l'ultimo messaggio assistant contiene >= 2
+# segnali FORTI di incertezza non risolta E NON contiene una domanda ('?'),
+# blocca lo stop e forza il modello a chiedere chiarimento all'utente.
+# Gap chiuso: oggi l'escalation e' solo reattiva (post N-fallimenti / gate PR).
+# Riusa il pattern di estrazione LAST_ASSISTANT_MSG di stop-gate (jq->node->python3).
+# Fail-safe ASSOLUTO: input vuoto / no parser / errore -> exit 0 (mai blocca per errore).
+# NESSUN set -e/-u/pipefail. Design: docs/plans/2026-06-25-sdlc-guardrail-hooks-design.md
+# ─────────────────────────────────────────────────────────────────
+export DEVFORGE_CURRENT_HOOK="uncertainty-escalation"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." 2>/dev/null && pwd)"
+source "${PLUGIN_ROOT}/lib/logger.sh" 2>/dev/null || true
+
+INPUT="$(cat 2>/dev/null || true)"
+[ -z "$INPUT" ] && exit 0
+
+# Estrai ultimo messaggio assistant — cascading fallback jq -> node -> python3
+LAST_MSG=""
+if command -v jq >/dev/null 2>&1; then
+    LAST_MSG=$(echo "$INPUT" | jq -r '
+        (.messages // .transcript // [])
+        | map(select(.role == "assistant")) | last
+        | if . == null then ""
+          elif (.content | type) == "string" then .content
+          else (.content | map(select(.type == "text") | .text) | join(" ")) end
+    ' 2>/dev/null || true)
+elif command -v node >/dev/null 2>&1; then
+    LAST_MSG=$(echo "$INPUT" | node -e "
+        let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{
+        try{const j=JSON.parse(d);const ms=(j.messages||j.transcript||[]).filter(m=>m.role==='assistant');
+        const l=ms[ms.length-1];if(!l){process.stdout.write('');return;}
+        const c=l.content;if(typeof c==='string')process.stdout.write(c);
+        else process.stdout.write((c||[]).filter(b=>b.type==='text').map(b=>b.text).join(' '));
+        }catch(e){process.stdout.write('');}});
+    " 2>/dev/null || true)
+elif command -v python3 >/dev/null 2>&1; then
+    LAST_MSG=$(echo "$INPUT" | python3 -c "
+import sys,json
+try:
+    j=json.load(sys.stdin)
+    ms=[m for m in (j.get('messages') or j.get('transcript') or []) if m.get('role')=='assistant']
+    if not ms:print('',end='')
+    else:
+        c=ms[-1].get('content','')
+        if isinstance(c,str):print(c,end='')
+        else:print(' '.join(b.get('text','') for b in c if b.get('type')=='text'),end='')
+except:print('',end='')
+    " 2>/dev/null || true)
+fi
+
+[ -z "$LAST_MSG" ] && exit 0
+
+# Se il modello ha gia' formulato una domanda all'utente -> non bloccare
+if printf '%s' "$LAST_MSG" | grep -q '?'; then
+    exit 0
+fi
+
+# Pattern FORTI di incertezza (esclusi termini ambigui: forse / dipende da / potrebbe essere)
+UNCERTAINTY='non so|non sono sicuro|non e chiaro|non è chiaro|non mi e chiaro|non mi è chiaro|assumo che|sto assumendo|non ho abbastanza informazioni|non ho dati|non ho info|TBD|da definire|unclear|not sure|i assume|i am not sure|need more info'
+
+N_UNCERTAIN=$(printf '%s' "$LAST_MSG" | grep -ioE "$UNCERTAINTY" 2>/dev/null | grep -c . 2>/dev/null || true)
+case "$N_UNCERTAIN" in ''|*[!0-9]*) N_UNCERTAIN=0 ;; esac
+
+if [ "$N_UNCERTAIN" -ge 2 ]; then
+    devforge_log "uncertainty_escalation" "blocked" "{\"signals\":${N_UNCERTAIN}}" 2>/dev/null || true
+    cat <<EOF
+{
+  "decision": "block",
+  "reason": "DevForge Uncertainty Gate — il tuo output contiene ${N_UNCERTAIN} segnali di incertezza non risolti ma non hai formulato una domanda all'utente. NON fermarti con incertezza aperta: formula una domanda diretta (chi/cosa/quale/quando/quale fonte) per risolvere l'ambiguita o per ottenere i dati mancanti, prima di procedere o concludere."
+}
+EOF
+    exit 0
+fi
+exit 0
