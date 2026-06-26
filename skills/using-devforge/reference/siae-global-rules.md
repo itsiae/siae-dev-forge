@@ -28,6 +28,7 @@ SIAE ha due famiglie di sistemi con convenzioni DIVERSE. Riconosci il contesto d
 - Environment names — DIPENDONO dal contesto di sistema (vedi sopra):
   - **Cloud/AWS** (datalake/IaC): valore tecnico `dev`/`qa`/`prod` (`AWS_ENV`). I GitHub Environment si chiamano `collaudo`/`certificazione`/`produzione`, ma `AWS_ENV` resta dev/qa/prod. NON usare i nomi italiani come valore tecnico AWS salvo indicazione esplicita.
   - **SPORT/PAE/POP** (microservizi OpenShift): gli ambienti SONO `sviluppo`/`collaudo`/`certificazione`/`produzione` (profili Spring `application-<AMB>.yml`, Helm `values-<ambiente>.yaml`, namespace OpenShift). Qui NON usare dev/qa/prod.
+- **Test coverage: soglia minima obbligatoria 70%** (≥80% per feature nuove; bug fix → test di regressione obbligatorio). I gate DevForge la enforçano: il `pre-commit` Coverage Force-Run esige coverage fresca quando si committano file di test, e `review-evidence` blocca la PR se il conteggio test regredisce sotto la baseline (hard-floor). Esegui sempre la suite con coverage prima di commit/PR (`mvn verify` JaCoCo, `pytest --cov`, `vitest --coverage`).
 
 ## CI/CD — Cloud/AWS (datalake/IaC): SIAE GitHub Environments
 Le pipeline di deploy AWS SIAE (reusable workflow `itsiae/siae-gh-actions/.github/workflows/terragrunt-plan.yaml` e `cd-terragrunt-plan-deploy.yaml`) cercano SEMPRE queste 5 GitHub Environment variables nell'environment configurato per il job (es. `collaudo`, `certificazione`, `produzione`):
