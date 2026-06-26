@@ -5,6 +5,12 @@
 > owner, rimanda alla skill (git → `siae-git-workflow`, GitHub env → `siae-github-env-sync`).
 > Si modifica SOLO qui. Nessun dato per-persona/segreto: l'unico indirizzo ammesso è il proxy corporate.
 
+## Contesto di sistema (DISCRIMINA prima di applicare ambienti / CI-CD / deploy)
+SIAE ha due famiglie di sistemi con convenzioni DIVERSE. Riconosci il contesto dai marker nel repo PRIMA di applicare le regole di ambiente/deploy:
+- **Cloud/AWS** (data platform, IaC): marker `*.tf`, `terragrunt.hcl`, repo `datalake-*` / `*-iac`. Runtime AWS (Glue/Lambda/ECS/S3). Deploy via reusable `terragrunt-*`. → ambienti tecnici `dev`/`qa`/`prod`.
+- **SPORT/PAE/POP** (microservizi Java): marker `pom.xml`+`mvnw`, `Dockerfile`, `chart/` (Helm); repo `sport-*` / `pae-*` / `pop-*`. Runtime **OpenShift** (K8s). Deploy via reusable `MVN_CI`/`MVN_CD`. → ambienti `sviluppo`/`collaudo`/`certificazione`/`produzione`.
+- Nel dubbio: ispeziona `.github/workflows/` (terragrunt → cloud; MVN_CD → microservizio) e CHIEDI invece di assumere.
+
 ## Scope Control
 - Do NOT over-scope changes. When asked to create IAM policies, Terraform modules, or any resource, start minimal and ask before adding extras.
 - Never include permissions, resources, or files not explicitly requested.
@@ -19,10 +25,12 @@
 - When working with CSV files, always read the actual column names from the file header before writing any mapping code.
 
 ## Conventions
-- Environment names: dev/qa/prod (NOT Italian equivalents like collaudo/certificazione/produzione unless explicitly told).
+- Environment names — DIPENDONO dal contesto di sistema (vedi sopra):
+  - **Cloud/AWS** (datalake/IaC): valore tecnico `dev`/`qa`/`prod` (`AWS_ENV`). I GitHub Environment si chiamano `collaudo`/`certificazione`/`produzione`, ma `AWS_ENV` resta dev/qa/prod. NON usare i nomi italiani come valore tecnico AWS salvo indicazione esplicita.
+  - **SPORT/PAE/POP** (microservizi OpenShift): gli ambienti SONO `sviluppo`/`collaudo`/`certificazione`/`produzione` (profili Spring `application-<AMB>.yml`, Helm `values-<ambiente>.yaml`, namespace OpenShift). Qui NON usare dev/qa/prod.
 
-## CI/CD — SIAE GitHub Environments
-Le pipeline di deploy SIAE (reusable workflow `itsiae/siae-gh-actions/.github/workflows/terragrunt-plan.yaml` e `cd-terragrunt-plan-deploy.yaml`) cercano SEMPRE queste 5 GitHub Environment variables nell'environment configurato per il job (es. `collaudo`, `certificazione`, `produzione`):
+## CI/CD — Cloud/AWS (datalake/IaC): SIAE GitHub Environments
+Le pipeline di deploy AWS SIAE (reusable workflow `itsiae/siae-gh-actions/.github/workflows/terragrunt-plan.yaml` e `cd-terragrunt-plan-deploy.yaml`) cercano SEMPRE queste 5 GitHub Environment variables nell'environment configurato per il job (es. `collaudo`, `certificazione`, `produzione`):
 - `AWS_ENV` — valore tecnico AWS (es. `dev`, `qa`, `prod`), usato come `$ENV` per leggere `live/_envs/$AWS_ENV.tmpl` e per nomenclatura risorse.
 - `AWS_ORG_ACCOUNT` — account master billing (`104589273752` per SIAE), primo step nel role chaining.
 - `AWS_REGION` — region target (es. `eu-west-1`).
@@ -30,6 +38,14 @@ Le pipeline di deploy SIAE (reusable workflow `itsiae/siae-gh-actions/.github/wo
 - `AWS_TARGET_ACCOUNT_ID` — account ID dove si deploya effettivamente (es. `134565215127` enterprise_dev_qa, `100649704385` digital, ecc.).
 Altre var possono essere presenti per pattern envsubst specifici (es. `VPC_STAGE`, `SIAE_ROUTE53_ZONE_NAME`) ma sono opzionali.
 Verifica/sync delle var di un repo: `gh api repos/itsiae/<repo>/environments/<env>/variables` (richiede gh autenticato). Workflow completo: skill `siae-github-env-sync`.
+
+## CI/CD — SPORT/PAE/POP (microservizi OpenShift)
+I microservizi Java (Spring Boot Maven + Docker + Helm) usano i reusable workflow `itsiae/siae-gh-actions/.github/workflows/MVN_CI.yaml` e `MVN_CD.yaml` (NON terragrunt). Verificato sui repo `pae-auth-be`, `sport-gestione-licenze-service`, `sport-payments-service`:
+- **CI** (`MVN_CI`): trigger su push `main`/`release/**` + PR su `main` → build Maven + JUnit.
+- **CD** (`MVN_CD`): trigger su **push di un tag git** `sviluppo` o `collaudo` (+ `workflow_dispatch`) → build → push immagine su GitHub Packages → update del Helm chart → deploy su **OpenShift**. Il rilascio si fa TAGGANDO (`git tag sviluppo|collaudo` + push del tag), NON con plan/apply Terraform.
+- **Ambienti = namespace OpenShift**, configurati come repo Variables: `OPENSHIFT_NAMESPACE_DEV` (sviluppo), `_COLL` (collaudo), `_CERT` (certificazione), `_PROD` (produzione). Cluster es. `apps.ocp-noprod.openshift.siae`.
+- **Helm**: `chart/deployment-<servizio>/values-<ambiente>.yaml` — un file values per ambiente (`sviluppo`/`collaudo`/`certificazione`/`main`).
+- Branch flow e tagging: skill `siae-git-workflow`.
 
 ## Workspace
 - If file writes fail (especially on synced paths — OneDrive/iCloud), alert immediately rather than retrying silently.
