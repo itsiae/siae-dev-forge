@@ -201,6 +201,10 @@ const _TOP_ESTERO = {
   'Austria':     ['STRASSE',  ['Mariahilfer','Kaerntner','Ringstrasse']],
 };
 
+// Uniqueness strategy (JS vs Python differ by design):
+// JS: name selected via pid-seeded PRNG (pid includes idTag → different seed per run).
+// Python: explicit formula idx=(run_epoch*7919 + run_counter*1013) % (N*M).
+// Both guarantee cross-run diversity when idTag changes. See design doc 2026-06-23.
 function _pickNomeCognome(stato, genere, rng) {
   _initRefs();
   let nomiM, nomiF, cognomi;
@@ -364,7 +368,7 @@ function generaRappLegale(pid, area) {
   return { cf, nome, cognome, data_nascita: dataNasc, genere };
 }
 
-function generaProfiloBusiness(pid, area, fg, mode, rng) {
+function generaProfiloBusiness(pid, area, fg, mode, rng, idTag) {
   _initRefs();
   if (area === 'ITA') area = 'IT';
   const fgAll  = loadRef('forme_giuridiche.json');
@@ -402,7 +406,9 @@ function generaProfiloBusiness(pid, area, fg, mode, rng) {
   }
 
   const rl      = generaRappLegale(pid, area);
-  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + pid.slice(-4);
+  const _pidParts = pid.split('-');
+  const seq       = _pidParts[_pidParts.length - 1];
+  const ragione = rng.choice(fgData.esempi_ragione_sociale || ['Azienda']) + ' ' + seq + '-' + idTag;
   const natGiur = rng.choice(fgData.nature_giuridiche || ['S.R.L.']);
 
   const soggGiur = {
@@ -482,6 +488,7 @@ function main() {
   const mode      = (args.profilo || 'FULL').toUpperCase();
   const outFile   = args.output;
 
+  const idTag    = args['id-tag'] || String(Math.floor(Date.now() / 1000) % 100000).padStart(5, '0');
   const AREA_MAP = { 'ITA': 'IT', 'UE': 'UE', 'EXTRA-UE': 'EXTRA-UE', 'IT': 'IT' };
   const dist     = calcolaDistribuzione(quantita, distRaw || nazRaw.map(() => 1));
 
@@ -493,14 +500,14 @@ function main() {
       if (cat === 'BUSINESS') {
         for (const fg of fgList) {
           for (let i = 1; i <= count; i++) {
-            const pid = `B-${fg}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
-            profili.push(generaProfiloBusiness(pid, area, fg, mode, makePRNG(pid)));
+            const pid = `B-${fg}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
+            profili.push(generaProfiloBusiness(pid, area, fg, mode, makePRNG(pid), idTag));
           }
         }
       } else {
         const pre = cat === 'AUTORE' ? 'A' : cat === 'EDITORE' ? 'E' : 'P';
         for (let i = 1; i <= count; i++) {
-          const pid = `${pre}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
+          const pid = `${pre}-${idTag}-${nazRaw[ni]}-${String(i).padStart(3,'0')}`;
           profili.push(generaProfiloPrivato(pid, area, mode, makePRNG(pid)));
         }
       }

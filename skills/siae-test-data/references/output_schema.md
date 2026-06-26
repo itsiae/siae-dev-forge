@@ -10,7 +10,7 @@ opzionale.
 
 ```json
 {
-  "profilo_id": "P-IT-001",
+  "profilo_id": "P-83421-IT-001",
   "macro_categoria": "PRIVATO",
   "ruoli": ["UTILIZZATORE"],
   "tipo_persona": "FISICA",
@@ -45,7 +45,8 @@ opzionale.
     "residenza_it": true,
     "edge_case": null,
     "calcolo_cf": "calcolato",
-    "note": ""
+    "note": "",
+    "generated_at_epoch": 1750000000
   }
 }
 ```
@@ -67,7 +68,7 @@ opzionale.
 
 ```json
 {
-  "profilo_id": "B-SDC-IT-001",
+  "profilo_id": "B-SDC-83421-IT-001",
   "macro_categoria": "BUSINESS",
   "ruoli": ["UTILIZZATORE"],
   "tipo_persona": "GIURIDICA",
@@ -111,7 +112,8 @@ opzionale.
     "residenza_it": true,
     "edge_case": null,
     "calcolo_cf": "uguale_piva",
-    "note": ""
+    "note": "",
+    "generated_at_epoch": 1750000000
   }
 }
 ```
@@ -154,18 +156,21 @@ stato_nascita, comune_nascita); solo il sotto-nodo `contatti` viene rimosso.
 
 ## D. Convenzioni profilo_id
 
-Pattern: `<categoria>-<forma?>-<area>-<NNN>`
+Pattern: `<categoria>-<id_tag>-<forma?>-<area>-<NNN>`
 
-| Categoria | Esempio | Forma | Area |
-|-----------|---------|-------|------|
-| PRIVATO | `P-IT-001` | — | IT, UE, EXTRA-UE |
-| AUTORE | `A-IT-001` | — | IT, UE, EXTRA-UE |
-| BUSINESS | `B-SDC-IT-001` | SDC | IT, UE, EXTRA-UE |
-| EDITORE | `E-COOP-IT-001` | COOP | IT |
-| COMBO | `AE-IT-001` | — | (autore+editore stessa persona) |
+| Categoria | Esempio (con id_tag) | Forma | Area |
+|-----------|---------------------|-------|------|
+| PRIVATO | `P-83421-IT-001` | — | IT, UE, EXTRA-UE |
+| AUTORE | `A-83421-IT-001` | — | IT, UE, EXTRA-UE |
+| BUSINESS | `B-SDC-83421-IT-001` | SDC | IT, UE, EXTRA-UE |
+| EDITORE | `E-COOP-83421-IT-001` | COOP | IT |
+| COMBO | `AE-83421-IT-001` | — | IT (autore+editore stessa persona) |
 
-L'`<NNN>` e' un progressivo 3 cifre zero-padded. Il `profilo_id` e' anche usato
-come seed per il generatore deterministico: stesso ID -> stesso output.
+L'`<id_tag>` è un tag a 5 cifre auto-generato dall'epoch Unix % 100.000 ad ogni
+run (o specificato esplicitamente con `--id-tag`). Cambia il seed del PRNG →
+nomi diversi tra run successive. L'`<NNN>` è un progressivo 3 cifre zero-padded.
+
+**Backward compat:** Il `profilo_id` è usato come seed PRNG — stesso ID → stesso output.
 
 ---
 
@@ -175,3 +180,14 @@ come seed per il generatore deterministico: stesso ID -> stesso output.
 - **CSV**: una riga per profilo, colonne piatte (vedi `to_csv` in `generate_profiles.py`)
 - **Markdown FULL**: tabella con ID/categoria/tipo/nome/CF/PIVA/indirizzo/edge
 - **Markdown LIGHT**: tabella con ID/categoria/tipo/nome/CF/PIVA/nazionalita'
+
+---
+
+## Changelog
+
+### 2026-06-23
+- `meta.generated_at_epoch` (int): timestamp Unix della run di `genera_dataset()`.
+  Usato per audit e per verificare l'unicità cross-run dei profili generati.
+  Valore `0` indica profili generati direttamente via `genera_profilo()` (path di test diretto).
+- `profilo_id`: aggiunto segmento `<id_tag>` (5 cifre epoch) per garantire unicità
+  dei nomi tra run successive. Flag CLI `--id-tag` per replay deterministico.

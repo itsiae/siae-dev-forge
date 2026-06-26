@@ -21,6 +21,8 @@ Fonte: analisi diretta di `MTP DMND0006339 - Mora singola con PBL.docx` (unzippa
 - Colore voci TOC: `2F5496` (stili Sommario1/Sommario2)
 - `word/settings.xml` deve contenere: `<w:updateFields w:val="true"/>`
 
+**Anchor TOC in OOXML**: il campo TOC è individuato cercando un elemento `w:fldChar` con attributo `w:fldCharType="begin"` il cui testo corrispondente (`w:instrText`) contiene la stringa `TOC`. In presenza di altri campi `w:fldChar` nel documento (es. campi page number), disambiguare cercando `w:instrText` che contiene esattamente `" TOC "` (con spazi). `build_mtp.py` NON deve modificare il campo TOC — il template lo aggiorna automaticamente all'apertura in Word grazie a `<w:updateFields w:val="true"/>`.
+
 ---
 
 ## Sezione 1 — Contesto del progetto
@@ -63,10 +65,12 @@ sostituisce il nodo XML padre con `<w:tbl>`.
 ### 1.2 Test Design
 Stile: Titolo2, colore `2F5496`
 
-Contenuto: elenco con checkbox ☑:
+Contenuto: elenco con checkbox ☑ — **STATICO nel template, non generato da JSON**:
 - ☑ IL PERIMETRO DEL TEST — tutte le funzionalità introdotte o modificate
 - ☑ I MACRO SCENARI DI TEST: (elenco sotto-punti con "o")
 - ☑ LE TECNOLOGIE DI TEST CHE SARANNO ADOTTATE PER L'INTEGRATION TEST — test funzionale
+
+> **Nota `build_mtp.py`**: questa sezione viene ereditata invariata dal template. `build_mtp.py` non patcha i tre paragrafi ☑ — sono testo fisso del documento MTP SIAE. L'unica parte dinamica di questa sezione è la sottosezione 1.2.1 Perimetro (anchor separato).
 
 #### 1.2.1 Perimetro
 Stile: Titolo3 (no colore esplicito)
@@ -140,6 +144,20 @@ lo script individua i nodi-bersaglio tramite pattern di testo/stile documentati 
 
 **Regola di sicurezza**: se un anchor non è trovato in modo univoco → fallisce con errore chiaro,
 non patcha il nodo sbagliato silenziosamente.
+
+**Regola stili Word**: ogni paragrafo o run inserito da `build_mtp.py` deve avere lo stile Word assegnato esplicitamente. Un paragrafo senza `w:pStyle` viene interpretato da Word come "Normal" — visivamente identico ma strutturalmente diverso, con effetti sul TOC e sulle stampe. Tabella degli stili obbligatori per sezione:
+
+| Sezione | Elemento | Stile da assegnare in python-docx |
+|---|---|---|
+| Heading sezione 1 | Titolo "1. Contesto del progetto" | `paragraph.style = 'Heading 1'` |
+| Heading 1.1–1.9 | Titoli sezioni (Titolo2) | `paragraph.style = 'Heading 2'` |
+| Heading 1.2.1 | Titolo sottosezione (Titolo3) | `paragraph.style = 'Heading 3'` |
+| Corpo testo | Paragrafi di contenuto | `paragraph.style = 'Normal'` (esplicito) |
+| Voci elenco puntato | Sotto-punti perimetro | `paragraph.style = 'List Bullet'` o `List Paragraph` |
+| Voci elenco numerato | Macro-scenari | `paragraph.style = 'List Number'` |
+| Checkbox ☑ | Voci sezione 1.2 e 1.3 | Testo Unicode `☑` in paragrafo `List Paragraph` |
+
+Se uno stile non esiste nel template, usare `paragraph.style = doc.styles['Normal']` e applicare formattazione diretta (bold, colore) — mai lasciare il campo vuoto.
 
 | Sezione | Anchor | Metodo |
 |---|---|---|
