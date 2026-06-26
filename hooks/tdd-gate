@@ -115,6 +115,19 @@ if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/
             devforge_task_skill_invoked "$TASK_ID" siae-tdd 2>/dev/null || true
         fi
     fi
+    # RC-B durable fallback: the session-skills file is ephemeral — session-start
+    # wipes it on a true cold start, and post-skill never records siae-tdd when
+    # sub-skill-gate rejected the Skill call (PreToolUse block → no PostToolUse).
+    # The per-task ledger (written by post-skill) survives those events, so trust
+    # it when the session file is blind. A compact/reset mid-task must not
+    # false-block a task that already went through TDD. Consistent with the
+    # task-scoped enforcement model (ADR-001).
+    if [ "$SKILL_INVOKED" = "0" ] && [ -n "$TASK_ID" ]; then
+        _TDD_LEDGER="${HOME}/.claude/.devforge-task-skills/${TASK_ID}/skills_invoked"
+        if [ -f "$_TDD_LEDGER" ] && grep -qxF "siae-tdd" "$_TDD_LEDGER"; then
+            SKILL_INVOKED=1
+        fi
+    fi
 fi
 
 if [ "$SKILL_INVOKED" = "1" ]; then

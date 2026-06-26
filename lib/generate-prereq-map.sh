@@ -138,6 +138,20 @@ _curated_prereqs() {
         # entry points in the SDLC flow (no prerequisite invocation).
         siae-brainstorming)    echo "NONE" ;;
         siae-onboarding)       echo "NONE" ;;
+        # Forward-handoff skills: their body `REQUIRED SUB-SKILL: X` declares a
+        # step invoked DURING/AFTER the skill (e.g. siae-debugging → fix via
+        # siae-tdd AFTER root cause; siae-codebase-map → tiered sub-step;
+        # datalake setups → env-sync/git-workflow as numbered steps). X is NOT
+        # a backward prerequisite, so the first-body-hit heuristic would invert
+        # the edge and deadlock the skill behind its own downstream step. These
+        # are entry points (no backward prereq). See siae-debugging.md:121,
+        # siae-receiving-review.md:149, siae-codebase-map.md:218.
+        siae-debugging)               echo "NONE" ;;
+        siae-receiving-review)        echo "NONE" ;;
+        siae-codebase-map)            echo "NONE" ;;
+        siae-datalake-etl-setup)      echo "NONE" ;;
+        siae-datalake-iac-setup)      echo "NONE" ;;
+        siae-datalake-ingestion-setup) echo "NONE" ;;
         *) echo "" ;;
     esac
 }
