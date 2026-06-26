@@ -6,6 +6,15 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added — Auto-Retrospective: cattura automatica delle lezioni (port headroom learn) (1.100.0)
+
+Sistema di retrospettiva automatica (port di "headroom learn", Apache-2.0 — NOTICE incluso):
+- **DETECT** (hook `session-end` → `lib/retro/scan.py`): scansiona il transcript SENZA LLM (<2s, best-effort) e salva un record pendente se trova pattern di errore/correzione.
+- **NUDGE** (hook `session-start` → `lib/retro/nudge.py`): mostra una riga di avviso se c'e' un record pendente (sentinel ≤1 per sessione).
+- **MINE/APPLY/DISMISS** (skill + comando `/forge-retrospect`): analisi LLM inline + `writer.py` marker-section idempotente su CLAUDE.md/memory.
+
+`lib/retro/` (classifier, parser/digest, writer, scan, nudge) — tutto dependency-free e fail-safe (python-less → skip silenzioso). 36 test (unit + e2e). Nessun hook nuovo: `session-start`/`session-end` estesi additivamente. Riusa `siae-retrospective` per la fase MINE.
+
 ### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 
 Il coverage gate del `pre-commit` (Force-Run + soglia 70%) si attivava su qualsiasi
