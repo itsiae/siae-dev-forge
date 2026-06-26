@@ -1,0 +1,13 @@
+DevForge — NOTICE
+
+Questo progetto include codice derivato da:
+
+  headroom — https://github.com/chopratejas/headroom
+  Copyright the headroom authors.
+  Licensed under the Apache License, Version 2.0.
+
+  File derivati: lib/retro/classifier.py (port di headroom/learn/_shared.py),
+  lib/retro/writer.py (port della logica marker-section di headroom/learn/writer.py),
+  lib/retro/digest.py (pattern di headroom/learn/analyzer.py).
+
+  Una copia della licenza Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
