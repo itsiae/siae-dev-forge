@@ -330,7 +330,19 @@ if [ -n "$_py3_raw" ]; then
     python3_banner_section="$(escape_for_json "$_py3_raw")\\n\\n"
 fi
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${python3_banner_section}${version_status_escaped}${branching_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
+# --- SIAE Global Rules (fonte unica versionata, iniezione team-wide) ---
+# Mirror del read di using-devforge/SKILL.md. Fail-safe: file mancante -> sezione vuota
+# -> session_context resta JSON valido. 2>/dev/null (NON 2>&1): un errore di lettura su
+# file opzionale non deve finire iniettato nel contesto.
+global_rules_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/reference/siae-global-rules.md" 2>/dev/null || echo "")
+global_rules_section=""
+if [ -n "$global_rules_content" ]; then
+    global_rules_escaped=$(escape_for_json "$global_rules_content")
+    global_rules_section="\\n\\n**SIAE Global Rules (operational guardrails — sempre attive):**\\n\\n${global_rules_escaped}"
+fi
+# --- End SIAE Global Rules ---
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${python3_banner_section}${version_status_escaped}${branching_section}${global_rules_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # additional_context is the canonical field for Claude Code hooks.
