@@ -77,5 +77,26 @@ else
 fi
 
 echo ""
+echo "=== 7. No forward-handoff edges mis-parsed as backward prerequisites (RC-A) ==="
+# In DevForge a body `REQUIRED SUB-SKILL: X` line means "invoke X as a step
+# DURING/AFTER this skill" (forward), never "X must run BEFORE this skill".
+# These skills declare such forward steps and have no real backward prereq —
+# they must be entry points (no map entry), not blocked on their own sub-step.
+_check_absent() {
+    local pattern="$1"
+    if grep -qE "$pattern" "$OUT"; then
+        echo "  FAIL  forward edge present: $pattern"; FAIL=$((FAIL+1))
+    else
+        echo "  PASS  absent: $pattern"; PASS=$((PASS+1))
+    fi
+}
+_check_absent '^siae-debugging='              # "Dopo la root cause, fixa con siae-tdd"
+_check_absent '^siae-receiving-review='        # "Se capisci → fix con siae-tdd"
+_check_absent '^siae-codebase-map='            # "Step 7a — sub-skill tiered"
+_check_absent '^siae-datalake-etl-setup='      # "Step — esegui sub-skill (env-sync/git)"
+_check_absent '^siae-datalake-iac-setup='
+_check_absent '^siae-datalake-ingestion-setup='
+
+echo ""
 echo "Total: $((PASS+FAIL)) — PASS: $PASS — FAIL: $FAIL"
 exit $FAIL
