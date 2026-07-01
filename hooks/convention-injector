@@ -30,6 +30,10 @@ emit_section(){ # $1 = base name; sezione compatta o marker se assente
     head -c "$PER_SECTION_BYTES" "$f"
 }
 
+# INVARIANTE DI SICUREZZA (review): WANT contiene SOLO nomi-file whitelisted
+# hardcoded qui sotto (siae-*.md), MAI valori derivati da $PROMPT/$CMD/$FILE.
+# L'espansione non quotata a valle (printf/for) e' sicura solo per questo motivo:
+# non concatenare mai input non fidato in WANT (altrimenti diventa injection).
 WANT=""
 # Trigger 1: deploy / PR
 if printf '%s %s' "$PROMPT" "$CMD" | grep -qiE 'deploy|collaudo|certificazione|terragrunt|make (dev|qa)|git tag|release' \
