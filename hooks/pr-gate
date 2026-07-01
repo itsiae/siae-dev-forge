@@ -207,7 +207,10 @@ fi
 
 devforge_log "pr_gate" "success" "{\"check\":\"security_scan_clean\"}"
 
-read -r -d '' PR_GATE_INSTRUCTIONS << 'INSTRUCTIONS_EOF' || true
+source "${PLUGIN_ROOT}/lib/pr-base-resolver.sh" 2>/dev/null || true
+PR_GATE_RESOLVED_BASE=$(devforge_resolve_pr_base 2>/dev/null || echo "main")
+
+read -r -d '' PR_GATE_INSTRUCTIONS_TEMPLATE << 'INSTRUCTIONS_EOF' || true
 # DevForge PR Gate — Security scan PASSED
 
 Il security scan automatico e' passato (nessun secret nel diff).
@@ -219,9 +222,16 @@ Questo NON e' opzionale. NON e' un suggerimento. E' un gate bloccante.
 
 ### Step 0: Ottieni il diff (OBBLIGATORIO)
 
+NON dare per scontato che la base sia `origin/main`: il branch di lavoro puo'
+derivare da `sviluppo` o da `release/*`. La base corretta e' gia' stata risolta:
+
 ```bash
-git diff origin/main...HEAD
+git diff __PR_GATE_RESOLVED_BASE__...HEAD
 ```
+
+Se il diff supera ~2000 righe, NON leggerlo tutto: usa prima
+`git diff --stat __PR_GATE_RESOLVED_BASE__...HEAD` e i singoli file on-demand
+(vedi lib/diff-truncate.sh — evita loop/hang su diff enormi).
 
 Salva l'output. Lo passerai nel prompt di ENTRAMBI gli agent.
 NON passare i path dei file — passa il DIFF TESTUALE. Leggere file interi spreca token.
@@ -270,6 +280,7 @@ Se hai saltato Step 1 o Step 2, stai violando il gate. FERMATI e torna indietro.
 | "Gli agent sono lenti" | Lancia entrambi in parallelo. |
 INSTRUCTIONS_EOF
 
+PR_GATE_INSTRUCTIONS="${PR_GATE_INSTRUCTIONS_TEMPLATE//__PR_GATE_RESOLVED_BASE__/$PR_GATE_RESOLVED_BASE}"
 pr_gate_escaped=$(escape_for_json "$PR_GATE_INSTRUCTIONS")
 pr_gate_context="<EXTREMELY_IMPORTANT>\nDevForge PR Gate attivo — security scan PASSED.\n\n${pr_gate_escaped}\n</EXTREMELY_IMPORTANT>"
 
