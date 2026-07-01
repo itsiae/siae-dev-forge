@@ -265,3 +265,9 @@ Hook `pr-release-gate` (PostToolUse Bash, 30s timeout) si attiva su:
 - branch corrente `release/**`
 
 Posta scorecard come PR comment con idempotency marker `<!-- release-risk:<diff-hash> -->`.
+
+## PR Diff Resolution
+
+| Env var | Default | Description |
+|---|---|---|
+| `DEVFORGE_MAX_DIFF_LINES` | `2000` | Soglia righe oltre la quale `lib/diff-truncate.sh` (`devforge_diff_or_summary`) smette di emettere il diff completo e passa a `--stat` + `--name-only` + nota di troncamento esplicita. Evita hang/loop su diff enormi nei gate PR (REQ-DF-03). Consumata da `lib/pr-base-resolver.sh` + i siti che oggi calcolano `git diff origin/main...HEAD` inline. |
