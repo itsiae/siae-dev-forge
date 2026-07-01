@@ -97,12 +97,10 @@ maven build -> unit test -> Qodana -> docker build -> helm package -> deploy
 
 ### Ambienti OpenShift
 
-| Ambiente | Namespace pattern | Note |
-|----------|-------------------|------|
-| sviluppo | `<app>-dev` | Deploy automatico su push in `develop` |
-| collaudo | `<app>-coll` | Deploy su tag `v*.*.*-rc.*` |
-| certificazione | `<app>-cert` | Deploy su tag `v*.*.*-cert.*` |
-| produzione | `<app>-prod` | Deploy su tag `v*.*.*` con approvazione |
+> **Fonte canonica:** l'ordine ambienti (`sviluppo`→`collaudo`→`certificazione`→`produzione`)
+> e il meccanismo di deploy via git tag sono in
+> `skills/using-devforge/reference/siae-environments.md`. Il namespace pattern (`<app>-dev`,
+> `<app>-coll`, `<app>-cert`, `<app>-prod`) resta specifico di questa factory (Core Platforms/OpenShift).
 
 ---
 
@@ -177,22 +175,22 @@ gli ambienti SIAE, con Terraform e Terragrunt.
 
 ### Struttura Repository
 
+> **Nota ambienti:** questa factory (DevOps/Infra) usa il modello Cloud/AWS documentato in
+> `skills/using-devforge/reference/siae-environments.md` (valore tecnico `dev`→`qa`→`prod`).
+> Le directory sotto `infrastructure/` seguono comunque il naming GitHub Environment per storico
+> repo — verifica la fonte canonica prima di assumere quale nome si applica al contesto tecnico.
+
 ```
 infrastructure/
   _envcommon/           # Moduli Terragrunt condivisi tra ambienti
-  sviluppo/
+  <ambiente-1>/
     account.hcl
     <regione>/
       <servizio>/
         terragrunt.hcl
-  collaudo/
-    account.hcl
-    <regione>/
-      <servizio>/
-        terragrunt.hcl
-  certificazione/
+  <ambiente-2>/
     ...
-  produzione/
+  <ambiente-N>/
     ...
   terragrunt.hcl        # Root config
 ```
@@ -241,5 +239,5 @@ Tutte le factory condividono:
 1. **GitHub Actions** riutilizzabili dal repository `itsiae/siae-gh-actions` (versione `v2.x`)
 2. **Deploy tag-based**: il push di un tag semantico triggera il deploy sull'ambiente corrispondente
 3. **Qodana** come quality gate obbligatorio su ogni PR
-4. **4 ambienti**: sviluppo, collaudo, certificazione, produzione
+4. **Ambienti**: vedi fonte canonica `skills/using-devforge/reference/siae-environments.md` (l'elenco e l'ordine variano per Cloud/AWS vs SPORT/PAE/OpenShift, non c'e' un unico "4 ambienti" valido ovunque)
 5. **Branch protection** su `main`: PR obbligatoria con almeno 1 review approvata
