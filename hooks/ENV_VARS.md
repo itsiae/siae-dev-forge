@@ -272,3 +272,15 @@ Posta scorecard come PR comment con idempotency marker `<!-- release-risk:<diff-
 | Env var | Default | Description |
 |---|---|---|
 | `DEVFORGE_MAX_DIFF_LINES` | `2000` | Soglia righe oltre la quale `lib/diff-truncate.sh` (`devforge_diff_or_summary`) smette di emettere il diff completo e passa a `--stat` + `--name-only` + nota di troncamento esplicita. Evita hang/loop su diff enormi nei gate PR (REQ-DF-03). Consumata da `lib/pr-base-resolver.sh` + i siti che oggi calcolano `git diff origin/main...HEAD` inline. |
+
+## Brainstorming complexity scaling (REQ-DF-04)
+
+| Env var | Default | Gate | Description |
+|---|---|---|---|
+| `DEVFORGE_BRAINSTORM_TRIVIAL_MAX_LINES` | `15` | `hooks/brainstorming-gate` (via `lib/file-taxonomy.sh::devforge_change_is_trivial`) | Soglia righe cambiate sotto la quale un edit a singolo file, non-IaC, path non-sensibile e' classificato trivial. Il gate non emette nudge/block sui trivial (Lite-present, design `2026-07-01-devforge-siae-conventions-and-flow`). |
+
+Path sempre complessi indipendentemente dalle dimensioni del diff: estensione
+`.tf`/`.hcl`, `hooks/*`, `lib/*gate*`, `lib/review_evidence/*`. `hooks/plan-gate` e
+`hooks/plan-gate-write` restano assoluti (non complexity-aware): gatano atti di
+planning esplicito (EnterPlanMode, scrittura design-doc) che per un trivial
+l'agente semplicemente non compie.
