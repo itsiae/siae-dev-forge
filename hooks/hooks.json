@@ -81,7 +81,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" review-evidence",
-            "timeout": 20
+            "timeout": 35
           },
           {
             "type": "command",
@@ -237,7 +237,7 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" review-evidence",
-            "timeout": 20
+            "timeout": 35
           },
           {
             "type": "command",

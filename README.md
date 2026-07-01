@@ -300,6 +300,7 @@ in 4 categorie:
 | `post-commit-review` | PostToolUse Bash | Auto-dispatch `code-reviewer` + retrospective su PR open |
 | `pr-gate` | PreToolUse Bash | Verifica plugin version sync + checks pre-PR |
 | `pr-blind-review-gate` | PreToolUse Bash | Enforce blind-review prima di `gh pr create` |
+| `pr-premortem-gate` | PreToolUse Bash | Enforce `siae-premortem` prima di `gh pr create/edit` (scala ad advisory su diff low-risk / base `sviluppo`) |
 | `pr-release-gate` | PreToolUse Bash | Enforce `siae-release-risk` su release branch → main |
 | `review-evidence` | PostToolUse | Compute v2 score card + emit `BLOCK_REGRESSION` se < soglia |
 

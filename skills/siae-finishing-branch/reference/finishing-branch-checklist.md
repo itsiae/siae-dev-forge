@@ -316,6 +316,20 @@ risponde esplicitamente ("sì, procedi" / "no, annulla"). Silenzio ≠ consenso.
 
 **Dopo la conferma:**
 
+#### 5.0 Pre-check idempotenza (evita l'errore "a pull request already exists")
+
+Prima di aprire, verifica se esiste già una PR aperta per il branch corrente
+(pattern da `siae-release-pr-to-main`): se sì, restituisci l'URL e **non**
+ricrearne una nuova — evita l'errore CLI grezzo che spinge al workaround manuale.
+
+```bash
+EXISTING_PR=$(gh pr list --head "$(git branch --show-current)" --state open --json url -q '.[0].url' 2>/dev/null || true)
+if [ -n "$EXISTING_PR" ]; then
+  echo "PR gia' aperta: $EXISTING_PR — non ricreo (idempotenza)"
+  exit 0
+fi
+```
+
 **Se GH_MODE:**
 
 ```bash
