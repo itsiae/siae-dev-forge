@@ -217,6 +217,36 @@ def _is_planning_artifact(path: str) -> bool:
     return path.startswith("docs/plans/")
 
 
+def _changelog_justifies_current_version(repo_root: Path) -> bool:
+    """BUG B (hooks/review-evidence:84-87): se la CHANGELOG documenta la versione
+    corrente di plugin.json in una entry strutturata (heading markdown), il drift
+    e' giustificato — la PR dichiara esplicitamente i cambiamenti. In tal caso
+    l'hard-block su ``drift_severity=high`` va declassato ad advisory.
+
+    Neutralizza il false-positive tipico in cui spec_drift seleziona per mtime un
+    design doc non correlato (iCloud rimaterializza mtime), marcando tutti i file
+    come "unplanned" e bloccando una PR legittima e documentata.
+    Fail-safe: qualsiasi assenza/errore -> False (enforcement invariato).
+    """
+    import json
+
+    plugin = repo_root / ".claude-plugin" / "plugin.json"
+    changelog = repo_root / "CHANGELOG.md"
+    if not plugin.is_file() or not changelog.is_file():
+        return False
+    try:
+        version = json.loads(plugin.read_text(encoding="utf-8")).get("version", "")
+        if not version:
+            return False
+        for line in changelog.read_text(encoding="utf-8").splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("#") and version in stripped:
+                return True
+    except (OSError, ValueError):
+        return False
+    return False
+
+
 def detect_drift(repo_root: Path, base: str, head: str) -> Optional[dict[str, Any]]:
     design = _find_design_doc(repo_root)
     if design is None:
@@ -248,10 +278,18 @@ def detect_drift(repo_root: Path, base: str, head: str) -> Optional[dict[str, An
     # outside docs/plans/ still count toward drift.
     impl_changed = [f for f in changed if not _is_planning_artifact(f)]
     unplanned = sorted(set(impl_changed) - set(files_in_plan))
-    return {
+    sev = severity(unplanned, in_plan=files_in_plan)
+    # BUG B: high drift giustificato dalla CHANGELOG (versione corrente documentata)
+    # -> advisory. Declassa a "medium" (non-blocking in thresholds) invece di
+    # hard-bloccare una PR legittima e versionata (false-positive over-block).
+    justified = sev == "high" and _changelog_justifies_current_version(repo_root)
+    result: dict[str, Any] = {
         "design_doc_path": str(design),
         "files_in_plan": files_in_plan,
         "files_changed": changed,
         "unplanned_files": unplanned,
-        "drift_severity": severity(unplanned, in_plan=files_in_plan),
+        "drift_severity": "medium" if justified else sev,
     }
+    if justified:
+        result["drift_justified_by_changelog"] = True
+    return result

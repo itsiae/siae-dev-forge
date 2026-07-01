@@ -21,7 +21,10 @@ Implementazione di `requirements-devforge.md` (Core Platforms, 2026-07-01). Desi
 - **REQ-04 (P2)** brainstorming proporzionato: `devforge_change_is_trivial` (size+IaC+path-sensibile) + `brainstorming-gate` silente sui trivial; flag `DEVFORGE_BRAINSTORM_COMPLEXITY` scoped+logged (no bypass); fix reset counter task-scoped; riconciliato "zero eccezioni".
 - **REQ-05 (P1)** apertura PR: fix timeout `review-evidence` (20→35s > attesa lock 30s) che causava fail-closed spuri; `pr-gate` linguaggio advisory onesto; idempotenza in `siae-finishing-branch`; programmatic-first (manuale = ultimo ricorso); no-review advisory su base `sviluppo`.
 
-18 test nuovi/estesi, zero regressioni sui file toccati.
+**Fix bonus — spec_drift false-positive hard-floor (over-block):**
+- `lib/review_evidence/spec_drift.py`: implementato BUG B (documentato in `hooks/review-evidence:84-87` ma mai implementato). Quando `spec_drift` seleziona per mtime un design doc non correlato (iCloud rimaterializza mtime) e marca tutti i file come "unplanned" → `drift_severity=high` → hard-floor non-overridable, **una PR legittima e versionata veniva bloccata**. Ora: se la CHANGELOG documenta la versione corrente di `plugin.json` in una entry strutturata, il drift è giustificato e declassato ad advisory (`medium`, non-blocking) con flag `drift_justified_by_changelog`. Fail-safe: assenza/errore → enforcement invariato. Stessa classe di over-blocking di REQ-DF-03/05.
+
+19 test nuovi/estesi (+5 spec_drift justification), zero regressioni sui file toccati.
 
 ### Added — SDLC Guardrail Hooks: famiglia di 3 hook (escalation / requisiti / sicurezza) (1.99.0)
 
