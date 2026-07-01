@@ -37,6 +37,18 @@ invoke_gate() {
     echo "$hook_input" | bash "${PLUGIN_ROOT}/hooks/brainstorming-gate" 2>/dev/null
 }
 
+invoke_gate_edit() {
+    local file_path="$1" old_str="${2:-}" new_str="${3:-}"
+    local hook_input
+    hook_input=$(python3 -c 'import json,sys; print(json.dumps({"tool_name":"Edit","file_path":sys.argv[1],"tool_input":{"file_path":sys.argv[1],"old_string":sys.argv[2],"new_string":sys.argv[3]}}))' "$file_path" "$old_str" "$new_str")
+    echo "$hook_input" | bash "${PLUGIN_ROOT}/hooks/brainstorming-gate" 2>/dev/null
+}
+
+reset_task_scope_state() {
+    rm -f "${HOME}/.claude/.devforge-brainstorm-counter" "${HOME}/.claude/.devforge-session-skills"
+    rm -rf "${HOME}/.claude/.devforge-task-skills"
+}
+
 set_sid() {
     echo "$1" > "${HOME}/.claude/.devforge-session-id"
 }
@@ -227,8 +239,107 @@ if [ "$BEFORE_13" = "$AFTER_13" ]; then
 fi
 echo "PASS scenario 13: gate always-on without STRICT/W2_DEFAULT (ADR-006)"
 
+# ─── Scenario 14: trivial single-file edit → no nudge, no counter increment ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    BEFORE_14=$(count_events brainstorming_nudge_soft)
+    OUT=$(invoke_gate_edit "${TEST_REPO}/hello.ts" "a" "ab")
+    AFTER_14=$(count_events brainstorming_nudge_soft)
+    if [ "$BEFORE_14" != "$AFTER_14" ]; then
+        echo "FAIL scenario 14: trivial edit ha emesso nudge (delta=$((AFTER_14 - BEFORE_14)))"; exit 1
+    fi
+    if [ "$OUT" != "{}" ]; then
+        echo "FAIL scenario 14: trivial edit output='$OUT', expected '{}'"; exit 1
+    fi
+    echo "PASS scenario 14: trivial single-file edit → short-circuit {} senza nudge"
+) || exit 1
+
+# ─── Scenario 15: multi-file nel task → NON trivial anche con poche righe ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    invoke_gate_edit "${TEST_REPO}/hello.ts" "a" "ab" >/dev/null
+    BEFORE_15=$(count_events brainstorming_nudge_soft)
+    OUT=$(invoke_gate_edit "${TEST_REPO}/other.ts" "x" "xy")
+    AFTER_15=$(count_events brainstorming_nudge_soft)
+    if [ "$BEFORE_15" = "$AFTER_15" ]; then
+        echo "FAIL scenario 15: secondo file nel task NON ha fatto nudge (expected multi-file → non trivial)"; exit 1
+    fi
+    echo "PASS scenario 15: secondo file toccato nel task → nudge (multi-file non trivial)"
+) || exit 1
+
+# ─── Scenario 16: file IaC (.tf) → nudge anche con edit minuscolo ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    BEFORE_16=$(count_events brainstorming_nudge_soft)
+    OUT=$(invoke_gate_edit "${TEST_REPO}/scenario16.tf" "a" "ab")
+    AFTER_16=$(count_events brainstorming_nudge_soft)
+    if [ "$BEFORE_16" = "$AFTER_16" ]; then
+        echo "FAIL scenario 16: edit .tf minuscolo NON ha fatto nudge (expected sempre non-trivial)"; exit 1
+    fi
+    echo "PASS scenario 16: edit .tf minuscolo → nudge (IaC sempre non-trivial)"
+) || exit 1
+
+# ─── Scenario 17: force-complex forza nudge su edit trivial ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    BEFORE_17=$(count_events brainstorming_nudge_soft)
+    OUT=$(DEVFORGE_BRAINSTORM_COMPLEXITY=force-complex invoke_gate_edit "${TEST_REPO}/hello.ts" "a" "ab")
+    AFTER_17=$(count_events brainstorming_nudge_soft)
+    if [ "$BEFORE_17" = "$AFTER_17" ]; then
+        echo "FAIL scenario 17: force-complex NON ha forzato il nudge su edit trivial"; exit 1
+    fi
+    if [ "$(count_events brainstorm_complexity_override)" = "0" ]; then
+        echo "FAIL scenario 17: override force-complex non loggato"; exit 1
+    fi
+    echo "PASS scenario 17: force-complex forza nudge + log override"
+) || exit 1
+
+# ─── Scenario 18: force-trivial NON bypassa IaC ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    BEFORE_18=$(count_events brainstorming_nudge_soft)
+    OUT=$(DEVFORGE_BRAINSTORM_COMPLEXITY=force-trivial invoke_gate_edit "${TEST_REPO}/scenario18.tf" "a" "ab")
+    AFTER_18=$(count_events brainstorming_nudge_soft)
+    if [ "$BEFORE_18" = "$AFTER_18" ]; then
+        echo "FAIL scenario 18: force-trivial ha bypassato l'enforcement su file IaC (violazione AC4)"; exit 1
+    fi
+    if [ "$(count_events brainstorm_complexity_override)" = "0" ]; then
+        echo "FAIL scenario 18: override force-trivial non loggato"; exit 1
+    fi
+    echo "PASS scenario 18: force-trivial NON bypassa IaC (resta non-trivial)"
+) || exit 1
+
+# ─── Scenario 19: post-skill resetta anche il counter task-scoped ───
+(
+    unset DEVFORGE_USE_SESSION_SCOPE
+    reset_task_scope_state
+    invoke_gate_edit "${TEST_REPO}/hello.ts" "a" "ab" >/dev/null
+    invoke_gate_edit "${TEST_REPO}/other.ts" "x" "xy" >/dev/null
+    TASK_ID_DIR=$(find "${HOME}/.claude/.devforge-task-skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
+    if [ -z "$TASK_ID_DIR" ]; then
+        echo "FAIL scenario 19: nessuna directory task-scoped creata"; exit 1
+    fi
+    TASK_COUNTER_FILE="${TASK_ID_DIR}/brainstorm-counter"
+    PRE_RESET=$(cat "$TASK_COUNTER_FILE" 2>/dev/null || echo "")
+    if ! echo "$PRE_RESET" | grep -qE '\|[1-9]'; then
+        echo "FAIL scenario 19: counter task-scoped non incrementato prima del reset ('$PRE_RESET')"; exit 1
+    fi
+    SKILL_INPUT='{"tool_name":"Skill","skill":"siae-devforge:siae-brainstorming","name":"siae-devforge:siae-brainstorming"}'
+    ( cd "$TEST_REPO" && echo "$SKILL_INPUT" | bash "${PLUGIN_ROOT}/hooks/post-skill" >/dev/null 2>&1 ) || true
+    POST_RESET=$(cat "$TASK_COUNTER_FILE" 2>/dev/null || echo "")
+    if echo "$POST_RESET" | grep -qE '\|[1-9]'; then
+        echo "FAIL scenario 19: counter task-scoped NON resettato da post-skill ('$POST_RESET')"; exit 1
+    fi
+    echo "PASS scenario 19: post-skill resetta anche il counter task-scoped"
+) || exit 1
+
 # Summary (aggregator-compatible)
-PASS_COUNT=13
+PASS_COUNT=19
 FAIL_COUNT=0
 echo "Total: $PASS_COUNT — PASS: $PASS_COUNT — FAIL: $FAIL_COUNT"
 echo "ALL SCENARIOS OK"

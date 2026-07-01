@@ -111,13 +111,15 @@ fi
 USE_SESSION_SCOPE="${DEVFORGE_USE_SESSION_SCOPE:-0}"
 COUNTER_KEY=""
 COUNTER_FILE=""
+TASK_DIR=""
 
 if [ "$USE_SESSION_SCOPE" != "1" ] && command -v devforge_compute_task_id >/dev/null 2>&1; then
     TASK_ID=$(cd "$FILE_GIT_ROOT" && devforge_compute_task_id 2>/dev/null || echo "")
     if [ -n "$TASK_ID" ]; then
         COUNTER_KEY="task:${TASK_ID}"
-        COUNTER_FILE="${HOME}/.claude/.devforge-task-skills/${TASK_ID}/brainstorm-counter"
-        mkdir -p "$(dirname "$COUNTER_FILE")"
+        TASK_DIR="${HOME}/.claude/.devforge-task-skills/${TASK_ID}"
+        COUNTER_FILE="${TASK_DIR}/brainstorm-counter"
+        mkdir -p "$TASK_DIR"
     fi
 fi
 
@@ -133,6 +135,52 @@ STORED_KEY="${CURRENT_DATA%%|*}"
 STORED_N="${CURRENT_DATA##*|}"
 if [ "$STORED_KEY" != "$COUNTER_KEY" ] || [ -z "$STORED_N" ]; then
     STORED_N=0
+fi
+
+# ── Complexity scaling (REQ-DF-04) ─────────────────────────────────
+# Solo in task-scope (TASK_DIR set). Un vero Edit/Write ha SEMPRE
+# old_string/new_string/content: se manca (payload sintetico/degradato)
+# NON si classifica trivial → enforcement invariato (fail-closed).
+if [ -n "$TASK_DIR" ] && command -v devforge_change_is_trivial >/dev/null 2>&1; then
+    HAS_CONTENT=0
+    LINES_CHANGED=0
+    if command -v jq >/dev/null 2>&1; then
+        HAS_CONTENT=$(echo "$HOOK_INPUT" | jq -r 'if (.tool_input.old_string // "")!="" or (.tool_input.new_string // "")!="" or (.tool_input.content // "")!="" then "1" else "0" end' 2>/dev/null || echo 0)
+        LINES_CHANGED=$(echo "$HOOK_INPUT" | jq -r '[((.tool_input.old_string // "")|split("\n")|length), ((.tool_input.new_string // "")|split("\n")|length), ((.tool_input.content // "")|split("\n")|length)] | max' 2>/dev/null || echo 0)
+        case "$LINES_CHANGED" in ''|*[!0-9]*) LINES_CHANGED=0 ;; esac
+    fi
+
+    if [ "$HAS_CONTENT" = "1" ]; then
+        FILES_TOUCHED_FILE="${TASK_DIR}/files_touched"
+        if ! grep -qxF "$FILE_PATH" "$FILES_TOUCHED_FILE" 2>/dev/null; then
+            printf '%s\n' "$FILE_PATH" >> "$FILES_TOUCHED_FILE"
+        fi
+        FILES_TOUCHED_COUNT=$(awk 'END{print NR}' "$FILES_TOUCHED_FILE" 2>/dev/null || echo 1)
+        case "$FILES_TOUCHED_COUNT" in ''|*[!0-9]*) FILES_TOUCHED_COUNT=1 ;; esac
+
+        COMPLEXITY_OVERRIDE="${DEVFORGE_BRAINSTORM_COMPLEXITY:-}"
+        IS_TRIVIAL=1
+        if devforge_change_is_trivial "$FILE_PATH" "$LINES_CHANGED"; then
+            IS_TRIVIAL=0
+        fi
+
+        if [ "$COMPLEXITY_OVERRIDE" = "force-complex" ]; then
+            devforge_log "brainstorm_complexity_override" "success" \
+                "{\"override\":\"force-complex\",\"file_path\":\"$(devforge_sanitize_json_str "$FILE_PATH")\"}" 2>/dev/null || true
+            IS_TRIVIAL=1
+        elif [ "$COMPLEXITY_OVERRIDE" = "force-trivial" ]; then
+            devforge_log "brainstorm_complexity_override" "success" \
+                "{\"override\":\"force-trivial\",\"file_path\":\"$(devforge_sanitize_json_str "$FILE_PATH")\"}" 2>/dev/null || true
+            # force-trivial NON flippa un cambiamento gia' non-trivial
+            # (IaC/path-sensibile/oversize): IS_TRIVIAL resta invariato.
+            :
+        fi
+
+        if [ "$IS_TRIVIAL" -eq 0 ] && [ "$FILES_TOUCHED_COUNT" -le 1 ]; then
+            echo '{}'
+            exit 0
+        fi
+    fi
 fi
 
 NEW_N=$((STORED_N + 1))

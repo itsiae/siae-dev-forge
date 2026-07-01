@@ -200,6 +200,18 @@ if [ -n "$SKILL_NAME" ]; then
         esac
         echo "${CURRENT_SID_RESET}|0" > "${BRAINSTORM_COUNTER_FILE}.tmp" && \
             mv "${BRAINSTORM_COUNTER_FILE}.tmp" "$BRAINSTORM_COUNTER_FILE"
+        # REQ-DF-04 (design gotcha #2): resetta ANCHE il counter task-scoped,
+        # non solo quello legacy SID-anchored — altrimenti un edit "trivial"
+        # dopo un vero brainstorming continua a incrementare un counter stantio.
+        if [ -n "${_POST_TASK_ID:-}" ] && [ -n "${_POST_TASK_DIR:-}" ]; then
+            TASK_BRAINSTORM_COUNTER="${_POST_TASK_DIR}/brainstorm-counter"
+            if [ -f "$TASK_BRAINSTORM_COUNTER" ]; then
+                TASK_PRE_RESET_DATA=$(cat "$TASK_BRAINSTORM_COUNTER" 2>/dev/null || echo "")
+                TASK_PRE_RESET_KEY="${TASK_PRE_RESET_DATA%%|*}"
+                echo "${TASK_PRE_RESET_KEY}|0" > "${TASK_BRAINSTORM_COUNTER}.tmp" && \
+                    mv "${TASK_BRAINSTORM_COUNTER}.tmp" "$TASK_BRAINSTORM_COUNTER"
+            fi
+        fi
         if [ "$TRIGGER" != "none" ]; then
             devforge_log "brainstorming_invoked_post_gate" "success" "{\"trigger\":\"${TRIGGER}\",\"counter_before_reset\":${PRE_RESET_N:-0}}" || true
         fi
