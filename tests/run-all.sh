@@ -1258,6 +1258,14 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/hooks/pr-base-wiring.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/pr-base-wiring.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/pr-base-wiring.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
 if bash "${PLUGIN_ROOT}/tests/hooks/test_post_commit_no_verify.sh" >/dev/null 2>&1; then
   echo "  PASS  tests/hooks/test_post_commit_no_verify.sh"
   TOTAL_PASS=$((TOTAL_PASS + 1))

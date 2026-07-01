@@ -56,7 +56,12 @@ escape_for_json() { devforge_sanitize_json_str "$1"; }
 # SECURITY SCAN — automated, blocking
 # ─────────────────────────────────────────────────────────────────
 
-MERGE_BASE=$(git merge-base HEAD origin/sviluppo 2>/dev/null \
+source "${PLUGIN_ROOT}/lib/pr-base-resolver.sh" 2>/dev/null || true
+PR_BASE="main"
+if command -v devforge_resolve_pr_base >/dev/null 2>&1; then
+    PR_BASE=$(devforge_resolve_pr_base 2>/dev/null || echo main)
+fi
+MERGE_BASE=$(git merge-base HEAD "origin/${PR_BASE}" 2>/dev/null \
           || git merge-base HEAD origin/main 2>/dev/null \
           || echo "HEAD~1")
 

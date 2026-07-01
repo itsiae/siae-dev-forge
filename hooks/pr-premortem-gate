@@ -108,9 +108,14 @@ fi
 # Proportional scaling: su diff risk=low (doc/manifest) il gate è advisory, non block.
 # Floor security/secret invariato (pre-commit non toccato). Design ADR-3.
 RISK=code
+PR_BASE=""
+if source "${PLUGIN_ROOT}/lib/pr-base-resolver.sh" 2>/dev/null \
+   && command -v devforge_resolve_pr_base >/dev/null 2>&1; then
+    PR_BASE=$(devforge_resolve_pr_base 2>/dev/null || echo main)
+fi
 if source "${PLUGIN_ROOT}/lib/diff-risk-classifier.sh" 2>/dev/null \
    && command -v devforge_classify_diff_risk >/dev/null 2>&1; then
-    RISK=$(devforge_classify_diff_risk "origin/main" 2>/dev/null || echo code)
+    RISK=$(devforge_classify_diff_risk "origin/${PR_BASE:-main}" 2>/dev/null || echo code)
 fi
 if [ "$RISK" = "low" ]; then
     devforge_log "pr_gate_scaled" "info" "{\"gate\":\"pr-premortem-gate\",\"risk\":\"low\"}" 2>/dev/null || true
