@@ -215,10 +215,13 @@ read -r -d '' PR_GATE_INSTRUCTIONS_TEMPLATE << 'INSTRUCTIONS_EOF' || true
 
 Il security scan automatico e' passato (nessun secret nel diff).
 
-## AZIONE OBBLIGATORIA — Dispatch Agent Review
+## Review Agent — Raccomandata (advisory)
 
-DEVI dispatchare ENTRAMBI gli agent ADESSO, PRIMA di eseguire gh pr create.
-Questo NON e' opzionale. NON e' un suggerimento. E' un gate bloccante.
+RACCOMANDATO: dispatcha ENTRAMBI gli agent di review PRIMA di aprire la PR.
+Questo passo e' ADVISORY (non blocca programmaticamente la creazione): se il diff
+e' a basso rischio o la base e' `sviluppo` (review facoltativa, direttiva DevOps
+SIAE) puoi procedere direttamente; altrimenti completa la review e poi procedi.
+Apri la PR programmaticamente — NON chiedere all'utente di aprirla manualmente.
 
 ### Step 0: Ottieni il diff (OBBLIGATORIO)
 

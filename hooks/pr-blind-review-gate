@@ -119,11 +119,16 @@ if source "${PLUGIN_ROOT}/lib/diff-risk-classifier.sh" 2>/dev/null \
    && command -v devforge_classify_diff_risk >/dev/null 2>&1; then
     RISK=$(devforge_classify_diff_risk "origin/${PR_BASE:-main}" 2>/dev/null || echo code)
 fi
-if [ "$RISK" = "low" ]; then
-    devforge_log "pr_gate_scaled" "info" "{\"gate\":\"pr-blind-review-gate\",\"risk\":\"low\"}" 2>/dev/null || true
+# REQ-DF-05: base PR = sviluppo → review facoltativa (direttiva DevOps SIAE) → advisory.
+# Base esplicita dal comando (--base/-B); se omessa (--fill) resta strict (default main).
+CMD_BASE=$(printf '%s' "$TOOL_COMMAND" | grep -oE -- '(--base|-B)[ =]+[^ ]+' | grep -oE '[^ =]+$' | head -1 || true)
+if [ "$RISK" = "low" ] || [ "$CMD_BASE" = "sviluppo" ]; then
+    _SCALE_REASON="diff a basso rischio (doc-only/manifest plugin)"
+    [ "$CMD_BASE" = "sviluppo" ] && _SCALE_REASON="base PR = sviluppo (review facoltativa, direttiva DevOps SIAE)"
+    devforge_log "pr_gate_scaled" "info" "{\"gate\":\"pr-blind-review-gate\",\"risk\":\"${RISK}\",\"base\":\"${CMD_BASE:-}\"}" 2>/dev/null || true
     cat <<EOF
 {
-  "additional_context": "<IMPORTANT>\\nDevForge Blind Review Gate scalato ad ADVISORY: diff a basso rischio (doc-only/manifest plugin). siae-blind-review consigliato ma NON obbligatorio per questo diff. Floor security invariato.\\n</IMPORTANT>"
+  "additional_context": "<IMPORTANT>\\nDevForge Blind Review Gate scalato ad ADVISORY: ${_SCALE_REASON}. siae-blind-review consigliato ma NON obbligatorio per questo diff. Floor security invariato.\\n</IMPORTANT>"
 }
 EOF
     exit 0
