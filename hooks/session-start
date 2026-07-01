@@ -342,7 +342,56 @@ if [ -n "$global_rules_content" ]; then
 fi
 # --- End SIAE Global Rules ---
 
-session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${python3_banner_section}${version_status_escaped}${branching_section}${global_rules_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
+# --- SIAE Canonical Conventions (environments/plan-deploy/multirepo) ---
+# 3 file canonici versionati (REQ-01/02/06). Ogni file è cappato a
+# SIAE_CONVENTIONS_MAX_BYTES byte (allineato a GLOBAL_MEMORY_MAX_BYTES riga 296)
+# per contenere il bloat (ADR-1). A differenza di siae-global-rules.md sopra,
+# qui il fallback NON è silenzioso: un file mancante inietta un marker esplicito
+# così l'agente dichiara l'assenza invece di ipotizzare i valori (REQ-01 AC4).
+SIAE_CONVENTIONS_MAX_BYTES=1800
+
+devforge_load_siae_convention() {
+    # $1 = path assoluto file, $2 = etichetta topic per il marker di fallback
+    local file_path="$1"
+    local topic_label="$2"
+    local raw_content
+    local full_size
+
+    if [ ! -f "$file_path" ]; then
+        echo "[FONTE NON DISPONIBILE: ${topic_label} SIAE — NON ipotizzare, dichiara l'assenza]"
+        return
+    fi
+
+    raw_content=$(cat "$file_path" 2>/dev/null || echo "")
+    if [ -z "$raw_content" ]; then
+        echo "[FONTE NON DISPONIBILE: ${topic_label} SIAE — NON ipotizzare, dichiara l'assenza]"
+        return
+    fi
+
+    full_size=$(wc -c < "$file_path" 2>/dev/null | tr -d '[:space:]')
+    local capped_content
+    capped_content=$(head -c "$SIAE_CONVENTIONS_MAX_BYTES" "$file_path" 2>/dev/null || echo "")
+    if [ -n "$full_size" ] && [ "$full_size" -gt "$SIAE_CONVENTIONS_MAX_BYTES" ]; then
+        printf '%s\n[troncato]' "$capped_content"
+    else
+        printf '%s' "$capped_content"
+    fi
+}
+
+siae_environments_raw="$(devforge_load_siae_convention "${PLUGIN_ROOT}/skills/using-devforge/reference/siae-environments.md" "elenco ambienti/stage")"
+siae_environments_escaped=$(escape_for_json "$siae_environments_raw")
+siae_environments_section="\\n\\n**SIAE Ambienti/Stage (fonte canonica):**\\n\\n${siae_environments_escaped}"
+
+siae_plan_deploy_raw="$(devforge_load_siae_convention "${PLUGIN_ROOT}/skills/using-devforge/reference/siae-plan-deploy.md" "best practice PLAN/PLAN+DEPLOY")"
+siae_plan_deploy_escaped=$(escape_for_json "$siae_plan_deploy_raw")
+siae_plan_deploy_section="\\n\\n**SIAE PLAN / PLAN+DEPLOY (fonte canonica):**\\n\\n${siae_plan_deploy_escaped}"
+
+siae_multirepo_raw="$(devforge_load_siae_convention "${PLUGIN_ROOT}/skills/using-devforge/reference/siae-multirepo.md" "convenzione multi-repo iac/bff/spa")"
+siae_multirepo_escaped=$(escape_for_json "$siae_multirepo_raw")
+siae_multirepo_section="\\n\\n**SIAE Multi-repo iac/bff/spa (fonte canonica):**\\n\\n${siae_multirepo_escaped}"
+# --- End SIAE Canonical Conventions ---
+
+session_context="<EXTREMELY_IMPORTANT>\nHai siae-devforge.\n\n${python3_banner_section}${version_status_escaped}${branching_section}${global_rules_section}${siae_environments_section}${siae_plan_deploy_section}${siae_multirepo_section}\n\n**Below is the content of your 'siae-devforge:using-devforge' meta-skill - the DevForge backbone for skill activation. For all other skills, use the 'Skill' tool:**\n\n${using_devforge_escaped}${catalog_section}${global_memory_section}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # additional_context is the canonical field for Claude Code hooks.
