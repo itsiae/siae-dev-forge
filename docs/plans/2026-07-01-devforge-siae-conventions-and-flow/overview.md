@@ -15,19 +15,19 @@
 
 | # | Task | File | Cluster | Stato |
 |---|------|------|---------|-------|
-| 1 | File canonici (environments/plan-deploy/multirepo) + guard test | `task-01-canonical-reference-files.md` | A contesto | [PENDING] |
-| 2 | Injection session-start (fallback esplicito + byte-budget) | `task-02-session-start-injection.md` | A contesto | [PENDING] |
-| 3 | Repoint onboarding + factory-configs alla fonte canonica | `task-03-repoint-onboarding.md` | A contesto | [PENDING] |
-| 4 | `lib/pr-base-resolver.sh` + unit test | `task-04-pr-base-resolver.md` | B diff | [PENDING] |
-| 5 | `lib/diff-truncate.sh` + `DEVFORGE_MAX_DIFF_LINES` + unit test | `task-05-diff-truncate.md` | B diff | [PENDING] |
-| 6 | Wire resolver nei siti bash (no heredoc) + regression non-main | `task-06-wire-resolver-bash.md` | B diff | [PENDING] |
-| 7 | Riscrivi heredoc iniettati agli agent (base dinamica + truncation) | `task-07-rewrite-agent-heredocs.md` | B diff | [PENDING] |
-| 8 | `devforge_change_is_trivial()` in file-taxonomy + unit test | `task-08-file-taxonomy-trivial.md` | C brainstorm | [PENDING] |
-| 9 | brainstorming-gate short-circuit trivial + flag + reset counter | `task-09-brainstorming-gate-complexity.md` | C brainstorm | [PENDING] |
-| 10 | Riconcilia "zero eccezioni" (skill/catalog/cases/ENV_VARS/memory) | `task-10-reconcile-zero-eccezioni.md` | C brainstorm | [PENDING] |
-| 11 | Fix timeout review-evidence + idempotenza PR + README gate | `task-11-pr-make-possible.md` | D PR | [PENDING] |
-| 12 | Programmatic-first + linguaggio onesto + no-review advisory | `task-12-pr-programmatic-first.md` | D PR | [PENDING] |
-| 13 | Hook convention-injector (moment-injection ibrida) | `task-13-convention-injector.md` | A contesto | [PENDING] |
+| 1 | File canonici (environments/plan-deploy/multirepo) + guard test | `task-01-canonical-reference-files.md` | A contesto | [DONE] |
+| 2 | Injection session-start (fallback esplicito + byte-budget) | `task-02-session-start-injection.md` | A contesto | [DONE] |
+| 3 | Repoint onboarding + factory-configs alla fonte canonica | `task-03-repoint-onboarding.md` | A contesto | [DONE] |
+| 4 | `lib/pr-base-resolver.sh` + unit test | `task-04-pr-base-resolver.md` | B diff | [DONE] |
+| 5 | `lib/diff-truncate.sh` + `DEVFORGE_MAX_DIFF_LINES` + unit test | `task-05-diff-truncate.md` | B diff | [DONE] |
+| 6 | Wire resolver nei siti bash (no heredoc) + regression non-main | `task-06-wire-resolver-bash.md` | B diff | [DONE] |
+| 7 | Riscrivi heredoc iniettati agli agent (base dinamica + truncation) | `task-07-rewrite-agent-heredocs.md` | B diff | [DONE] |
+| 8 | `devforge_change_is_trivial()` in file-taxonomy + unit test | `task-08-file-taxonomy-trivial.md` | C brainstorm | [DONE] |
+| 9 | brainstorming-gate short-circuit trivial + flag + reset counter | `task-09-brainstorming-gate-complexity.md` | C brainstorm | [DONE] |
+| 10 | Riconcilia "zero eccezioni" (skill/catalog/cases/ENV_VARS/memory) | `task-10-reconcile-zero-eccezioni.md` | C brainstorm | [DONE] |
+| 11 | Fix timeout review-evidence + idempotenza PR + README gate | `task-11-pr-make-possible.md` | D PR | [DONE] |
+| 12 | Programmatic-first + linguaggio onesto + no-review advisory | `task-12-pr-programmatic-first.md` | D PR | [DONE] |
+| 13 | Hook convention-injector (moment-injection ibrida) | `task-13-convention-injector.md` | A contesto | [DONE] |
 
 ## Dipendenze
 

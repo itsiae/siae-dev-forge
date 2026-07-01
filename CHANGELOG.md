@@ -6,6 +6,23 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+### Added / Fixed — Convenzioni SIAE come contesto versionato + fix di flusso (REQ-DF-01..06) (1.100.0)
+
+Implementazione di `requirements-devforge.md` (Core Platforms, 2026-07-01). Design + piano 13-task in `docs/plans/2026-07-01-devforge-siae-conventions-and-flow/`.
+
+**Contesto versionato (REQ-DF-01/02/06):**
+- Nuovi file canonici `skills/using-devforge/reference/siae-{environments,plan-deploy,multirepo}.md` (ambienti/stage per contesto Cloud vs SPORT/PAE; PLAN/PLAN+DEPLOY con disambiguazione dal PLAN interno DevForge; convenzione iac/bff/spa verificata sull'org itsiae).
+- `hooks/session-start` inietta i 3 file con **fallback esplicito** `[FONTE NON DISPONIBILE]` (REQ-01 AC4) e byte-budget (`head -c 1800`).
+- Nuovo `hooks/convention-injector`: re-iniezione **ai momenti clou** (deploy/PR · edit IaC/multi-repo · promozione ambiente) della sola sezione pertinente, diff-deduped.
+- `siae-onboarding`/`factory-configs` ripuntati alla fonte canonica (rimossi tag pattern non verificati).
+
+**Fix di flusso (REQ-DF-03/04/05):**
+- **REQ-03 (P1)** diff PR sul branch corretto: `lib/pr-base-resolver.sh` (gh pr view → merge-base voting → symbolic-ref → main) + `lib/diff-truncate.sh` (`DEVFORGE_MAX_DIFF_LINES`, no più loop/hang); wire nei gate + prompt agent, base dinamica invece di `origin/main` hardcoded (siti release→main lasciati intatti).
+- **REQ-04 (P2)** brainstorming proporzionato: `devforge_change_is_trivial` (size+IaC+path-sensibile) + `brainstorming-gate` silente sui trivial; flag `DEVFORGE_BRAINSTORM_COMPLEXITY` scoped+logged (no bypass); fix reset counter task-scoped; riconciliato "zero eccezioni".
+- **REQ-05 (P1)** apertura PR: fix timeout `review-evidence` (20→35s > attesa lock 30s) che causava fail-closed spuri; `pr-gate` linguaggio advisory onesto; idempotenza in `siae-finishing-branch`; programmatic-first (manuale = ultimo ricorso); no-review advisory su base `sviluppo`.
+
+18 test nuovi/estesi, zero regressioni sui file toccati.
+
 ### Added — SDLC Guardrail Hooks: famiglia di 3 hook (escalation / requisiti / sicurezza) (1.99.0)
 
 Tre hook "che girano sotto", fondati su gap analysis (ricerca obra/superpowers/AI-SDLC + inventario
