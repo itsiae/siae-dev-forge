@@ -6,6 +6,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOK="$(cd "$SCRIPT_DIR/../hooks" && pwd)/tdd-gate"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && git rev-parse --show-toplevel)"
 
+# Hermetic HOME: the task-aware gate (RC-B) also consults the durable per-task
+# ledger under $HOME (.devforge-task-skills/<task_id>/skills_invoked), not just
+# the session-skills file. Isolate HOME so these scenarios see no ambient
+# siae-tdd evidence from the developer's live session — skill state is
+# controlled explicitly via reset_session below. Without this, running the
+# suite from a session that already invoked siae-tdd for THIS repo's task_id
+# would legitimately satisfy the gate and mask the "skill not invoked" case.
+export HOME="$(mktemp -d)"
+mkdir -p "$HOME/.claude"
+trap 'rm -rf "$HOME"' EXIT
+
 PASS=0
 FAIL=0
 

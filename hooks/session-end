@@ -30,6 +30,11 @@ if command -v jq >/dev/null 2>&1 && [ -n "$INPUT" ]; then
     REASON=$(printf '%s' "$INPUT" | jq -r '.reason // "other"' 2>/dev/null || echo "other")
 fi
 
+TRANSCRIPT_PATH=""
+if command -v jq >/dev/null 2>&1 && [ -n "$INPUT" ]; then
+    TRANSCRIPT_PATH=$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null || echo "")
+fi
+
 SESSION_START_NS_FILE="${HOME}/.claude/.devforge-session-start-ns"
 SESSION_COMMITS_FILE="${HOME}/.claude/.devforge-session-commits"
 SESSION_SKILLS_FILE="${HOME}/.claude/.devforge-session-skills"
@@ -120,6 +125,13 @@ fi
 
 # Flush telemetry. NESSUN rm dei file di stato: il reset e' di session-start.
 devforge_upload_logs 2>/dev/null || true
+
+# Auto-retrospective DETECT (best-effort, ULTIMO, exit 0 — design 2026-06-22-auto-retrospective).
+# Bounded in scan.py (EVENT_CAP). python-less → skip silenzioso.
+if command -v python3 >/dev/null 2>&1 && [ -n "${TRANSCRIPT_PATH:-}" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+    DEVFORGE_SID=$(cat "${HOME}/.claude/.devforge-session-id" 2>/dev/null || echo "unknown")
+    python3 "${PLUGIN_ROOT}/lib/retro/scan.py" "$TRANSCRIPT_PATH" "$DEVFORGE_SID" >/dev/null 2>&1 || true
+fi
 
 echo '{}'
 exit 0

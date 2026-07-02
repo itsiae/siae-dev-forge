@@ -330,17 +330,16 @@ if [ -n "$_py3_raw" ]; then
     python3_banner_section="$(escape_for_json "$_py3_raw")\\n\\n"
 fi
 
-# --- SIAE Global Rules (fonte unica versionata, iniezione team-wide) ---
-# Mirror del read di using-devforge/SKILL.md. Fail-safe: file mancante -> sezione vuota
-# -> session_context resta JSON valido. 2>/dev/null (NON 2>&1): un errore di lettura su
-# file opzionale non deve finire iniettato nel contesto.
-global_rules_content=$(cat "${PLUGIN_ROOT}/skills/using-devforge/reference/siae-global-rules.md" 2>/dev/null || echo "")
-global_rules_section=""
-if [ -n "$global_rules_content" ]; then
-    global_rules_escaped=$(escape_for_json "$global_rules_content")
-    global_rules_section="\\n\\n**SIAE Global Rules (operational guardrails — sempre attive):**\\n\\n${global_rules_escaped}"
+# Auto-retrospective NUDGE (best-effort) — design 2026-06-22-auto-retrospective.
+# nudge.py stampa la riga (con prefisso) E imposta il sentinel come side-effect.
+retro_nudge_section=""
+if command -v python3 >/dev/null 2>&1; then
+    _retro_nudge=$(python3 "${PLUGIN_ROOT}/lib/retro/nudge.py" 2>/dev/null || true)
+    if [ -n "$_retro_nudge" ]; then
+        _retro_nudge_escaped=$(escape_for_json "$_retro_nudge")
+        retro_nudge_section="\\n\\n${_retro_nudge_escaped}"
+    fi
 fi
-# --- End SIAE Global Rules ---
 
 # --- SIAE Canonical Conventions (environments/plan-deploy/multirepo) ---
 # 3 file canonici versionati (REQ-01/02/06). Ogni file è cappato a
