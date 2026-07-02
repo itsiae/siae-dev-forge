@@ -109,7 +109,7 @@ ha un'alternativa funzionante:
 
 | Operazione | Alternativa FALLBACK |
 |---|---|
-| Apri PR | Template markdown completo in chat + URL: `https://github.com/<owner>/<repo>/compare/<branch>` |
+| Apri PR | PROVA PRIMA il path programmatico: `gh pr create`, o in subordine `gh api repos/<owner>/<repo>/pulls` (token via `gh auth token`) se il subcommand CLI è degradato. Solo come **ULTIMO RICORSO**, quando nessun path programmatico è disponibile: template markdown in chat + URL `https://github.com/<owner>/<repo>/compare/<branch>`. Non chiedere l'apertura manuale se il programmatico è possibile. |
 | Vedi PR aperte | `git log --oneline origin/sviluppo..HEAD` + URL: `https://github.com/<owner>/<repo>/pulls` |
 | Dettagli PR | URL: `https://github.com/<owner>/<repo>/pull/<numero>` |
 | Stato review | URL: `https://github.com/<owner>/<repo>/pulls?q=is:open+review-requested` |
@@ -165,8 +165,8 @@ senza ri-eseguire il check.
 3. Mostra il blocco GIT_ENV CONTEXT normalmente
 
 **Se l'utente non esegue i comandi:**
-- Assumi **FALLBACK_MODE** come default sicuro
-- Segnala: "Impossibile verificare gh CLI. Uso FALLBACK_MODE."
+- Assumi **GH_MODE** e TENTA il path programmatico (`gh pr create`): su macchine SIAE `gh` è tipicamente già autenticato (vedi `siae-global-rules`). Degrada al template manuale (ULTIMO RICORSO) solo se il tentativo programmatico fallisce davvero — non defaultare al manuale per prudenza.
+- Segnala: "gh CLI non verificato: tento il path programmatico, fallback manuale solo su errore reale."
 
 **Fasi completabili senza permessi:** Determinazione GH_MODE (da output utente), propagazione sessione
 **Fasi che richiedono permessi:** Step 1-2 (Bash per `gh --version` e `gh auth status`)

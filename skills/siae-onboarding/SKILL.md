@@ -49,7 +49,7 @@ Se presente nella root del progetto, leggi il file e usa i valori dichiarati:
 {
   "factory": "digital | core-platforms | data-platform | devops-infra",
   "stack": ["java", "ts-frontend", "ts-backend", "python", "iac"],
-  "environments": ["sviluppo", "collaudo", "certificazione", "produzione"],
+  "environments": ["<vedi skills/using-devforge/reference/siae-environments.md>"],
   "cicd": { "actionsRepo": "itsiae/siae-gh-actions", "actionsVersion": "v2.x" }
 }
 ```
@@ -165,12 +165,11 @@ Dettagli completi delle configurazioni factory in `reference/factory-configs.md`
 
 ### 3.2 Ambienti
 
-| Ambiente | Scopo | Tag pattern |
-|----------|-------|-------------|
-| **sviluppo** | Sviluppo e test interni | `v*.*.*-dev.*` |
-| **collaudo** | Test di integrazione | `v*.*.*-rc.*` |
-| **certificazione** | UAT e validazione | `v*.*.*-cert.*` |
-| **produzione** | Ambiente live | `v*.*.*` |
+> **Fonte canonica:** l'elenco ordinato di ambienti/stage e le regole di deploy
+> (Cloud/AWS: `dev`→`qa`→`prod`; SPORT/PAE/OpenShift: `sviluppo`→`collaudo`→`certificazione`→`produzione`
+> via git tag) sono in `skills/using-devforge/reference/siae-environments.md`, iniettato a
+> session-start. Consultala prima di assumere nomi o pattern di tag: non sono documentati
+> qui per evitare drift tra due copie della stessa informazione.
 
 ### 3.3 Static Analysis
 

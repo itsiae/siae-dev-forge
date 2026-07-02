@@ -300,7 +300,7 @@ Dopo che tutti i task sono [DONE], lancia un subagent fresh-eyes-reviewer
 con il prompt definito in [fresh-eyes-reviewer-prompt.md](fresh-eyes-reviewer-prompt.md).
 
 **Il subagent fresh-eyes-reviewer:**
-1. Usa `git diff $(git merge-base HEAD origin/main)..HEAD` per TUTTI i cambiamenti
+1. Risolve la base con `devforge_resolve_pr_base()` (`lib/pr-base-resolver.sh` — non assume `origin/main`: usa la PR aperta se esiste, altrimenti merge-base contro il default branch reale) e usa `git diff $PARENT_BRANCH...HEAD` per TUTTI i cambiamenti. Se il diff e' grande, prima `git diff --stat $PARENT_BRANCH...HEAD`, poi i file uno a uno on-demand.
 2. Si concentra SOLO su problemi cross-task (6 categorie)
 3. NON ri-revisa problemi per-task (gia' approvati da spec + quality reviewer)
 4. Produce report con issue count + ready to merge assessment

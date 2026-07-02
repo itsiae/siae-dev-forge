@@ -31,10 +31,16 @@ NESSUNA IMPLEMENTAZIONE SENZA DESIGN APPROVATO DALL'UTENTE
 
 <EXTREMELY-IMPORTANT>
 NON invocare skill di implementazione, scrivere codice, o creare scaffold FINCHE'
-non hai presentato il design e l'utente lo ha approvato. Questo si applica a OGNI
-progetto, indipendentemente dalla semplicita' percepita.
+non hai presentato il design e l'utente lo ha approvato. Per i task complessi
+questo vincolo e' assoluto, indipendentemente dalla semplicita' percepita.
 
-Stai per scrivere codice, creare file, o invocare siae-tdd/siae-code-standards?
+Per i cambiamenti trivial (1 file, poche righe, path non-sensibile, non-IaC — vedi
+tabella Scaling sotto) il gate hook `brainstorming-gate` non forza nudge/block: la
+profondita' del design collassa a un tier "Bassa" quasi-istantaneo, MA il
+ragionamento sui 7 punti resta implicito nel flusso, non eliminato.
+
+Stai per scrivere codice, creare file, o invocare siae-tdd/siae-code-standards su
+un task complesso?
 Hai completato TUTTI e 7 i punti della checklist brainstorming?
 - NO → FERMATI. Torna al punto mancante. Nessun codice senza design approvato.
 - SI → Procedi con siae-writing-plans.
@@ -47,19 +53,30 @@ Conseguenze documentate dello skip:
 
 ---
 
-## Scaling — Adatta la Profondita', MAI il Processo
+## Scaling — La PROFONDITA' Scala Sempre, il Gate Scala sui Trivial
 
-ZERO ECCEZIONI. I 7 step si eseguono SEMPRE. La complessita' determina la PROFONDITA', non se lo step si esegue. Ogni task produce SEMPRE un piano con subtask via siae-writing-plans.
+La complessita' determina SEMPRE la PROFONDITA' del ragionamento. Per i task
+complessi il processo e' obbligatorio end-to-end (nessuna eccezione). Per i task
+**trivial** (1 file, righe cambiate sotto soglia configurabile, path non-sensibile,
+non-IaC — `DEVFORGE_BRAINSTORM_TRIVIAL_MAX_LINES`, default 15, vedi
+`hooks/ENV_VARS.md`) il tier "Bassa" e' quasi-istantaneo e `hooks/brainstorming-gate`
+non emette nudge/block: il gate non forza il processo, ma la profondita' minima
+(poche frasi di intento) resta la pratica raccomandata. Ogni task non-trivial
+produce SEMPRE un piano con subtask via siae-writing-plans.
 
-| Complessita' | Segnali | Profondita' |
-|-------------|---------|-------------|
-| **Bassa** | Config change, typo, rename, fix isolato (<3 file) | Step brevi (poche frasi). Design doc 10-15 righe. Tutti i 7 step eseguiti. |
-| **Media** | CRUD, refactoring, ottimizzazione, bug fix multi-file | Dettaglio moderato. Design doc 30-60 righe. |
-| **Alta** | Feature nuova, cross-module, integrazione, migrazione | Checklist completa con massimo dettaglio. |
-| **Anti-pattern** | "E' troppo semplice per un design" | I task semplici nascondono assunzioni non esaminate. Il design puo' essere breve, ma DEVI presentarlo e ottenere approvazione. |
+| Complessita' | Segnali | Profondita' | Gate hook |
+|-------------|---------|-------------|-----------|
+| **Trivial** | 1 file, ≤soglia righe, path non-sensibile, non-IaC | Quasi-istantanea (poche frasi di intento, no design doc formale richiesto) | Silente — nessun nudge/block |
+| **Bassa** | Config change, typo, rename, fix isolato (<3 file) | Step brevi (poche frasi). Design doc 10-15 righe. Tutti i 7 step eseguiti. | Nudge progressivo (invariato) |
+| **Media** | CRUD, refactoring, ottimizzazione, bug fix multi-file | Dettaglio moderato. Design doc 30-60 righe. | Nudge progressivo (invariato) |
+| **Alta** | Feature nuova, cross-module, integrazione, migrazione | Checklist completa con massimo dettaglio. | Enforcement pieno (invariato) |
+| **Anti-pattern** | "E' troppo semplice per un design" | Se il task NON e' trivial per la definizione sopra, il design puo' essere breve ma DEVI presentarlo e ottenere approvazione — non decidere autonomamente il bypass. | Enforcement pieno |
 
 <EXTREMELY-IMPORTANT>
-NON saltare step. NON abbreviare. NON decidere autonomamente che un task e' "troppo semplice".
+Multi-file, IaC (.tf/.hcl), path-sensibile (hooks/, lib/*gate*,
+lib/review_evidence/) o multi-repo sono SEMPRE complessi, mai trivial,
+indipendentemente dalle dimensioni del diff. NON decidere autonomamente che un
+task complesso e' "troppo semplice" per saltare il processo.
 </EXTREMELY-IMPORTANT>
 
 ---

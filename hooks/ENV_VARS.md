@@ -13,6 +13,7 @@ kill-switch globali/admin (sotto) e il breakglass tool-fail di review-evidence
 |---|---|---|---|
 | `DEVFORGE_ENFORCEMENT_OFF` | `0` | v1.45 | Disable **all** gates. Exit `{}` on every invocation. |
 | `DEVFORGE_USE_SESSION_SCOPE` | `0` | **v1.47 (PR #2)** | Rollback switch. Restores session-scoped enforcement for every task-scoped gate (tdd, brainstorming, stop, pre-commit, pr-blind-review, plan-gate-write). Set for an entire shell if task-scope enforcement misbehaves. |
+| `DEVFORGE_BRAINSTORM_COMPLEXITY` | (unset) | v1.10x (REQ-DF-04) | Override *scoped+logged* della classificazione trivial/complesso in `brainstorming-gate`. Valori: `force-complex` (forza il nudge anche su edit trivial), `force-trivial` (declassa un edit altrimenti trivial-per-dimensione). **Non** bypassa i carve-out IaC (`.tf`/`.hcl`) / path-sensibili (`hooks/`, `lib/*gate*`, `lib/review_evidence/`) / multi-file: quelli restano "complesso" indipendentemente dal flag. Ogni uso è loggato via evento `brainstorm_complexity_override`. Non è un bypass discrezionale (precedente PR #318): agisce solo sulla classificazione, non salta il gate per un cambiamento indipendentemente complesso. |
 
 ## Token Collector (v1.74+)
 
@@ -265,3 +266,21 @@ Hook `pr-release-gate` (PostToolUse Bash, 30s timeout) si attiva su:
 - branch corrente `release/**`
 
 Posta scorecard come PR comment con idempotency marker `<!-- release-risk:<diff-hash> -->`.
+
+## PR Diff Resolution
+
+| Env var | Default | Description |
+|---|---|---|
+| `DEVFORGE_MAX_DIFF_LINES` | `2000` | Soglia righe oltre la quale `lib/diff-truncate.sh` (`devforge_diff_or_summary`) smette di emettere il diff completo e passa a `--stat` + `--name-only` + nota di troncamento esplicita. Evita hang/loop su diff enormi nei gate PR (REQ-DF-03). Consumata da `lib/pr-base-resolver.sh` + i siti che oggi calcolano `git diff origin/main...HEAD` inline. |
+
+## Brainstorming complexity scaling (REQ-DF-04)
+
+| Env var | Default | Gate | Description |
+|---|---|---|---|
+| `DEVFORGE_BRAINSTORM_TRIVIAL_MAX_LINES` | `15` | `hooks/brainstorming-gate` (via `lib/file-taxonomy.sh::devforge_change_is_trivial`) | Soglia righe cambiate sotto la quale un edit a singolo file, non-IaC, path non-sensibile e' classificato trivial. Il gate non emette nudge/block sui trivial (Lite-present, design `2026-07-01-devforge-siae-conventions-and-flow`). |
+
+Path sempre complessi indipendentemente dalle dimensioni del diff: estensione
+`.tf`/`.hcl`, `hooks/*`, `lib/*gate*`, `lib/review_evidence/*`. `hooks/plan-gate` e
+`hooks/plan-gate-write` restano assoluti (non complexity-aware): gatano atti di
+planning esplicito (EnterPlanMode, scrittura design-doc) che per un trivial
+l'agente semplicemente non compie.

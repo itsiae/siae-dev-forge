@@ -6,14 +6,44 @@ Il formato e' basato su [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Added — Auto-Retrospective: cattura automatica delle lezioni (port headroom learn) (1.100.0)
+### Added / Fixed — Convenzioni SIAE come contesto versionato + fix di flusso (REQ-DF-01..06) (1.100.0)
 
-Sistema di retrospettiva automatica (port di "headroom learn", Apache-2.0 — NOTICE incluso):
-- **DETECT** (hook `session-end` → `lib/retro/scan.py`): scansiona il transcript SENZA LLM (<2s, best-effort) e salva un record pendente se trova pattern di errore/correzione.
-- **NUDGE** (hook `session-start` → `lib/retro/nudge.py`): mostra una riga di avviso se c'e' un record pendente (sentinel ≤1 per sessione).
-- **MINE/APPLY/DISMISS** (skill + comando `/forge-retrospect`): analisi LLM inline + `writer.py` marker-section idempotente su CLAUDE.md/memory.
+Implementazione di `requirements-devforge.md` (Core Platforms, 2026-07-01). Design + piano 13-task in `docs/plans/2026-07-01-devforge-siae-conventions-and-flow/`.
 
-`lib/retro/` (classifier, parser/digest, writer, scan, nudge) — tutto dependency-free e fail-safe (python-less → skip silenzioso). 36 test (unit + e2e). Nessun hook nuovo: `session-start`/`session-end` estesi additivamente. Riusa `siae-retrospective` per la fase MINE.
+**Contesto versionato (REQ-DF-01/02/06):**
+- Nuovi file canonici `skills/using-devforge/reference/siae-{environments,plan-deploy,multirepo}.md` (ambienti/stage per contesto Cloud vs SPORT/PAE; PLAN/PLAN+DEPLOY con disambiguazione dal PLAN interno DevForge; convenzione iac/bff/spa verificata sull'org itsiae).
+- `hooks/session-start` inietta i 3 file con **fallback esplicito** `[FONTE NON DISPONIBILE]` (REQ-01 AC4) e byte-budget (`head -c 1800`).
+- Nuovo `hooks/convention-injector`: re-iniezione **ai momenti clou** (deploy/PR · edit IaC/multi-repo · promozione ambiente) della sola sezione pertinente, diff-deduped.
+- `siae-onboarding`/`factory-configs` ripuntati alla fonte canonica (rimossi tag pattern non verificati).
+
+**Fix di flusso (REQ-DF-03/04/05):**
+- **REQ-03 (P1)** diff PR sul branch corretto: `lib/pr-base-resolver.sh` (gh pr view → merge-base voting → symbolic-ref → main) + `lib/diff-truncate.sh` (`DEVFORGE_MAX_DIFF_LINES`, no più loop/hang); wire nei gate + prompt agent, base dinamica invece di `origin/main` hardcoded (siti release→main lasciati intatti).
+- **REQ-04 (P2)** brainstorming proporzionato: `devforge_change_is_trivial` (size+IaC+path-sensibile) + `brainstorming-gate` silente sui trivial; flag `DEVFORGE_BRAINSTORM_COMPLEXITY` scoped+logged (no bypass); fix reset counter task-scoped; riconciliato "zero eccezioni".
+- **REQ-05 (P1)** apertura PR: fix timeout `review-evidence` (20→35s > attesa lock 30s) che causava fail-closed spuri; `pr-gate` linguaggio advisory onesto; idempotenza in `siae-finishing-branch`; programmatic-first (manuale = ultimo ricorso); no-review advisory su base `sviluppo`.
+
+**Fix bonus — spec_drift false-positive hard-floor (over-block):**
+- `lib/review_evidence/spec_drift.py`: implementato BUG B (documentato in `hooks/review-evidence:84-87` ma mai implementato). Quando `spec_drift` seleziona per mtime un design doc non correlato (iCloud rimaterializza mtime) e marca tutti i file come "unplanned" → `drift_severity=high` → hard-floor non-overridable, **una PR legittima e versionata veniva bloccata**. Ora: se la CHANGELOG documenta la versione corrente di `plugin.json` in una entry strutturata, il drift è giustificato e declassato ad advisory (`medium`, non-blocking) con flag `drift_justified_by_changelog`. Fail-safe: assenza/errore → enforcement invariato. Stessa classe di over-blocking di REQ-DF-03/05.
+
+19 test nuovi/estesi (+5 spec_drift justification), zero regressioni sui file toccati.
+
+### Added — SDLC Guardrail Hooks: famiglia di 3 hook (escalation / requisiti / sicurezza) (1.99.0)
+
+Tre hook "che girano sotto", fondati su gap analysis (ricerca obra/superpowers/AI-SDLC + inventario
+interno per evitare duplicazioni):
+- `uncertainty-escalation` (Stop, prima di stop-gate): se l'ultimo messaggio assistant contiene >=2
+  segnali FORTI di incertezza (non so / TBD / non ho abbastanza informazioni / unclear...) e NON
+  contiene una domanda (`?`), blocca e forza una domanda diretta all'utente. Escalation PROATTIVA
+  su umano quando incerti / mancano dati (gap prima senza copertura). Riusa l'estrazione
+  LAST_ASSISTANT_MSG di stop-gate.
+- `scope-reduction-guard` (PreToolUse:Write su docs/plans piani): confronta i requisiti del design
+  doc col piano esecutivo; warn >30% / block >60% requisiti non tracciati (anti scope-reduction
+  silente). No div/0 su 0 requisiti.
+- `security-write-trigger` (PreToolUse:Edit+Write su file auth/credential/.env/token): advisory
+  non-bloccante che invita a invocare siae-security prima della modifica (sicurezza proattiva).
+
+Tutti bash deterministici e fail-safe (mai bloccano per errore tecnico, exit 0). La categoria
+"test" NON ha hook nuovi: gia coperta da `tdd-gate` (YAGNI, confermato in spec-review). Allinea
+`marketplace.json` (1.96.0->1.99.0) e il count `hooks-json-var-expansion` (29->33). Test: 21/21 PASS.
 
 ### Fixed — Coverage gate: falso positivo su commit config-only/test-only (1.90.3)
 

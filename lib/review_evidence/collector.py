@@ -374,11 +374,13 @@ def orchestrate_v2(
     )
 
     # ---- Baseline cache lookup (PR-B Task 09 wired) ----
-    # Resolve `origin/main` HEAD SHA — fall back to the requested base ref so
-    # the lookup still works on a feature branch without a configured remote.
+    # REQ-DF-03: il base fornito dal chiamante ha PRECEDENZA su origin/main.
+    # `origin/main` resta solo come ultimo fallback quando `base` non risolve
+    # (es. repo locale senza quel ref) — evita drift di cache su branch aperti
+    # verso un target diverso da main (es. sviluppo, release/*).
     main_sha = (
-        _git(["rev-parse", "origin/main"], repo_root)
-        or _git(["rev-parse", base], repo_root)
+        _git(["rev-parse", base], repo_root)
+        or _git(["rev-parse", "origin/main"], repo_root)
     )
     repo_full_name = os.environ.get("GITHUB_REPOSITORY", "local/unknown")
     baseline_scores: ScoreCard | None = None

@@ -13,9 +13,10 @@ _devforge_path_is_lowrisk() {
     esac
 }
 
-# Stampa 'low' | 'code'. $1 = base branch (default origin/main).
+# Stampa 'low' | 'code'. $1 = base branch (OBBLIGATORIO: il chiamante DEVE
+# risolvere il base reale via lib/pr-base-resolver.sh — REQ-DF-03, niente default origin/main).
 devforge_classify_diff_risk() {
-    local base="${1:-origin/main}"
+    local base="${1:?devforge_classify_diff_risk richiede un base esplicito (usa devforge_resolve_pr_base)}"
     local status
     status=$(git diff --name-status "${base}...HEAD" 2>/dev/null) || { printf 'code'; return 0; }
     [ -z "$status" ] && { printf 'code'; return 0; }

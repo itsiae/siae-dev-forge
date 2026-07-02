@@ -97,3 +97,36 @@ devforge_file_is_config_only() {
         *) return 1 ;;
     esac
 }
+
+# devforge_change_is_trivial FILE_PATH LINES_CHANGED
+# Return 0 if the single-file change is trivial: non-IaC extension AND
+# lines_changed <= DEVFORGE_BRAINSTORM_TRIVIAL_MAX_LINES (default 15) AND
+# path is not sensitive (hooks/, lib/*gate*, lib/review_evidence/).
+# A small edit to a gate/enforcement file is high-risk, so it is forced
+# non-trivial regardless of size — same carve-out logic as IaC.
+# Multi-file aggregation is NOT handled here (caller/hook responsibility).
+devforge_change_is_trivial() {
+    local f="${1:-}" lines="${2:-0}"
+    [ -z "$f" ] && return 1
+
+    # IaC is always non-trivial (design-gated regardless of diff size).
+    case "$f" in
+        *.tf|*.hcl) return 1 ;;
+    esac
+
+    # Sensitive paths force non-trivial: hooks/, lib/*gate*, lib/review_evidence/.
+    case "$f" in
+        hooks/*|*/hooks/*) return 1 ;;
+        lib/review_evidence/*) return 1 ;;
+    esac
+    case "$f" in
+        lib/*gate*|*/lib/*gate*) return 1 ;;
+    esac
+
+    local threshold="${DEVFORGE_BRAINSTORM_TRIVIAL_MAX_LINES:-15}"
+    if [ "$lines" -gt "$threshold" ] 2>/dev/null; then
+        return 1
+    fi
+
+    return 0
+}

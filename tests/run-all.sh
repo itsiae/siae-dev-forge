@@ -1218,6 +1218,86 @@ else
   TOTAL_FAIL=$((TOTAL_FAIL + 1))
 fi
 
+if bash "${PLUGIN_ROOT}/tests/hooks/session-start-conventions.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/session-start-conventions.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/session-start-conventions.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/onboarding-env-repoint.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/onboarding-env-repoint.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/onboarding-env-repoint.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/convention-injector.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/convention-injector.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/convention-injector.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/lib/test_pr_base_resolver.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/lib/test_pr_base_resolver.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/lib/test_pr_base_resolver.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/lib/diff-truncate.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/lib/diff-truncate.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/lib/diff-truncate.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/pr-base-wiring.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/pr-base-wiring.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/pr-base-wiring.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/lib/test_file_taxonomy_trivial.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/lib/test_file_taxonomy_trivial.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/lib/test_file_taxonomy_trivial.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/test_reconcile_zero_eccezioni.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/test_reconcile_zero_eccezioni.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/test_reconcile_zero_eccezioni.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/review-evidence-timeout.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/review-evidence-timeout.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/review-evidence-timeout.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
+if bash "${PLUGIN_ROOT}/tests/hooks/pr-no-review-advisory.test.sh" >/dev/null 2>&1; then
+  echo "  PASS  tests/hooks/pr-no-review-advisory.test.sh"
+  TOTAL_PASS=$((TOTAL_PASS + 1))
+else
+  echo "  FAIL  tests/hooks/pr-no-review-advisory.test.sh"
+  TOTAL_FAIL=$((TOTAL_FAIL + 1))
+fi
+
 if bash "${PLUGIN_ROOT}/tests/hooks/test_post_commit_no_verify.sh" >/dev/null 2>&1; then
   echo "  PASS  tests/hooks/test_post_commit_no_verify.sh"
   TOTAL_PASS=$((TOTAL_PASS + 1))

@@ -370,7 +370,10 @@ SHOULD_UPLOAD=1
 # Local alias for readability in this file.
 escape_for_json() { devforge_sanitize_json_str "$1"; }
 
-read -r -d '' REVIEW_INSTRUCTIONS << 'REVIEW_EOF' || true
+source "${PLUGIN_ROOT}/lib/pr-base-resolver.sh" 2>/dev/null || true
+REVIEW_RESOLVED_BASE=$(devforge_resolve_pr_base 2>/dev/null || echo "main")
+
+read -r -d '' REVIEW_INSTRUCTIONS_TEMPLATE << 'REVIEW_EOF' || true
 # DevForge PR Auto-Review
 
 Una PR e' stata creata o il branch e' stato pushato. DEVI lanciare automaticamente questi due agent in parallelo.
@@ -381,9 +384,16 @@ Gli agent di review DEVONO ricevere il diff testuale nel prompt, NON i path dei 
 Passare i path causa la lettura dei file interi — spreco di token enorme.
 
 **Step preliminare obbligatorio:**
+
+NON dare per scontato che la base sia `origin/main`: il branch puo' derivare
+da `sviluppo` o `release/*`. La base corretta e' gia' stata risolta:
+
 ```bash
-git diff origin/main...HEAD
+git diff __REVIEW_RESOLVED_BASE__...HEAD
 ```
+
+Se il diff supera ~2000 righe, usa prima `git diff --stat __REVIEW_RESOLVED_BASE__...HEAD`
+e i singoli file on-demand (vedi lib/diff-truncate.sh — evita loop/hang).
 
 Salva l'output di questo comando. Lo passerai nel prompt di ENTRAMBI gli agent.
 
@@ -404,7 +414,7 @@ Invoca la skill siae-devforge:siae-security per verificare SOLO il diff:
 
 ## Istruzioni
 
-1. Ottieni il diff completo: `git diff origin/main...HEAD`
+1. Ottieni il diff completo con la base risolta via `devforge_resolve_pr_base()` (Task 04): `git diff __REVIEW_RESOLVED_BASE__...HEAD` — troncando con `devforge_diff_or_summary()` (lib/diff-truncate.sh) se enorme.
 2. Lancia ENTRAMBI in parallelo usando il tool Agent:
    - Agent con subagent_type="siae-devforge:code-reviewer" — passa il DIFF nel prompt
    - Invoca Skill("siae-devforge:siae-security") per il security check — passa il DIFF
@@ -420,6 +430,7 @@ NON chiedere all'utente se vuole la review — e' automatica.
 NON saltare questo step — ogni PR viene revisionata.
 REVIEW_EOF
 
+REVIEW_INSTRUCTIONS="${REVIEW_INSTRUCTIONS_TEMPLATE//__REVIEW_RESOLVED_BASE__/$REVIEW_RESOLVED_BASE}"
 review_escaped=$(escape_for_json "$REVIEW_INSTRUCTIONS")
 review_context="<EXTREMELY_IMPORTANT>\nDevForge PR Auto-Review attivato.\n\n${review_escaped}\n</EXTREMELY_IMPORTANT>"
 

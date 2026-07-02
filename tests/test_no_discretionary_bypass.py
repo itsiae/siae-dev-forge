@@ -67,3 +67,24 @@ def test_killswitches_preserved_in_code():
 def test_break_glass_regex_still_documented():
     assert "DEVFORGE_BREAK_GLASS_REGEX" in ENV_VARS.read_text(), \
         "BREAK_GLASS_REGEX (admin) non deve essere rimosso da ENV_VARS.md"
+
+
+def test_brainstorm_complexity_flag_cannot_bypass_iac():
+    """DEVFORGE_BRAINSTORM_COMPLEXITY agisce solo sulla classificazione:
+    force-trivial non deve silenziare un file IaC (.tf/.hcl), che resta
+    sempre non-trivial nella libreria pura (Task 08). L'override va letto
+    SOLO nel hook (brainstorming-gate) e loggato, mai in file-taxonomy.sh.
+    """
+    lib_taxonomy = (REPO / "lib" / "file-taxonomy.sh").read_text()
+    assert "devforge_change_is_trivial" in lib_taxonomy, \
+        "devforge_change_is_trivial mancante in lib/file-taxonomy.sh (Task 08 non applicato)"
+    assert "DEVFORGE_BRAINSTORM_COMPLEXITY" not in lib_taxonomy, \
+        "DEVFORGE_BRAINSTORM_COMPLEXITY non deve comparire nella libreria pura: " \
+        "l'override va gestito solo nel hook, altrimenti force-trivial rischia di " \
+        "bypassare il carve-out IaC/path-sensibile"
+
+    gate = (REPO / "hooks" / "brainstorming-gate").read_text()
+    assert "DEVFORGE_BRAINSTORM_COMPLEXITY" in gate, \
+        "il hook non legge il flag di override della complessita'"
+    assert "brainstorm_complexity_override" in gate, \
+        "l'uso del flag non e' loggato (manca l'evento brainstorm_complexity_override)"

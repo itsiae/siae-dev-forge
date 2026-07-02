@@ -165,6 +165,59 @@ def test_orchestrate_v2_calls_baseline_cache(tmp_path: Path, monkeypatch) -> Non
     assert data["baseline_scores"] is None
 
 
+def test_orchestrate_v2_baseline_uses_caller_base_not_origin_main(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """REQ-DF-03: se esiste un ref origin/main DIVERSO dal base del branch
+    (es. base=sviluppo), il main_sha usato per la baseline cache deve
+    risolvere al base fornito dal chiamante, non a origin/main hardcoded.
+    """
+    _init_git(tmp_path)
+    sp = subprocess.run
+    (tmp_path / "main-only.py").write_text("# main only\n")
+    sp(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    sp(["git", "commit", "-m", "main-only"], cwd=tmp_path, check=True, capture_output=True)
+    main_sha = _head_sha(tmp_path)
+    sp(
+        ["git", "update-ref", "refs/remotes/origin/main", main_sha],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    sp(["git", "checkout", "-b", "sviluppo"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / "sviluppo-only.py").write_text("# sviluppo only\n")
+    sp(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    sp(["git", "commit", "-m", "sviluppo-only"], cwd=tmp_path, check=True, capture_output=True)
+    sviluppo_sha = _head_sha(tmp_path)
+    assert sviluppo_sha != main_sha
+
+    monkeypatch.setenv("DEVFORGE_BASELINE_LOCAL_DIR", str(tmp_path / "fallback"))
+    calls: list[tuple[str, str]] = []
+
+    def _spy(repo_full_name: str, main_sha_arg: str):
+        calls.append((repo_full_name, main_sha_arg))
+        return None
+
+    out = tmp_path / "ev.json"
+    with patch(
+        "lib.review_evidence.baseline_cache.fetch_baseline", side_effect=_spy
+    ):
+        code = orchestrate_v2(
+            sha=sviluppo_sha,
+            base="sviluppo",
+            dirty=False,
+            out_path=out,
+            repo_root=tmp_path,
+        )
+    assert code == 0
+    assert calls, "orchestrate_v2 deve chiamare fetch_baseline almeno una volta"
+    resolved_sha = calls[0][1]
+    assert resolved_sha == sviluppo_sha, (
+        f"main_sha deve risolvere al base fornito (sviluppo={sviluppo_sha}), "
+        f"non a origin/main hardcoded (main={main_sha}); got {resolved_sha}"
+    )
+
+
 def test_orchestrate_v2_calls_compute_regression_verdict(tmp_path: Path, monkeypatch) -> None:
     """PR-B wiring: ``compute_regression_verdict`` MUST be invoked.
 

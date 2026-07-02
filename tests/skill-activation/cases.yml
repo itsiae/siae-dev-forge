@@ -65,7 +65,10 @@
 - id: feature-config-change
   prompt: "modifico il timeout del client HTTP da 5s a 30s"
   expected_primary: siae-brainstorming
-  # anche cambio config richiede brainstorm (memory: zero eccezioni)
+  # config change resta expected_primary siae-brainstorming: il segnale testuale
+  # ("modifico... client HTTP") non permette di inferire se e' 1 file/poche righe
+  # (trivial, gate silente) o multi-file (complesso, gate attivo) — la skill si
+  # aggancia comunque; il gate hook scala l'enforcement in base al diff reale.
 
 - id: feature-options-tradeoff
   prompt: "valutiamo se usare Kafka o SQS per la coda eventi"
